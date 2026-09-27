@@ -132,6 +132,7 @@ function ChildRow({
   const row = (
     <a
       href={child.href}
+      data-thread-card={child.id}
       draggable={false}
       aria-current={isActive ? "true" : undefined}
       onClick={(event) => {
@@ -224,6 +225,7 @@ export function ThreadCard({
   // are siblings inside it — a button inside an anchor would be invalid HTML.
   const card = (
     <div
+      data-thread-card={thread.id}
       className={cn(
         "relative overflow-hidden rounded-md bg-card transition-colors",
         "hover:bg-accent/50",
