@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { PluginSidebarProject } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -49,15 +49,21 @@ function MultiSelectDropdown({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerId = useId();
-  // Long lists get a search bar; short ones (Group, State) keep their rows.
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listboxId = `${containerId}-listbox`;
+  // Long lists (Project, Provider, and the six-row Group) get a search bar;
+  // short ones like State keep their plain rows.
   const searchable = shouldShowDropdownSearch(options);
   const visibleOptions = searchable
     ? filterDropdownOptions(options, query)
     : options;
   // The query is a per-visit scratch pad: reopening always starts blank.
+  // Closing returns focus to the trigger, since the search input unmounts
+  // with the menu and would otherwise drop focus onto the body.
   const close = () => {
     setOpen(false);
     setQuery("");
+    triggerRef.current?.focus();
   };
   return (
     <div
@@ -74,10 +80,11 @@ function MultiSelectDropdown({
       }}
     >
       <button
+        ref={triggerRef}
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        onClick={() => (open ? close() : setOpen(true))}
+        onClick={() => setOpen((current) => !current)}
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-foreground",
           "hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -107,13 +114,14 @@ function MultiSelectDropdown({
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder={`Search ${label.toLowerCase()}…`}
                     aria-label={`Search ${label.toLowerCase()} options`}
+                    aria-controls={listboxId}
                     autoFocus
                     className="h-7 pl-7 text-xs"
                   />
                 </div>
               </div>
             ) : null}
-            <ul role="listbox" aria-label={label}>
+            <ul id={listboxId} role="listbox" aria-label={label}>
               {visibleOptions.map((option) => {
                 const isSelected = selected.has(option.value);
                 return (
@@ -180,12 +188,15 @@ function MultiSelectDropdown({
                   </li>
                 );
               })}
-              {visibleOptions.length === 0 ? (
-                <li className="px-2 py-1.5 text-xs text-muted-foreground">
-                  No {label.toLowerCase()} matches
-                </li>
-              ) : null}
             </ul>
+            {/* Sits outside the listbox: not an option, and it only speaks
+                when a typed query came up empty (an empty list with no
+                query is a different state, not a failed search). */}
+            {query.trim() !== "" && visibleOptions.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                No {label.toLowerCase()} matches
+              </div>
+            ) : null}
             {footer !== undefined ? (
               <div className="mt-1 border-t border-border pt-1">{footer}</div>
             ) : null}

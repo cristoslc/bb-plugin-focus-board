@@ -7,7 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **Search bar in long filter dropdowns**: the toolbar's Project and
+- **Search bar in long filter dropdowns** (#8): the toolbar's Project and
   Provider dropdowns (and any other option list past five rows) now open
   with a search field, matching the model picker's affordance. Matching is
   a case-insensitive substring on the label, the field takes focus on open,

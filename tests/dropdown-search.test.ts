@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  DROPDOWN_SEARCH_MIN_OPTIONS,
+  DROPDOWN_SEARCH_THRESHOLD,
   filterDropdownOptions,
   shouldShowDropdownSearch,
 } from "../components/dropdown-search";
@@ -9,7 +9,7 @@ const options = (labels: string[]) => labels.map((label) => ({ value: label, lab
 
 describe("dropdown search threshold", () => {
   it("shows no search bar at or below the threshold", () => {
-    expect(DROPDOWN_SEARCH_MIN_OPTIONS).toBe(5);
+    expect(DROPDOWN_SEARCH_THRESHOLD).toBe(5);
     expect(shouldShowDropdownSearch([])).toBe(false);
     expect(shouldShowDropdownSearch(options(["a"]))).toBe(false);
     expect(shouldShowDropdownSearch(options(["a", "b", "c", "d", "e"]))).toBe(false);
@@ -45,5 +45,10 @@ describe("filterDropdownOptions", () => {
 
   it("returns nothing when no label matches", () => {
     expect(filterDropdownOptions(options(["alpha", "beta"]), "zzz")).toEqual([]);
+  });
+
+  it("returns nothing for an empty list, with or without a query", () => {
+    expect(filterDropdownOptions([], "")).toEqual([]);
+    expect(filterDropdownOptions([], "alpha")).toEqual([]);
   });
 });
