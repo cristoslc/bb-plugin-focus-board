@@ -3,6 +3,21 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.4] — 2026-09-26
+
+### Fixed
+
+- **Answer agent questions from the thread pane**: the pane now renders a
+  pending question as a real form and submits the answer from the board —
+  the host's embedded chat only shows these in the main thread view, so the
+  question tool used to block until timeout while the pane showed nothing.
+  Both payload shapes are handled: provider `user_question` interactions
+  (answered through `interactions.resolve`; dismissing one stops the turn,
+  like the main view) and plugin forms with the ask-user-question shape
+  (answered through `interactions.respond`; Dismiss cancels). Provider
+  extension requests get an "Open in main view" fallback, and unrenderable
+  plugin forms keep it too.
+
 ## [0.3.3] — 2026-09-26
 
 ### Added
