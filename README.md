@@ -27,6 +27,11 @@ they've been quiet.
 
 - **Group by** Attention, Last activity, Project, Provider, or Machine
 - **Filter and search** by state, project, provider, or title
+- **Reorder a column** by dragging cards into your own order instead of the
+  board's recency order. The order belongs to the column, not the thread, so
+  a card that leaves a column and comes back returns to the slot it left.
+  Alt+ArrowUp / Alt+ArrowDown does the same from the keyboard, and a lane
+  with a hand-set order says so in its header.
 - **Nest** subthreads under their parent card
 - **Sweep** stale Done and long-idle threads to Archive in two clicks
 - **Ticket chips** with GitHub status dots, linking to the tracker
