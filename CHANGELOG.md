@@ -3,6 +3,17 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **Search bar in long filter dropdowns** (#8): the toolbar's Project and
+  Provider dropdowns (and any other option list past five rows) now open
+  with a search field, matching the model picker's affordance. Matching is
+  a case-insensitive substring on the label, the field takes focus on open,
+  Escape clears the query then closes, and reopening starts blank. Short
+  lists (State) keep their plain rows.
+
 ## [0.3.1] — 2026-09-25
 
 ### Changed

@@ -10,6 +10,7 @@ happy-path coverage suffices except where a cell is filled anyway.
 |---------------|--------------|-------|-----|------|--------|
 | Group threads into columns (`buildColumns`, `columnFor`) | low | auto (`tests/grouping.test.ts`) | auto (unknown group-by falls back) | auto (frozen column, pinned, done ordering) | skip (pure ordering) |
 | Filter + search threads (`filterThreads`, `matchesFilter`) | low | auto | auto (no match → empty) | auto (multi-dim intersection) | skip |
+| Filter dropdown search bar (`shouldShowDropdownSearch`, `filterDropdownOptions`) | low | auto (`tests/dropdown-search.test.ts` — lists past 5 options get a field) | auto (blank/whitespace query returns every row, in order) | auto (threshold boundary at exactly 5 vs 6) | auto (no label matches → empty list) / manual (search field, sticky header, no-match row, Escape ladder, focus restore — presentational, no DOM harness) |
 | Family index (`buildFamilyIndex`) | low | auto (`tests/nesting.test.ts`) | auto (orphan → root) | auto (hidden excluded, archived included per R2) | auto (cycle tolerated) |
 | Nesting placement, Attention grouping (`nestUnderParents`) | low | auto (`tests/nesting.test.ts`) | auto (equal-rank child nests) | auto (done parent, live child promotes) | auto (promoted child keeps column sort) |
 | Nesting placement, axis groupings | low | auto (same-axis nests, `tests/nesting.test.ts`) | auto (cross-axis child standalone) | auto (recency/none always nest) | skip (pure placement) |
