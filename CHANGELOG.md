@@ -3,6 +3,17 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.3] — 2026-09-26
+
+### Added
+
+- **New threads inherit a single-project filter**: when exactly one
+  project is selected in the filter, the toolbar's new thread button and
+  the board's new task affordance create the thread in that project.
+  With no or multiple projects selected, bb's default project pick
+  applies, and a stale filter id (project deleted since) falls back to
+  the default as well.
+
 ## [0.3.2] — 2026-09-26
 
 ### Added
