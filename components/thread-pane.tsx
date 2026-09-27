@@ -4,6 +4,7 @@ import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { COARSE_POINTER_HEADER_ICON_BUTTON_CLASS } from "@/components/ui/coarse-pointer-sizing";
+import { PendingInteractionCard } from "@/components/pending-interaction-card";
 import { useIsCompactViewport } from "@/components/ui/hooks/use-compact-viewport";
 
 // Shared header-button classes: a 28px ghost icon button that grows to a
@@ -353,6 +354,11 @@ export function ThreadPane({
           <Icon name="X" className="size-4" />
         </Button>
       </header>
+      {/* The host's embedded ThreadChat hides pending interactions of kind
+          "plugin" (the main view renders them), which swallows the
+          ask-user-question form and leaves the tool call blocking. This card
+          restores the form in the pane. */}
+      <PendingInteractionCard threadId={thread.id} onOpenInMainView={onMaximize} />
       <div className="min-h-0 flex-1">
         <ThreadChat threadId={thread.id} variant="compact" layout="contained" />
       </div>

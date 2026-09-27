@@ -520,6 +520,20 @@ function BoardPage() {
 
   const anyFilterActive =
     filter.projects.size > 0 || filter.providers.size > 0 || filter.states.size > 0 || searchActive;
+  // When exactly one project is selected in the filter, new threads created
+  // from the board land in that project. Stale ids (project deleted since
+  // the filter was persisted) fall back to bb's default project pick.
+  const newThreadProjectId = useMemo(() => {
+    if (filter.projects.size !== 1) return undefined;
+    const projectId = [...filter.projects][0];
+    return projects.some((project) => project.id === projectId) ? projectId : undefined;
+  }, [filter.projects, projects]);
+  const openNewThread = useCallback(() => {
+    actions.openNewThread({
+      ...(newThreadProjectId === undefined ? {} : { projectId: newThreadProjectId }),
+      focusPrompt: true,
+    });
+  }, [actions, newThreadProjectId]);
   // Archived riders sit in `searched` when nesting is ON (they stay under
   // their parent); board-level counts stay live-thread counts.
   const boardCount = useMemo(
@@ -645,7 +659,7 @@ function BoardPage() {
             persistSearch("");
           }}
           anyFilterActive={anyFilterActive}
-          onNewThread={() => actions.openNewThread({ focusPrompt: true })}
+          onNewThread={openNewThread}
           nestChildren={nestChildren}
           onNestChildrenChange={persistNestChildren}
         />
@@ -672,7 +686,7 @@ function BoardPage() {
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
             onOpenThread={openThreadCard}
-            onNewTask={() => actions.openNewThread({ focusPrompt: true })}
+            onNewTask={openNewThread}
             sweepCandidatesFor={sweepCandidatesFor}
             armedSweep={armedSweep}
             onSweepArm={armSweepFor}

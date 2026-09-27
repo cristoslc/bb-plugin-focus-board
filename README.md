@@ -31,6 +31,13 @@ they've been quiet.
 - **Sweep** stale Done and long-idle threads to Archive in two clicks
 - **Ticket chips** with GitHub status dots, linking to the tracker
 - **Thread pane** slides in beside the board; works on phone
+- **Answer questions in the pane**: when an agent asks a question (the
+  ask-user-question tool), the pane renders the form and submits the answer
+  from the board — the host's embedded chat only shows these in the main
+  thread view. Both payload shapes are handled: provider `user_question`
+  interactions (answered through `interactions.resolve`) and plugin forms
+  (answered through `interactions.respond`). Unsupported plugin forms get an
+  "Open in main view" fallback.
 
 It lives in the sidebar as a nav panel and updates in real time through
 the plugin SDK.

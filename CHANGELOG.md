@@ -3,6 +3,8 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+<!-- 0.3.2 through 0.3.5 (from main) are listed below; this release follows. -->
+## [0.4.0] — 2026-09-27
 ## [0.4.0] — 2026-09-27
 
 ### Added
@@ -41,6 +43,53 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `TargetCloseError` on `Emulation.setTouchEmulationEnabled`. It flipped one
   shared page's viewport between shots; each shot now gets its own page with
   the viewport set once.
+
+## [0.3.5] — 2026-09-26
+
+### Fixed
+
+- **Keep the selected card in view when the thread pane opens**: the pane
+  squeezes the board, which could leave the open thread's card clipped off
+  to the right. The board's horizontal scroller now keeps the active card
+  (parent card or nested child row) in the visible range when the pane
+  opens or is drag-resized.
+
+## [0.3.4] — 2026-09-26
+
+### Fixed
+
+- **Answer agent questions from the thread pane**: the pane now renders a
+  pending question as a real form and submits the answer from the board —
+  the host's embedded chat only shows these in the main thread view, so the
+  question tool used to block until timeout while the pane showed nothing.
+  Both payload shapes are handled: provider `user_question` interactions
+  (answered through `interactions.resolve`; dismissing one stops the turn,
+  like the main view) and plugin forms with the ask-user-question shape
+  (answered through `interactions.respond`; Dismiss cancels). Provider
+  extension requests get an "Open in main view" fallback, and unrenderable
+  plugin forms keep it too.
+
+## [0.3.3] — 2026-09-26
+
+### Added
+
+- **New threads inherit a single-project filter**: when exactly one
+  project is selected in the filter, the toolbar's new thread button and
+  the board's new task affordance create the thread in that project.
+  With no or multiple projects selected, bb's default project pick
+  applies, and a stale filter id (project deleted since) falls back to
+  the default as well.
+
+## [0.3.2] — 2026-09-26
+
+### Added
+
+- **Search bar in long filter dropdowns** (#8): the toolbar's Project and
+  Provider dropdowns (and any other option list past five rows) now open
+  with a search field, matching the model picker's affordance. Matching is
+  a case-insensitive substring on the label, the field takes focus on open,
+  Escape clears the query then closes, and reopening starts blank. Short
+  lists (State) keep their plain rows.
 
 ## [0.3.1] — 2026-09-25
 

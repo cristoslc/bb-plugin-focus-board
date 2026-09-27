@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { BoardColumn, GroupBy } from "./grouping";
 import { threadState, withSweepGather } from "./grouping";
@@ -187,6 +187,34 @@ export function Board({
     threadId: string;
     edge: Half;
   } | null>(null);
+
+  // When the thread pane opens (or is resized) the board container shrinks;
+  // keep the open thread's card in view by scrolling it into the visible
+  // horizontal range instead of letting the pane cover it.
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (container === null || activeThreadId === null) return;
+    const keepActiveCardInView = () => {
+      const card = container.querySelector(`[data-thread-card="${CSS.escape(activeThreadId)}"]`);
+      if (!(card instanceof HTMLElement)) return;
+      const cardRect = card.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      // Adjust only horizontally; vertical card lists manage their own scroll.
+      if (cardRect.left < containerRect.left) {
+        container.scrollLeft -= containerRect.left - cardRect.left;
+      } else if (cardRect.right > containerRect.right) {
+        container.scrollLeft += cardRect.right - containerRect.right;
+      }
+    };
+    keepActiveCardInView();
+    // Pane opening and drag-resizing both change the container's width; the
+    // observer re-runs the adjustment for each size change.
+    const observer = new ResizeObserver(keepActiveCardInView);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [activeThreadId]);
+
   const sweepActive = sweepCandidatesFor !== undefined && onSweepArm !== undefined;
   const ranking = rankStore !== undefined && onRankMove !== undefined;
 
@@ -225,7 +253,10 @@ export function Board({
     return null;
   };
   return (
-    <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-3 pb-3 pt-2">
+    <div
+      ref={scrollRef}
+      className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-3 pb-3 pt-2"
+    >
       {/* The insertion line is the only visual feedback a reorder gives, so
           a screen reader gets the same information in words. */}
       <p aria-live="polite" className="sr-only">

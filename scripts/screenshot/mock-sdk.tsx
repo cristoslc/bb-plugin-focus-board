@@ -59,6 +59,11 @@ export function useSdk(): unknown {
     threads: {
       list: async () => [],
       unarchive: async () => {},
+      interactions: {
+        list: async () => [],
+        respond: async () => ({}),
+        cancel: async () => ({}),
+      },
     },
     hosts: {
       list: async () => [{ id: "host_local", name: "MacBook Pro", lifecycle: { phase: "active" } }],
