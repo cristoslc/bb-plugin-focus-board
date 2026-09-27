@@ -3,8 +3,6 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-<!-- 0.3.2 through 0.3.5 (from main) are listed below; this release follows. -->
-## [0.4.0] — 2026-09-27
 ## [0.4.0] — 2026-09-27
 
 ### Added
@@ -28,6 +26,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Drop on a card's top half to land in front of it, bottom half to land past
     it, or below the last card to append. Dropping a card on itself, or
     dragging into a different lane's order, writes nothing.
+- **Pane question form: parity with the host's QuestionForm**: the pending
+  question card now mirrors the host's shipped form rather than a stacked
+  long form. Sequential questions sit behind a scrollable tab strip with a
+  N-of-M counter and Back/Next; the banner collapses (Escape collapses it
+  before the pane closes); the form body is height-capped and scrolls
+  internally so the transcript keeps its space, which was blocking the phone
+  layout. Free-text-only questions (the common provider shape) open with the
+  textarea visible, number keys 1-N select options, and the form also disables
+  while the interaction's server-side status is `resolving`, with stale
+  selections filtered before submission. Analysis of the original gaps is in
+  `docs/pane-question-gap-analysis.md`.
 
 ### Changed
 
