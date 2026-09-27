@@ -3,13 +3,13 @@ import type { PluginSidebarProject } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import type { DropdownOption } from "./dropdown-search";
+import {
+  filterDropdownOptions,
+  shouldShowDropdownSearch,
+} from "./dropdown-search";
 import type { FilterState, GroupBy, ThreadState } from "./grouping";
 import { GROUP_BY_OPTIONS } from "./grouping";
-
-interface DropdownOption {
-  value: string;
-  label: string;
-}
 
 /**
  * Linear-model dropdown: clicking a row's label applies it as the single
@@ -47,14 +47,37 @@ function MultiSelectDropdown({
   footer,
 }: MultiSelectDropdownProps) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const containerId = useId();
+  // Long lists get a search bar; short ones (Group, State) keep their rows.
+  const searchable = shouldShowDropdownSearch(options);
+  const visibleOptions = searchable
+    ? filterDropdownOptions(options, query)
+    : options;
+  // The query is a per-visit scratch pad: reopening always starts blank.
+  const close = () => {
+    setOpen(false);
+    setQuery("");
+  };
   return (
-    <div className="relative" id={containerId}>
+    <div
+      className="relative"
+      id={containerId}
+      onKeyDown={(event) => {
+        // Only claim Escape while the menu is open; otherwise let it reach
+        // bb (closing the panel) as it did before.
+        if (!open || event.key !== "Escape") return;
+        event.stopPropagation();
+        // First Escape wipes a typed filter, second closes the menu.
+        if (query !== "") setQuery("");
+        else close();
+      }}
+    >
       <button
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => (open ? close() : setOpen(true))}
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-foreground",
           "hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -67,10 +90,31 @@ function MultiSelectDropdown({
       </button>
       {open ? (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
-          <div className="absolute left-0 top-9 z-50 max-h-80 min-w-52 overflow-y-auto rounded-md border border-border bg-popover p-1 shadow-md">
+          <div className="fixed inset-0 z-40" onClick={close} aria-hidden />
+          <div className="absolute left-0 top-9 z-50 max-h-80 min-w-56 overflow-y-auto rounded-md border border-border bg-popover p-1 shadow-md">
+            {/* Search bar: long option lists only. Sticky so it stays put
+                while the rows scroll, like bb's model picker. */}
+            {searchable ? (
+              <div className="sticky top-0 z-10 -mx-1 mb-1 border-b border-border bg-popover px-2 pb-1.5 pt-0.5">
+                <div className="relative">
+                  <Icon
+                    name="Search"
+                    className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
+                  />
+                  <Input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder={`Search ${label.toLowerCase()}…`}
+                    aria-label={`Search ${label.toLowerCase()} options`}
+                    autoFocus
+                    className="h-7 pl-7 text-xs"
+                  />
+                </div>
+              </div>
+            ) : null}
             <ul role="listbox" aria-label={label}>
-              {options.map((option) => {
+              {visibleOptions.map((option) => {
                 const isSelected = selected.has(option.value);
                 return (
                   <li
@@ -83,7 +127,7 @@ function MultiSelectDropdown({
                       aria-selected={isSelected}
                       onClick={() => {
                         onSingleSelect(option.value);
-                        setOpen(false);
+                        close();
                       }}
                       className={cn(
                         "flex w-full items-center rounded-sm pl-7 pr-2 py-1.5 text-left text-xs",
@@ -136,6 +180,11 @@ function MultiSelectDropdown({
                   </li>
                 );
               })}
+              {visibleOptions.length === 0 ? (
+                <li className="px-2 py-1.5 text-xs text-muted-foreground">
+                  No {label.toLowerCase()} matches
+                </li>
+              ) : null}
             </ul>
             {footer !== undefined ? (
               <div className="mt-1 border-t border-border pt-1">{footer}</div>
@@ -146,7 +195,7 @@ function MultiSelectDropdown({
                   type="button"
                   onClick={() => {
                     onClear();
-                    setOpen(false);
+                    close();
                   }}
                   className="flex w-full items-center gap-1.5 rounded-sm px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
                 >
@@ -228,6 +277,9 @@ function ProjectDropdown({
                   event.preventDefault();
                   void submitCreate();
                 } else if (event.key === "Escape") {
+                  // Handled here: the menu-level Escape would also fire and
+                  // clear the search query behind the create field.
+                  event.stopPropagation();
                   setCreating(false);
                   setNewName("");
                 }
