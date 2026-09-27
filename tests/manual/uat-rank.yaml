@@ -67,6 +67,21 @@ steps:
         ordered: [thr_roadmap, thr_ship_release]
       - store: { pinned: ["thr_roadmap"] }
 
+  - id: drop-without-a-payload-id-still-moves
+    title: A drop whose payload has no card id falls back to the dragstart ref
+    # The payload is the authoritative source at drop time, but a drop must
+    # never depend on it alone: the dragstart ref is the fallback, and losing
+    # it turns every reorder into a no-op with nothing on screen to say why.
+    goto: "?groupBy=status"
+    assert_before_drag:
+      - rank_slots: { column: pinned, count: 2 }
+    drag_unidentified: { from: thr_roadmap, to: thr_ship_release, edge: before }
+    assert:
+      - column: pinned
+        ordered: [thr_roadmap, thr_ship_release]
+      - store: { pinned: ["thr_roadmap"] }
+      - no_visible_error: true
+
   - id: unranked-lane-is-recency
     title: A lane with no stored order reads newest-first
     goto: "?groupBy=status"

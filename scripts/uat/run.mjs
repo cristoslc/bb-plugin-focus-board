@@ -210,6 +210,34 @@ const pageLineShown = ({ to, edge }) => {
   };
 };
 
+/**
+ * A drop whose payload carries no card id — the shape of the failure where the
+ * board cannot attribute the gesture to a card. The rank type is still set, so
+ * the drop is accepted, but the id is empty.
+ */
+const pageDragUnidentified = ({ from, to, edge }) => {
+  const slot = (id) => document.querySelector(`li[data-rank-slot="${id}"]`);
+  const source = slot(from);
+  const target = slot(to);
+  if (!source || !target) throw new Error(`drag: missing slot (${from} → ${to})`);
+  const anchor = source.querySelector("a[draggable]");
+  const transfer = window.__protectedDrag();
+  transfer._armRead(true);
+  anchor.dispatchEvent(
+    new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: transfer }),
+  );
+  // Strip the id, keeping the lane marker: the lane is known, the card is not.
+  transfer.clearData("text/focus-board-id");
+  const box = target.getBoundingClientRect();
+  const clientY = edge === "before" ? box.top + box.height * 0.2 : box.top + box.height * 0.8;
+  const point = { bubbles: true, cancelable: true, dataTransfer: transfer, clientX: box.left + 8, clientY };
+  transfer._armRead(false);
+  target.dispatchEvent(new DragEvent("dragover", point));
+  transfer._armRead(true);
+  target.dispatchEvent(new DragEvent("drop", point));
+  return { ok: true };
+};
+
 const pageKey = ({ card, key, alt }) => {
   const target = document.querySelector(`li[data-rank-slot="${card}"] a[href]`);
   if (!target) throw new Error(`key: no focusable card ${card}`);
@@ -313,6 +341,23 @@ async function check(step, page, gestureResults = []) {
         "the drop was permitted, so a cross-lane reorder could land",
       );
     }
+    if (rule.visible_error !== undefined) {
+      const text = await page.evaluate(() => {
+        const el = document.querySelector('p[role="status"]');
+        return el?.textContent?.trim() ?? "";
+      });
+      const re =
+        rule.visible_error instanceof RegExp
+          ? rule.visible_error
+          : new RegExp(rule.visible_error);
+      expect("failure reported on screen", re.test(text), `banner said ${JSON.stringify(text)}`);
+    }
+    if (rule.no_visible_error === true) {
+      const text = await page.evaluate(
+        () => document.querySelector('p[role="status"]')?.textContent?.trim() ?? "",
+      );
+      expect("no refusal banner", text === "", `banner said ${JSON.stringify(text)}`);
+    }
     if (rule.rpc_called_method !== undefined) {
       const methods = await page.evaluate(() =>
         globalThis.__uat.calls().map((call) => call.method),
@@ -324,10 +369,15 @@ async function check(step, page, gestureResults = []) {
       );
     }
     if (rule.rpc_not_called !== undefined) {
-      const calls = await page.evaluate(() =>
-        globalThis.__uat.calls().filter((call) => call.method === rule.rpc_not_called),
+      // The method name goes in as an argument: a closure over `rule` here
+      // throws inside the page, but only once the call log is non-empty and
+      // the filter actually runs.
+      const method = rule.rpc_not_called;
+      const calls = await page.evaluate(
+        (name) => globalThis.__uat.calls().filter((call) => call.method === name),
+        method,
       );
-      expect(`no ${rule.rpc_not_called} call`, calls.length === 0, `${calls.length} call(s) made`);
+      expect(`no ${method} call`, calls.length === 0, `${calls.length} call(s) made`);
     }
     if (rule.insertion_line !== undefined || rule.no_insertion_line !== undefined) {
       // Hover first, then sample after React has committed the line.
@@ -405,6 +455,10 @@ async function runSuite(file, { port, browser }) {
           ok: outcome.dropAllowed !== false,
           detail: "no dragover handler called preventDefault — a real browser would refuse this drop",
         });
+        await sleep(200);
+      }
+      if (step.drag_unidentified !== undefined) {
+        await page.evaluate(pageDragUnidentified, step.drag_unidentified);
         await sleep(200);
       }
       if (step.drag_to_column !== undefined) {

@@ -1,4 +1,4 @@
-_Generated 2026-09-27T14:08:27.821Z by `npm run uat`._
+_Generated 2026-09-27T14:18:46.280Z by `npm run uat`._
 
 # UAT report
 
@@ -11,6 +11,7 @@ Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees
 | A first-time user with no stored order can drag, and the drop writes one | pass | ✓ unread has 3 reorder slots; ✓ unread hand-ordered=false; ✓ drop permitted during drag; ✓ unread order; ✓ stored order {"status:unread":["thr_review_pr"]}; ✓ unread hand-ordered=true |
 | With every lane draggable, dropping on Done still marks done | pass | ✓ called done_set |
 | A lane with no cross-column drop handler still authorises its own reorder | pass | ✓ pinned has 2 reorder slots; ✓ drop permitted during drag; ✓ pinned order; ✓ stored order {"pinned":["thr_roadmap"]} |
+| A drop whose payload has no card id falls back to the dragstart ref | pass | ✓ pinned has 2 reorder slots; ✓ pinned order; ✓ stored order {"pinned":["thr_roadmap"]}; ✓ no refusal banner |
 | A lane with no stored order reads newest-first | pass | ✓ unread order; ✓ unread hand-ordered=false |
 | The Unread lane reads in its stored order instead of recency | pass | ✓ unread order; ✓ unread hand-ordered=true |
 | Dropping on a card's top half lands in front of it | pass | ✓ drop permitted during drag; ✓ unread order; ✓ rank_move {"columnKey":"status:unread","threadId":"thr_review_pr","beforeId":"thr_rpc_auth","toEnd":false}; ✓ stored order {"status:unread":["thr_review_pr","thr_rpc_auth","thr_uat_queue"]} |

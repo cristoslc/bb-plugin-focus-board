@@ -36,6 +36,23 @@ const DRAG_ID_KEY = "text/focus-board-id";
 /** Where an insertion line would land: before or after the hovered card. */
 type Half = "before" | "after";
 
+/**
+ * The dragged card, for a DROP.
+ *
+ * Read from the payload first: `drop` is one of the two moments the browser
+ * lets a handler read it, so this is the authoritative source. The ref is the
+ * fallback for the rare case where a payload is unavailable, and it must never
+ * be the only source — losing it silently turns every reorder into a no-op,
+ * because an empty id makes `applyMove` return the order unchanged and the
+ * RPC reject it, with nothing on screen to say why.
+ */
+function draggedIdFor(
+  event: React.DragEvent,
+  fallback: string | null,
+): string {
+  return event.dataTransfer.getData(DRAG_ID_KEY) || fallback || "";
+}
+
 interface BoardProps {
   columns: readonly BoardColumn[];
   /** The active grouping — a column's rank key is namespaced by it. */
@@ -229,6 +246,10 @@ export function Board({
   // Announce a completed move so a reorder is legible without sight of the
   // insertion line, which is the only feedback a screen reader would miss.
   const [announcement, setAnnouncement] = useState("");
+  // A reorder that cannot complete says so ON SCREEN. A live region alone
+  // leaves the sighted operator with a drag that silently does nothing, which
+  // is exactly how the last version of this shipped.
+  const [rankError, setRankError] = useState<string | null>(null);
 
   // The card being dragged, captured at dragstart. Held here rather than read
   // from the payload because the payload is unreadable until the drop, and
@@ -240,13 +261,38 @@ export function Board({
     setRankDrop(null);
   }
 
+  /**
+   * Report a reorder that cannot complete, naming the reason.
+   *
+   * A drop that quietly does nothing is indistinguishable from a board
+   * ignoring the operator, which is precisely how this shipped twice: once
+   * because dragover read a protected payload, and once because the drop could
+   * not identify the card. Every early return names itself so one reproduction
+   * says which one fired.
+   */
+  function reportRefusal(reason: string): void {
+    setAnnouncement(`Reorder refused: ${reason}`);
+    setRankError(`Reorder refused: ${reason}`);
+  }
+
   function commitMove(
     column: BoardColumn,
     threadId: string,
     beforeId: string | null,
     toEnd: boolean,
   ): void {
-    if (!ranking) return;
+    if (!ranking) {
+      reportRefusal("card ordering is not available on this board.");
+      return;
+    }
+    // Fail loud, on screen. An empty id means the drop could not identify the
+    // dragged card; the move would otherwise be a silent no-op that looks
+    // exactly like the board ignoring the operator.
+    if (threadId === "") {
+      reportRefusal(`could not identify the dragged card in ${column.label}.`);
+      return;
+    }
+    setRankError(null);
     const current = column.threads.map((thread) => thread.id);
     onRankMove?.(columnRankKey(groupBy, column.id), threadId, beforeId, toEnd);
     // Report the resulting position from the order the move produces, not
@@ -276,6 +322,14 @@ export function Board({
       <p aria-live="polite" className="sr-only">
         {announcement}
       </p>
+      {rankError !== null ? (
+        <p
+          role="status"
+          className="mx-3 mb-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-[11px] text-destructive"
+        >
+          {rankError}
+        </p>
+      ) : null}
       <div className="flex h-full min-h-0 items-stretch gap-4">
         {columns.map((column) => {
           const dropHandler = dropHandlerFor(column.id);
@@ -320,7 +374,7 @@ export function Board({
               }}
               onDragLeave={isDropTarget ? () => setDragOverColumn((c) => (c === column.id ? null : c)) : undefined}
               onDrop={(event) => {
-                const threadId = draggingIdRef.current ?? "";
+                const threadId = draggedIdFor(event, draggingIdRef.current);
                 if (ranking && isLaneDrag(event.dataTransfer.types, rankKey)) {
                   // Released over the lane's empty space below the last card:
                   // append. A drop ON a card was already claimed by that
@@ -414,10 +468,10 @@ export function Board({
                         }
                         onDrop={
                           (event) => {
-                            if (!ranking) return;
                             if (!isLaneDrag(event.dataTransfer.types, rankKey)) return;
+                            if (!ranking) return;
                             event.preventDefault();
-                            const threadId = draggingIdRef.current ?? "";
+                            const threadId = draggedIdFor(event, draggingIdRef.current);
                             // The drop bubbles to the column's own handler,
                             // which treats a same-lane drag as "append". Claim
                             // the event so one drop is one move, not an
@@ -438,7 +492,12 @@ export function Board({
                               edge,
                               threadId,
                             );
-                            if (target === null) return;
+                            if (target === null) {
+                              reportRefusal(
+                                `the drop position in ${column.label} resolved to no move.`,
+                              );
+                              return;
+                            }
                             commitMove(column, threadId, target.beforeId, target.toEnd);
                           }
                         }
