@@ -12,18 +12,26 @@ import {
   applyMove,
   columnIsRanked,
   columnRankKey,
+  isLaneDrag,
   moveTargetFor,
   type RankStore,
 } from "../lib/rank";
 
 /**
- * Drag payload keys. The id is the moved card; the rank key is the column it
- * is being reordered WITHIN, set only when that column is ranked. Its presence
- * is what tells a same-column reorder apart from a cross-column drop onto
- * Done or Unread, which the column-level drop handlers own.
+ * Drag payload keys.
+ *
+ * `DRAG_ID_KEY` carries the moved card and is readable at drop time.
+ *
+ * The lane the drag came from is carried in the MIME **type name**, not in a
+ * payload value. A real browser holds the drag payload write-only until the
+ * drop: `getData` returns "" during `dragover`, so any handler that decides
+ * from `getData` mid-drag silently sees nothing, never calls
+ * `preventDefault`, and the browser then refuses the drop outright. `types`
+ * stays readable for the whole drag, so the lane is discoverable exactly when
+ * the drop has to be authorised. Reading the lane from the type name is the
+ * difference between a reorder that works and one that does nothing.
  */
 const DRAG_ID_KEY = "text/focus-board-id";
-const DRAG_RANK_KEY = "text/focus-board-rank";
 
 /** Where an insertion line would land: before or after the hovered card. */
 type Half = "before" | "after";
@@ -222,6 +230,12 @@ export function Board({
   // insertion line, which is the only feedback a screen reader would miss.
   const [announcement, setAnnouncement] = useState("");
 
+  // The card being dragged, captured at dragstart. Held here rather than read
+  // from the payload because the payload is unreadable until the drop, and
+  // dragover needs to know this to avoid drawing an insertion line on the
+  // card under the cursor.
+  const draggingIdRef = useRef<string | null>(null);
+
   function clearRankDrop(): void {
     setRankDrop(null);
   }
@@ -292,10 +306,9 @@ export function Board({
               data-column-ordered={isOrdered}
               aria-label={`${column.label}, ${column.threads.length} threads`}
               onDragOver={(event) => {
-                const sourceKey = event.dataTransfer.getData(DRAG_RANK_KEY);
                 // Same-lane drag: the lane's own empty space accepts the drop
                 // as an append, so the column must allow the event.
-                if (sourceKey === rankKey && ranking) {
+                if (ranking && isLaneDrag(event.dataTransfer.types, rankKey)) {
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "move";
                   return;
@@ -307,9 +320,8 @@ export function Board({
               }}
               onDragLeave={isDropTarget ? () => setDragOverColumn((c) => (c === column.id ? null : c)) : undefined}
               onDrop={(event) => {
-                const threadId = event.dataTransfer.getData(DRAG_ID_KEY);
-                const sourceKey = event.dataTransfer.getData(DRAG_RANK_KEY);
-                if (sourceKey === rankKey && ranking) {
+                const threadId = draggingIdRef.current ?? "";
+                if (ranking && isLaneDrag(event.dataTransfer.types, rankKey)) {
                   // Released over the lane's empty space below the last card:
                   // append. A drop ON a card was already claimed by that
                   // card's own handler, which stops propagation.
@@ -381,14 +393,13 @@ export function Board({
                             // one — invisible on drop — so it falls through to
                             // the column's Done/Unread handler instead.
                             if (!ranking) return;
-                            if (event.dataTransfer.getData(DRAG_RANK_KEY) !== rankKey) return;
+                            if (!isLaneDrag(event.dataTransfer.types, rankKey)) return;
                             event.preventDefault();
                             event.dataTransfer.dropEffect = "move";
                             const rect = event.currentTarget.getBoundingClientRect();
                             const edge: Half =
                               event.clientY - rect.top < rect.height / 2 ? "before" : "after";
-                            const draggedId = event.dataTransfer.getData(DRAG_ID_KEY);
-                            if (draggedId === thread.id) {
+                            if (draggingIdRef.current === thread.id) {
                               clearRankDrop();
                               return;
                             }
@@ -404,9 +415,9 @@ export function Board({
                         onDrop={
                           (event) => {
                             if (!ranking) return;
-                            if (event.dataTransfer.getData(DRAG_RANK_KEY) !== rankKey) return;
+                            if (!isLaneDrag(event.dataTransfer.types, rankKey)) return;
                             event.preventDefault();
-                            const threadId = event.dataTransfer.getData(DRAG_ID_KEY);
+                            const threadId = draggingIdRef.current ?? "";
                             // The drop bubbles to the column's own handler,
                             // which treats a same-lane drag as "append". Claim
                             // the event so one drop is one move, not an
@@ -482,6 +493,9 @@ export function Board({
                           onOpenThread={onOpenThread}
                           childMenuActions={menuActionsFor}
                           rankKey={ranking ? rankKey : undefined}
+                          onRankDragStart={(id) => {
+                            draggingIdRef.current = id;
+                          }}
                         />
                       </li>
                     ))}

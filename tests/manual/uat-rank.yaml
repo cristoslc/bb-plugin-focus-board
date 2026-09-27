@@ -49,6 +49,24 @@ steps:
     assert:
       - rpc_called_method: done_set
 
+  - id: plain-lane-permits-its-own-drop
+    title: A lane with no cross-column drop handler still authorises its own reorder
+    # The bug this pins: the board decided "is this a same-lane drag?" by
+    # reading the drag payload during `dragover`. A real browser returns ""
+    # there, so no handler called preventDefault and the browser refused every
+    # drop. The Unread lane hid it, because it authorises drops anyway for its
+    # own "mark unread" gesture; a plain lane like Pinned had nothing to hide
+    # behind, and did nothing at all. `types` is readable mid-drag, so the
+    # lane now rides in the drag type name.
+    goto: "?groupBy=status"
+    assert_before_drag:
+      - rank_slots: { column: pinned, count: 2 }
+    drag: { from: thr_roadmap, to: thr_ship_release, edge: before }
+    assert:
+      - column: pinned
+        ordered: [thr_roadmap, thr_ship_release]
+      - store: { pinned: ["thr_roadmap"] }
+
   - id: unranked-lane-is-recency
     title: A lane with no stored order reads newest-first
     goto: "?groupBy=status"
@@ -104,10 +122,16 @@ steps:
       - rpc_not_called: rank_move
 
   - id: cross-lane-drag-is-refused
-    title: A rank drag into a different ranked lane writes nothing
+    title: A rank drag into a different lane's order is refused, not silently swallowed
+    # Not a bug: reordering a card INTO another lane's order would write a rank
+    # for a card that is not in that lane, which is invisible until the order
+    # is read back. Moving a card between lanes is a different feature (a
+    # transfer, not a reorder) and is not built. Here the drop is refused
+    # outright, so the browser shows a no-drop cursor instead of pretending.
     goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_rpc_auth\"],\"pinned\":[\"thr_roadmap\",\"thr_ship_release\"]}"
     drag: { from: thr_rpc_auth, to: thr_roadmap, edge: before }
     assert:
+      - expect_drop_refused: true
       - store: { "status:unread": [thr_rpc_auth], pinned: [thr_roadmap, thr_ship_release] }
       - rpc_not_called: rank_move
 

@@ -58,6 +58,41 @@ async function startHarness(port) {
 }
 
 /**
+ * A DataTransfer that enforces the browser's protected mode, which a plain
+ * `new DataTransfer()` does NOT.
+ *
+ * In a real drag the payload is write-only until the drop: `getData` returns
+ * "" during `dragover`, and only `setData` (dragstart) / `getData` (drop,
+ * dragend) are honoured. `types` stays readable throughout. A harness built
+ * on a bare DataTransfer therefore lets code that reads the payload mid-drag
+ * look like it works, when in the product it silently sees nothing — which is
+ * exactly how a whole-column reorder shipped and then did nothing for the
+ * operator. Every drag in this suite runs through here.
+ *
+ * Installed into the page (not the Node closure) because the drag helpers run
+ * in the browser and cannot see anything defined out here.
+ */
+function installProtectedDrag() {
+  window.__protectedDrag = () => {
+    // A real DataTransfer, because DragEvent's constructor rejects a plain
+    // object. Only `getData` is shadowed, to reproduce protected mode.
+    const transfer = new DataTransfer();
+    const realGetData = transfer.getData.bind(transfer);
+    const reading = { on: false };
+    Object.defineProperty(transfer, "getData", {
+      configurable: true,
+      value: (format) => (reading.on ? realGetData(format) : ""),
+    });
+    // Test hook: the browser flips these rules per event type, so the harness
+    // flips them too. `types` is deliberately left real and readable.
+    transfer._armRead = (on) => {
+      reading.on = on;
+    };
+    return transfer;
+  };
+}
+
+/**
  * Page-context drag. Runs in the browser because HTML5 drag needs a real
  * DataTransfer and coordinates on the target's own box.
  */
@@ -70,22 +105,30 @@ const pageDrag = ({ from, to, edge }) => {
   const anchor = source.querySelector("a[draggable]");
   if (!anchor) throw new Error(`source ${from} has no draggable anchor`);
 
-  const transfer = new DataTransfer();
+  const transfer = window.__protectedDrag();
+  transfer._armRead(true); // dragstart: the writer may read back what it wrote
   anchor.dispatchEvent(
     new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: transfer }),
   );
-  if (transfer.getData("text/focus-board-rank") === "") {
-    return { dropped: false, reason: "drag payload carried no rank key" };
-  }
+  const carried = transfer.types.some((type) => type.includes("focus-board-rank"));
+  if (!carried) return { dropped: false, reason: "drag payload carried no rank marker" };
 
   const box = target.getBoundingClientRect();
   const clientY = edge === "before" ? box.top + box.height * 0.2 : box.top + box.height * 0.8;
   const point = { bubbles: true, cancelable: true, dataTransfer: transfer, clientX: box.left + 8, clientY };
-  target.dispatchEvent(new DragEvent("dragover", point));
-  const hadLine = target.matches(":before") || getComputedStyle(target, "::before").content !== "none";
-  target.dispatchEvent(new DragEvent("drop", point));
+
+  // Protected mode: the payload is unreadable while the pointer moves.
+  transfer._armRead(false);
+  const over = new DragEvent("dragover", point);
+  target.dispatchEvent(over);
+  // A drop is only permitted if some dragover handler called preventDefault.
+  const dropAllowed = over.defaultPrevented;
+
+  transfer._armRead(true);
+  const drop = new DragEvent("drop", point);
+  target.dispatchEvent(drop);
   anchor.dispatchEvent(new DragEvent("dragend", { bubbles: true, dataTransfer: transfer }));
-  return { dropped: true, hadLine };
+  return { dropped: true, dropAllowed };
 };
 
 /** Thread ids a lane shows, in display order, from the cards' hrefs. */
@@ -127,32 +170,33 @@ const pageDragToColumn = ({ from, column }) => {
 };
 
 /**
- * Hover a card's chosen half and report the insertion line. Split from
- * `pageLineShown` because the dragover sets React state: reading the computed
- * style in the same task would sample the DOM before the commit.
+ * Hover a card's chosen half. Split from `pageLineShown` because the dragover
+ * sets React state: reading the computed style in the same task would sample
+ * the DOM before the commit.
  */
 const pageHover = ({ from, to, edge }) => {
   const slot = (id) => document.querySelector(`li[data-rank-slot="${id}"]`);
   const source = slot(from);
   const target = slot(to);
   if (!source || !target) throw new Error(`hover: missing slot (${from} → ${to})`);
-  const transfer = new DataTransfer();
+  const transfer = window.__protectedDrag();
   const anchor = source.querySelector("a[draggable]");
+  transfer._armRead(true);
   anchor.dispatchEvent(
     new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: transfer }),
   );
   const box = target.getBoundingClientRect();
   const clientY = edge === "before" ? box.top + box.height * 0.2 : box.top + box.height * 0.8;
-  target.dispatchEvent(
-    new DragEvent("dragover", {
-      bubbles: true,
-      cancelable: true,
-      dataTransfer: transfer,
-      clientX: box.left + 8,
-      clientY,
-    }),
-  );
-  return { ok: true };
+  transfer._armRead(false);
+  const over = new DragEvent("dragover", {
+    bubbles: true,
+    cancelable: true,
+    dataTransfer: transfer,
+    clientX: box.left + 8,
+    clientY,
+  });
+  target.dispatchEvent(over);
+  return { ok: true, dropAllowed: over.defaultPrevented };
 };
 
 /** Is an insertion line rendered on that card's chosen edge? */
@@ -179,8 +223,13 @@ const pageKey = ({ card, key, alt }) => {
 const pageLiveRegion = () =>
   [...document.querySelectorAll('[aria-live="polite"]')].map((el) => el.textContent?.trim() ?? "").join(" | ");
 
+/** Does this step declare a top-level assertion of that name? */
+function rule_has(step, name) {
+  return (step.assert ?? []).some((rule) => rule[name] !== undefined);
+}
+
 /** Turn one YAML step's assertions into pass/fail records. */
-async function check(step, page) {
+async function check(step, page, gestureResults = []) {
   const results = [];
   const expect = (name, ok, detail) => results.push({ name, ok, detail });
 
@@ -255,6 +304,15 @@ async function check(step, page) {
         Object.entries(want).every(([k, v]) => last[k] === v);
       expect(`rank_move ${JSON.stringify(want)}`, hit, `last call args ${JSON.stringify(last)}`);
     }
+    if (rule.expect_drop_refused === true) {
+      // The inverse of the normal rule: a cross-lane reorder is refused by
+      // design, so nothing must authorise it. A `true` here is the pass.
+      expect(
+        "cross-lane drop refused",
+        gestureResults.some((r) => r.name === "drop permitted during drag" && r.ok === false),
+        "the drop was permitted, so a cross-lane reorder could land",
+      );
+    }
     if (rule.rpc_called_method !== undefined) {
       const methods = await page.evaluate(() =>
         globalThis.__uat.calls().map((call) => call.method),
@@ -275,12 +333,17 @@ async function check(step, page) {
       // Hover first, then sample after React has committed the line.
       const wants = [rule.insertion_line, rule.no_insertion_line].filter((r) => r !== undefined);
       for (const want of wants) {
-        await page.evaluate(pageHover, want);
+        const hoverOutcome = await page.evaluate(pageHover, want);
         await sleep(150);
         const probe = { to: want.to, edge: want.edge };
         const line = await page.evaluate(pageLineShown, probe);
         if (want === rule.insertion_line) {
           expect("insertion line visible", line.shown, line.reason);
+          expect(
+            "drop permitted during hover",
+            hoverOutcome.dropAllowed !== false,
+            "no dragover handler called preventDefault — a real browser would refuse this drop",
+          );
         } else {
           expect("no insertion line", !line.shown, `a line rendered anyway (${line.reason})`);
         }
@@ -307,6 +370,9 @@ async function runSuite(file, { port, browser }) {
   try {
     for (const step of suite.steps) {
       if (step.goto !== undefined) {
+        // Before any document script runs, so the app and the helpers share
+        // one page.
+        await page.evaluateOnNewDocument(installProtectedDrag);
         await page.goto(`${base}${step.goto}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
         await page.waitForSelector("section[aria-label]", { timeout: 30_000 });
         await page.evaluate((t) => document.documentElement.classList.toggle("dark", t === "dark"), theme);
@@ -318,6 +384,10 @@ async function runSuite(file, { port, browser }) {
       const preResults = step.assert_before_drag
         ? await check({ assert: step.assert_before_drag }, page)
         : [];
+      // Failures recorded here still fall through to the step's own
+      // assertions, so a broken drop shows up alongside what it broke rather
+      // than replacing it.
+      const gestureResults = [];
       if (step.drag !== undefined) {
         const outcome = await page.evaluate(pageDrag, step.drag);
         if (outcome.dropped === false) {
@@ -326,6 +396,15 @@ async function runSuite(file, { port, browser }) {
           ] });
           continue;
         }
+        // The rule a real browser enforces and a bare DataTransfer does not:
+        // some dragover handler must call preventDefault or the browser
+        // refuses the drop. `false` here means the reorder "works" in this
+        // harness and does nothing at all for the operator.
+        gestureResults.push({
+          name: "drop permitted during drag",
+          ok: outcome.dropAllowed !== false,
+          detail: "no dragover handler called preventDefault — a real browser would refuse this drop",
+        });
         await sleep(200);
       }
       if (step.drag_to_column !== undefined) {
@@ -339,7 +418,11 @@ async function runSuite(file, { port, browser }) {
         await page.evaluate(pageKey, step.key);
         await sleep(200);
       }
-      const results = [...preResults, ...(await check(step, page))];
+      const results = [
+        ...preResults,
+        ...(rule_has(step, "expect_drop_refused") ? [] : gestureResults),
+        ...(await check(step, page, gestureResults)),
+      ];
       report.steps.push({
         id: step.id,
         title: step.title,

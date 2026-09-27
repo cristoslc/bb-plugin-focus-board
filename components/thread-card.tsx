@@ -6,6 +6,7 @@ import { threadState } from "./grouping";
 import { findTicketRefs, resolveRepoSlug, type TicketRef } from "@/lib/tickets";
 import type { GitHubItemStatus } from "@/lib/tracker-status";
 import { grandchildCountFor } from "./nesting";
+import { rankDragType } from "../lib/rank";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
 
 function relativeTime(timestamp: number, now: number): string {
@@ -56,11 +57,13 @@ interface ThreadCardProps {
   /** Reduced opacity for family members that did not match the filters. */
   dimmed?: boolean;
   /**
-   * Set when this card sits in a ranked column. Its presence in the drag
-   * payload is what marks the drag as a same-column reorder, so the column
-   * drop handlers (Done, Unread) leave it alone.
+   * The lane this card's drag belongs to. Written into the drag type name so
+   * the board can recognise a same-lane drag during `dragover`, which is the
+   * only moment it can authorise the drop.
    */
   rankKey?: string;
+  /** Reports the card a drag started on, so the board can hold it. */
+  onRankDragStart?: (threadId: string | null) => void;
   onOpen: () => void;
   /** The currently open thread; a nested child row matching it is highlighted. */
   activeThreadId?: string | null;
@@ -207,6 +210,7 @@ export function ThreadCard({
   childrenByParent,
   dimmed,
   rankKey,
+  onRankDragStart,
   onOpen,
   activeThreadId,
   onOpenThread,
@@ -260,10 +264,15 @@ export function ThreadCard({
           onDragStart={(event) => {
             event.dataTransfer.setData("text/focus-board-id", thread.id);
             if (rankKey !== undefined) {
-              event.dataTransfer.setData("text/focus-board-rank", rankKey);
+              // The lane rides in the drag TYPE, not a payload value: the
+              // payload is unreadable until the drop, and dragover is
+              // exactly when the drop has to be authorised.
+              event.dataTransfer.setData(rankDragType(rankKey), "");
+              onRankDragStart?.(thread.id);
             }
             event.dataTransfer.effectAllowed = "move";
           }}
+          onDragEnd={() => onRankDragStart?.(null)}
           onClick={(event) => {
             // Let modified clicks (middle-click handled natively, cmd/ctrl new
             // window) pass through; the host also routes plain clicks on href.

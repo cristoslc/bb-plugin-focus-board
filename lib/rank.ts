@@ -88,6 +88,37 @@ export function columnIsRanked(store: RankStore, columnKey: string): boolean {
 }
 
 /**
+ * The drag type that marks a drag as originating in `rankKey`'s lane.
+ *
+ * The lane rides in the drag TYPE NAME, not in a payload value. A real browser
+ * holds the drag payload write-only until the drop — `getData` returns ""
+ * during `dragover` — so a handler that decides from `getData` mid-drag
+ * silently sees nothing, never calls `preventDefault`, and the browser then
+ * refuses the drop outright. `types` is readable for the whole drag, so the
+ * lane is discoverable at exactly the moment the drop must be authorised.
+ * This is the difference between a reorder that works and one that does
+ * nothing at all for the operator.
+ *
+ * Lowercased because browsers lowercase custom drag type names.
+ */
+export const RANK_DRAG_TYPE_PREFIX = "application/x-focus-board-rank:";
+
+export const rankDragType = (rankKey: string): string =>
+  `${RANK_DRAG_TYPE_PREFIX}${rankKey.toLowerCase()}`;
+
+/** Is this drag the one that started in `rankKey`'s lane? Safe mid-drag. */
+export function isLaneDrag(
+  types: ArrayLike<string>,
+  rankKey: string,
+): boolean {
+  const wanted = rankDragType(rankKey);
+  for (let i = 0; i < types.length; i++) {
+    if (types[i] === wanted) return true;
+  }
+  return false;
+}
+
+/**
  * Append to the bottom of the order. Separate from applyMove because "drop
  * below the last card" and "drop at the top" are different intents that share
  * a null in the RPC payload.
