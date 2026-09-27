@@ -70,10 +70,55 @@ export function useSdk(): unknown {
   };
 }
 
+/**
+ * In-memory rank store for the harness, mirroring the server's KV row:
+ * columnKey → sparse ordered id list. Seeded from `?ranks=` (a JSON object)
+ * so a UAT pass can start from a ranked column, and mutated by rank_move the
+ * way the real server mutates it. `__uat` exposes it to the page so a driver
+ * can seed and inspect it without going through the app.
+ */
+let simRanks: Record<string, string[]> = {};
+const uatCalls: { method: string; args?: unknown }[] = [];
+(globalThis as unknown as { __uat?: unknown }).__uat = {
+  seedRanks: (orders: Record<string, string[]>) => {
+    simRanks = structuredClone(orders);
+  },
+  ranks: () => structuredClone(simRanks),
+  calls: () => structuredClone(uatCalls),
+  resetCalls: () => {
+    uatCalls.length = 0;
+  },
+};
+
 const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
+  uatCalls.push({ method, args });
   if (method === "done_list") return { doneIds: SIM_DONE_IDS, records: {} };
   if (method === "sweep_config_get") {
     return { doneArchiveDays: 7, idleArchiveDays: 30 };
+  }
+  if (method === "rank_list") return { orders: structuredClone(simRanks) };
+  if (method === "rank_move") {
+    // The same move semantics as lib/rank.ts, applied in the harness so a
+    // UAT pass exercises a real state change rather than a stub.
+    const { columnKey, threadId, beforeId, toEnd } = args as {
+      columnKey: string;
+      threadId: string;
+      beforeId: string | null;
+      toEnd: boolean;
+    };
+    const order = simRanks[columnKey] ?? [];
+    const rest = order.filter((id) => id !== threadId);
+    simRanks[columnKey] = toEnd
+      ? [...rest, threadId]
+      : beforeId === null
+        ? [threadId, ...rest]
+        : (() => {
+            const at = rest.indexOf(beforeId);
+            return at === -1
+              ? [...rest, threadId]
+              : [...rest.slice(0, at), threadId, ...rest.slice(at)];
+          })();
+    return { columnKey, order: [...simRanks[columnKey]] };
   }
   return {};
 };

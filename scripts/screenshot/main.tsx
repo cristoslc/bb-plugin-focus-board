@@ -21,6 +21,17 @@ window.localStorage.setItem(
   params.get("paneWidth") ?? "480",
 );
 
+// Seed the harness's rank store before the app's first rank_list call, so a
+// UAT pass can start from a column that already has a stored order.
+const seedRanks = params.get("ranks");
+if (seedRanks !== null) {
+  const uat = (globalThis as unknown as {
+    __uat?: { seedRanks: (orders: Record<string, string[]>) => void };
+  }).__uat;
+  if (!uat) throw new Error("harness: rank seeding requested but __uat is missing");
+  uat.seedRanks(JSON.parse(seedRanks) as Record<string, string[]>);
+}
+
 const Component = registeredNavPanel.component;
 const rootElement = document.getElementById("root");
 if (!Component || !rootElement) throw new Error("harness failed to initialize");

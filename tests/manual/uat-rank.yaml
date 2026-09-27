@@ -1,0 +1,151 @@
+# Operator-assisted E2E: per-column rank ordering.
+#
+# Rendered and driven for real: the harness mounts the actual app.tsx against
+# the mocked SDK (scripts/screenshot), and each drag is a real HTML5 drag
+# gesture — dragstart, dragover on the target's chosen half, drop — so the
+# handlers under test are the ones the board ships, not a simulation of them.
+#
+# Run: npm run uat -- tests/manual/uat-rank.yaml
+#
+# The Unread lane's three simulated cards, in the derived recency order the
+# board shows with no rank stored:
+#   thr_rpc_auth (26m) · thr_uat_queue (2h) · thr_review_pr (3h)
+suite: rank-ordering
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5173
+defaults:
+  groupBy: status
+  theme: dark
+
+steps:
+  - id: fresh-install-can-reach-the-reorder
+    title: A first-time user with no stored order can drag, and the drop writes one
+    # This step is the one every other step in this suite used to assume. It
+    # failed until seed-on-first-intent: an unranked lane used to mark no drop
+    # slots at all, so the feature was dark on a fresh install. Now every card
+    # is a drop target for its own lane's drag, and the first drop creates the
+    # order — the drag IS the intent.
+    goto: "?groupBy=status"
+    assert_before_drag:
+      - rank_slots: { column: unread, count: 3 }
+      - column_ordered: { column: unread, ordered: false }
+    drag: { from: thr_review_pr, to: thr_rpc_auth, edge: before }
+    assert:
+      - column: unread
+        ordered: [thr_review_pr, thr_rpc_auth, thr_uat_queue]
+      # Sparse by design: the first drop records only the card it moved, not
+      # the whole column. The rest keep recency until they are ranked.
+      - store: { "status:unread": ["thr_review_pr"] }
+      - column_ordered: { column: unread, ordered: true }
+
+  - id: fresh-install-drop-to-done-still-works
+    title: With every lane draggable, dropping on Done still marks done
+    # The cost of removing the gate: a drag now carries a rank key, which used
+    # to be the signal that suppressed the Done/Unread column handlers. This
+    # pins that cross-lane drops were not broken by the change.
+    goto: "?groupBy=status"
+    drag_to_column: { from: thr_rpc_auth, column: done }
+    assert:
+      - rpc_called_method: done_set
+
+  - id: unranked-lane-is-recency
+    title: A lane with no stored order reads newest-first
+    goto: "?groupBy=status"
+    assert:
+      - column: unread
+        ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]
+      - column_ordered: { column: unread, ordered: false }
+
+  - id: unread-column-is-ranked
+    title: The Unread lane reads in its stored order instead of recency
+    goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_review_pr\",\"thr_rpc_auth\"]}"
+    assert:
+      - column: unread
+        ordered: [thr_review_pr, thr_rpc_auth, thr_uat_queue]
+      - column_ordered: { column: unread, ordered: true }
+
+  - id: drag-top-half-anchors-on-that-card
+    title: Dropping on a card's top half lands in front of it
+    goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_rpc_auth\",\"thr_uat_queue\",\"thr_review_pr\"]}"
+    drag: { from: thr_review_pr, to: thr_rpc_auth, edge: before }
+    assert:
+      - column: unread
+        ordered: [thr_review_pr, thr_rpc_auth, thr_uat_queue]
+      - rpc_called: { columnKey: "status:unread", threadId: thr_review_pr, beforeId: thr_rpc_auth, toEnd: false }
+      - store: { "status:unread": [thr_review_pr, thr_rpc_auth, thr_uat_queue] }
+
+  - id: drag-bottom-half-lands-past-that-card
+    title: Dropping on a card's bottom half lands past it, not on it
+    goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_rpc_auth\",\"thr_uat_queue\",\"thr_review_pr\"]}"
+    drag: { from: thr_review_pr, to: thr_rpc_auth, edge: after }
+    assert:
+      # Lands between thr_rpc_auth and thr_uat_queue — one slot FURTHER than
+      # the top-half case, which is the whole point of the two halves.
+      - column: unread
+        ordered: [thr_rpc_auth, thr_review_pr, thr_uat_queue]
+      - store: { "status:unread": [thr_rpc_auth, thr_review_pr, thr_uat_queue] }
+
+  - id: drop-below-last-card-appends
+    title: Dropping below the last card appends
+    goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_rpc_auth\",\"thr_uat_queue\",\"thr_review_pr\"]}"
+    drag: { from: thr_rpc_auth, to: thr_review_pr, edge: after }
+    assert:
+      - column: unread
+        ordered: [thr_uat_queue, thr_review_pr, thr_rpc_auth]
+      - rpc_called: { columnKey: "status:unread", threadId: thr_rpc_auth, beforeId: null, toEnd: true }
+
+  - id: drop-on-self-is-a-no-op
+    title: Dropping a card on itself writes nothing
+    goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_rpc_auth\",\"thr_uat_queue\",\"thr_review_pr\"]}"
+    drag: { from: thr_uat_queue, to: thr_uat_queue, edge: after }
+    assert:
+      - store: { "status:unread": [thr_rpc_auth, thr_uat_queue, thr_review_pr] }
+      - rpc_not_called: rank_move
+
+  - id: cross-lane-drag-is-refused
+    title: A rank drag into a different ranked lane writes nothing
+    goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_rpc_auth\"],\"pinned\":[\"thr_roadmap\",\"thr_ship_release\"]}"
+    drag: { from: thr_rpc_auth, to: thr_roadmap, edge: before }
+    assert:
+      - store: { "status:unread": [thr_rpc_auth], pinned: [thr_roadmap, thr_ship_release] }
+      - rpc_not_called: rank_move
+
+  - id: pinned-lane-ranks-across-groupings
+    title: The Pinned lane is ranked under every grouping
+    goto: "?groupBy=project&ranks={\"pinned\":[\"thr_roadmap\",\"thr_ship_release\"]}"
+    assert:
+      - column: pinned
+        ordered: [thr_roadmap, thr_ship_release]
+      - column_ordered: { column: pinned, ordered: true }
+
+  - id: keyboard-move-down
+    title: Alt+ArrowDown moves a card down one slot
+    goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_rpc_auth\",\"thr_uat_queue\",\"thr_review_pr\"]}"
+    key: { card: thr_rpc_auth, key: ArrowDown, alt: true }
+    assert:
+      - column: unread
+        ordered: [thr_uat_queue, thr_rpc_auth, thr_review_pr]
+      - store: { "status:unread": [thr_uat_queue, thr_rpc_auth, thr_review_pr] }
+
+  - id: keyboard-move-to-top
+    title: Alt+ArrowUp on the second card lands it at the very top
+    goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_uat_queue\",\"thr_review_pr\",\"thr_rpc_auth\"]}"
+    key: { card: thr_review_pr, key: ArrowUp, alt: true }
+    assert:
+      - column: unread
+        ordered: [thr_review_pr, thr_uat_queue, thr_rpc_auth]
+
+  - id: insertion-line-is-shown
+    title: The insertion line appears on the hovered half
+    goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_rpc_auth\",\"thr_uat_queue\",\"thr_review_pr\"]}"
+    assert:
+      - insertion_line: { from: thr_review_pr, to: thr_rpc_auth, edge: before }
+      - no_insertion_line: { from: thr_review_pr, to: thr_review_pr, edge: after }
+
+  - id: move-is-announced
+    title: A completed move is announced for screen readers
+    goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_rpc_auth\",\"thr_uat_queue\",\"thr_review_pr\"]}"
+    key: { card: thr_rpc_auth, key: ArrowDown, alt: true }
+    assert:
+      - live_region: "Moved to position 2 of 3 in Unread."

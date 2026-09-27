@@ -55,6 +55,12 @@ interface ThreadCardProps {
   childrenByParent?: ReadonlyMap<string, readonly PluginSidebarThread[]>;
   /** Reduced opacity for family members that did not match the filters. */
   dimmed?: boolean;
+  /**
+   * Set when this card sits in a ranked column. Its presence in the drag
+   * payload is what marks the drag as a same-column reorder, so the column
+   * drop handlers (Done, Unread) leave it alone.
+   */
+  rankKey?: string;
   onOpen: () => void;
   /** The currently open thread; a nested child row matching it is highlighted. */
   activeThreadId?: string | null;
@@ -199,6 +205,7 @@ export function ThreadCard({
   childCount,
   childrenByParent,
   dimmed,
+  rankKey,
   onOpen,
   activeThreadId,
   onOpenThread,
@@ -250,6 +257,9 @@ export function ThreadCard({
           draggable
           onDragStart={(event) => {
             event.dataTransfer.setData("text/focus-board-id", thread.id);
+            if (rankKey !== undefined) {
+              event.dataTransfer.setData("text/focus-board-rank", rankKey);
+            }
             event.dataTransfer.effectAllowed = "move";
           }}
           onClick={(event) => {

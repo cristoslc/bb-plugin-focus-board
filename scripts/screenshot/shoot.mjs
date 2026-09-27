@@ -25,80 +25,57 @@ const browser = await puppeteer.launch({
   defaultViewport: VIEWPORTS.desktop,
   args: ["--hide-scrollbars"],
 });
-let page = await browser.newPage();
-
-// Each theme pass gets a fresh page: reusing one page across viewport flips,
-// navigations, and theme changes eventually wedges Chrome's emulation state
-// (navigation never dispatches domcontentloaded).
-async function freshPage() {
-  await page.close();
-  page = await browser.newPage();
-}
 
 let currentTheme = "dark";
 
-// The harness's palette is driven by the `dark` class on <html>; flipping it
-// is how we capture both theme variants of each shot.
-async function setTheme(theme) {
-  await page.evaluate((t) => {
+async function goto(target, query) {
+  await target.goto(`${BASE}${query}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await target.waitForSelector("section[aria-label]", { timeout: 30_000 });
+  await target.evaluate((t) => {
     document.documentElement.classList.toggle("dark", t === "dark");
-  }, theme);
-}
-
-async function setViewport(name) {
-  // CDP emulation calls occasionally race Chrome's internal state and throw;
-  // a short retry reliably gets through.
-  for (let attempt = 1; ; attempt++) {
-    try {
-      await page.setViewport(VIEWPORTS[name]);
-      return;
-    } catch (error) {
-      if (attempt >= 3) throw error;
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-  }
-}
-
-async function goto(query) {
-  await page.goto(`${BASE}${query}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  await page.waitForSelector("section[aria-label]", { timeout: 30_000 });
-  await setTheme(currentTheme);
+  }, currentTheme);
   await new Promise((resolve) => setTimeout(resolve, 400));
 }
 
-async function shot(name) {
-  await page.screenshot({ path: `${OUT}${name}-${currentTheme}.png`, timeout: 30_000 });
+/** A real mouse click starts an HTML5 drag and swallows the mouseup, so
+ *  dispatch the click programmatically instead. */
+async function openPermissionsPane(target) {
+  await target.evaluate(() => {
+    const el = document.querySelector('a[href$="thr_permissions"]');
+    if (!el) throw new Error("card not found");
+    el.click();
+  });
+  await target.waitForSelector('aside[aria-label^="Thread:"]', { timeout: 5_000 });
+  await new Promise((resolve) => setTimeout(resolve, 500));
 }
 
+// Each shot gets its OWN page with the viewport set once, at creation. The
+// earlier driver flipped one shared page's viewport between shots, and Chrome
+// reliably wedged its emulation state partway through (TargetCloseError on
+// Emulation.setTouchEmulationEnabled), failing roughly two runs in three. One
+// page per shot removes the repeated emulation flips entirely.
+const SHOTS = [
+  { name: "board-thread-pane", viewport: "desktop", pane: true },
+  { name: "phone-board", viewport: "phone", pane: false },
+  { name: "phone-thread-pane", viewport: "phone", pane: true },
+];
+
 async function captureAll() {
-  console.log("  thread pane");
-  await setViewport("desktop");
-  await goto("?groupBy=status");
-  // A real mouse click starts an HTML5 drag on the draggable card and swallows
-  // the mouseup, so dispatch the click programmatically instead.
-  await page.evaluate(() => {
-    const el = document.querySelector('a[href$="thr_permissions"]');
-    if (!el) throw new Error("card not found");
-    el.click();
-  });
-  await page.waitForSelector('aside[aria-label^="Thread:"]', { timeout: 5_000 });
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  await shot("board-thread-pane");
-
-  console.log("  phone board");
-  await setViewport("phone");
-  await goto("?groupBy=status");
-  await shot("phone-board");
-
-  console.log("  phone thread pane");
-  await page.evaluate(() => {
-    const el = document.querySelector('a[href$="thr_permissions"]');
-    if (!el) throw new Error("card not found");
-    el.click();
-  });
-  await page.waitForSelector('aside[aria-label^="Thread:"]', { timeout: 5_000 });
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  await shot("phone-thread-pane");
+  for (const { name, viewport, pane } of SHOTS) {
+    console.log(`  ${name}`);
+    const shotPage = await browser.newPage();
+    try {
+      await shotPage.setViewport(VIEWPORTS[viewport]);
+      await goto(shotPage, "?groupBy=status");
+      if (pane) await openPermissionsPane(shotPage);
+      await shotPage.screenshot({
+        path: `${OUT}${name}-${currentTheme}.png`,
+        timeout: 30_000,
+      });
+    } finally {
+      await shotPage.close().catch(() => {});
+    }
+  }
 }
 
 await mkdir(OUT, { recursive: true });
@@ -106,7 +83,6 @@ await mkdir(OUT, { recursive: true });
 for (const theme of ["dark", "light"]) {
   currentTheme = theme;
   console.log(`${theme} theme`);
-  await freshPage();
   await captureAll();
 }
 

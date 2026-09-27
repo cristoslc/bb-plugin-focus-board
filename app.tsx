@@ -29,6 +29,7 @@ import {
   assembleBoard,
 } from "./components/nesting";
 import { doneAtToEpochMs } from "./lib/done-metadata";
+import { appendTo, applyMove, orderForColumn, type RankStore } from "./lib/rank";
 import {
   DEFAULT_DONE_ARCHIVE_DAYS,
   DEFAULT_IDLE_ARCHIVE_DAYS,
@@ -170,6 +171,30 @@ function BoardPage() {
     (threadId: string) => doneExtras[threadId]?.keep === true,
     [doneExtras],
   );
+
+  // Manual column orders, keyed by columnRankKey. A column with no stored
+  // order stays in the derived order and shows no drag affordance, so the
+  // board never implies a reorder it will silently drop.
+  const [ranks, setRanks] = useState<RankStore>({});
+  const refetchRanks = useCallback(() => {
+    rpc.call("rank_list").then(
+      // Guarded, not trusted: the zod contract says `orders` is there, but a
+      // host running a different plugin build could answer without it, and
+      // an unvalidated `undefined` would throw during render and take the
+      // whole board down over an optional feature.
+      (result) => {
+        const orders = (result as { orders?: unknown }).orders;
+        if (orders !== undefined && orders !== null && typeof orders === "object") {
+          setRanks(orders as RankStore);
+        }
+      },
+      () => {}, // Ranking is optional state; the board works without it.
+    );
+  }, [rpc]);
+  useEffect(() => {
+    refetchRanks();
+  }, [refetchRanks]);
+  useRealtime("rank-changed", refetchRanks);
 
   // The sidebar view refreshes over its own realtime subscription, but
   // archive/unarchive changes also bump the pane's button state and the
@@ -359,8 +384,9 @@ function BoardPage() {
     () =>
       assembleBoard(searched, groupBy, { projects, providers }, frozenColumns, doneIds, Date.now(), {
         nestingEnabled: nestChildren,
+        ranks,
       }),
-    [searched, groupBy, projects, providers, frozenColumns, doneIds, nestChildren],
+    [searched, groupBy, projects, providers, frozenColumns, doneIds, nestChildren, ranks],
   );
   const columns = assembly.columns;
 
@@ -634,6 +660,7 @@ function BoardPage() {
         ) : (
           <Board
             columns={columns}
+            groupBy={groupBy}
             activeThreadId={openThreadId}
             doneIds={doneIds}
             nestedChildrenByParent={assembly.nestedChildrenByParent}
@@ -662,6 +689,21 @@ function BoardPage() {
               if (thread !== undefined && !thread.isUnread) {
                 void actions.setRead(threadId, false);
               }
+            }}
+            rankStore={ranks}
+            onRankMove={(columnKey, threadId, beforeId, toEnd) => {
+              // Optimistic: the card snaps to its slot immediately, and the
+              // rank-changed refetch confirms. A rejected write settles back
+              // to the stored order on the next refetch rather than sticking.
+              setRanks((prev) => ({
+                ...prev,
+                [columnKey]: toEnd
+                  ? appendTo(orderForColumn(prev, columnKey), threadId)
+                  : applyMove(orderForColumn(prev, columnKey), threadId, beforeId),
+              }));
+              rpc
+                .call("rank_move", { columnKey, threadId, beforeId, toEnd })
+                .catch(() => refetchRanks());
             }}
             menuActionsFor={(thread) => {
               const isThreadDone = doneIds.has(thread.id);
