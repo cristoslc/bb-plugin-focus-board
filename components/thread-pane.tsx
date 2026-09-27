@@ -354,10 +354,10 @@ export function ThreadPane({
           <Icon name="X" className="size-4" />
         </Button>
       </header>
-      {/* The host's embedded ThreadChat hides pending interactions of kind
-          "plugin" (the main view renders them), which swallows the
-          ask-user-question form and leaves the tool call blocking. This card
-          restores the form in the pane. */}
+      {/* The host's embedded ThreadChat renders no pending-interaction UI
+          (only the main thread view does), so a question asked while this
+          pane is open would block the tool call until timeout. This card
+          renders the host's question form in the pane instead. */}
       <PendingInteractionCard threadId={thread.id} onOpenInMainView={onMaximize} />
       <div className="min-h-0 flex-1">
         <ThreadChat threadId={thread.id} variant="compact" layout="contained" />
