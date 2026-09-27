@@ -3,6 +3,16 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.5] — 2026-09-26
+
+### Fixed
+
+- **Keep the selected card in view when the thread pane opens**: the pane
+  squeezes the board, which could leave the open thread's card clipped off
+  to the right. The board's horizontal scroller now keeps the active card
+  (parent card or nested child row) in the visible range when the pane
+  opens or is drag-resized.
+
 ## [0.3.4] — 2026-09-26
 
 ### Fixed
