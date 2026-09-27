@@ -3,6 +3,47 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+<!-- 0.3.2 through 0.3.5 (from main) are listed below; this release follows. -->
+## [0.4.0] — 2026-09-27
+## [0.4.0] — 2026-09-27
+
+### Added
+
+- **Per-column card rank ordering.** Drag cards up and down inside a column to
+  put them in your own order instead of the board's recency order.
+  - Order is stored per column, not per thread, so it describes the column's
+    reading order. A card that leaves a column and comes back returns to the
+    slot it left, because the stored order is a sparse list of thread ids that
+    is never renumbered.
+  - The Pinned and Done lanes keep one order across every grouping; other
+    lanes are namespaced by grouping, so a project named "unread" cannot
+    collide with the Attention lane.
+  - **Seed on first intent**: no setup step and no toggle. Every card is a
+    drop target for its own lane, the insertion line appears on hover, and the
+    first drop writes the order. A lane with a stored order says so in its
+    header, so a card sitting out of recency order does not read as a bug.
+  - **Keyboard parity**: Alt+ArrowUp / Alt+ArrowDown moves a focused card one
+    slot, and each move is announced in a live region. A drag-only reorder is
+    a reorder half the people cannot do.
+  - Drop on a card's top half to land in front of it, bottom half to land past
+    it, or below the last card to append. Dropping a card on itself, or
+    dragging into a different lane's order, writes nothing.
+
+### Changed
+
+- The board marks each lane and each card with `data-column-id`,
+  `data-column-ordered`, and `data-rank-slot` attributes, which the UAT
+  harness reads to drive real drag gestures.
+- The simulated board in the screenshot harness gained a third unread thread
+  and an in-memory rank store, and the screenshots are regenerated to match.
+
+### Fixed
+
+- `scripts/screenshot/shoot.mjs` failed roughly two runs in three with
+  `TargetCloseError` on `Emulation.setTouchEmulationEnabled`. It flipped one
+  shared page's viewport between shots; each shot now gets its own page with
+  the viewport set once.
+
 ## [0.3.5] — 2026-09-26
 
 ### Fixed

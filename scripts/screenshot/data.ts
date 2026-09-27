@@ -155,6 +155,13 @@ export const SIM_THREADS: readonly SimThread[] = [
 
   // Unread
   thread({
+    id: "thr_uat_queue",
+    displayTitle: "Queue the UAT pass for the rank lane",
+    isUnread: true,
+    lastReadAt: SIM_NOW - 3 * HOUR,
+    updatedAt: SIM_NOW - 2 * HOUR,
+  }),
+  thread({
     id: "thr_rpc_auth",
     displayTitle: "Research: bb plugin RPC auth tokens",
     isUnread: true,
