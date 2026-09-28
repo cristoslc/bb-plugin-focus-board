@@ -872,9 +872,12 @@ function BoardPage({ subPath }: { subPath: string }) {
                   label: "Open in new window",
                   icon: "NewTab",
                   run: () => {
+                    // noopener: the opened tab must not reach back through
+                    // window.opener into this board.
                     window.open(
                       new URL(thread.href, window.location.origin).toString(),
                       "_blank",
+                      "noopener",
                     );
                   },
                 },

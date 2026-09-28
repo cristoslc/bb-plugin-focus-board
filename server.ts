@@ -43,6 +43,21 @@ import { resolveRepoSlug } from "./lib/tickets";
 import { resolveWithinRoot } from "./lib/workspace-paths";
 import type { JsonValue } from "@get-bb/plugin-sdk";
 
+/**
+ * A rank store column key: a bare lane name ("pinned", "done") or
+ * `${groupBy}:${columnId}` with a host id (project, provider). The shape
+ * guards reject the two things that are never legitimate but are dangerous
+ * as a computed object key on the KV store write (`__proto__` reassigns
+ * the store object's prototype) and control characters (invisible
+ * pollution of the KV row and realtime payloads). Everything real passes:
+ * host ids, colons, dots.
+ */
+const COLUMN_KEY_SCHEMA = z
+  .string()
+  .min(1)
+  .max(200)
+  .regex(/^(?!__proto__$)[^\x00-\x1f\x7f]+$/, "not a column key");
+
 export const rpcContract = defineRpcContract({
   done_list: {
     input: z.null(),
@@ -109,7 +124,7 @@ export const rpcContract = defineRpcContract({
    */
   rank_move: {
     input: z.object({
-      columnKey: z.string().min(1),
+      columnKey: COLUMN_KEY_SCHEMA,
       threadId: z.string().min(1),
       /** The card to land in front of; null means the top of the column. */
       beforeId: z.string().nullable(),
@@ -123,7 +138,7 @@ export const rpcContract = defineRpcContract({
        */
       visibleIds: z.array(z.string()),
     }),
-    output: z.object({ columnKey: z.string().min(1), order: z.array(z.string()) }),
+    output: z.object({ columnKey: COLUMN_KEY_SCHEMA, order: z.array(z.string()) }),
   },
 });
 

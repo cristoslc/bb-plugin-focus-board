@@ -66,6 +66,49 @@ describe("rank_move", () => {
     expect((await list(rpc)).orders["status:unread"]).toEqual(["thr_b", "thr_a"]);
   });
 
+  it("rejects column keys that are never legitimate", async () => {
+    // Security: columnKey becomes a computed object key on the KV store
+    // write. `__proto__` would reassign the store object's prototype, and
+    // control characters are invisible pollution of the KV row. The
+    // contract rejects both shapes before the handler runs.
+    const rpc = await setup();
+    await expect(
+      rpc.callRpc("rank_move", {
+        columnKey: "__proto__",
+        threadId: "thr_a",
+        beforeId: null,
+        toEnd: false,
+        visibleIds: ["thr_a"],
+      }),
+    ).rejects.toThrow();
+    await expect(
+      rpc.callRpc("rank_move", {
+        columnKey: "status:\u0000unread",
+        threadId: "thr_a",
+        beforeId: null,
+        toEnd: false,
+        visibleIds: ["thr_a"],
+      }),
+    ).rejects.toThrow();
+    // The store is untouched: nothing was written under either key.
+    expect(await list(rpc)).toEqual({ orders: {} });
+  });
+
+  it("accepts every real key shape", async () => {
+    const rpc = await setup();
+    for (const columnKey of ["pinned", "done", "status:unread", "project:proj_a", "provider:claude-code", "idle-earlier"]) {
+      await expect(
+        rpc.callRpc("rank_move", {
+          columnKey,
+          threadId: "thr_a",
+          beforeId: null,
+          toEnd: false,
+          visibleIds: ["thr_a"],
+        }),
+      ).resolves.toMatchObject({ columnKey });
+    }
+  });
+
   it("publishes rank-changed so other boards refetch", async () => {
     const rpc = await setup();
     await move(rpc, "status:unread", "thr_a", null);
