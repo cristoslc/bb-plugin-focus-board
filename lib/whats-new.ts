@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.1";
+export const APP_VERSION = "0.5.2";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    version: "0.5.2",
+    items: [
+      "Right-clicking a nested child thread now opens the child's own menu instead of the parent card's, and every card menu names the thread it acts on.",
+    ],
+  },
   {
     version: "0.5.1",
     items: [
