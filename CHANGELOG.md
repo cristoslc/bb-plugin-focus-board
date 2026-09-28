@@ -3,6 +3,18 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.1] — 2026-09-27
+
+### Fixed
+
+- **Selected option indicators in the pane question form were invisible**:
+  the check rendered in `primary-foreground` on a transparent border, and
+  this theme's `primary` is not a strong fill, so picking an answer looked
+  like nothing happened. Selected options now fill foreground-on-background,
+  matching the plugin's own checkbox (radio-shaped for single-select, square
+  for multi-select). Selection logic was always correct; only the visual was
+  missing.
+
 ## [0.4.0] — 2026-09-27
 
 ### Added
