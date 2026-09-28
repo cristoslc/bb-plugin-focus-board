@@ -132,4 +132,14 @@ describe("inlineCodeMarkdownPath", () => {
     expect(inlineCodeMarkdownPath("")).toBeNull();
     expect(inlineCodeMarkdownPath("a.md".repeat(200))).toBeNull();
   });
+
+  it("never linkifies script-executing schemes disguised as file paths", () => {
+    // Security: a code span whose text is a scheme-qualified url must stay
+    // plain, whatever the extension looks like. These are the classic
+    // javascript:/data: payload shapes a message could contain.
+    expect(inlineCodeMarkdownPath("javascript:alert(1)//x.md")).toBeNull();
+    expect(inlineCodeMarkdownPath("javascript://x.md")).toBeNull();
+    expect(inlineCodeMarkdownPath("data:text/html,<script>alert(1)</script>.md")).toBeNull();
+    expect(inlineCodeMarkdownPath("vbscript:x.md")).toBeNull();
+  });
 });

@@ -48,6 +48,47 @@ describe("collectInlineCodeCandidates", () => {
       "docs/notes.md",
     ]);
   });
+
+  it("treats html-like code text as a literal path, never as markup", () => {
+    // Security: the decorator classifies code spans by textContent and
+    // writes the path back with setAttribute. A span whose text looks like
+    // HTML must stay inert text; nothing may parse it as markup.
+    const root = markdownMessage(
+      "<p><code>docs/&lt;script&gt;alert(1)&lt;/script&gt;.md</code></p>",
+    );
+    const candidates = collectInlineCodeCandidates(root);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.path).toBe("docs/<script>alert(1)</script>.md");
+  });
+});
+
+describe("decorated element safety", () => {
+  it("decoration adds only a static icon: no scripts, handlers, or parsed markup", async () => {
+    // Security: the host-rendered message can contain any text, including
+    // html-like code spans. decorateCode is the only raw-HTML sink in the
+    // plugin (a constant inline SVG); pin that a decorated element gains
+    // no script elements, no inline handlers, and no markup interpretation.
+    const path = "docs/<script>alert(1)</script>.md";
+    const root = markdownMessage(
+      `<p><code>${path
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")}</code></p>`,
+    );
+    const exists = checker(new Map([[path, true]]));
+    await decorateVerifiedInlineCodeLinks(root, "env-xss", exists.check);
+    const code = root.querySelector("code");
+    expect(decoratedCodePath(code!)).toBe(path);
+    expect(root.querySelectorAll("script, iframe, object, embed")).toHaveLength(0);
+    for (const element of Array.from(root.querySelectorAll("*"))) {
+      for (const attribute of Array.from(element.attributes)) {
+        expect(/^on/i.test(attribute.name) ? attribute.name : "").toBe("");
+      }
+    }
+    // The span's text is untouched: the path was set via setAttribute, not
+    // re-parsed as html.
+    expect(code?.textContent).toContain("<script>alert(1)</script>");
+  });
 });
 
 describe("decorateVerifiedInlineCodeLinks", () => {
