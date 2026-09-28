@@ -27,11 +27,20 @@ export function isExternalHref(href: string): boolean {
  * relative href is treated as anchored at the workspace root; `..` segments
  * climb within the root and a climb past it yields null (traversal is not a
  * workspace path). Returns null for empty results, queries, and fragments.
+ *
+ * Only file-looking destinations qualify: the final segment must contain a
+ * dot (or start with one), matching how the host's own markdown local-file
+ * routing identifies files. This keeps in-app route anchors such as thread
+ * mention chips (`/threads/thr_...`) and extensionless routes on native
+ * routing instead of hijacking them as nonexistent workspace files.
  */
 export function workspacePathFromHref(href: string): string | null {
 	// Drop any query/fragment; workspace paths have neither.
-	const raw = href.split(/[?#]/, 1)[0];
-	if (raw === "") return null;
+	const withoutQuery = href.split(/[?#]/, 1)[0];
+	if (withoutQuery === "") return null;
+	// The host also accepts line/column suffixes like `:12`, `:12-20`, and
+	// `:12:5`; strip them the same way so `docs/x.mmd:12` still resolves.
+	const raw = withoutQuery.replace(/:\d+(?::\d+)?(?:-\d+(?::\d+)?)?$/u, "");
 	const segments: string[] = [];
 	for (const part of raw.split("/")) {
 		if (part === "" || part === ".") continue;
@@ -43,5 +52,7 @@ export function workspacePathFromHref(href: string): string | null {
 		segments.push(part);
 	}
 	if (segments.length === 0) return null;
+	const basename = segments[segments.length - 1] ?? "";
+	if (!(basename.startsWith(".") || basename.includes("."))) return null;
 	return segments.join("/");
 }

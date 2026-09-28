@@ -63,4 +63,23 @@ describe("workspacePathFromHref", () => {
     expect(workspacePathFromHref("./")).toBeNull();
     expect(workspacePathFromHref(".")).toBeNull();
   });
+
+  it("leaves in-app route anchors like thread mentions alone", () => {
+    // Mention chips render as `<a href="/threads/thr_...">`; without a dot
+    // in the final segment they are app routes, not workspace files.
+    expect(workspacePathFromHref("/threads/thr_3ux2jmacqb")).toBeNull();
+    expect(workspacePathFromHref("threads/thr_3ux2jmacqb")).toBeNull();
+    expect(workspacePathFromHref("/settings")).toBeNull();
+  });
+
+  it("strips host-style line suffixes before resolving", () => {
+    expect(workspacePathFromHref("docs/erd.mmd:12")).toBe("docs/erd.mmd");
+    expect(workspacePathFromHref("docs/erd.mmd:12-20")).toBe("docs/erd.mmd");
+    expect(workspacePathFromHref("docs/erd.mmd:12:5")).toBe("docs/erd.mmd");
+    expect(workspacePathFromHref("docs/erd.mmd#L12-L20")).toBe("docs/erd.mmd");
+  });
+
+  it("does not treat a dotless route with a line suffix as a file", () => {
+    expect(workspacePathFromHref("/threads/thr_abc:12")).toBeNull();
+  });
 });
