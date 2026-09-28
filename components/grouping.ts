@@ -1,4 +1,11 @@
 import type { PluginSidebarProject, PluginSidebarThread } from "@get-bb/plugin-sdk/app";
+import {
+  columnRankKey,
+  compareByRank,
+  orderForColumn,
+  type ColumnOrder,
+  type RankStore,
+} from "../lib/rank";
 
 export type GroupBy =
   | "none"
@@ -126,13 +133,25 @@ export function filterThreads(
   });
 }
 
-function sorted(threads: readonly PluginSidebarThread[]): PluginSidebarThread[] {
-  return [...threads].sort((a, b) => {
-    const aPinned = a.isPinned ? 0 : 1;
-    const bPinned = b.isPinned ? 0 : 1;
-    if (aPinned !== bPinned) return aPinned - bPinned;
-    return b.updatedAt - a.updatedAt;
-  });
+/** The board's derived order: pinned first, then newest-first. This is the
+ *  tiebreak under a manual rank AND the whole order for an unranked column.
+ *  Exported so the nesting pass sorts a family in the same order its column
+ *  does — a parent honouring a rank with children that ignore it is a lie. */
+export function derivedCompare(
+  a: PluginSidebarThread,
+  b: PluginSidebarThread,
+): number {
+  const aPinned = a.isPinned ? 0 : 1;
+  const bPinned = b.isPinned ? 0 : 1;
+  if (aPinned !== bPinned) return aPinned - bPinned;
+  return b.updatedAt - a.updatedAt;
+}
+
+function sorted(
+  threads: readonly PluginSidebarThread[],
+  order: ColumnOrder = [],
+): PluginSidebarThread[] {
+  return [...threads].sort(compareByRank(order, derivedCompare));
 }
 
 /**
@@ -197,6 +216,7 @@ export function buildColumns(
   frozenColumns: ReadonlyMap<string, { id: string; label: string }> = new Map(),
   doneIds: ReadonlySet<string> = new Set(),
   now: number = Date.now(),
+  ranks: RankStore = {},
 ): BoardColumn[] {
   // Threads marked Done form their own column, always farthest right on the
   // Attention board and present (dimmed) on every other grouping.
@@ -235,17 +255,29 @@ export function buildColumns(
       if (keyDiff !== 0) return keyDiff;
       return a[1].label.localeCompare(b[1].label);
     })
-    .map(([id, bucket]) => ({ id, label: bucket.label, threads: sorted(bucket.threads) }));
+    .map(([id, bucket]) => ({
+      id,
+      label: bucket.label,
+      threads: sorted(bucket.threads, orderForColumn(ranks, columnRankKey(groupBy, id))),
+    }));
 
   // The Pinned column renders whenever a card has entered it, at the far
   // left, before every other column.
   if (pinned.length > 0) {
-    columns.unshift({ id: "pinned", label: "Pinned", threads: sorted(pinned) });
+    columns.unshift({
+      id: "pinned",
+      label: "Pinned",
+      threads: sorted(pinned, orderForColumn(ranks, columnRankKey(groupBy, "pinned"))),
+    });
   }
 
   // The Done column renders whenever a card has entered it, at the far right.
   if (done.length > 0) {
-    columns.push({ id: "done", label: "Done", threads: sorted(done) });
+    columns.push({
+      id: "done",
+      label: "Done",
+      threads: sorted(done, orderForColumn(ranks, columnRankKey(groupBy, "done"))),
+    });
   }
   // A grouping with no buckets at all still shows the flat column.
   if (groupBy === "none" && columns.length === 0) {

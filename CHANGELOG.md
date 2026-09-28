@@ -3,6 +3,115 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.5] — 2026-09-27
+
+### Fixed
+
+- **The first drag-and-drop reorder in a column silently did nothing unless
+  the drop landed at the very top.** The rank model is sparse, and a first
+  move ranked only the dragged card — which the comparator then sorts above
+  every unranked card, so "drop below the second card" re-sorted nothing.
+  Moves now also rank every card ABOVE the drop point (the smallest write
+  that honours the intent); cards below it stay unranked, preserving the
+  leave-a-gap, re-enter-in-the-gap property. Applies to mouse drops, empty-
+  space drops, and Alt+Arrow keyboard moves.
+
+## [0.4.4] — 2026-09-27
+
+### Fixed
+
+- **Thread mention links in pane messages were swallowed.** The 0.4.3 link
+  interceptor treated every relative anchor as a workspace file, so mention
+  chips rendering as `/threads/thr_...` anchors stopped navigating. The
+  interceptor now mirrors the host's own local-file routing heuristic: only
+  destinations whose final segment contains a dot are treated as files, and
+  bb's line/column suffixes (`:12`, `:12-20`, `:12:5`, `#L12-L20`) are
+  stripped before resolving the path.
+
+## [0.4.3] — 2026-09-27
+
+### Fixed
+
+- **Relative file links in pane messages no longer open as broken browser
+  URLs.** A message like `[ERD](docs/erd.mmd)` rendered as an anchor the
+  browser resolved against the bb app origin, landing on an error page. The
+  pane now intercepts left-clicks on relative anchors and reopens the target
+  as a live workspace file in bb's preview panel, resolved against the
+  thread's environment. Absolute URLs and fragment links keep native
+  routing; `../` climbs that escape the workspace root are refused.
+
+## [0.4.2] — 2026-09-27
+
+### Fixed
+
+- **Rank refusal banners could not be dismissed.** The "Reorder refused"
+  banner sat over the board until the next drag. It now has an X button, and
+  auto-dismisses after 10 seconds — generous, so it is never gone before it
+  was read. A repeat refusal restarts the timer rather than inheriting a
+  stale one.
+
+## [0.4.1] — 2026-09-27
+
+### Fixed
+
+- **Selected option indicators in the pane question form were invisible**:
+  the check rendered in `primary-foreground` on a transparent border, and
+  this theme's `primary` is not a strong fill, so picking an answer looked
+  like nothing happened. Selected options now fill foreground-on-background,
+  matching the plugin's own checkbox (radio-shaped for single-select, square
+  for multi-select). Selection logic was always correct; only the visual was
+  missing.
+
+## [0.4.0] — 2026-09-27
+
+### Added
+
+- **Per-column card rank ordering.** Drag cards up and down inside a column to
+  put them in your own order instead of the board's recency order.
+  - Order is stored per column, not per thread, so it describes the column's
+    reading order. A card that leaves a column and comes back returns to the
+    slot it left, because the stored order is a sparse list of thread ids that
+    is never renumbered.
+  - The Pinned and Done lanes keep one order across every grouping; other
+    lanes are namespaced by grouping, so a project named "unread" cannot
+    collide with the Attention lane.
+  - **Seed on first intent**: no setup step and no toggle. Every card is a
+    drop target for its own lane, the insertion line appears on hover, and the
+    first drop writes the order. A lane with a stored order says so in its
+    header, so a card sitting out of recency order does not read as a bug.
+  - **Keyboard parity**: Alt+ArrowUp / Alt+ArrowDown moves a focused card one
+    slot, and each move is announced in a live region. A drag-only reorder is
+    a reorder half the people cannot do.
+  - Drop on a card's top half to land in front of it, bottom half to land past
+    it, or below the last card to append. Dropping a card on itself, or
+    dragging into a different lane's order, writes nothing.
+- **Pane question form: parity with the host's QuestionForm**: the pending
+  question card now mirrors the host's shipped form rather than a stacked
+  long form. Sequential questions sit behind a scrollable tab strip with a
+  N-of-M counter and Back/Next; the banner collapses (Escape collapses it
+  before the pane closes); the form body is height-capped and scrolls
+  internally so the transcript keeps its space, which was blocking the phone
+  layout. Free-text-only questions (the common provider shape) open with the
+  textarea visible, number keys 1-N select options, and the form also disables
+  while the interaction's server-side status is `resolving`, with stale
+  selections filtered before submission. Analysis of the original gaps is in
+  `docs/pane-question-gap-analysis.md`.
+
+### Changed
+
+- The board marks each lane and each card with `data-column-id`,
+  `data-column-ordered`, and `data-rank-slot` attributes, which the UAT
+  harness reads to drive real drag gestures.
+- The simulated board in the screenshot harness gained a third unread thread
+  and an in-memory rank store, and the screenshots are regenerated to match.
+
+### Fixed
+
+- `scripts/screenshot/shoot.mjs` failed roughly two runs in three with
+  `TargetCloseError` on `Emulation.setTouchEmulationEnabled`. It flipped one
+  shared page's viewport between shots; each shot now gets its own page with
+  the viewport set once.
+
 ## [0.3.5] — 2026-09-26
 
 ### Fixed

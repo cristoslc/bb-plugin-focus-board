@@ -26,6 +26,14 @@ import {
 } from "./lib/done-metadata";
 import { DEFAULT_DONE_ARCHIVE_DAYS, DEFAULT_IDLE_ARCHIVE_DAYS } from "./lib/sweep";
 import {
+  RANK_KV_KEY,
+  applyMoveVisible,
+  orderForColumn,
+  parseRankStore,
+  rankRowFromStore,
+  type RankStore,
+} from "./lib/rank";
+import {
   sweepCliEligible,
   type SweepEligible,
   type SweepFact,
@@ -73,12 +81,43 @@ export const rpcContract = defineRpcContract({
     input: z.object({ threadId: z.string().min(1), keep: z.boolean() }),
     output: z.object({ threadId: z.string().min(1), keep: z.boolean() }),
   },
+
+  rank_list: {
+    input: z.null(),
+    output: z.object({ orders: z.record(z.string(), z.array(z.string())) }),
+  },
+  /**
+   * A single move, not a whole-column write: two boards open on the same
+   * column each lose only their own move, instead of the second write
+   * clobbering every rank the first one established.
+   */
+  rank_move: {
+    input: z.object({
+      columnKey: z.string().min(1),
+      threadId: z.string().min(1),
+      /** The card to land in front of; null means the top of the column. */
+      beforeId: z.string().nullable(),
+      /** Drop below the last ranked card instead of at an anchor. */
+      toEnd: z.boolean(),
+      /**
+       * The column's displayed order at drop time. The move ranks every card
+       * above the drop point from this list — a first drop into an unranked
+       * column otherwise ranks one card and reorders nothing, because the
+       * sparse comparator sorts all ranked cards above unranked ones.
+       */
+      visibleIds: z.array(z.string()),
+    }),
+    output: z.object({ columnKey: z.string().min(1), order: z.array(z.string()) }),
+  },
 });
 
 /** Realtime signal after every done/keep write. Payload is { threadId, done }
  *  (was { count } before the metadata migration); consumers refetch on the
  *  event rather than reading the payload. */
 const DONE_CHANGED = "done-changed";
+/** Realtime signal after a rank write. Payload names the column; boards
+ *  refetch the whole store, so a stale payload cannot desync an order. */
+const RANK_CHANGED = "rank-changed";
 /** Legacy KV key written before the metadata migration. */
 const LEGACY_DONE_KEY = "done-thread-ids";
 /** Per-thread sweep keep flags, independent of Done marks. */
@@ -312,6 +351,14 @@ export default async function plugin(bb: BbPluginApi) {
     await bb.storage.kv.set(KEEP_KEY, keepRowFromStore(store));
   }
 
+  async function readRanks(): Promise<RankStore> {
+    return parseRankStore(await bb.storage.kv.get<unknown>(RANK_KV_KEY));
+  }
+
+  async function writeRanks(store: RankStore): Promise<void> {
+    await bb.storage.kv.set(RANK_KV_KEY, rankRowFromStore(store));
+  }
+
   bb.rpc.register(rpcContract, {
     done_list: async () => {
       const [{ doneIds, records }, kept] = await Promise.all([
@@ -365,6 +412,28 @@ export default async function plugin(bb: BbPluginApi) {
       // subscribes to; payload consumers refetch, so done:false is a dummy.
       bb.realtime.publish(DONE_CHANGED, { threadId, done: false });
       return { threadId, keep };
+    },
+    rank_list: async () => {
+      const store = await readRanks();
+      return { orders: rankRowFromStore(store) };
+    },
+    rank_move: async ({ columnKey, threadId, beforeId, toEnd, visibleIds }) => {
+      const store = await readRanks();
+      const current = orderForColumn(store, columnKey);
+      const next = applyMoveVisible(
+        current,
+        visibleIds,
+        threadId,
+        beforeId,
+        toEnd,
+      );
+      // Skip the write (and the refetch) when the move changes nothing, so
+      // a drop that lands where the card already sits is a no-op everywhere.
+      if (next.join("\u0000") !== current.join("\u0000")) {
+        await writeRanks({ ...store, [columnKey]: next });
+        bb.realtime.publish(RANK_CHANGED, { columnKey });
+      }
+      return { columnKey, order: next };
     },
   });
 

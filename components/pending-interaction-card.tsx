@@ -1,8 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSdk } from "@get-bb/plugin-sdk/app";
 import type { PluginBrowserBbSdk } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
+import { usePointerCoarse } from "@/components/ui/hooks/use-pointer-coarse";
+import { cn } from "@/lib/utils";
 
 /**
  * Pending interactions are invisible inside `ThreadChat`: the host's embedded
@@ -23,7 +32,11 @@ import { Button } from "@/components/ui/button";
  *   through `interactions.respond({ value: { answers } })`; the card sends
  *   the same value for the well-known question shape.
  *
- * Payloads the pane cannot render fall back to a pointer at the main view.
+ * The form mirrors the host's `QuestionForm`: one question at a time behind a
+ * tab strip (answered tabs strike through), number-key shortcuts, Enter
+ * advances / submits, a collapsible banner so the transcript stays readable,
+ * and a height-capped, internally-scrolling body. Payloads the pane cannot
+ * render fall back to a pointer at the main view.
  */
 
 type InteractionsListResult = Awaited<
@@ -53,12 +66,22 @@ export type QuestionAnswers = Record<
   { selected: string[]; freeText?: string }
 >;
 
-interface QuestionFormData {
-  questions: QuestionSpec[];
+interface QuestionAnswerState {
+  selected: string[];
+  otherSelected: boolean;
+  otherText: string;
 }
 
 const MAX_OPTIONS_PER_QUESTION = 4;
 const MAX_FREE_TEXT_LENGTH = 4096;
+const OTHER_LABEL = "Other…";
+/** Textarea auto-grow bounds, matching the host's `$0`/`e2`. */
+const TEXTAREA_MIN_HEIGHT = 84;
+const TEXTAREA_MAX_HEIGHT = 158;
+/** Host's `t2`: max height of a selected option's preview block. */
+const PREVIEW_MAX_HEIGHT = 220;
+/** Height cap for the scrollable question body; keeps the chat usable. */
+const BODY_MAX_CLASS = "max-h-[45dvh]";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -110,7 +133,7 @@ function parseQuestion(value: unknown): QuestionSpec | null {
  * payload is it, directly. Returns null for anything else (other plugins'
  * forms the pane cannot draw).
  */
-export function parseQuestionData(data: unknown): QuestionFormData | null {
+export function parseQuestionData(data: unknown): { questions: QuestionSpec[] } | null {
   if (!isRecord(data) || !Array.isArray(data.questions) || data.questions.length === 0) {
     return null;
   }
@@ -123,32 +146,95 @@ export function parseQuestionData(data: unknown): QuestionFormData | null {
   return { questions };
 }
 
-interface QuestionAnswerState {
-  selected: string[];
-  other: boolean;
-  otherText: string;
+/**
+ * Selections filtered to values the current option list actually offers —
+ * the host does the same before validating and submitting, so a payload
+ * change can never carry orphaned values out.
+ */
+export function knownSelections(
+  question: QuestionSpec,
+  selected: string[],
+): string[] {
+  const known = new Set(question.options.map((option) => option.value));
+  return selected.filter((value) => known.has(value));
 }
 
-export function initialAnswerState(): QuestionAnswerState {
-  return { selected: [], other: false, otherText: "" };
+/** A question with at least one option defaults to picking, not typing. */
+function hasOptions(question: QuestionSpec): boolean {
+  return question.options.length > 0;
+}
+
+export function initialAnswerState(question: QuestionSpec): QuestionAnswerState {
+  return { selected: [], otherSelected: !hasOptions(question), otherText: "" };
 }
 
 export function isAnswered(question: QuestionSpec, state: QuestionAnswerState): boolean {
-  if (state.selected.length > 0) return true;
-  return state.other && state.otherText.trim().length > 0;
+  if (knownSelections(question, state.selected).length > 0) return true;
+  return state.otherSelected && state.otherText.trim().length > 0;
 }
 
 export function buildAnswerValue(
   question: QuestionSpec,
   state: QuestionAnswerState,
 ): { selected: string[]; freeText?: string } {
-  // Single-select "Other" answers carry only the free text; multi-select can
-  // combine picked options with free text, mirroring the host form.
-  const freeText = state.other ? state.otherText.trim() : undefined;
-  const selected = state.other && !question.multiSelect ? [] : state.selected;
-  const answer: { selected: string[]; freeText?: string } = { selected };
-  if (freeText !== undefined && freeText.length > 0) answer.freeText = freeText;
-  return answer;
+  const trimmed = state.otherText.trim();
+  const hasText = state.otherSelected && trimmed.length > 0;
+  // Mirrors the host: single-select "Other" answers carry only the free
+  // text; multi-select can combine picked options with free text.
+  if (question.multiSelect) {
+    const selected = knownSelections(question, state.selected);
+    return hasText ? { selected, freeText: trimmed } : { selected };
+  }
+  return state.otherSelected
+    ? hasText
+      ? { selected: [], freeText: trimmed }
+      : { selected: [] }
+    : { selected: knownSelections(question, state.selected) };
+}
+
+export function buildAnswers(
+  questions: QuestionSpec[],
+  states: Record<string, QuestionAnswerState>,
+): QuestionAnswers {
+  const answers: QuestionAnswers = {};
+  for (const question of questions) {
+    const state = states[question.id] ?? initialAnswerState(question);
+    answers[question.id] = buildAnswerValue(question, state);
+  }
+  return answers;
+}
+
+/** Tab label for a question; the host defaults to "Question N". */
+export function tabLabel(question: QuestionSpec, index: number): string {
+  return question.shortLabel ?? `Question ${index + 1}`;
+}
+
+/**
+ * Maps a number key to the choice it selects for the visible question:
+ * options in order, then Other when it renders. Digits beyond that are
+ * unmapped. Returns null for keys with no target.
+ */
+export function choiceForDigitKey(
+  question: QuestionSpec,
+  key: string,
+): { kind: "option"; value: string } | { kind: "other" } | null {
+  const index = Number(key) - 1;
+  if (!Number.isInteger(index) || index < 0) return null;
+  const option = question.options[index];
+  if (option !== undefined) return { kind: "option", value: option.value };
+  // Other only takes a shortcut when it renders as a row.
+  if (index === question.options.length && hasOptions(question) && question.allowFreeText) {
+    return { kind: "other" };
+  }
+  return null;
+}
+
+/** The question visible at a given step, clamped to range. */
+export function visibleQuestion(
+  questions: QuestionSpec[],
+  step: number,
+): QuestionSpec | null {
+  return questions[step] ?? null;
 }
 
 function OptionRow({
@@ -156,12 +242,14 @@ function OptionRow({
   selected,
   multiSelect,
   disabled,
+  shortcut,
   onToggle,
 }: {
   option: QuestionOption;
   selected: boolean;
   multiSelect: boolean;
   disabled: boolean;
+  shortcut?: string;
   onToggle: () => void;
 }) {
   return (
@@ -174,17 +262,26 @@ function OptionRow({
         className="flex w-full min-w-0 items-start gap-2 rounded-sm px-2 py-1.5 text-left outline-none hover:bg-state-hover focus-visible:bg-state-hover disabled:cursor-not-allowed disabled:opacity-60"
       >
         <span
-          className={
-            selected
-              ? "mt-0.5 flex size-3.5 shrink-0 items-center justify-center rounded-[4px] border border-primary bg-primary text-primary-foreground"
-              : "mt-0.5 flex size-3.5 shrink-0 items-center justify-center rounded-[4px] border border-input"
-          }
+          className={cn(
+            "mt-0.5 flex size-3.5 shrink-0 items-center justify-center border",
+            // This theme's `primary` is not a strong fill; the plugin's own
+            // checkbox marks checked with foreground-on-background.
+            selected ? "border-foreground bg-foreground text-background" : "border-input",
+            multiSelect ? "rounded-[4px]" : "rounded-full",
+          )}
           aria-hidden
         >
           {selected ? <Icon name="Check" className="size-2.5" /> : null}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-xs font-medium leading-snug">{option.label}</span>
+          <span className="block text-xs font-medium leading-snug">
+            {option.label}
+            {shortcut !== undefined ? (
+              <kbd className="ml-1.5 rounded-sm border border-border px-1 font-sans text-[10px] text-muted-foreground/70">
+                {shortcut}
+              </kbd>
+            ) : null}
+          </span>
           {option.description !== undefined ? (
             <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
               {option.description}
@@ -193,10 +290,87 @@ function OptionRow({
         </span>
       </button>
       {selected && !multiSelect && option.preview !== undefined ? (
-        <pre className="mx-2 mb-1 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-background p-2 font-mono text-xs leading-relaxed text-foreground">
+        <pre
+          className="mx-2 mb-1 max-h-[220px] overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-background p-2 font-mono text-xs leading-relaxed text-foreground"
+          style={{ maxHeight: PREVIEW_MAX_HEIGHT }}
+        >
           {option.preview}
         </pre>
       ) : null}
+    </div>
+  );
+}
+
+/** Auto-grows the textarea between the host's min/max heights. */
+function useAutoResize(disabled: boolean) {
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+  const resize = useCallback(
+    (element: HTMLTextAreaElement | null = ref.current) => {
+      if (element === null || disabled) return;
+      element.style.height = "auto";
+      element.style.height = `${Math.min(
+        Math.max(element.scrollHeight, TEXTAREA_MIN_HEIGHT),
+        TEXTAREA_MAX_HEIGHT,
+      )}px`;
+    },
+    [disabled],
+  );
+  return { ref, resize };
+}
+
+function QuestionTabStrip({
+  questions,
+  states,
+  step,
+  onSelect,
+  disabled,
+}: {
+  questions: QuestionSpec[];
+  states: Record<string, QuestionAnswerState>;
+  step: number;
+  onSelect: (step: number) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+        {questions.map((question, index) => {
+          const current = index === step;
+          const answered = isAnswered(question, states[question.id] ?? initialAnswerState(question));
+          return (
+            <div
+              key={question.id}
+              className={
+                current
+                  ? "relative inline-flex h-7 shrink-0 items-center rounded-md bg-muted text-foreground"
+                  : "relative inline-flex h-7 shrink-0 items-center rounded-md text-muted-foreground hover:bg-state-hover"
+              }
+            >
+              <button
+                type="button"
+                onClick={() => onSelect(index)}
+                aria-pressed={current}
+                title={question.prompt}
+                disabled={disabled}
+                className="flex h-full min-w-0 items-center rounded-md px-2 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <span
+                  className={
+                    answered
+                      ? "max-w-[180px] truncate text-xs line-through"
+                      : "max-w-[180px] truncate text-xs"
+                  }
+                >
+                  {tabLabel(question, index)}
+                </span>
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <span className="shrink-0 text-xs text-muted-foreground">
+        {step + 1} of {questions.length}
+      </span>
     </div>
   );
 }
@@ -205,148 +379,274 @@ function QuestionForm({
   questions,
   disabled,
   onSubmit,
+  onCancel,
+  cancelCancelsForm,
 }: {
   questions: QuestionSpec[];
   disabled: boolean;
   onSubmit: (answers: QuestionAnswers) => void;
+  onCancel: () => void;
+  /** Labels the footer cancel: Dismiss (cancellable plugin form) vs Stop turn. */
+  cancelCancelsForm: boolean;
 }) {
-  const [answers, setAnswers] = useState<Record<string, QuestionAnswerState>>(() => {
+  const coarse = usePointerCoarse();
+  const [states, setStates] = useState<Record<string, QuestionAnswerState>>(() => {
     const initial: Record<string, QuestionAnswerState> = {};
-    for (const question of questions) initial[question.id] = initialAnswerState();
+    for (const question of questions) initial[question.id] = initialAnswerState(question);
     return initial;
   });
+  const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const current = visibleQuestion(questions, step);
+  const first = step === 0;
+  const last = step === questions.length - 1;
 
   const allAnswered = useMemo(
-    () => questions.every((question) => isAnswered(question, answers[question.id] ?? initialAnswerState())),
-    [questions, answers],
+    () =>
+      questions.length > 0 &&
+      questions.every((question) =>
+        isAnswered(question, states[question.id] ?? initialAnswerState(question)),
+      ),
+    [questions, states],
   );
 
-  const toggleOption = useCallback((question: QuestionSpec, value: string) => {
-    setAnswers((current) => {
-      const state = current[question.id] ?? initialAnswerState();
-      let selected: string[];
-      let other = state.other;
-      if (question.multiSelect) {
-        selected = state.selected.includes(value)
-          ? state.selected.filter((entry) => entry !== value)
-          : [...state.selected, value];
-      } else {
-        selected = state.selected.includes(value) ? [] : [value];
-        other = false;
-      }
-      return { ...current, [question.id]: { ...state, selected, other } };
-    });
-  }, []);
+  const updateState = useCallback(
+    (question: QuestionSpec, update: (state: QuestionAnswerState) => QuestionAnswerState) => {
+      setStates((currentStates) => ({
+        ...currentStates,
+        [question.id]: update(currentStates[question.id] ?? initialAnswerState(question)),
+      }));
+    },
+    [],
+  );
 
-  const toggleOther = useCallback((question: QuestionSpec) => {
-    setAnswers((current) => {
-      const state = current[question.id] ?? initialAnswerState();
-      if (question.multiSelect) {
-        return { ...current, [question.id]: { ...state, other: !state.other } };
-      }
-      return {
-        ...current,
-        [question.id]: { ...state, other: !state.other, selected: [] },
-      };
-    });
-  }, []);
+  const toggleOption = useCallback(
+    (question: QuestionSpec, value: string) => {
+      updateState(question, (state) => {
+        if (question.multiSelect) {
+          const selected = state.selected.includes(value)
+            ? state.selected.filter((entry) => entry !== value)
+            : [...state.selected, value];
+          return { ...state, selected };
+        }
+        return { ...state, selected: state.selected.includes(value) ? [] : [value], otherSelected: false };
+      });
+    },
+    [updateState],
+  );
 
-  const setOtherText = useCallback((questionId: string, text: string) => {
-    setAnswers((current) => {
-      const state = current[questionId] ?? initialAnswerState();
-      return { ...current, [questionId]: { ...state, otherText: text } };
-    });
-  }, []);
+  const toggleOther = useCallback(
+    (question: QuestionSpec) => {
+      updateState(question, (state) => {
+        if (question.multiSelect) return { ...state, otherSelected: !state.otherSelected };
+        return { ...state, selected: [], otherSelected: !state.otherSelected };
+      });
+    },
+    [updateState],
+  );
+
+  const setOtherText = useCallback(
+    (question: QuestionSpec, text: string) => {
+      updateState(question, (state) => ({ ...state, otherText: text }));
+    },
+    [updateState],
+  );
 
   const submit = useCallback(() => {
     if (disabled || submitting || !allAnswered) return;
-    const value: QuestionAnswers = {};
-    for (const question of questions) {
-      const state = answers[question.id] ?? initialAnswerState();
-      if (!isAnswered(question, state)) return;
-      value[question.id] = buildAnswerValue(question, state);
-    }
     setSubmitting(true);
-    onSubmit(value);
-  }, [answers, allAnswered, disabled, onSubmit, questions, submitting]);
+    onSubmit(buildAnswers(questions, states));
+  }, [allAnswered, disabled, onSubmit, questions, states, submitting]);
+
+  /** Next/submit: the host's single action behind its footer button. */
+  const advanceOrSubmit = useCallback(() => {
+    if (!last) {
+      setStep((value) => Math.min(value + 1, questions.length - 1));
+      return;
+    }
+    submit();
+  }, [last, questions.length, submit]);
+
+  // Number-key shortcuts for the visible question, host-style: global while
+  // the form is enabled, ignored while typing in a field.
+  useEffect(() => {
+    if (disabled || current === null) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return;
+      }
+      const choice = choiceForDigitKey(current, event.key);
+      if (choice === null) return;
+      event.preventDefault();
+      if (choice.kind === "option") {
+        toggleOption(current, choice.value);
+        containerRef.current?.focus();
+      } else {
+        toggleOther(current);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [current, disabled, toggleOption, toggleOther]);
 
   const busy = disabled || submitting;
 
+  const { ref: textareaRef, resize: resizeTextarea } = useAutoResize(busy);
+  const otherSelected = current !== null && (states[current.id] ?? initialAnswerState(current)).otherSelected;
+  useLayoutEffect(() => {
+    if (otherSelected) resizeTextarea();
+  }, [otherSelected, resizeTextarea]);
+
+  if (current === null) return null;
+  const state = states[current.id] ?? initialAnswerState(current);
+  const otherShortcutIndex = current.options.length; // 1-based digit for Other
+
   return (
-    <form
-      className="flex min-w-0 flex-col"
-      onSubmit={(event) => {
+    <div
+      ref={containerRef}
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        // Enter on the container (not in a field) advances or submits,
+        // mirroring the host; IME composition passes through.
+        if (
+          event.target !== event.currentTarget ||
+          event.defaultPrevented ||
+          event.nativeEvent.isComposing ||
+          event.key !== "Enter" ||
+          event.shiftKey ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.altKey ||
+          busy
+        ) {
+          return;
+        }
         event.preventDefault();
-        submit();
+        advanceOrSubmit();
       }}
+      className="flex min-h-0 flex-col"
     >
-      {questions.map((question, index) => {
-        const state = answers[question.id] ?? initialAnswerState();
-        return (
-          <fieldset key={question.id} disabled={busy} className="min-w-0 border-t border-border px-3 py-2 first:border-t-0">
-            <div className="mb-1 flex min-w-0 items-center gap-2">
-              {question.shortLabel !== undefined ? (
-                <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                  {question.shortLabel}
-                </span>
-              ) : null}
-              {questions.length > 1 ? (
-                <span className="shrink-0 text-[10px] text-muted-foreground">
-                  {index + 1} of {questions.length}
-                </span>
-              ) : null}
-            </div>
-            <legend className="sr-only">{question.prompt}</legend>
-            <div className="text-sm font-semibold text-foreground">{question.prompt}</div>
-            <div className="mt-1.5 space-y-0.5">
-              {question.options.map((option) => (
-                <OptionRow
-                  key={option.value}
-                  option={option}
-                  selected={state.selected.includes(option.value)}
-                  multiSelect={question.multiSelect}
-                  disabled={busy}
-                  onToggle={() => toggleOption(question, option.value)}
-                />
-              ))}
-              {question.allowFreeText ? (
-                <OptionRow
-                  option={{ value: `${question.id}:other`, label: "Other" }}
-                  selected={state.other}
-                  multiSelect={question.multiSelect}
-                  disabled={busy}
-                  onToggle={() => toggleOther(question)}
-                />
-              ) : null}
-            </div>
-            {state.other && question.allowFreeText ? (
-              <textarea
-                aria-label={`Your answer for ${question.shortLabel ?? question.prompt}`}
-                value={state.otherText}
-                rows={2}
-                autoFocus
-                maxLength={MAX_FREE_TEXT_LENGTH}
-                onChange={(event) => setOtherText(question.id, event.target.value)}
-                onKeyDown={(event) => {
-                  event.stopPropagation();
-                }}
-                placeholder="Type your own answer…"
-                className="mt-1.5 w-full resize-none overflow-y-auto rounded-md border border-border bg-surface-raised px-3 py-2 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground focus-visible:border-ring/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/40"
+      {questions.length > 1 ? (
+        <div className="border-t border-border px-3 pb-1 pt-2">
+          <QuestionTabStrip
+            questions={questions}
+            states={states}
+            step={step}
+            onSelect={setStep}
+            disabled={busy}
+          />
+        </div>
+      ) : null}
+      <div className={`min-h-0 touch-pan-y overflow-y-auto overscroll-contain border-t border-border ${BODY_MAX_CLASS}`}>
+        <fieldset disabled={busy} className="min-w-0 px-3 py-2">
+          <legend className="sr-only">{current.prompt}</legend>
+          <div className="text-sm font-semibold text-foreground">{current.prompt}</div>
+          <div className="mt-1.5 space-y-0.5">
+            {current.options.map((option, index) => (
+              <OptionRow
+                key={option.value}
+                option={option}
+                selected={state.selected.includes(option.value)}
+                multiSelect={current.multiSelect}
+                disabled={busy}
+                shortcut={String(index + 1)}
+                onToggle={() => toggleOption(current, option.value)}
+              />
+            ))}
+            {/* The host only renders an Other row when options exist; a
+                free-text-only question opens with the textarea instead. */}
+            {current.allowFreeText && hasOptions(current) ? (
+              <OptionRow
+                option={{ value: `${current.id}:other`, label: OTHER_LABEL }}
+                selected={state.otherSelected}
+                multiSelect={current.multiSelect}
+                disabled={busy}
+                shortcut={String(otherShortcutIndex + 1)}
+                onToggle={() => toggleOther(current)}
               />
             ) : null}
-          </fieldset>
-        );
-      })}
-      <div className="flex items-center gap-2 border-t border-border px-3 py-2">
-        <p className="min-w-0 flex-1 text-xs text-muted-foreground">
-          Answering here unblocks the thread.
-        </p>
-        <Button type="submit" size="sm" disabled={busy || !allAnswered}>
-          {submitting ? "Submitting…" : "Submit answer"}
-        </Button>
+          </div>
+          {state.otherSelected && current.allowFreeText ? (
+            <textarea
+              ref={textareaRef}
+              aria-label={`Your answer for ${current.shortLabel ?? current.prompt}`}
+              value={state.otherText}
+              rows={1}
+              autoFocus={!coarse}
+              autoComplete="off"
+              maxLength={MAX_FREE_TEXT_LENGTH}
+              onChange={(event) => {
+                setOtherText(current, event.target.value);
+                resizeTextarea(event.target);
+              }}
+              onKeyDown={(event) => {
+                // Cmd/Ctrl+Enter submits from the textarea, like the host.
+                if (
+                  !event.nativeEvent.isComposing &&
+                  event.key === "Enter" &&
+                  (event.metaKey || event.ctrlKey)
+                ) {
+                  event.preventDefault();
+                  advanceOrSubmit();
+                  return;
+                }
+                event.stopPropagation();
+              }}
+              placeholder="Type your own answer…"
+              className="mt-1.5 w-full resize-none overflow-y-auto rounded-md border border-border bg-surface-raised px-3 py-2 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground focus-visible:border-ring/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/40"
+              style={{ minHeight: TEXTAREA_MIN_HEIGHT, maxHeight: TEXTAREA_MAX_HEIGHT }}
+            />
+          ) : null}
+        </fieldset>
       </div>
-    </form>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border px-3 py-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={busy}
+          onClick={onCancel}
+          aria-label={
+            cancelCancelsForm
+              ? "Dismiss without answering — the agent proceeds with its best judgement"
+              : "Dismiss without answering — stops the turn, like the main view"
+          }
+        >
+          {cancelCancelsForm ? "Dismiss" : "Stop turn"}
+        </Button>
+        <div className="flex items-center gap-2">
+          {!first ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => setStep((value) => Math.max(value - 1, 0))}
+            >
+              Back
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            size="sm"
+            disabled={busy || (last && !allAnswered)}
+            onClick={advanceOrSubmit}
+          >
+            {submitting ? <Icon name="Spinner" className="size-3 animate-spin" aria-hidden /> : null}
+            {last ? "Submit answer" : "Next"}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -359,8 +659,10 @@ export interface PendingInteractionCardProps {
 export function PendingInteractionCard({ threadId, onOpenInMainView }: PendingInteractionCardProps) {
   const sdk = useSdk();
   const [interaction, setInteraction] = useState<PendingInteractionRow | null>(null);
-  const [dismissError, setDismissError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [dismissing, setDismissing] = useState(false);
+  const [expanded, setExpanded] = useState(true);
+  const toggleRef = useRef<HTMLButtonElement | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -378,7 +680,7 @@ export function PendingInteractionCard({ threadId, onOpenInMainView }: PendingIn
                 (typeof row.payload.kind === "string" && row.payload.kind.includes("/"))),
           ) ?? null;
       setInteraction(pending);
-      setDismissError(null);
+      setActionError(null);
     } catch {
       // Unknown/unavailable thread — no card rather than a broken pane.
       setInteraction(null);
@@ -387,7 +689,8 @@ export function PendingInteractionCard({ threadId, onOpenInMainView }: PendingIn
 
   useEffect(() => {
     setInteraction(null);
-    setDismissError(null);
+    setActionError(null);
+    setExpanded(true);
     void refresh();
   }, [refresh]);
 
@@ -451,7 +754,7 @@ export function PendingInteractionCard({ threadId, onOpenInMainView }: PendingIn
           });
         }
       } catch (cause) {
-        setDismissError(
+        setActionError(
           cause instanceof Error && cause.message.length > 0
             ? cause.message
             : "Submitting the answer failed.",
@@ -466,7 +769,7 @@ export function PendingInteractionCard({ threadId, onOpenInMainView }: PendingIn
   const dismiss = useCallback(async () => {
     if (interaction === null) return;
     setDismissing(true);
-    setDismissError(null);
+    setActionError(null);
     try {
       if (dismissCancelsForm) {
         await sdk.threads.interactions.cancel({ threadId, interactionId: interaction.id });
@@ -476,7 +779,7 @@ export function PendingInteractionCard({ threadId, onOpenInMainView }: PendingIn
         await sdk.threads.stop({ threadId });
       }
     } catch (cause) {
-      setDismissError(
+      setActionError(
         cause instanceof Error && cause.message.length > 0
           ? cause.message
           : "Dismissing the question failed.",
@@ -485,65 +788,103 @@ export function PendingInteractionCard({ threadId, onOpenInMainView }: PendingIn
       setDismissing(false);
       void refresh();
     }
-  }, [interaction, refresh, sdk, threadId]);
+  }, [dismissCancelsForm, interaction, refresh, sdk, threadId]);
 
   if (interaction === null || interaction.payload.kind === "approval") return null;
 
   const title = isUserQuestion ? null : (interaction.payload as { title?: string }).title;
+  // The server marks an in-flight resolution; the host disables from it too.
+  const resolving = interaction.status === "resolving";
+  const busy = dismissing || resolving;
 
   return (
-    <div
-      role="region"
+    <section
       aria-label="Pending question"
+      aria-expanded={expanded}
       data-testid="thread-board-pending-interaction"
+      onKeyDown={(event) => {
+        // Escape collapses the banner first (like the host) and keeps the
+        // pane open; the pane's own Escape handler honors defaultPrevented.
+        if (event.key === "Escape" && expanded && !event.defaultPrevented) {
+          event.preventDefault();
+          event.stopPropagation();
+          setExpanded(false);
+          toggleRef.current?.focus();
+        }
+      }}
       className="mx-3 mt-2 shrink-0 overflow-hidden rounded-lg border border-border bg-card shadow-sm"
     >
-      <div className="flex min-w-0 items-center gap-2 px-3 pb-1 pt-2">
-        <Icon name="MessageQuestion" className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-        <span className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
-          {questionData !== null
-            ? questionData.questions.length === 1
-              ? "Question"
-              : `${questionData.questions.length} questions`
-            : (title ?? "Question")}
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 shrink-0 px-2 text-xs text-muted-foreground hover:text-foreground"
-          disabled={dismissing}
-          onClick={() => void dismiss()}
-          aria-label={
-            dismissCancelsForm
-              ? "Dismiss without answering — the agent proceeds with its best judgement"
-              : "Dismiss without answering — stops the turn, like the main view"
-          }
+      <div className="flex min-h-9 min-w-0 items-center gap-2 pl-3 pr-1.5">
+        <button
+          ref={toggleRef}
+          type="button"
+          aria-controls="focus-board-question-body"
+          aria-expanded={expanded}
+          aria-label={expanded ? "Hide details" : "Show details"}
+          onClick={() => setExpanded((value) => !value)}
+          className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-state-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
-          {dismissCancelsForm ? "Dismiss" : "Stop turn"}
-        </Button>
+          <Icon
+            name="ChevronDown"
+            className={expanded ? "size-3.5 transition-transform duration-200 rotate-180" : "size-3.5 transition-transform duration-200"}
+            aria-hidden
+          />
+        </button>
+        <button
+          type="button"
+          aria-controls="focus-board-question-body"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((value) => !value)}
+          title={
+            questionData !== null && questionData.questions.length === 1
+              ? questionData.questions[0]?.prompt
+              : undefined
+          }
+          className="flex min-h-7 min-w-0 flex-1 items-center rounded-md text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <span
+            className={
+              expanded
+                ? "min-w-0 whitespace-normal text-sm font-semibold text-foreground"
+                : "min-w-0 truncate text-sm font-medium text-foreground"
+            }
+          >
+            {questionData !== null
+              ? questionData.questions.length === 1
+                ? "Question"
+                : `${questionData.questions.length} questions`
+              : (title ?? "Question")}
+          </span>
+        </button>
       </div>
-      {questionData !== null ? (
-        <QuestionForm
-          key={interaction.id}
-          questions={questionData.questions}
-          disabled={dismissing}
-          onSubmit={(answers) => void submitAnswer(answers)}
-        />
-      ) : (
-        <div className="flex items-center gap-2 border-t border-border px-3 py-2">
-          <p className="min-w-0 flex-1 text-xs text-muted-foreground">
-            This form isn&apos;t supported in the board pane.
-          </p>
-          <Button variant="outline" size="sm" onClick={onOpenInMainView}>
-            Open in main view
-          </Button>
+      {expanded ? (
+        <div id="focus-board-question-body" className="pb-2">
+          {questionData !== null ? (
+            <QuestionForm
+              key={interaction.id}
+              questions={questionData.questions}
+              disabled={busy}
+              cancelCancelsForm={dismissCancelsForm}
+              onCancel={() => void dismiss()}
+              onSubmit={(answers) => void submitAnswer(answers)}
+            />
+          ) : (
+            <div className="flex items-center gap-2 border-t border-border px-3 py-2">
+              <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+                This form isn&apos;t supported in the board pane.
+              </p>
+              <Button variant="outline" size="sm" onClick={onOpenInMainView}>
+                Open in main view
+              </Button>
+            </div>
+          )}
+          {actionError !== null ? (
+            <p aria-live="polite" className="border-t border-border px-3 py-1.5 text-xs text-destructive-text">
+              {actionError}
+            </p>
+          ) : null}
         </div>
-      )}
-      {dismissError !== null ? (
-        <p className="border-t border-border px-3 py-1.5 text-xs text-destructive-text">
-          {dismissError}
-        </p>
       ) : null}
-    </div>
+    </section>
   );
 }

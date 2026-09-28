@@ -10,9 +10,16 @@ import {
   STATUS_COLUMN_ORDER,
   buildColumns,
   columnFor,
+  derivedCompare,
   matchesFilter,
   threadState,
 } from "./grouping";
+import {
+  columnRankKey,
+  compareByRank,
+  orderForColumn,
+  type RankStore,
+} from "../lib/rank";
 
 export interface FamilyIndex {
   /** Parent id → its visible children, in input order. */
@@ -52,6 +59,12 @@ export interface NestingOptions {
    * standalone). Default `true`.
    */
   nestingEnabled?: boolean;
+  /**
+   * Manual column orders, keyed by `columnRankKey`. Threaded into column
+   * building AND the nested-sibling sort so a family reads in one order:
+   * a parent that honours a rank with children that ignore it is a lie.
+   */
+  ranks?: RankStore;
 }
 
 /**
@@ -79,13 +92,14 @@ export function assembleBoard(
   options: NestingOptions = {},
 ): BoardAssembly {
   const nestingEnabled = options.nestingEnabled ?? true;
+  const ranks = options.ranks ?? {};
   // Archived threads never take a column slot in either mode; when nesting
   // is OFF they render nowhere at all (matching bb's sidebar, where
   // archiving removes the thread from the list).
   const columnThreads = threads.filter((thread) => !thread.isArchived);
   if (!nestingEnabled) {
     return {
-      columns: buildColumns(columnThreads, groupBy, context, frozenColumns, doneIds, now),
+      columns: buildColumns(columnThreads, groupBy, context, frozenColumns, doneIds, now, ranks),
       nestedChildrenByParent: new Map(),
       childCountByParent: new Map(),
     };
@@ -95,7 +109,7 @@ export function assembleBoard(
   // included — they stay under the parent).
   const familyIndex = buildFamilyIndex(threads);
   const nested = nestUnderParents(
-    buildColumns(columnThreads, groupBy, context, frozenColumns, doneIds, now),
+    buildColumns(columnThreads, groupBy, context, frozenColumns, doneIds, now, ranks),
     threads,
     groupBy,
     context,
@@ -246,6 +260,7 @@ export function nestUnderParents(
 ): NestingResult {
   const index = familyIndex;
   const threadById = new Map(threads.map((thread) => [thread.id, thread]));
+  const ranks = options.ranks ?? {};
 
   // R3: nesting disabled — a fully flat board. Columns pass through
   // untouched (the caller has already kept archived threads out of them);
@@ -277,6 +292,7 @@ export function nestUnderParents(
   // A parent whose children all nest keeps its card; children leave the
   // column lists entirely. Only roots (and promoted/flat children) stay.
   const nestedKeyIds = nestedKeys(nested);
+  sortNestedByColumnRank(nested, columns, groupBy, ranks);
   const outColumns: BoardColumn[] = columns.map((column) => {
     const kept = column.threads.filter(
       (thread) => !nestedKeyIds.has(thread.id) && (flatIds.has(thread.id) || index.rootIds.has(thread.id)),
@@ -285,6 +301,33 @@ export function nestUnderParents(
   });
 
   return { columns: outColumns, childrenByParent: nested };
+}
+
+/**
+ * Sort each parent's nested children in the order of the column the PARENT
+ * sits in. The family moves as one unit: a child's stored rank is an id in
+ * that column's list, and the parent is the card the operator actually drags,
+ * so the children follow the parent's column order rather than their own
+ * (absent) ranks. With no ranks stored this is a no-op — the derived order
+ * already matches what the columns produced.
+ */
+function sortNestedByColumnRank(
+  nested: Map<string, PluginSidebarThread[]>,
+  columns: readonly BoardColumn[],
+  groupBy: GroupBy,
+  ranks: RankStore,
+): void {
+  const columnOfThread = new Map<string, string>();
+  for (const column of columns) {
+    for (const thread of column.threads) columnOfThread.set(thread.id, column.id);
+  }
+  for (const [parentId, children] of nested) {
+    const columnId = columnOfThread.get(parentId);
+    if (columnId === undefined) continue;
+    const order = orderForColumn(ranks, columnRankKey(groupBy, columnId));
+    if (order.length === 0) continue;
+    children.sort(compareByRank(order, derivedCompare));
+  }
 }
 
 function nestedKeys(nested: ReadonlyMap<string, readonly PluginSidebarThread[]>): Set<string> {

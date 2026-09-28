@@ -9,6 +9,7 @@
  */
 import type { ComponentType, ReactNode } from "react";
 import { SIM_DONE_IDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS } from "./data";
+import { applyMoveVisible } from "../../lib/rank";
 
 export const registeredNavPanel: { component?: ComponentType } = {};
 
@@ -75,10 +76,53 @@ export function useSdk(): unknown {
   };
 }
 
+/**
+ * In-memory rank store for the harness, mirroring the server's KV row:
+ * columnKey → sparse ordered id list. Seeded from `?ranks=` (a JSON object)
+ * so a UAT pass can start from a ranked column, and mutated by rank_move the
+ * way the real server mutates it. `__uat` exposes it to the page so a driver
+ * can seed and inspect it without going through the app.
+ */
+let simRanks: Record<string, string[]> = {};
+const uatCalls: { method: string; args?: unknown }[] = [];
+(globalThis as unknown as { __uat?: unknown }).__uat = {
+  seedRanks: (orders: Record<string, string[]>) => {
+    simRanks = structuredClone(orders);
+  },
+  ranks: () => structuredClone(simRanks),
+  calls: () => structuredClone(uatCalls),
+  resetCalls: () => {
+    uatCalls.length = 0;
+  },
+};
+
 const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
+  uatCalls.push({ method, args });
   if (method === "done_list") return { doneIds: SIM_DONE_IDS, records: {} };
   if (method === "sweep_config_get") {
     return { doneArchiveDays: 7, idleArchiveDays: 30 };
+  }
+  if (method === "rank_list") return { orders: structuredClone(simRanks) };
+  if (method === "rank_move") {
+    // The server's move semantics — applyMoveVisible, not a re-spelled copy
+    // of them — so a UAT pass exercises the real state change. The copy this
+    // replaced drifted the first time the move semantics changed (the
+    // rank-everything-above-the-drop-point fix), and the suite caught it.
+    const { columnKey, threadId, beforeId, toEnd, visibleIds } = args as {
+      columnKey: string;
+      threadId: string;
+      beforeId: string | null;
+      toEnd: boolean;
+      visibleIds: string[];
+    };
+    simRanks[columnKey] = applyMoveVisible(
+      simRanks[columnKey] ?? [],
+      visibleIds,
+      threadId,
+      beforeId,
+      toEnd,
+    );
+    return { columnKey, order: [...simRanks[columnKey]] };
   }
   return {};
 };

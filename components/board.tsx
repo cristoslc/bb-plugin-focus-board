@@ -1,15 +1,65 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
-import type { BoardColumn } from "./grouping";
+import type { BoardColumn, GroupBy } from "./grouping";
 import { threadState, withSweepGather } from "./grouping";
 import { sweepColumnKind, type ArmedSweep } from "../lib/sweep";
 import { ThreadCard } from "./thread-card";
 import type { CardMenuAction } from "./thread-card-menu";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
+import {
+  applyMoveVisible,
+  columnIsRanked,
+  columnRankKey,
+  displayAfterMove,
+  isLaneDrag,
+  moveTargetFor,
+  type RankStore,
+} from "../lib/rank";
+
+/**
+ * Drag payload keys.
+ *
+ * `DRAG_ID_KEY` carries the moved card and is readable at drop time.
+ *
+ * The lane the drag came from is carried in the MIME **type name**, not in a
+ * payload value. A real browser holds the drag payload write-only until the
+ * drop: `getData` returns "" during `dragover`, so any handler that decides
+ * from `getData` mid-drag silently sees nothing, never calls
+ * `preventDefault`, and the browser then refuses the drop outright. `types`
+ * stays readable for the whole drag, so the lane is discoverable exactly when
+ * the drop has to be authorised. Reading the lane from the type name is the
+ * difference between a reorder that works and one that does nothing.
+ */
+const DRAG_ID_KEY = "text/focus-board-id";
+
+/** How long a refusal banner stays on screen before auto-dismissing. */
+const RANK_ERROR_AUTO_DISMISS_MS = 10_000;
+
+/** Where an insertion line would land: before or after the hovered card. */
+type Half = "before" | "after";
+
+/**
+ * The dragged card, for a DROP.
+ *
+ * Read from the payload first: `drop` is one of the two moments the browser
+ * lets a handler read it, so this is the authoritative source. The ref is the
+ * fallback for the rare case where a payload is unavailable, and it must never
+ * be the only source — losing it silently turns every reorder into a no-op,
+ * because an empty id makes `applyMove` return the order unchanged and the
+ * RPC reject it, with nothing on screen to say why.
+ */
+function draggedIdFor(
+  event: React.DragEvent,
+  fallback: string | null,
+): string {
+  return event.dataTransfer.getData(DRAG_ID_KEY) || fallback || "";
+}
 
 interface BoardProps {
   columns: readonly BoardColumn[];
+  /** The active grouping — a column's rank key is namespaced by it. */
+  groupBy: GroupBy;
   activeThreadId: string | null;
   doneIds: ReadonlySet<string>;
   /** Parent id → children that render as nested rows under the parent card. */
@@ -32,6 +82,27 @@ interface BoardProps {
   /** Close the open thread pane when the operator clicks empty board area. */
   onClosePane?: () => void;
   onNewTask: () => void;
+  /**
+   * Per-column manual orders. A column is reorderable only when it has a
+   * stored order, so the board never shows a drag affordance for a
+   * rearrange it would silently discard.
+   */
+  rankStore?: RankStore;
+  /**
+   * Move `threadId` within `columnKey`. `beforeId` names the card to land in
+   * front of (null = top); `toEnd` drops below the last ranked card instead,
+   * which is a different intent that would otherwise share the null.
+   * `visibleIds` is the column's displayed order, so the writer can rank
+   * every card above the drop point — without it, a first drop into an
+   * unranked column would rank one card and reorder nothing.
+   */
+  onRankMove?: (
+    columnKey: string,
+    threadId: string,
+    beforeId: string | null,
+    toEnd: boolean,
+    visibleIds: readonly string[],
+  ) => void;
   /** Drop a card onto the Done column. */
   onDropDone: (threadId: string) => void;
   /** Drop a card onto the Unread column (Attention grouping only). */
@@ -120,6 +191,7 @@ function SweepButton({
 
 export function Board({
   columns,
+  groupBy,
   activeThreadId,
   doneIds,
   nestedChildrenByParent,
@@ -131,6 +203,8 @@ export function Board({
   onOpenThread,
   onNewTask,
   onClosePane,
+  rankStore,
+  onRankMove,
   onDropDone,
   onDropUnread,
   menuActionsFor,
@@ -141,6 +215,14 @@ export function Board({
   onSweepConfirm,
 }: BoardProps) {
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  // { columnId, threadId, edge } of the insertion line while a ranked card
+  // is dragged over a ranked column. Null when no reorder is in flight.
+  const [rankDrop, setRankDrop] = useState<{
+    columnId: string;
+    threadId: string;
+    edge: Half;
+  } | null>(null);
+
   // When the thread pane opens (or is resized) the board container shrinks;
   // keep the open thread's card in view by scrolling it into the visible
   // horizontal range instead of letting the pane cover it.
@@ -167,6 +249,7 @@ export function Board({
     observer.observe(container);
     return () => observer.disconnect();
   }, [activeThreadId]);
+
   const sweepActive = sweepCandidatesFor !== undefined && onSweepArm !== undefined;
   // Clicking empty board area (anything that is not a card, control, or link)
   // while a thread is open closes the pane.
@@ -177,6 +260,91 @@ export function Board({
     if (target.closest("[data-thread-card], button, a, input, textarea, select, [role='menu'], [role='menuitem']") !== null) return;
     onClosePane();
   };
+  const ranking = rankStore !== undefined && onRankMove !== undefined;
+
+  // Announce a completed move so a reorder is legible without sight of the
+  // insertion line, which is the only feedback a screen reader would miss.
+  const [announcement, setAnnouncement] = useState("");
+  // A reorder that cannot complete says so ON SCREEN. A live region alone
+  // leaves the sighted operator with a drag that silently does nothing, which
+  // is exactly how the last version of this shipped.
+  const [rankError, setRankError] = useState<string | null>(null);
+  // Bumped on every refusal so the auto-dismiss timer restarts even when the
+  // new message is identical to the old one — React would otherwise bail out
+  // on the same string and let the stale clock cut the repeat refusal short.
+  const [rankErrorSeq, setRankErrorSeq] = useState(0);
+
+  // A refusal leaves the screen on its own after a while: the operator has
+  // read it (or dismissed it), and a banner that outlives its drag reads as
+  // a board that is still broken. Generous, because "fail loud" loses to
+  // "vanish before it was read". The dismiss button clears the same state.
+  useEffect(() => {
+    if (rankError === null) return;
+    const timer = setTimeout(() => setRankError(null), RANK_ERROR_AUTO_DISMISS_MS);
+    return () => clearTimeout(timer);
+  }, [rankError, rankErrorSeq]);
+
+  // The card being dragged, captured at dragstart. Held here rather than read
+  // from the payload because the payload is unreadable until the drop, and
+  // dragover needs to know this to avoid drawing an insertion line on the
+  // card under the cursor.
+  const draggingIdRef = useRef<string | null>(null);
+
+  function clearRankDrop(): void {
+    setRankDrop(null);
+  }
+
+  /**
+   * Report a reorder that cannot complete, naming the reason.
+   *
+   * A drop that quietly does nothing is indistinguishable from a board
+   * ignoring the operator, which is precisely how this shipped twice: once
+   * because dragover read a protected payload, and once because the drop could
+   * not identify the card. Every early return names itself so one reproduction
+   * says which one fired.
+   */
+  function reportRefusal(reason: string): void {
+    setAnnouncement(`Reorder refused: ${reason}`);
+    setRankError(`Reorder refused: ${reason}`);
+    setRankErrorSeq((seq) => seq + 1);
+  }
+
+  function commitMove(
+    column: BoardColumn,
+    threadId: string,
+    beforeId: string | null,
+    toEnd: boolean,
+    visibleIds: readonly string[],
+  ): void {
+    if (!ranking) {
+      reportRefusal("card ordering is not available on this board.");
+      return;
+    }
+    // Fail loud, on screen. An empty id means the drop could not identify the
+    // dragged card; the move would otherwise be a silent no-op that looks
+    // exactly like the board ignoring the operator.
+    if (threadId === "") {
+      reportRefusal(`could not identify the dragged card in ${column.label}.`);
+      return;
+    }
+    setRankError(null);
+    onRankMove?.(
+      columnRankKey(groupBy, column.id),
+      threadId,
+      beforeId,
+      toEnd,
+      visibleIds,
+    );
+    // Report the resulting position from the order the move produces, not
+    // from the anchor's old index: dropping onto a card's top half lands one
+    // above where that card was, and the message must match the new board.
+    // The DISPLAYED order, not the sparse stored one — a card that keeps its
+    // rank below the drop point is still a card on the board.
+    const after = displayAfterMove(visibleIds, threadId, beforeId, toEnd);
+    setAnnouncement(
+      `Moved to position ${after.indexOf(threadId) + 1} of ${after.length} in ${column.label}.`,
+    );
+  }
   // Only the Done and Unread lanes accept drops; Unread exists as a column
   // only in the Attention grouping.
   const dropHandlerFor = (columnId: string): ((threadId: string) => void) | null => {
@@ -185,7 +353,34 @@ export function Board({
     return null;
   };
   return (
-    <div ref={scrollRef} onClick={handleBackgroundClick} className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-3 pb-3 pt-2">
+    <div
+      ref={scrollRef}
+      onClick={handleBackgroundClick}
+      className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-3 pb-3 pt-2"
+    >
+      {/* The insertion line is the only visual feedback a reorder gives, so
+          a screen reader gets the same information in words. */}
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
+      {rankError !== null ? (
+        <div
+          role="status"
+          data-testid="rank-error-banner"
+          className="mx-3 mb-1 flex items-center justify-between gap-2 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-[11px] text-destructive"
+        >
+          <p className="min-w-0">{rankError}</p>
+          <button
+            type="button"
+            onClick={() => setRankError(null)}
+            aria-label="Dismiss error"
+            title="Dismiss"
+            className="shrink-0 rounded p-0.5 text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline focus-visible:outline-1 focus-visible:outline-destructive"
+          >
+            <Icon name="X" className="size-3" aria-hidden />
+          </button>
+        </div>
+      ) : null}
       <div className="flex h-full min-h-0 items-stretch gap-4">
         {columns.map((column) => {
           const dropHandler = dropHandlerFor(column.id);
@@ -202,30 +397,57 @@ export function Board({
               : [];
           const shownThreads = isArmed ? withSweepGather(column.threads, eligible) : column.threads;
           const armedSet = isArmed ? new Set(eligible) : null;
+          const rankKey = columnRankKey(groupBy, column.id);
+          // Seed on first intent: every card is a reorder target for its OWN
+          // lane, whether or not that lane has a stored order yet. The drag
+          // itself is the intent, and the first drop writes the order — so a
+          // fresh install can reach the feature. The stored-order flag below
+          // is for display only ("this lane is hand-ordered"), not a gate.
+          const isOrdered = ranking && columnIsRanked(rankStore ?? {}, rankKey);
           return (
             <section
               key={column.id}
+              data-column-id={column.id}
+              data-column-ordered={isOrdered}
               aria-label={`${column.label}, ${column.threads.length} threads`}
-              onDragOver={
-                isDropTarget
-                  ? (event) => {
-                      event.preventDefault();
-                      event.dataTransfer.dropEffect = "move";
-                      setDragOverColumn(column.id);
-                    }
-                  : undefined
-              }
+              onDragOver={(event) => {
+                // Same-lane drag: the lane's own empty space accepts the drop
+                // as an append, so the column must allow the event.
+                if (ranking && isLaneDrag(event.dataTransfer.types, rankKey)) {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                  return;
+                }
+                if (!isDropTarget) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setDragOverColumn(column.id);
+              }}
               onDragLeave={isDropTarget ? () => setDragOverColumn((c) => (c === column.id ? null : c)) : undefined}
-              onDrop={
-                isDropTarget
-                  ? (event) => {
-                      event.preventDefault();
-                      setDragOverColumn(null);
-                      const threadId = event.dataTransfer.getData("text/focus-board-id");
-                      if (threadId !== "") dropHandler(threadId);
-                    }
-                  : undefined
-              }
+              onDrop={(event) => {
+                const threadId = draggedIdFor(event, draggingIdRef.current);
+                if (ranking && isLaneDrag(event.dataTransfer.types, rankKey)) {
+                  // Released over the lane's empty space below the last card:
+                  // append. A drop ON a card was already claimed by that
+                  // card's own handler, which stops propagation.
+                  event.preventDefault();
+                  clearRankDrop();
+                  if (threadId !== "") {
+                    commitMove(
+                      column,
+                      threadId,
+                      null,
+                      true,
+                      shownThreads.map((candidate) => candidate.id),
+                    );
+                  }
+                  return;
+                }
+                if (!isDropTarget) return;
+                event.preventDefault();
+                setDragOverColumn(null);
+                if (threadId !== "") dropHandler(threadId);
+              }}
               className={cn(
                 "flex h-full min-h-0 w-64 shrink-0 flex-col rounded-lg transition-colors",
                 dragOverColumn === column.id && "bg-accent/60 ring-2 ring-ring",
@@ -238,6 +460,17 @@ export function Board({
                 <span className="text-[11px] tabular-nums text-muted-foreground/60">
                   {column.threads.length}
                 </span>
+                {/* A hand-ordered lane says so, so a card sitting out of recency
+                    order does not read as a bug. */}
+                {isOrdered ? (
+                  <span
+                    title="This column is in your order, not by recency"
+                    aria-label="Ordered by you, not by recency"
+                    className="inline-flex items-center text-muted-foreground/50"
+                  >
+                    <Icon name="SortingOneNine" className="size-3" aria-hidden />
+                  </span>
+                ) : null}
                 {sweepActive ? (
                   <span className="ml-auto">
                     <SweepButton
@@ -260,7 +493,111 @@ export function Board({
                 {column.threads.length === 0 ? null : (
                   <ul className="flex flex-col gap-1.5">
                     {shownThreads.map((thread) => (
-                      <li key={thread.id}>
+                      <li
+                        key={thread.id}
+                        data-rank-slot={ranking ? thread.id : undefined}
+                        // Every card is a drop target for its own lane's drag;
+                        // the hovered card decides which of its two edges the
+                        // insertion line lands on.
+                        onDragOver={
+                          (event) => {
+                            // Same lane only. A drag from another lane would
+                            // write an order for a card that is not in this
+                            // one — invisible on drop — so it falls through to
+                            // the column's Done/Unread handler instead.
+                            if (!ranking) return;
+                            if (!isLaneDrag(event.dataTransfer.types, rankKey)) return;
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "move";
+                            const rect = event.currentTarget.getBoundingClientRect();
+                            const edge: Half =
+                              event.clientY - rect.top < rect.height / 2 ? "before" : "after";
+                            if (draggingIdRef.current === thread.id) {
+                              clearRankDrop();
+                              return;
+                            }
+                            setRankDrop((current) =>
+                              current?.columnId === column.id &&
+                              current?.threadId === thread.id &&
+                              current?.edge === edge
+                                ? current
+                                : { columnId: column.id, threadId: thread.id, edge },
+                            );
+                          }
+                        }
+                        onDrop={
+                          (event) => {
+                            if (!isLaneDrag(event.dataTransfer.types, rankKey)) return;
+                            if (!ranking) return;
+                            event.preventDefault();
+                            const threadId = draggedIdFor(event, draggingIdRef.current);
+                            // The drop bubbles to the column's own handler,
+                            // which treats a same-lane drag as "append". Claim
+                            // the event so one drop is one move, not an
+                            // insert plus an append.
+                            event.stopPropagation();
+                            // Read the edge from the live drag position, not
+                            // from React state: the last dragover before a
+                            // drop can land on a different card than the one
+                            // that was hovered when the state was set.
+                            const rect = event.currentTarget.getBoundingClientRect();
+                            const edge: Half =
+                              event.clientY - rect.top < rect.height / 2 ? "before" : "after";
+                            clearRankDrop();
+                            if (threadId === "") return;
+                            const target = moveTargetFor(
+                              shownThreads.map((candidate) => candidate.id),
+                              thread.id,
+                              edge,
+                              threadId,
+                            );
+                            if (target === null) {
+                              reportRefusal(
+                                `the drop position in ${column.label} resolved to no move.`,
+                              );
+                              return;
+                            }
+                            commitMove(
+                              column,
+                              threadId,
+                              target.beforeId,
+                              target.toEnd,
+                              shownThreads.map((candidate) => candidate.id),
+                            );
+                          }
+                        }
+                        // A drag is mouse-only, so a column also takes Alt+Arrow
+                        // from a focused card. Without it the reorder is
+                        // unreachable for keyboard and touch.
+                        onKeyDown={
+                          (event) => {
+                            if (!ranking) return;
+                            if (!event.altKey) return;
+                            if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+                            const at = shownThreads.indexOf(thread);
+                            const visibleIds = shownThreads.map((candidate) => candidate.id);
+                            const to = event.key === "ArrowUp" ? at - 1 : at + 1;
+                            if (to < 0 || to >= shownThreads.length) return;
+                            event.preventDefault();
+                            // Up anchors on the card being stepped over; down
+                            // anchors on the one after the destination, or
+                            // appends when the card is already last.
+                            const beforeId =
+                              event.key === "ArrowUp"
+                                ? shownThreads[to].id
+                                : (shownThreads[to + 1]?.id ?? null);
+                            commitMove(column, thread.id, beforeId, beforeId === null, visibleIds);
+                          }
+                        }
+                        className={cn(
+                          "relative",
+                          rankDrop?.columnId === column.id && rankDrop.threadId === thread.id && (
+                            rankDrop.edge === "before"
+                              ? "before:absolute before:inset-x-0 before:-top-0.5 before:h-0.5 before:rounded-full before:bg-ring"
+                              : "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-ring"
+                          ),
+                        )}
+                      >
                         <ThreadCard
                           thread={thread}
                           stateDot={<StateDot thread={thread} />}
@@ -280,6 +617,10 @@ export function Board({
                           onOpen={() => onOpenThread(thread.id)}
                           onOpenThread={onOpenThread}
                           childMenuActions={menuActionsFor}
+                          rankKey={ranking ? rankKey : undefined}
+                          onRankDragStart={(id) => {
+                            draggingIdRef.current = id;
+                          }}
                         />
                       </li>
                     ))}
