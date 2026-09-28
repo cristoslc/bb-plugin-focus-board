@@ -71,16 +71,26 @@ export interface NestingOptions {
    * leaves that card on the board's derived order.
    */
   doneTimes?: ReadonlyMap<string, number>;
+  /**
+   * Threads marked Done. `childNests` needs them: a Done parent stays in the
+   * Done lane, so its live children still promote (raw-state comparison);
+   * a live parent always nests its children (R4).
+   */
+  doneIds?: ReadonlySet<string>;
 }
 
 /**
  * The full columns-plus-nesting assembly the board renders, in one call — the
  * composition app.tsx wires. `nestedChildrenByParent` (from
  * `nestUnderParents`, NOT the raw index) is what renders as child rows, so a
- * promoted or cross-axis child never appears both as a standalone card and as
- * a nested row. `childCountByParent` (from the raw index) is what the
- * child-count chip counts, so a parent still shows its family size when a
- * child stands alone.
+ * promoted (live child of a Done parent) or cross-axis child never appears
+ * both as a standalone card and as a nested row. `childCountByParent` (from
+ * the raw index) is what the child-count chip counts, so a parent still
+ * shows its family size when a child stands alone.
+ *
+ * R4: under the status grouping, `familyColumnOverrides` places each family
+ * in the column of its most attention-requiring live member, so the parent
+ * card carries the family's urgency and its children nest under it.
  *
  * R2: archived children never take standalone column slots. They are
  * excluded from column building entirely and always nest under their parent
@@ -120,10 +130,20 @@ export function assembleBoard(
       childCountByParent: new Map(),
     };
   }
-  // One family index serves both halves: the nesting pass and the chip
-  // counts both read the same raw parent→children map (archived children
-  // included — they stay under the parent).
+  // One family index serves all three passes: the R4 column overrides, the
+  // nesting pass, and the chip counts all read the same raw parent→children
+  // map (archived children included — they stay under the parent).
   const familyIndex = buildFamilyIndex(threads);
+  // R4: under the status grouping a family lands in the column of its most
+  // attention-requiring live member, so the parent card carries the family's
+  // urgency instead of splitting from its children.
+  const columnOverrides = familyColumnOverrides(
+    columnThreads,
+    familyIndex,
+    groupBy,
+    context,
+    doneIds,
+  );
   const nested = nestUnderParents(
     buildColumns(
       columnThreads,
@@ -134,13 +154,16 @@ export function assembleBoard(
       now,
       ranks,
       doneTimes,
+      columnOverrides,
     ),
     threads,
     groupBy,
     context,
     now,
     familyIndex,
-    options,
+    // assembleBoard owns doneIds positionally; inject it so childNests can
+    // keep the Done-lane promotion rule.
+    { ...options, doneIds },
   );
   const childCountByParent = new Map<string, number>();
   for (const [parentId, children] of familyIndex.childrenByParent) {
@@ -221,10 +244,13 @@ export function buildFamilyIndex(threads: readonly PluginSidebarThread[]): Famil
  *
  * - R2: an archived child ALWAYS nests — it never takes a standalone column
  *   slot, in any grouping (archived overrides promotion and axis-match).
- * - Promotion (Attention grouping): a child whose state column strictly
- *   precedes its parent's stands alone in its own state column — never bury
- *   a Needs-you child. Done is the rightmost lane, so any live child of a
- *   Done parent promotes. Equal rank nests.
+ * - R4 (status grouping): the family moves as one unit into the column of
+ *   its most attention-requiring live member (`familyColumnOverrides` lifts
+ *   the parent card there), so every visible child of a live parent nests —
+ *   no child is ever buried, because the family relocates to meet the child.
+ *   The promotion rule survives only where the family cannot relocate: a
+ *   Done parent keeps its Done-lane card, and its live children still
+ *   promote (raw-state comparison, Done being the rightmost lane).
  * - Axis match (project/provider/machine): the child nests only when its
  *   axis key matches its parent's; otherwise it stays flat in its own axis
  *   column.
@@ -236,10 +262,17 @@ function childNests(
   parent: PluginSidebarThread,
   groupBy: GroupBy,
   now: number,
+  doneIds: ReadonlySet<string>,
 ): boolean {
   if (child.isArchived) return true; // R2: archived children always nest
   if (groupBy === "status") {
-    return stateRank(threadState(child)) >= stateRank(threadState(parent));
+    if (doneIds.has(parent.id)) {
+      // Done parent: the family stays in the Done lane; keep the raw-state
+      // comparison so live children promote and done children nest.
+      return stateRank(threadState(child)) >= stateRank(threadState(parent));
+    }
+    // R4: live parent — the family moves as one unit, every child nests.
+    return true;
   }
   if (groupBy === "project" || groupBy === "provider") {
     const key = groupBy === "project" ? child.projectId : child.providerId;
@@ -258,13 +291,71 @@ function stateRank(state: ThreadState): number {
 }
 
 /**
- * Pull nested children out of their column placement and attach them under
- * their parent's card. Applies two rules:
+ * R4: under the status grouping, where should each family land? The family
+ * (a root and all its descendants) appears in the column of its most
+ * attention-requiring LIVE member — the smallest state rank across members
+ * that are neither archived (stale status must not demand attention) nor
+ * done (the Done lane is a placement of its own). The returned map is keyed
+ * by family ROOT id, so only roots — the cards that take column slots — read
+ * it; promoted children of Done parents and axis-flat children keep their
+ * own placements.
  *
- * - Promotion (Attention grouping): a child whose state column precedes its
- *   parent's stands alone in its own state column — never bury a Needs-you
- *   child. Done is the rightmost lane, so any live child of a Done parent
- *   promotes.
+ * An all-idle family gets no entry: `threadState` collapses idle to one
+ * value, so every idle member ties — the family keeps the parent's own
+ * bucket. The parent card's raw state badge is untouched: this is a
+ * placement rule, not a state rewrite.
+ */
+export function familyColumnOverrides(
+  threads: readonly PluginSidebarThread[],
+  familyIndex: FamilyIndex,
+  groupBy: GroupBy,
+  context: GroupingContext,
+  doneIds: ReadonlySet<string>,
+): ReadonlyMap<string, { id: string; label: string }> {
+  if (groupBy !== "status") return new Map();
+  const byId = new Map(threads.map((thread) => [thread.id, thread]));
+  const overrides = new Map<string, { id: string; label: string }>();
+  for (const rootId of familyIndex.rootIds) {
+    const root = byId.get(rootId);
+    if (root === undefined || root.isArchived || doneIds.has(rootId)) continue;
+    // Walk the whole family (root + descendants); only live members lift it.
+    const live: PluginSidebarThread[] = [];
+    const stack = [rootId];
+    const seen = new Set<string>();
+    while (stack.length > 0) {
+      const id = stack.pop() as string;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const member = byId.get(id);
+      if (member === undefined) continue;
+      if (!member.isArchived && !doneIds.has(member.id)) live.push(member);
+      for (const grandchild of familyIndex.childrenByParent.get(id) ?? []) {
+        stack.push(grandchild.id);
+      }
+    }
+    let best: PluginSidebarThread | undefined;
+    let bestRank = Number.MAX_SAFE_INTEGER;
+    for (const member of live) {
+      const rank = stateRank(threadState(member));
+      if (rank < bestRank) {
+        bestRank = rank;
+        best = member;
+      }
+    }
+    if (best === undefined || bestRank === Number.MAX_SAFE_INTEGER) continue;
+    overrides.set(rootId, columnFor(best, "status", context));
+  }
+  return overrides;
+}
+
+/**
+ * Pull nested children out of their column placement and attach them under
+ * their parent's card. Applies these rules:
+ *
+ * - R4 (status grouping): the family moves as one unit into the column of
+ *   its most attention-requiring live member (see `familyColumnOverrides`),
+ *   and every visible child of a live parent nests. Live children of a Done
+ *   parent still promote (the Done lane cannot relocate).
  * - Axis match (project/provider/machine): a child nests only when its axis
  *   key matches its parent's; otherwise it stays flat in its own column.
  *   Recency and None groupings always nest.
@@ -286,6 +377,7 @@ export function nestUnderParents(
   const index = familyIndex;
   const threadById = new Map(threads.map((thread) => [thread.id, thread]));
   const ranks = options.ranks ?? {};
+  const doneIds = options.doneIds ?? new Set<string>();
 
   // R3: nesting disabled — a fully flat board. Columns pass through
   // untouched (the caller has already kept archived threads out of them);
@@ -305,7 +397,7 @@ export function nestUnderParents(
       flatIds.add(childId);
       continue;
     }
-    if (childNests(child, parent, groupBy, now)) {
+    if (childNests(child, parent, groupBy, now, doneIds)) {
       const siblings = nested.get(parentId);
       if (siblings === undefined) nested.set(parentId, [child]);
       else siblings.push(child);
