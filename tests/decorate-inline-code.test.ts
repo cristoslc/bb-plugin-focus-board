@@ -74,4 +74,31 @@ describe("decorateInlineCodeLinks", () => {
     decorateInlineCodeLinks(chat);
     expect(decoratedCodePath(chat.querySelector("code")!)).toBe("notes.md");
   });
+
+  it("matches the exact markup observed in the live bb 0.44.0 pane", () => {
+    // Shapes captured from the running app: agent-message markdown renders
+    // as <p class="mb-2"> inside [data-markdown-preview] > .group/message,
+    // with plain <code class="rounded bg-muted/70 ..."> spans. The path
+    // span must decorate; the commit-sha and block-code spans must not.
+    const root = markdownMessage(
+      '<div class="group/message"><p class="mb-2">Reflowed ' +
+        '<code class="rounded bg-muted/70 px-1.5 py-0.5 font-mono text-xs">' +
+        "docs/rfcs/rfc-support-triage-process.md</code> so each paragraph is a " +
+        "single logical line. Committed as " +
+        '<code class="rounded bg-muted/70 px-1.5 py-0.5 font-mono text-xs">' +
+        "8811dd9c</code>.</p>" +
+        '<pre><code class="bb-code-highlight">const x = 1</code></pre></div>',
+    );
+    decorateInlineCodeLinks(root);
+    const [pathCode, shaCode, blockCode] = root.querySelectorAll("code");
+    expect(decoratedCodePath(pathCode)).toBe(
+      "docs/rfcs/rfc-support-triage-process.md",
+    );
+    expect(pathCode.className).toContain("underline");
+    expect(
+      pathCode.querySelector("[data-focus-board-path-link-icon]"),
+    ).not.toBeNull();
+    expect(decoratedCodePath(shaCode)).toBeNull();
+    expect(decoratedCodePath(blockCode)).toBeNull();
+  });
 });
