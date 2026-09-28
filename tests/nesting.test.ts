@@ -956,3 +956,49 @@ describe("threadState sanity for promotion tests", () => {
     expect(threadState(thread({}))).toBe("idle");
   });
 });
+
+describe("urgent nested children float to the top of the family's rows", () => {
+  it("a Needs-you child sorts above a newer idle sibling under the parent (no ranks stored)", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - HOUR });
+    // Input order puts the newer idle child first, so this fails while the
+    // nested rows keep raw input order.
+    const newerIdle = thread({ id: "n", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
+    const urgent = thread({ id: "u", parentThreadId: "p", hasPendingInteraction: true, updatedAt: NOW - 3 * HOUR });
+    const threads = [parent, newerIdle, urgent];
+    const columns = buildColumns(threads, "status", CONTEXT, new Map(), new Set(), NOW);
+    const nested = nestUnderParents(columns, threads, "status", CONTEXT, NOW);
+    expect(ids(nested.childrenByParent.get("p"))).toEqual(["u", "n"]);
+  });
+
+  it("the urgency tier wins over the parent column's manual rank order", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - HOUR });
+    const urgent = thread({ id: "u", parentThreadId: "p", hasPendingInteraction: true, updatedAt: NOW - 3 * HOUR });
+    const newerIdle = thread({ id: "n", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
+    const threads = [parent, newerIdle, urgent];
+    const ranks = { "status:idle-today": ["n", "u"] };
+    const columns = buildColumns(threads, "status", CONTEXT, new Map(), new Set(), NOW);
+    const nested = nestUnderParents(columns, threads, "status", CONTEXT, NOW, undefined, { ranks });
+    expect(ids(nested.childrenByParent.get("p"))).toEqual(["u", "n"]);
+  });
+
+  it("urgent children float under non-status groupings too (recency)", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - HOUR });
+    const newerIdle = thread({ id: "n", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
+    const urgent = thread({ id: "u", parentThreadId: "p", hasPendingInteraction: true, updatedAt: NOW - 3 * HOUR });
+    const threads = [parent, newerIdle, urgent];
+    const columns = buildColumns(threads, "recency", CONTEXT, new Map(), new Set(), NOW);
+    const nested = nestUnderParents(columns, threads, "recency", CONTEXT, NOW);
+    expect(ids(nested.childrenByParent.get("p"))).toEqual(["u", "n"]);
+  });
+
+  it("multiple urgent children keep the parent column's own order among themselves", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - HOUR });
+    const olderUrgent = thread({ id: "u1", parentThreadId: "p", hasPendingInteraction: true, updatedAt: NOW - 3 * HOUR });
+    const newerUrgent = thread({ id: "u2", parentThreadId: "p", hasPendingInteraction: true, updatedAt: NOW - 2 * HOUR });
+    const idle = thread({ id: "n", parentThreadId: "p", updatedAt: NOW - 4 * HOUR });
+    const threads = [parent, idle, olderUrgent, newerUrgent];
+    const columns = buildColumns(threads, "status", CONTEXT, new Map(), new Set(), NOW);
+    const nested = nestUnderParents(columns, threads, "status", CONTEXT, NOW);
+    expect(ids(nested.childrenByParent.get("p"))).toEqual(["u2", "u1", "n"]);
+  });
+});
