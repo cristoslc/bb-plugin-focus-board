@@ -52,7 +52,12 @@ describe("compareVersions", () => {
 describe("entriesSince", () => {
   it("returns entries strictly newer than the stored version", () => {
     const entries = entriesSince("0.4.2");
-    expect(entries.map((entry) => entry.version)).toEqual(["0.5.0", "0.4.4", "0.4.3"]);
+    expect(entries.map((entry) => entry.version)).toEqual([
+      "0.5.1",
+      "0.5.0",
+      "0.4.4",
+      "0.4.3",
+    ]);
   });
 
   it("returns everything newer, newest first, when far behind", () => {

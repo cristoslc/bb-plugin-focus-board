@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.0";
+export const APP_VERSION = "0.5.1";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -23,11 +23,16 @@ export interface WhatsNewEntry {
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
+    version: "0.5.1",
+    items: [
+      "The Done column now sorts by when each thread was marked done, newest first; dragging still applies a manual order on top.",
+    ],
+  },
+  {
     version: "0.5.0",
     items: [
       "The open pane is part of the panel URL: bb's back arrow returns you to the pane you left after following a link out to a full thread, and walks back through cards you lost track of.",
       "The board keeps the active card in view — when a pane is restored from history, and when the card relocates (pin, done, grouping change).",
-      "The Done column now sorts by when each thread was marked done, newest first; dragging still applies a manual order on top.",
       "A What's-new button now lives in the toolbar (this one).",
     ],
   },

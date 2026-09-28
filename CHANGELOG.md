@@ -3,6 +3,16 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.1] — 2026-09-28
+
+### Added
+
+- **The Done column now sorts by when each thread was marked done, newest
+  first**, instead of by the board's newest-activity order. Dragging a card
+  inside Done still applies a manual order on top of that default, exactly
+  as in every other column; a thread whose done stamp is unknown falls below
+  recorded ones rather than being assumed just done.
+
 ## [0.5.0] — 2026-09-28
 
 ### Added
@@ -27,11 +37,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   are stamped silently — no pulse for a first visit. The condensed list
   ships in the bundle (`lib/whats-new.ts`) and is pinned to
   `package.json`'s version by a test.
-- **The Done column now sorts by when each thread was marked done, newest
-  first**, instead of by the board's newest-activity order. Dragging a card
-  inside Done still applies a manual order on top of that default, exactly
-  as in every other column; a thread whose done stamp is unknown falls below
-  recorded ones rather than being assumed just done.
 
 ### Fixed
 
