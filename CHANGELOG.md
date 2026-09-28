@@ -3,6 +3,18 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.4] — 2026-09-27
+
+### Fixed
+
+- **Thread mention links in pane messages were swallowed.** The 0.4.3 link
+  interceptor treated every relative anchor as a workspace file, so mention
+  chips rendering as `/threads/thr_...` anchors stopped navigating. The
+  interceptor now mirrors the host's own local-file routing heuristic: only
+  destinations whose final segment contains a dot are treated as files, and
+  bb's line/column suffixes (`:12`, `:12-20`, `:12:5`, `#L12-L20`) are
+  stripped before resolving the path.
+
 ## [0.4.3] — 2026-09-27
 
 ### Fixed
