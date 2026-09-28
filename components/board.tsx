@@ -33,6 +33,9 @@ import {
  */
 const DRAG_ID_KEY = "text/focus-board-id";
 
+/** How long a refusal banner stays on screen before auto-dismissing. */
+const RANK_ERROR_AUTO_DISMISS_MS = 10_000;
+
 /** Where an insertion line would land: before or after the hovered card. */
 type Half = "before" | "after";
 
@@ -250,6 +253,20 @@ export function Board({
   // leaves the sighted operator with a drag that silently does nothing, which
   // is exactly how the last version of this shipped.
   const [rankError, setRankError] = useState<string | null>(null);
+  // Bumped on every refusal so the auto-dismiss timer restarts even when the
+  // new message is identical to the old one — React would otherwise bail out
+  // on the same string and let the stale clock cut the repeat refusal short.
+  const [rankErrorSeq, setRankErrorSeq] = useState(0);
+
+  // A refusal leaves the screen on its own after a while: the operator has
+  // read it (or dismissed it), and a banner that outlives its drag reads as
+  // a board that is still broken. Generous, because "fail loud" loses to
+  // "vanish before it was read". The dismiss button clears the same state.
+  useEffect(() => {
+    if (rankError === null) return;
+    const timer = setTimeout(() => setRankError(null), RANK_ERROR_AUTO_DISMISS_MS);
+    return () => clearTimeout(timer);
+  }, [rankError, rankErrorSeq]);
 
   // The card being dragged, captured at dragstart. Held here rather than read
   // from the payload because the payload is unreadable until the drop, and
@@ -273,6 +290,7 @@ export function Board({
   function reportRefusal(reason: string): void {
     setAnnouncement(`Reorder refused: ${reason}`);
     setRankError(`Reorder refused: ${reason}`);
+    setRankErrorSeq((seq) => seq + 1);
   }
 
   function commitMove(
@@ -323,12 +341,22 @@ export function Board({
         {announcement}
       </p>
       {rankError !== null ? (
-        <p
+        <div
           role="status"
-          className="mx-3 mb-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-[11px] text-destructive"
+          data-testid="rank-error-banner"
+          className="mx-3 mb-1 flex items-center justify-between gap-2 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-[11px] text-destructive"
         >
-          {rankError}
-        </p>
+          <p className="min-w-0">{rankError}</p>
+          <button
+            type="button"
+            onClick={() => setRankError(null)}
+            aria-label="Dismiss error"
+            title="Dismiss"
+            className="shrink-0 rounded p-0.5 text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline focus-visible:outline-1 focus-visible:outline-destructive"
+          >
+            <Icon name="X" className="size-3" aria-hidden />
+          </button>
+        </div>
       ) : null}
       <div className="flex h-full min-h-0 items-stretch gap-4">
         {columns.map((column) => {
