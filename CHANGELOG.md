@@ -3,6 +3,16 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.2] — 2026-09-27
+
+### Fixed
+
+- **Rank refusal banners could not be dismissed.** The "Reorder refused"
+  banner sat over the board until the next drag. It now has an X button, and
+  auto-dismisses after 10 seconds — generous, so it is never gone before it
+  was read. A repeat refusal restarts the timer rather than inheriting a
+  stale one.
+
 ## [0.4.1] — 2026-09-27
 
 ### Fixed
