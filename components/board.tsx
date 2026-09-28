@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { BoardColumn } from "./grouping";
 import { threadState, withSweepGather } from "./grouping";
@@ -29,6 +29,8 @@ interface BoardProps {
     | { kind: string; state: string }
     | undefined;
   onOpenThread: (threadId: string) => void;
+  /** Close the open thread pane when the operator clicks empty board area. */
+  onClosePane?: () => void;
   onNewTask: () => void;
   /** Drop a card onto the Done column. */
   onDropDone: (threadId: string) => void;
@@ -128,6 +130,7 @@ export function Board({
   statusFor,
   onOpenThread,
   onNewTask,
+  onClosePane,
   onDropDone,
   onDropUnread,
   menuActionsFor,
@@ -165,6 +168,15 @@ export function Board({
     return () => observer.disconnect();
   }, [activeThreadId]);
   const sweepActive = sweepCandidatesFor !== undefined && onSweepArm !== undefined;
+  // Clicking empty board area (anything that is not a card, control, or link)
+  // while a thread is open closes the pane.
+  const handleBackgroundClick = (event: MouseEvent) => {
+    if (activeThreadId === null || onClosePane === undefined) return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    if (target.closest("[data-thread-card], button, a, input, textarea, select, [role='menu'], [role='menuitem']") !== null) return;
+    onClosePane();
+  };
   // Only the Done and Unread lanes accept drops; Unread exists as a column
   // only in the Attention grouping.
   const dropHandlerFor = (columnId: string): ((threadId: string) => void) | null => {
@@ -173,7 +185,7 @@ export function Board({
     return null;
   };
   return (
-    <div ref={scrollRef} className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-3 pb-3 pt-2">
+    <div ref={scrollRef} onClick={handleBackgroundClick} className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-3 pb-3 pt-2">
       <div className="flex h-full min-h-0 items-stretch gap-4">
         {columns.map((column) => {
           const dropHandler = dropHandlerFor(column.id);

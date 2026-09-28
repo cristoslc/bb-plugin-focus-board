@@ -659,6 +659,7 @@ function BoardPage() {
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
             onOpenThread={openThreadCard}
+            onClosePane={closeThreadPane}
             onNewTask={openNewThread}
             sweepCandidatesFor={sweepCandidatesFor}
             armedSweep={armedSweep}
