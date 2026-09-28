@@ -1,0 +1,65 @@
+# Operator-assisted E2E: parent-thread lanes.
+#
+# The harness mounts the actual app.tsx against the mocked SDK
+# (scripts/screenshot), with one seeded family (thr_parent_lane /
+# thr_child_lane) plus the normal fixture threads. The suite exercises the
+# pivoted Attention grid: vertical lanes are families, horizontal rows are the
+# attention ladder, and only children render as cards.
+#
+# Run: npm run uat -- tests/manual/uat-parent-lanes.yaml
+suite: parent-lanes
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5175
+defaults:
+  groupBy: parent
+  theme: dark
+  viewport: { width: 900, height: 640 }
+
+steps:
+  - id: parent-mode-renders-family-and-standalone-lanes
+    title: Parent-thread grouping shows the family lane and the Standalone lane
+    goto: "?groupBy=parent"
+    assert:
+      - text_visible: "Parent thread lane fixture"
+      - text_visible: "Standalone"
+      - text_visible: "Child thread lane fixture"
+
+  - id: header-click-opens-parent-pane
+    title: Clicking a lane header opens the parent thread's pane
+    goto: "?groupBy=parent"
+    click_aria: { label: "Open Parent thread lane fixture" }
+    assert:
+      - pane: { open: true }
+      - text_visible: "Parent thread lane fixture"
+      - url: { suffix: "/board/t/thr_parent_lane" }
+
+  - id: card-click-opens-child-pane
+    title: Clicking a child card opens its thread pane
+    goto: "?groupBy=parent"
+    click: { card: thr_child_lane }
+    assert:
+      - pane: { threadId: thr_child_lane }
+      - active_card: { id: thr_child_lane }
+      - url: { suffix: "/board/t/thr_child_lane" }
+
+  - id: horizontal-scroll-keeps-active-lane-in-view
+    title: A deep-linked child in the rightmost lane is scrolled into view
+    goto: "?groupBy=parent#/plugins/focus-board/board/t/thr_child_lane"
+    assert:
+      - pane: { threadId: thr_child_lane }
+      - active_card: { id: thr_child_lane, visible: true }
+
+  - id: search-drops-families-shows-standalone
+    title: A search that matches only standalone threads drops every family
+    goto: "?groupBy=parent&q=Queue%20the%20UAT%20pass%20for%20the%20rank%20lane"
+    assert:
+      - text_visible: "Standalone"
+      - text_visible: "Queue the UAT pass for the rank lane"
+
+  - id: group-switch-back-to-attention
+    title: Switching back to Attention grouping renders normal columns
+    goto: "?groupBy=status"
+    assert:
+      - column: unread
+        ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]

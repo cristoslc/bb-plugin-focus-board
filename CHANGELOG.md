@@ -3,6 +3,20 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **Parent thread lanes.** The Group-by dropdown now offers "Parent thread",
+  which pivots the Attention board so that each vertical lane is a parent
+  thread and the horizontal rows are the attention ladder (Needs you,
+  Unread, Working, idle age buckets, Done). Only children render as cards;
+  the parent is a clickable lane header with a state dot and child-count
+  chip. A catch-all "Standalone" lane holds threads with no family. Lane
+  order derives from the family's most attention-needing live member; the
+  Done row sorts by done-recency; archived children ride under the header.
+  Sweep arming and stored lane order are deferred.
+
 ## [0.5.5] — 2026-09-28
 
 ### Changed
