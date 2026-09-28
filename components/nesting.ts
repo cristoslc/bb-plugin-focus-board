@@ -360,8 +360,9 @@ export function familyColumnOverrides(
  *   key matches its parent's; otherwise it stays flat in its own column.
  *   Recency and None groupings always nest.
  *
- * `childrenByParent` holds each parent's nested children in the same sorted
- * order the columns use (pinned-first, newest-first). Grandchildren are
+ * `childrenByParent` holds each parent's nested children sorted urgent-first,
+ * then in the same order the columns use (pinned-first, newest-first; manual
+ * ranks within each tier) — see `sortNestedByColumnRank`. Grandchildren are
  * never placed: a child that itself has children surfaces them only through
  * the `+N more` count (`grandchildCountFor`).
  */
@@ -425,8 +426,15 @@ export function nestUnderParents(
  * sits in. The family moves as one unit: a child's stored rank is an id in
  * that column's list, and the parent is the card the operator actually drags,
  * so the children follow the parent's column order rather than their own
- * (absent) ranks. With no ranks stored this is a no-op — the derived order
- * already matches what the columns produced.
+ * (absent) ranks.
+ *
+ * Urgent children (state "attention": a pending interaction or an unread
+ * error) float to the top of the rows regardless of ranks and recency — the
+ * same attention signal that places the family in its column deserves the
+ * first slot on the card it lands under. Within each tier (urgent, then the
+ * rest) the parent column's own order applies unchanged, so a family with no
+ * urgent member reads exactly as it did before. An unranked column (or a
+ * parent not found in any column) sorts purely by the board's derived order.
  */
 function sortNestedByColumnRank(
   nested: Map<string, PluginSidebarThread[]>,
@@ -440,10 +448,17 @@ function sortNestedByColumnRank(
   }
   for (const [parentId, children] of nested) {
     const columnId = columnOfThread.get(parentId);
-    if (columnId === undefined) continue;
-    const order = orderForColumn(ranks, columnRankKey(groupBy, columnId));
-    if (order.length === 0) continue;
-    children.sort(compareByRank(order, derivedCompare));
+    const order =
+      columnId === undefined
+        ? []
+        : orderForColumn(ranks, columnRankKey(groupBy, columnId));
+    const rankCompare = compareByRank(order, derivedCompare);
+    children.sort((a, b) => {
+      const aUrgent = threadState(a) === "attention" ? 0 : 1;
+      const bUrgent = threadState(b) === "attention" ? 0 : 1;
+      if (aUrgent !== bUrgent) return aUrgent - bUrgent;
+      return rankCompare(a, b);
+    });
   }
 }
 
