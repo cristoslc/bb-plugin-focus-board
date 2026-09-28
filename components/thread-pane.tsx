@@ -15,6 +15,7 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { COARSE_POINTER_HEADER_ICON_BUTTON_CLASS } from "@/components/ui/coarse-pointer-sizing";
 import { PendingInteractionCard } from "@/components/pending-interaction-card";
+import { DecidedQuestionsCard } from "@/components/decided-questions-card";
 import { isExternalHref, workspacePathFromHref } from "@/components/chat-link-intercept";
 import { useIsCompactViewport } from "@/components/ui/hooks/use-compact-viewport";
 
@@ -410,6 +411,11 @@ export function ThreadPane({
           pane is open would block the tool call until timeout. This card
           renders the host's question form in the pane instead. */}
       <PendingInteractionCard threadId={thread.id} onOpenInMainView={onMaximize} />
+      {/* The host transcript drops every trace of an answered AskUserQuestion
+          (suppressed tool call, hidden delivered result, answers never stored
+          on the interaction row), so this card rebuilds recent decisions from
+          the raw event log. */}
+      <DecidedQuestionsCard threadId={thread.id} />
       <div
         className="min-h-0 flex-1"
         onClickCapture={onChatClickCapture}
