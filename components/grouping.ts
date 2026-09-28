@@ -13,10 +13,12 @@ export type GroupBy =
   | "recency"
   | "project"
   | "provider"
-  | "machine";
+  | "machine"
+  | "parent";
 
 export const GROUP_BY_OPTIONS: readonly { value: GroupBy; label: string }[] = [
   { value: "status", label: "Attention" },
+  { value: "parent", label: "Parent thread" },
   { value: "recency", label: "Last activity" },
   { value: "project", label: "Project" },
   { value: "provider", label: "Provider" },
@@ -103,7 +105,7 @@ export const STATUS_COLUMN_ORDER: readonly string[] = [
   ...RECENCY_COLUMN_ORDER.map((id) => `idle-${id}`),
 ];
 
-const IDLE_BUCKETS = AGE_BUCKETS.map((bucket) => ({
+export const IDLE_BUCKETS = AGE_BUCKETS.map((bucket) => ({
   ...bucket,
   id: `idle-${bucket.id}`,
   label: `Idle · ${bucket.label}`,
