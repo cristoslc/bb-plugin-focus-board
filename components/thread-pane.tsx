@@ -1,10 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ThreadChat } from "@get-bb/plugin-sdk/app";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react";
+import {
+  ThreadChat,
+  useBbNavigate,
+  useSdk,
+} from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { COARSE_POINTER_HEADER_ICON_BUTTON_CLASS } from "@/components/ui/coarse-pointer-sizing";
 import { PendingInteractionCard } from "@/components/pending-interaction-card";
+import { isExternalHref, workspacePathFromHref } from "@/components/chat-link-intercept";
 import { useIsCompactViewport } from "@/components/ui/hooks/use-compact-viewport";
 
 // Shared header-button classes: a 28px ghost icon button that grows to a
@@ -190,6 +201,8 @@ export function ThreadPane({
 }: ThreadPaneProps) {
   const [width, setWidth] = useState(readStoredPaneWidth);
   const isCompact = useIsCompactViewport();
+  const sdk = useSdk();
+  const navigate = useBbNavigate();
   const dragStateRef = useRef<{ pointerId: number; startX: number; startWidth: number } | null>(
     null,
   );
@@ -203,6 +216,44 @@ export function ThreadPane({
     const next = Math.min(PANE_MAX_WIDTH, Math.max(PANE_MIN_WIDTH, drag.startWidth + delta));
     setWidth(next);
   }, [setWidth]);
+
+  // The host's embedded ThreadChat renders markdown links with their raw
+  // destination, so a message like `[ERD](docs/erd.mmd)` becomes an anchor
+  // the browser resolves against the bb app's origin — an error page. The
+  // host's own thread view owns message link routing; this pane does not.
+  // Capture clicks on relative anchors here and reopen them as live files
+  // against the thread's environment instead.
+  const onChatClickCapture = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest("a[href]");
+      if (anchor === null) return;
+      const href = anchor.getAttribute("href") ?? "";
+      if (href === "" || isExternalHref(href)) return;
+      const path = workspacePathFromHref(href);
+      if (path === null) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void sdk.threads
+        .get({ threadId: thread.id })
+        .then((result) => {
+          const environmentId =
+            "environmentId" in result ? result.environmentId : null;
+          if (environmentId === null) return;
+          navigate.experimental_openFilePreview({
+            target: { kind: "workspace", environmentId, path },
+            location: null,
+          });
+        })
+        .catch(() => {
+          // Without a resolvable environment there is nothing better to do;
+          // swallowing keeps the dead click from also being an error page.
+        });
+    },
+    [sdk, navigate, thread.id],
+  );
 
   const endDrag = useCallback((event: PointerEvent) => {
     const drag = dragStateRef.current;
@@ -359,7 +410,10 @@ export function ThreadPane({
           pane is open would block the tool call until timeout. This card
           renders the host's question form in the pane instead. */}
       <PendingInteractionCard threadId={thread.id} onOpenInMainView={onMaximize} />
-      <div className="min-h-0 flex-1">
+      <div
+        className="min-h-0 flex-1"
+        onClickCapture={onChatClickCapture}
+      >
         <ThreadChat threadId={thread.id} variant="compact" layout="contained" />
       </div>
     </aside>
