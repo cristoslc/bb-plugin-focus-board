@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.8";
+export const APP_VERSION = "0.5.9";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
