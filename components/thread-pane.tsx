@@ -8,6 +8,7 @@ import {
 import {
   ThreadChat,
   useBbNavigate,
+  useRpc,
   useSdk,
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
@@ -17,13 +18,14 @@ import { COARSE_POINTER_HEADER_ICON_BUTTON_CLASS } from "@/components/ui/coarse-
 import { PendingInteractionCard } from "@/components/pending-interaction-card";
 import {
   isExternalHref,
-  inlineCodeMarkdownPath,
   workspacePathFromHref,
 } from "@/components/chat-link-intercept";
 import {
-  decorateInlineCodeLinks,
+  decorateVerifiedInlineCodeLinks,
   decoratedCodePath,
+  type PathExistenceChecker,
 } from "@/components/decorate-inline-code";
+import type { rpcContract } from "@/server";
 import { useIsCompactViewport } from "@/components/ui/hooks/use-compact-viewport";
 
 // Shared header-button classes: a 28px ghost icon button that grows to a
@@ -211,6 +213,7 @@ export function ThreadPane({
   const isCompact = useIsCompactViewport();
   const sdk = useSdk();
   const navigate = useBbNavigate();
+  const rpc = useRpc<typeof rpcContract>();
   const dragStateRef = useRef<{ pointerId: number; startX: number; startWidth: number } | null>(
     null,
   );
@@ -275,9 +278,10 @@ export function ThreadPane({
       }
       const code = target.closest("code");
       if (code === null || code.closest("pre") !== null) return;
-      // Prefer the path recorded by the decorator; fall back to classifying
-      // the code text for clicks that land before the scan caught up.
-      const path = decoratedCodePath(code) ?? inlineCodeMarkdownPath(code.textContent ?? "");
+      // Only verified paths claim clicks: the decorator flags a code span
+      // after its path checked out against the workspace, so unverified or
+      // missing files stay inert instead of opening a dead preview.
+      const path = decoratedCodePath(code);
       if (path === null) return;
       event.preventDefault();
       event.stopPropagation();
@@ -340,23 +344,77 @@ export function ThreadPane({
     return () => document.removeEventListener("keydown", onKeyDown, { capture: true });
   }, [onClose]);
 
+  // Existence checks for the inline-code file links (see
+  // decorate-inline-code.ts): a path verdict comes from the plugin
+  // backend, which resolves the thread's environment and stats the file
+  // on the environment's own host.
+  const checkWorkspacePaths = useCallback<PathExistenceChecker>(
+    (paths) => {
+      return rpc
+        .call("workspace_files_exist", { threadId: thread.id, paths })
+        .then((result) => new Map(Object.entries(result.existence)));
+    },
+    [rpc, thread.id],
+  );
+
   // Paint the host's missing inline-code file links (see
-  // decorate-inline-code.ts): ThreadChat streams and React rewrites its
-  // markdown over time, so decorate once for the content already on
-  // screen, then re-scan on mutations, coalesced to one scan per frame.
+  // decorate-inline-code.ts), gated on workspace existence: ThreadChat
+  // streams and React rewrites its markdown over time, so verify once
+  // for the content already on screen, then re-scan on mutations,
+  // coalesced to one scan per frame. The environment id scopes the
+  // verdict cache (the same relative path exists in one workspace but
+  // not another) and is resolved once per thread.
   const chatBodyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const root = chatBodyRef.current;
     if (root === null) return;
     const view = root.ownerDocument.defaultView;
     if (view === null) return;
-    decorateInlineCodeLinks(root);
+    // undefined = not yet resolved, null = thread has no workspace
+    // (stop retrying), string = scope for verdicts and decoration.
+    let environmentId: string | null | undefined;
+    let resolutionPending = false;
+    const decorate = () => {
+      if (environmentId === null) return;
+      const scope = environmentId;
+      if (scope !== undefined) {
+        void decorateVerifiedInlineCodeLinks(
+          root,
+          scope,
+          checkWorkspacePaths,
+        ).catch(() => {});
+        return;
+      }
+      if (resolutionPending) return;
+      resolutionPending = true;
+      sdk.threads
+        .get({ threadId: thread.id })
+        .then((result) => {
+          resolutionPending = false;
+          const resolved =
+            "environmentId" in result ? result.environmentId : null;
+          environmentId = resolved;
+          if (resolved === null) return;
+          return decorateVerifiedInlineCodeLinks(
+            root,
+            resolved,
+            checkWorkspacePaths,
+          );
+        })
+        // A transient resolution failure retries on the next mutation
+        // scan; without a resolvable environment there is nothing
+        // better to do.
+        .catch(() => {
+          resolutionPending = false;
+        });
+    };
+    decorate();
     let frame: number | null = null;
     const schedule = () => {
       if (frame !== null) return;
       frame = view.requestAnimationFrame(() => {
         frame = null;
-        decorateInlineCodeLinks(root);
+        decorate();
       });
     };
     const observer = new MutationObserver(schedule);
@@ -365,7 +423,7 @@ export function ThreadPane({
       observer.disconnect();
       if (frame !== null) view.cancelAnimationFrame(frame);
     };
-  }, [thread.id]);
+  }, [thread.id, sdk, checkWorkspacePaths]);
 
   return (
     <aside
