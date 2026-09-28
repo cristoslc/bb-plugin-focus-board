@@ -3,6 +3,12 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.3] — 2026-09-28
+
+### Added
+
+- **Recent decisions card in the thread pane.** bb's transcript drops every trace of an answered AskUserQuestion — the tool call is suppressed, the delivered result is a hidden system message, and the interaction row stores only "Submitted", never the answers — so once a question card was submitted, the pane forgot what was decided. The pane now shows a collapsed "Recent decisions" card (up to five) rebuilt from the raw event log, listing each question's header chip, prompt, and chosen answer; it auto-expands when a fresh answer lands and collapses with Escape.
+
 ## [0.5.2] — 2026-09-28
 
 ### Fixed
