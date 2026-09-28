@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isExternalHref, workspacePathFromHref } from "../components/chat-link-intercept";
+import {
+  isExternalHref,
+  inlineCodeMarkdownPath,
+  workspacePathFromHref,
+} from "../components/chat-link-intercept";
 
 describe("isExternalHref", () => {
   it("treats scheme-qualified urls as external", () => {
@@ -81,5 +85,51 @@ describe("workspacePathFromHref", () => {
 
   it("does not treat a dotless route with a line suffix as a file", () => {
     expect(workspacePathFromHref("/threads/thr_abc:12")).toBeNull();
+  });
+});
+
+describe("inlineCodeMarkdownPath", () => {
+  it("accepts the spans the host's thread view linkifies", () => {
+    expect(inlineCodeMarkdownPath("docs/rfcs/rfc-support-triage-process.md")).toBe(
+      "docs/rfcs/rfc-support-triage-process.md",
+    );
+    expect(inlineCodeMarkdownPath("./docs/erd.md")).toBe("docs/erd.md");
+    expect(inlineCodeMarkdownPath("docs/../docs/erd.md")).toBe("docs/erd.md");
+    expect(inlineCodeMarkdownPath("README.MARKDOWN")).toBe("README.MARKDOWN");
+  });
+
+  it("strips host-style line suffixes from code text", () => {
+    expect(inlineCodeMarkdownPath("docs/erd.md:12")).toBe("docs/erd.md");
+    expect(inlineCodeMarkdownPath("docs/erd.md:12-20")).toBe("docs/erd.md");
+    expect(inlineCodeMarkdownPath("docs/erd.md:12:5")).toBe("docs/erd.md");
+    expect(inlineCodeMarkdownPath("docs/erd.md#L12-L20")).toBe("docs/erd.md");
+  });
+
+  it("rejects whitespace-padded and multiline spans like the host does", () => {
+    expect(inlineCodeMarkdownPath(" docs/erd.md ")).toBeNull();
+    expect(inlineCodeMarkdownPath("docs/erd.md\n")).toBeNull();
+    expect(inlineCodeMarkdownPath("docs/a.mmd\ndocs/b.md")).toBeNull();
+  });
+
+  it("never linkifies non-markdown files or commit hashes", () => {
+    // The host autolinks markdown files only; .ts paths, mermaid .mmd,
+    // commit shas and extensionless routes stay plain code.
+    expect(inlineCodeMarkdownPath("src/main.ts")).toBeNull();
+    expect(inlineCodeMarkdownPath("8811dd9c")).toBeNull();
+    expect(inlineCodeMarkdownPath("docs/erd.mmd")).toBeNull();
+    expect(inlineCodeMarkdownPath("docs/erd")).toBeNull();
+    expect(inlineCodeMarkdownPath("components/thread-pane.tsx")).toBeNull();
+  });
+
+  it("rejects home-relative paths the host cannot resolve in the workspace", () => {
+    expect(inlineCodeMarkdownPath("~/.agents/AGENTS.md")).toBeNull();
+    expect(inlineCodeMarkdownPath("~agents/AGENTS.md")).toBeNull();
+  });
+
+  it("rejects urls, empty text, and oversized spans", () => {
+    expect(inlineCodeMarkdownPath("https://example.com/a.md")).toBeNull();
+    expect(inlineCodeMarkdownPath("//example.com/a.md")).toBeNull();
+    expect(inlineCodeMarkdownPath("")).toBeNull();
+    expect(inlineCodeMarkdownPath("a.md".repeat(200))).toBeNull();
   });
 });
