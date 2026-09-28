@@ -10,6 +10,7 @@
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
 import { SIM_DONE_IDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS } from "./data";
+import { applyMoveVisible } from "../../lib/rank";
 
 export const registeredNavPanel: {
   path?: string;
@@ -190,26 +191,24 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   }
   if (method === "rank_list") return { orders: structuredClone(simRanks) };
   if (method === "rank_move") {
-    // The same move semantics as lib/rank.ts, applied in the harness so a
-    // UAT pass exercises a real state change rather than a stub.
-    const { columnKey, threadId, beforeId, toEnd } = args as {
+    // The server's move semantics — applyMoveVisible, not a re-spelled copy
+    // of them — so a UAT pass exercises the real state change. The copy this
+    // replaced drifted the first time the move semantics changed (the
+    // rank-everything-above-the-drop-point fix), and the suite caught it.
+    const { columnKey, threadId, beforeId, toEnd, visibleIds } = args as {
       columnKey: string;
       threadId: string;
       beforeId: string | null;
       toEnd: boolean;
+      visibleIds: string[];
     };
-    const order = simRanks[columnKey] ?? [];
-    const rest = order.filter((id) => id !== threadId);
-    simRanks[columnKey] = toEnd
-      ? [...rest, threadId]
-      : beforeId === null
-        ? [threadId, ...rest]
-        : (() => {
-            const at = rest.indexOf(beforeId);
-            return at === -1
-              ? [...rest, threadId]
-              : [...rest.slice(0, at), threadId, ...rest.slice(at)];
-          })();
+    simRanks[columnKey] = applyMoveVisible(
+      simRanks[columnKey] ?? [],
+      visibleIds,
+      threadId,
+      beforeId,
+      toEnd,
+    );
     return { columnKey, order: [...simRanks[columnKey]] };
   }
   return {};

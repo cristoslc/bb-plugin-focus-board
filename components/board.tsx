@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { BoardColumn, GroupBy } from "./grouping";
 import { threadState, withSweepGather } from "./grouping";
@@ -8,10 +8,10 @@ import type { CardMenuAction } from "./thread-card-menu";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import {
-  appendTo,
-  applyMove,
+  applyMoveVisible,
   columnIsRanked,
   columnRankKey,
+  displayAfterMove,
   isLaneDrag,
   moveTargetFor,
   type RankStore,
@@ -79,6 +79,8 @@ interface BoardProps {
     | { kind: string; state: string }
     | undefined;
   onOpenThread: (threadId: string) => void;
+  /** Close the open thread pane when the operator clicks empty board area. */
+  onClosePane?: () => void;
   onNewTask: () => void;
   /**
    * Per-column manual orders. A column is reorderable only when it has a
@@ -90,12 +92,16 @@ interface BoardProps {
    * Move `threadId` within `columnKey`. `beforeId` names the card to land in
    * front of (null = top); `toEnd` drops below the last ranked card instead,
    * which is a different intent that would otherwise share the null.
+   * `visibleIds` is the column's displayed order, so the writer can rank
+   * every card above the drop point — without it, a first drop into an
+   * unranked column would rank one card and reorder nothing.
    */
   onRankMove?: (
     columnKey: string,
     threadId: string,
     beforeId: string | null,
     toEnd: boolean,
+    visibleIds: readonly string[],
   ) => void;
   /** Drop a card onto the Done column. */
   onDropDone: (threadId: string) => void;
@@ -196,6 +202,7 @@ export function Board({
   statusFor,
   onOpenThread,
   onNewTask,
+  onClosePane,
   rankStore,
   onRankMove,
   onDropDone,
@@ -275,6 +282,15 @@ export function Board({
   }, [activeThreadId, activeCardLaneId]);
 
   const sweepActive = sweepCandidatesFor !== undefined && onSweepArm !== undefined;
+  // Clicking empty board area (anything that is not a card, control, or link)
+  // while a thread is open closes the pane.
+  const handleBackgroundClick = (event: MouseEvent) => {
+    if (activeThreadId === null || onClosePane === undefined) return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    if (target.closest("[data-thread-card], button, a, input, textarea, select, [role='menu'], [role='menuitem']") !== null) return;
+    onClosePane();
+  };
   const ranking = rankStore !== undefined && onRankMove !== undefined;
 
   // Announce a completed move so a reorder is legible without sight of the
@@ -329,6 +345,7 @@ export function Board({
     threadId: string,
     beforeId: string | null,
     toEnd: boolean,
+    visibleIds: readonly string[],
   ): void {
     if (!ranking) {
       reportRefusal("card ordering is not available on this board.");
@@ -342,14 +359,19 @@ export function Board({
       return;
     }
     setRankError(null);
-    const current = column.threads.map((thread) => thread.id);
-    onRankMove?.(columnRankKey(groupBy, column.id), threadId, beforeId, toEnd);
+    onRankMove?.(
+      columnRankKey(groupBy, column.id),
+      threadId,
+      beforeId,
+      toEnd,
+      visibleIds,
+    );
     // Report the resulting position from the order the move produces, not
     // from the anchor's old index: dropping onto a card's top half lands one
     // above where that card was, and the message must match the new board.
-    const after = toEnd
-      ? appendTo(current, threadId)
-      : applyMove(current, threadId, beforeId);
+    // The DISPLAYED order, not the sparse stored one — a card that keeps its
+    // rank below the drop point is still a card on the board.
+    const after = displayAfterMove(visibleIds, threadId, beforeId, toEnd);
     setAnnouncement(
       `Moved to position ${after.indexOf(threadId) + 1} of ${after.length} in ${column.label}.`,
     );
@@ -364,6 +386,7 @@ export function Board({
   return (
     <div
       ref={scrollRef}
+      onClick={handleBackgroundClick}
       className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-3 pb-3 pt-2"
     >
       {/* The insertion line is the only visual feedback a reorder gives, so
@@ -440,7 +463,15 @@ export function Board({
                   // card's own handler, which stops propagation.
                   event.preventDefault();
                   clearRankDrop();
-                  if (threadId !== "") commitMove(column, threadId, null, true);
+                  if (threadId !== "") {
+                    commitMove(
+                      column,
+                      threadId,
+                      null,
+                      true,
+                      shownThreads.map((candidate) => candidate.id),
+                    );
+                  }
                   return;
                 }
                 if (!isDropTarget) return;
@@ -560,7 +591,13 @@ export function Board({
                               );
                               return;
                             }
-                            commitMove(column, threadId, target.beforeId, target.toEnd);
+                            commitMove(
+                              column,
+                              threadId,
+                              target.beforeId,
+                              target.toEnd,
+                              shownThreads.map((candidate) => candidate.id),
+                            );
                           }
                         }
                         // A drag is mouse-only, so a column also takes Alt+Arrow
@@ -572,6 +609,7 @@ export function Board({
                             if (!event.altKey) return;
                             if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
                             const at = shownThreads.indexOf(thread);
+                            const visibleIds = shownThreads.map((candidate) => candidate.id);
                             const to = event.key === "ArrowUp" ? at - 1 : at + 1;
                             if (to < 0 || to >= shownThreads.length) return;
                             event.preventDefault();
@@ -582,7 +620,7 @@ export function Board({
                               event.key === "ArrowUp"
                                 ? shownThreads[to].id
                                 : (shownThreads[to + 1]?.id ?? null);
-                            commitMove(column, thread.id, beforeId, beforeId === null);
+                            commitMove(column, thread.id, beforeId, beforeId === null, visibleIds);
                           }
                         }
                         className={cn(

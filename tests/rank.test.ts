@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   appendTo,
   applyMove,
+  applyMoveVisible,
   columnIsRanked,
+  displayAfterMove,
   columnRankKey,
   compareByRank,
   moveTargetFor,
@@ -242,6 +244,121 @@ describe("turning a drop position into a move", () => {
 
   it("refuses a hover id that is not in the column", () => {
     expect(moveTargetFor(ids, "thr_zzz", "before", "thr_a")).toBeNull();
+  });
+});
+
+describe("applyMoveVisible", () => {
+  it("a first drop into an unranked column ranks everything above the drop point", () => {
+    // THE regression: with only the dragged card ranked, compareByRank still
+    // sorts it above every unranked card, so "below the second card" silently
+    // no-ops. The cards the drop lands ABOVE must be ranked with it. thr_b is
+    // the anchor the card was dropped in front of, so it sits BELOW the drop
+    // point and stays unranked — yet still displays third, under thr_c.
+    const order = applyMoveVisible([], ["thr_a", "thr_b", "thr_c"], "thr_c", "thr_b", false);
+    expect(order).toEqual(["thr_a", "thr_c"]);
+  });
+
+  it("cards below the drop point stay unranked", () => {
+    const order = applyMoveVisible(
+      [],
+      ["thr_a", "thr_b", "thr_c", "thr_d"],
+      "thr_d",
+      "thr_b",
+      false,
+    );
+    expect(order).toEqual(["thr_a", "thr_d"]);
+  });
+
+  it("an already-ranked column moves only the dragged card", () => {
+    const order = applyMoveVisible(
+      ["thr_x", "thr_y"],
+      ["thr_x", "thr_y", "thr_z"],
+      "thr_z",
+      "thr_y",
+      false,
+    );
+    expect(order).toEqual(["thr_x", "thr_z", "thr_y"]);
+  });
+
+  it("a first drop onto a card's top half ranks the cards above the anchor", () => {
+    // Dropping on thr_c's top half lands between thr_b and thr_c, so the
+    // ranked head is [a, b] plus the moved card — thr_c stays unranked.
+    const order = applyMoveVisible(
+      [],
+      ["thr_a", "thr_b", "thr_c"],
+      "thr_d",
+      "thr_c",
+      false,
+    );
+    expect(order).toEqual(["thr_a", "thr_b", "thr_d"]);
+  });
+
+  it("dropping at the top of an unranked column ranks only the moved card", () => {
+    expect(applyMoveVisible([], ["thr_a", "thr_b"], "thr_c", null, false)).toEqual([
+      "thr_c",
+    ]);
+  });
+
+  it("a toEnd drop ranks every visible card", () => {
+    // Landing below the last visible card means landing below the unranked
+    // ones too, so all of them are ranked. A previously-ranked card the
+    // visible list does not mention is untouched by the move and keeps its
+    // stored order after the newly ranked head.
+    const order = applyMoveVisible(
+      ["thr_old"],
+      ["thr_a", "thr_b", "thr_c"],
+      "thr_c",
+      null,
+      true,
+    );
+    expect(order).toEqual(["thr_a", "thr_b", "thr_c", "thr_old"]);
+  });
+
+  it("an unknown anchor in an unranked column still ranks the displayed prefix", () => {
+    // applyMove appends when the anchor is not in the visible list; the head
+    // densify then follows the DISPLAYED order, not the fallback's guess.
+    const order = applyMoveVisible(
+      [],
+      ["thr_a", "thr_b"],
+      "thr_c",
+      "thr_zzz",
+      false,
+    );
+    expect(order).toEqual(["thr_a", "thr_b", "thr_c"]);
+  });
+
+  it("appends ranks the visible list does not mention after the new head", () => {
+    // A filtered-out ranked card is not silently unranked by a move it took
+    // no part in; it lands after the newly ranked head, which is the next
+    // slot the display order can resolve.
+    const order = applyMoveVisible(
+      ["thr_hidden", "thr_a"],
+      ["thr_a", "thr_b"],
+      "thr_c",
+      "thr_b",
+      false,
+    );
+    expect(order).toEqual(["thr_a", "thr_c", "thr_hidden"]);
+  });
+
+  it("an empty thread id changes nothing", () => {
+    expect(applyMoveVisible([], ["thr_a"], "", null, false)).toEqual([]);
+  });
+});
+
+describe("displayAfterMove", () => {
+  it("rearranges the visible list without consulting stored ranks", () => {
+    // The announcement counts cards, not ranks: a card that keeps its rank
+    // below the drop point is still on the board and still occupies a slot.
+    expect(displayAfterMove(["thr_a", "thr_b", "thr_c"], "thr_c", "thr_b", false)).toEqual([
+      "thr_a",
+      "thr_c",
+      "thr_b",
+    ]);
+    expect(displayAfterMove(["thr_a", "thr_b"], "thr_b", null, true)).toEqual([
+      "thr_a",
+      "thr_b",
+    ]);
   });
 });
 

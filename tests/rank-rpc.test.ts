@@ -10,17 +10,29 @@ type Rpc = Awaited<ReturnType<typeof setup>>;
 const list = async (rpc: Rpc) =>
   (await rpc.callRpc("rank_list", null)) as { orders: Record<string, string[]> };
 
+// `visibleIds` defaults to the column's stored order, which is what the
+// display order equals when every visible card is already ranked. Tests that
+// exercise unranked cards pass the list explicitly.
 const move = async (
   rpc: Rpc,
   columnKey: string,
   threadId: string,
   beforeId: string | null,
   toEnd = false,
-) =>
-  (await rpc.callRpc("rank_move", { columnKey, threadId, beforeId, toEnd })) as {
+  visibleIds?: readonly string[],
+) => {
+  const seen = visibleIds ?? ((await list(rpc)).orders[columnKey] ?? []);
+  return (await rpc.callRpc("rank_move", {
+    columnKey,
+    threadId,
+    beforeId,
+    toEnd,
+    visibleIds: seen.includes(threadId) ? seen : [...seen, threadId],
+  })) as {
     columnKey: string;
     order: string[];
   };
+};
 
 describe("rank_list", () => {
   it("reads as no ranks when nothing is stored", async () => {

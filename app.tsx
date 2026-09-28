@@ -33,7 +33,7 @@ import {
   paneSubPathFor,
   paneThreadIdFromSubPath,
 } from "./lib/pane-route";
-import { appendTo, applyMove, orderForColumn, type RankStore } from "./lib/rank";
+import { applyMoveVisible, orderForColumn, type RankStore } from "./lib/rank";
 import {
   DEFAULT_DONE_ARCHIVE_DAYS,
   DEFAULT_IDLE_ARCHIVE_DAYS,
@@ -809,6 +809,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
             onOpenThread={openThreadCard}
+            onClosePane={closeThreadPane}
             onNewTask={openNewThread}
             sweepCandidatesFor={sweepCandidatesFor}
             armedSweep={armedSweep}
@@ -828,18 +829,28 @@ function BoardPage({ subPath }: { subPath: string }) {
               }
             }}
             rankStore={ranks}
-            onRankMove={(columnKey, threadId, beforeId, toEnd) => {
+            onRankMove={(columnKey, threadId, beforeId, toEnd, visibleIds) => {
               // Optimistic: the card snaps to its slot immediately, and the
               // rank-changed refetch confirms. A rejected write settles back
               // to the stored order on the next refetch rather than sticking.
               setRanks((prev) => ({
                 ...prev,
-                [columnKey]: toEnd
-                  ? appendTo(orderForColumn(prev, columnKey), threadId)
-                  : applyMove(orderForColumn(prev, columnKey), threadId, beforeId),
+                [columnKey]: applyMoveVisible(
+                  orderForColumn(prev, columnKey),
+                  visibleIds,
+                  threadId,
+                  beforeId,
+                  toEnd,
+                ),
               }));
               rpc
-                .call("rank_move", { columnKey, threadId, beforeId, toEnd })
+                .call("rank_move", {
+                  columnKey,
+                  threadId,
+                  beforeId,
+                  toEnd,
+                  visibleIds: [...visibleIds],
+                })
                 .catch(() => refetchRanks());
             }}
             menuActionsFor={(thread) => {

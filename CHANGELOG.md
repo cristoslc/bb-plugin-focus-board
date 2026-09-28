@@ -35,6 +35,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and its handlers setState on resolve — an endless setState → render →
   new-sdk → setState loop (~1000 renders/s) that could eventually wedge the
   page. The mock now returns one stable client, as the real host does.
+||||||| 5faffb6
+
+## [0.4.6] — 2026-09-27
+
+### Added
+
+- **Click an empty area of the board to close the thread pane.** Clicking
+  anywhere on the board that is not a card, button, link, input, or menu
+  closes the open thread pane, matching the host's click-away behavior.
+  Clicks on cards, controls, and card menus are unaffected.
+
+## [0.4.5] — 2026-09-27
+
+### Fixed
+
+- **The first drag-and-drop reorder in a column silently did nothing unless
+  the drop landed at the very top.** The rank model is sparse, and a first
+  move ranked only the dragged card — which the comparator then sorts above
+  every unranked card, so "drop below the second card" re-sorted nothing.
+  Moves now also rank every card ABOVE the drop point (the smallest write
+  that honours the intent); cards below it stay unranked, preserving the
+  leave-a-gap, re-enter-in-the-gap property. Applies to mouse drops, empty-
+  space drops, and Alt+Arrow keyboard moves.
+
 
 ## [0.4.4] — 2026-09-27
 
