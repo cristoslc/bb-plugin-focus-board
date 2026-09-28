@@ -40,6 +40,7 @@ import {
 } from "./lib/sweep-cli";
 import { readGitHubStatuses } from "./lib/tracker-status";
 import { resolveRepoSlug } from "./lib/tickets";
+import { resolveWithinRoot } from "./lib/workspace-paths";
 import type { JsonValue } from "@get-bb/plugin-sdk";
 
 export const rpcContract = defineRpcContract({
@@ -68,6 +69,21 @@ export const rpcContract = defineRpcContract({
     output: z.object({
       statuses: z.record(z.number().int(), z.object({ kind: z.string(), state: z.string() })),
     }),
+  },
+
+  // Existence check behind the thread pane's inline-code file links: the
+  // pane only decorates code spans whose path really exists in the
+  // thread's workspace (the host linkifier is string-only and will paint
+  // dead links). Paths are workspace-relative and resolved against the
+  // environment root here; the check runs on the environment's own host.
+  workspace_files_exist: {
+    input: z.object({
+      threadId: z.string().min(1),
+      // One visible pane's candidate paths stay well under this cap; it
+      // bounds each RPC fan-out to the host daemon.
+      paths: z.array(z.string().min(1)).max(200),
+    }),
+    output: z.object({ existence: z.record(z.string(), z.boolean()) }),
   },
 
   sweep_config_get: {
@@ -387,6 +403,40 @@ export default async function plugin(bb: BbPluginApi) {
       if (home === "") return { statuses: {} };
       const statuses = readGitHubStatuses(`${home}/${GITHUB_CACHE_DB}`, repo, numbers, bb.log);
       return { statuses };
+    },
+    workspace_files_exist: async ({ threadId, paths }) => {
+      const thread = await bb.sdk.threads.get({ threadId });
+      const environmentId = "environmentId" in thread ? thread.environmentId : null;
+      if (environmentId === null) return { existence: {} };
+      const environment = await bb.sdk.environments.get({ environmentId });
+      const root = environment.path;
+      // A workspaceless environment has no files to verify against.
+      if (root === null) return { existence: {} };
+      // Dedupe first, then re-validate the untrusted relative paths; the
+      // ones that escape the workspace (absolute, `~`, `..` escapes) are
+      // reported missing instead of stat-ed on the host.
+      const unique = [...new Set(paths)];
+      const relative: string[] = [];
+      const absolute: string[] = [];
+      for (const path of unique) {
+        const resolved = resolveWithinRoot(root, path);
+        if (resolved === null) continue;
+        relative.push(path);
+        absolute.push(resolved);
+      }
+      if (absolute.length === 0) return { existence: {} };
+      // The check runs on the environment's own host, so workspaces on
+      // other machines verify correctly too.
+      const { existence } = await bb.sdk.hosts.pathsExist({
+        hostId: environment.hostId,
+        paths: absolute,
+      });
+      const out: Record<string, boolean> = {};
+      for (const [index, path] of relative.entries()) {
+        const verdict = existence[absolute[index]];
+        if (typeof verdict === "boolean") out[path] = verdict;
+      }
+      return { existence: out };
     },
     sweep_config_get: async () => {
       const values = await settings.get();

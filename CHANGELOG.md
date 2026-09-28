@@ -3,6 +3,19 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.5] — 2026-09-28
+
+### Changed
+
+- **Inline-code workspace paths now verify against the workspace before
+  they become clickable in the board's thread pane.** A path is
+  decorated (and clickable) only when the plugin backend confirms the
+  file exists in the thread's environment — checked on the
+  environment's own host, so remote workspaces verify correctly. Dead
+  names stay plain text: a bare `.md`, a path the model only planned,
+  or anything the workspace does not have no longer invites a preview
+  that opens nothing. Explicit markdown links keep the 0.5.3 behavior.
+
 ## [0.5.4] — 2026-09-28
 
 ### Added
