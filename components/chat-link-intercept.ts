@@ -56,3 +56,37 @@ export function workspacePathFromHref(href: string): string | null {
 	if (!(basename.startsWith(".") || basename.includes("."))) return null;
 	return segments.join("/");
 }
+
+/**
+ * The host's own thread view linkifies inline code that names a workspace
+ * markdown file: the rendered `code` element's text is re-parsed as a local
+ * file link and turned into an anchor. That behavior lives in the host's
+ * markdown preview, but it only runs when the host supplies local-file link
+ * routing — which the embedded `ThreadChat` in this pane never receives
+ * (routing is wired through the app-panel context and gated on the panel's
+ * environment matching the thread's; a board pane lists many environments).
+ *
+ * This function mirrors the host's gate so the pane can claim the same
+ * clicks and paint the same affordance. A code span qualifies when it is a
+ * single trimmed token (no surrounding whitespace, no newlines), survives
+ * the same suffix/segment reduction as an href (`:12`, `:12-20`, `#L12-L20`,
+ * `./`, `../`), and names a `.md`/`.markdown` file — the host only ever
+ * autolinks markdown files from inline code, never other extensions, never
+ * commit hashes, never `~`-home paths.
+ */
+export function inlineCodeMarkdownPath(text: string): string | null {
+	if (text === "" || text.trim() !== text) return null;
+	if (text.includes("\n") || text.includes("\r")) return null;
+	// Defensive cap so a pathological giant code span can never drive the
+	// decorator's scans; the host has no bound but real paths stay short.
+	if (text.length > 512) return null;
+	// Scheme-qualified and protocol-relative urls are not workspace paths,
+	// even when they end in `.md`.
+	if (isExternalHref(text)) return null;
+	// Home-relative paths (`~/.agents/AGENTS.md`) cannot resolve inside the
+	// workspace root, and the host's relative-link parser rejects them too.
+	if (/^~(?:[^/]*\/|$)/u.test(text)) return null;
+	const path = workspacePathFromHref(text);
+	if (path === null) return null;
+	return /\.(?:md|markdown)$/iu.test(path) ? path : null;
+}

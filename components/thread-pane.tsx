@@ -16,7 +16,15 @@ import { Button } from "@/components/ui/button";
 import { COARSE_POINTER_HEADER_ICON_BUTTON_CLASS } from "@/components/ui/coarse-pointer-sizing";
 import { PendingInteractionCard } from "@/components/pending-interaction-card";
 import { DecidedQuestionsCard } from "@/components/decided-questions-card";
-import { isExternalHref, workspacePathFromHref } from "@/components/chat-link-intercept";
+import {
+  isExternalHref,
+  inlineCodeMarkdownPath,
+  workspacePathFromHref,
+} from "@/components/chat-link-intercept";
+import {
+  decorateInlineCodeLinks,
+  decoratedCodePath,
+} from "@/components/decorate-inline-code";
 import { useIsCompactViewport } from "@/components/ui/hooks/use-compact-viewport";
 
 // Shared header-button classes: a 28px ghost icon button that grows to a
@@ -223,20 +231,12 @@ export function ThreadPane({
   // the browser resolves against the bb app's origin — an error page. The
   // host's own thread view owns message link routing; this pane does not.
   // Capture clicks on relative anchors here and reopen them as live files
-  // against the thread's environment instead.
-  const onChatClickCapture = useCallback(
-    (event: MouseEvent<HTMLDivElement>) => {
-      if (event.button !== 0) return;
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const anchor = target.closest("a[href]");
-      if (anchor === null) return;
-      const href = anchor.getAttribute("href") ?? "";
-      if (href === "" || isExternalHref(href)) return;
-      const path = workspacePathFromHref(href);
-      if (path === null) return;
-      event.preventDefault();
-      event.stopPropagation();
+  // against the thread's environment instead. The same routing gap also
+  // hides the host's inline-code file links (see the decoration effect
+  // below), so inline code that names a workspace markdown file is claimed
+  // here too.
+  const openWorkspacePreview = useCallback(
+    (path: string) => {
       void sdk.threads
         .get({ threadId: thread.id })
         .then((result) => {
@@ -254,6 +254,37 @@ export function ThreadPane({
         });
     },
     [sdk, navigate, thread.id],
+  );
+
+  const onChatClickCapture = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      // Explicit markdown links win; code spans are only claimed when no
+      // anchor is involved.
+      const anchor = target.closest("a[href]");
+      if (anchor !== null) {
+        const href = anchor.getAttribute("href") ?? "";
+        if (href === "" || isExternalHref(href)) return;
+        const path = workspacePathFromHref(href);
+        if (path === null) return;
+        event.preventDefault();
+        event.stopPropagation();
+        openWorkspacePreview(path);
+        return;
+      }
+      const code = target.closest("code");
+      if (code === null || code.closest("pre") !== null) return;
+      // Prefer the path recorded by the decorator; fall back to classifying
+      // the code text for clicks that land before the scan caught up.
+      const path = decoratedCodePath(code) ?? inlineCodeMarkdownPath(code.textContent ?? "");
+      if (path === null) return;
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkspacePreview(path);
+    },
+    [openWorkspacePreview],
   );
 
   const endDrag = useCallback((event: PointerEvent) => {
@@ -309,6 +340,33 @@ export function ThreadPane({
     document.addEventListener("keydown", onKeyDown, { capture: true });
     return () => document.removeEventListener("keydown", onKeyDown, { capture: true });
   }, [onClose]);
+
+  // Paint the host's missing inline-code file links (see
+  // decorate-inline-code.ts): ThreadChat streams and React rewrites its
+  // markdown over time, so decorate once for the content already on
+  // screen, then re-scan on mutations, coalesced to one scan per frame.
+  const chatBodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = chatBodyRef.current;
+    if (root === null) return;
+    const view = root.ownerDocument.defaultView;
+    if (view === null) return;
+    decorateInlineCodeLinks(root);
+    let frame: number | null = null;
+    const schedule = () => {
+      if (frame !== null) return;
+      frame = view.requestAnimationFrame(() => {
+        frame = null;
+        decorateInlineCodeLinks(root);
+      });
+    };
+    const observer = new MutationObserver(schedule);
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    return () => {
+      observer.disconnect();
+      if (frame !== null) view.cancelAnimationFrame(frame);
+    };
+  }, [thread.id]);
 
   return (
     <aside
@@ -417,6 +475,7 @@ export function ThreadPane({
           the raw event log. */}
       <DecidedQuestionsCard threadId={thread.id} />
       <div
+        ref={chatBodyRef}
         className="min-h-0 flex-1"
         onClickCapture={onChatClickCapture}
       >

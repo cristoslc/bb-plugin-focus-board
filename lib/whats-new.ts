@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.3";
+export const APP_VERSION = "0.5.4";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -23,9 +23,15 @@ export interface WhatsNewEntry {
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
-    version: "0.5.3",
+    version: "0.5.4",
     items: [
       "The thread pane now keeps a record of recent AskUserQuestion decisions — bb's transcript drops the answers once a question card is submitted, so the pane rebuilds them from the event log in a collapsed 'Recent decisions' card.",
+    ],
+  },
+  {
+    version: "0.5.3",
+    items: [
+      "Backticked workspace paths in thread messages are now clickable in the board's thread pane: clicking a `.md` path opens the file preview, with the same underline and icon the main thread pane shows.",
     ],
   },
   {
