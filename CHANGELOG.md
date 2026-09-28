@@ -3,6 +3,15 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.6] — 2026-09-27
+
+### Added
+
+- **Click an empty area of the board to close the thread pane.** Clicking
+  anywhere on the board that is not a card, button, link, input, or menu
+  closes the open thread pane, matching the host's click-away behavior.
+  Clicks on cards, controls, and card menus are unaffected.
+
 ## [0.4.5] — 2026-09-27
 
 ### Fixed
