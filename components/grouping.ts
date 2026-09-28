@@ -150,8 +150,29 @@ export function derivedCompare(
 function sorted(
   threads: readonly PluginSidebarThread[],
   order: ColumnOrder = [],
+  derived: (a: PluginSidebarThread, b: PluginSidebarThread) => number = derivedCompare,
 ): PluginSidebarThread[] {
-  return [...threads].sort(compareByRank(order, derivedCompare));
+  return [...threads].sort(compareByRank(order, derived));
+}
+
+/**
+ * The Done column's derived order: most recently done first. A thread with no
+ * recorded doneAt (marked done but the record is missing, e.g. a fresh board
+ * over legacy state) cannot be placed on the done timeline, so it sorts below
+ * every recorded one, in the board's derived order — assuming "just now" for
+ * an unknown stamp would vault it over cards the operator watched get done.
+ */
+export function doneRecencyCompare(
+  doneTimes: ReadonlyMap<string, number>,
+): (a: PluginSidebarThread, b: PluginSidebarThread) => number {
+  return (a, b) => {
+    const aDone = doneTimes.get(a.id);
+    const bDone = doneTimes.get(b.id);
+    if (aDone !== undefined && bDone !== undefined) return bDone - aDone;
+    if (aDone !== undefined) return -1;
+    if (bDone !== undefined) return 1;
+    return derivedCompare(a, b);
+  };
 }
 
 /**
@@ -217,6 +238,7 @@ export function buildColumns(
   doneIds: ReadonlySet<string> = new Set(),
   now: number = Date.now(),
   ranks: RankStore = {},
+  doneTimes: ReadonlyMap<string, number> = new Map(),
 ): BoardColumn[] {
   // Threads marked Done form their own column, always farthest right on the
   // Attention board and present (dimmed) on every other grouping.
@@ -272,11 +294,18 @@ export function buildColumns(
   }
 
   // The Done column renders whenever a card has entered it, at the far right.
+  // Default order is by the done stamp, newest done first; a stored drag
+  // order (rank key "done") rides on top of that default, exactly as in
+  // every other column.
   if (done.length > 0) {
     columns.push({
       id: "done",
       label: "Done",
-      threads: sorted(done, orderForColumn(ranks, columnRankKey(groupBy, "done"))),
+      threads: sorted(
+        done,
+        orderForColumn(ranks, columnRankKey(groupBy, "done")),
+        doneRecencyCompare(doneTimes),
+      ),
     });
   }
   // A grouping with no buckets at all still shows the flat column.

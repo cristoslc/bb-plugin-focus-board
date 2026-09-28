@@ -27,6 +27,7 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
     items: [
       "The open pane is part of the panel URL: bb's back arrow returns you to the pane you left after following a link out to a full thread, and walks back through cards you lost track of.",
       "The board keeps the active card in view — when a pane is restored from history, and when the card relocates (pin, done, grouping change).",
+      "The Done column now sorts by when each thread was marked done, newest first; dragging still applies a manual order on top.",
       "A What's-new button now lives in the toolbar (this one).",
     ],
   },

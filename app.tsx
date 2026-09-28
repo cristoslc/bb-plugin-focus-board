@@ -201,6 +201,16 @@ function BoardPage({ subPath }: { subPath: string }) {
     (threadId: string) => doneExtras[threadId]?.keep === true,
     [doneExtras],
   );
+  // Thread id → epoch-ms done stamp, feeding the Done column's default sort
+  // (newest done first). Threads without a record (or the whole map, if
+  // done_list never answered) fall back to the board's derived order.
+  const doneTimes = useMemo(() => {
+    const times = new Map<string, number>();
+    for (const [threadId, extra] of Object.entries(doneExtras)) {
+      if (extra.doneAt !== undefined) times.set(threadId, extra.doneAt);
+    }
+    return times;
+  }, [doneExtras]);
 
   // Manual column orders, keyed by columnRankKey. A column with no stored
   // order stays in the derived order and shows no drag affordance, so the
@@ -453,8 +463,9 @@ function BoardPage({ subPath }: { subPath: string }) {
       assembleBoard(searched, groupBy, { projects, providers }, frozenColumns, doneIds, Date.now(), {
         nestingEnabled: nestChildren,
         ranks,
+        doneTimes,
       }),
-    [searched, groupBy, projects, providers, frozenColumns, doneIds, nestChildren, ranks],
+    [searched, groupBy, projects, providers, frozenColumns, doneIds, nestChildren, ranks, doneTimes],
   );
   const columns = assembly.columns;
 

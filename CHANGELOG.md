@@ -27,6 +27,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   are stamped silently — no pulse for a first visit. The condensed list
   ships in the bundle (`lib/whats-new.ts`) and is pinned to
   `package.json`'s version by a test.
+- **The Done column now sorts by when each thread was marked done, newest
+  first**, instead of by the board's newest-activity order. Dragging a card
+  inside Done still applies a manual order on top of that default, exactly
+  as in every other column; a thread whose done stamp is unknown falls below
+  recorded ones rather than being assumed just done.
 
 ### Fixed
 
@@ -35,7 +40,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and its handlers setState on resolve — an endless setState → render →
   new-sdk → setState loop (~1000 renders/s) that could eventually wedge the
   page. The mock now returns one stable client, as the real host does.
-||||||| 5faffb6
 
 ## [0.4.6] — 2026-09-27
 

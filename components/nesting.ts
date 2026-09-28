@@ -65,6 +65,12 @@ export interface NestingOptions {
    * a parent that honours a rank with children that ignore it is a lie.
    */
   ranks?: RankStore;
+  /**
+   * Thread id → epoch-ms done stamp, for the Done column's default sort
+   * (newest done first). Absent for a thread, or an absent map entirely,
+   * leaves that card on the board's derived order.
+   */
+  doneTimes?: ReadonlyMap<string, number>;
 }
 
 /**
@@ -93,13 +99,23 @@ export function assembleBoard(
 ): BoardAssembly {
   const nestingEnabled = options.nestingEnabled ?? true;
   const ranks = options.ranks ?? {};
+  const doneTimes = options.doneTimes ?? new Map<string, number>();
   // Archived threads never take a column slot in either mode; when nesting
   // is OFF they render nowhere at all (matching bb's sidebar, where
   // archiving removes the thread from the list).
   const columnThreads = threads.filter((thread) => !thread.isArchived);
   if (!nestingEnabled) {
     return {
-      columns: buildColumns(columnThreads, groupBy, context, frozenColumns, doneIds, now, ranks),
+      columns: buildColumns(
+        columnThreads,
+        groupBy,
+        context,
+        frozenColumns,
+        doneIds,
+        now,
+        ranks,
+        doneTimes,
+      ),
       nestedChildrenByParent: new Map(),
       childCountByParent: new Map(),
     };
@@ -109,7 +125,16 @@ export function assembleBoard(
   // included — they stay under the parent).
   const familyIndex = buildFamilyIndex(threads);
   const nested = nestUnderParents(
-    buildColumns(columnThreads, groupBy, context, frozenColumns, doneIds, now, ranks),
+    buildColumns(
+      columnThreads,
+      groupBy,
+      context,
+      frozenColumns,
+      doneIds,
+      now,
+      ranks,
+      doneTimes,
+    ),
     threads,
     groupBy,
     context,
