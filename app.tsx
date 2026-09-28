@@ -439,14 +439,16 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Family-aware filtering replaces per-thread filtering when nesting is ON:
   // a family passes when any member matches, non-matching members render
   // dimmed (archived riders always dim; they never contribute a match).
-  // Nesting OFF means a fully flat board — per-thread filtering again.
+  // Nesting OFF means a fully flat board — per-thread filtering again. The
+  // "parent" grouping overrides that (D11): the nesting toggle is inert
+  // there, and lane mode always filters family-first (D10 keep-and-dim).
   const familyIndex = useMemo(() => buildFamilyIndex(nonHiddenThreads), [nonHiddenThreads]);
   const familyFiltered = useMemo(
     () =>
-      nestChildren
+      nestChildren || groupBy === "parent"
         ? filterFamilies(nonHiddenThreads, familyIndex, filter, search.trim())
         : filterIndividually(nonHiddenThreads, filter, search.trim()),
-    [nestChildren, nonHiddenThreads, familyIndex, filter, search],
+    [nestChildren, groupBy, nonHiddenThreads, familyIndex, filter, search],
   );
   const filtered = familyFiltered.kept;
 
