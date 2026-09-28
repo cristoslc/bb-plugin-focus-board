@@ -47,6 +47,13 @@ export interface GroupingContext {
 }
 
 export function threadState(thread: PluginSidebarThread): ThreadState {
+  // Attention outranks working: a turn that is paused waiting on the operator
+  // (a pending interaction such as a secret request, or an unread error) still
+  // reports a running status, but the card belongs in "Needs you" until the
+  // operator acts.
+  if (thread.hasPendingInteraction || thread.indicator === "unread-error") {
+    return "attention";
+  }
   if (
     thread.status === "active" ||
     thread.status === "starting" ||
@@ -54,9 +61,6 @@ export function threadState(thread: PluginSidebarThread): ThreadState {
     thread.status === "pending"
   ) {
     return "working";
-  }
-  if (thread.hasPendingInteraction || thread.indicator === "unread-error") {
-    return "attention";
   }
   if (thread.isUnread) {
     return "unread";

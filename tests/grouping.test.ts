@@ -28,6 +28,14 @@ describe("threadState", () => {
     expect(threadState(thread({ indicator: "unread-error" }))).toBe("attention");
   });
 
+  it("prefers attention over working when a turn waits on the user", () => {
+    for (const status of ["active", "starting", "stopping", "pending"] as const) {
+      expect(
+        threadState(thread({ status, hasPendingInteraction: true })),
+      ).toBe("attention");
+    }
+  });
+
   it("maps unread and idle", () => {
     expect(threadState(thread({ isUnread: true }))).toBe("unread");
     expect(threadState(thread({}))).toBe("idle");
