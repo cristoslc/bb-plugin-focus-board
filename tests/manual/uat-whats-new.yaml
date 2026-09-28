@@ -1,0 +1,63 @@
+# Operator-assisted E2E: the What's-new gift button and modal.
+#
+# The button is always in the toolbar (the changelog never becomes
+# unreachable); the pulse marks an unseen version, and opening the modal
+# clears it. The harness seeds the stored last-seen version via
+# `?lastSeenVersion=…` — absent, the first visit stamps the running version
+# as seen (a fresh install pulses for nothing).
+#
+# Run: npm run uat -- tests/manual/uat-whats-new.yaml
+suite: whats-new
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5175
+defaults:
+  groupBy: status
+  theme: dark
+
+steps:
+  - id: upgrade-pulses-the-gift
+    title: An upgrade (stored 0.4.4 → running 0.5.0) shows the gift, pulsing
+    goto: "?groupBy=status&lastSeenVersion=0.4.4"
+    assert:
+      - whats_new: { icon: true, unseen: true, modal: false }
+
+  - id: opening-shows-the-delta
+    title: Opening the modal lists the entries since the stored version
+    click_aria: { label: "What's new" }
+    assert:
+      - whats_new: { modal: true }
+      - text_visible: "Version 0.5.0"
+      - text_visible: "Version 0.4.4"
+      - text_visible: "The open pane is part of the panel URL"
+
+  - id: opening-marks-seen
+    title: Having opened it, the pulse clears — but the button stays
+    click_aria: { label: "Got it" }
+    assert:
+      - whats_new: { icon: true, unseen: false, modal: false }
+
+  - id: quiet-button-still-opens-the-list
+    title: The quiet (seen) button still opens the full recent changelog
+    click_aria: { label: "What's new" }
+    assert:
+      - whats_new: { modal: true }
+      - text_visible: "Version 0.5.0"
+
+  - id: escape-closes-the-modal
+    title: Escape closes the modal; the button remains
+    press_escape: true
+    assert:
+      - whats_new: { icon: true, modal: false }
+
+  - id: fresh-install-pulses-for-nothing
+    title: A fresh install (nothing stored) is stamped seen — no pulse
+    goto: "?groupBy=status"
+    assert:
+      - whats_new: { icon: true, unseen: false, modal: false }
+
+  - id: up-to-date-is-quiet
+    title: Revisiting at the same version stays quiet
+    goto: "?groupBy=status&lastSeenVersion=0.5.0"
+    assert:
+      - whats_new: { icon: true, unseen: false, modal: false }

@@ -7,11 +7,15 @@ host app involved.
 
 - `data.ts` — simulated projects, providers, and threads (shapes mirror the
   SDK's `PluginSidebarThread`).
-- `mock-sdk.tsx` — SDK stand-in: hooks return the simulated state, and
-  `ThreadChat` renders a canned conversation. Vite aliases the SDK specifier
+- `mock-sdk.tsx` — SDK stand-in: hooks return the simulated state,
+  `ThreadChat` renders a canned conversation, and `useBbNavigate` drives a
+  minimal real-history router (hash-based) so UAT suites can exercise the
+  app's pane-history behavior with genuine browser back/forward. Its `useSdk`
+  returns one stable object across renders — a per-render object loops the
+  app (effect deps + setState). Vite aliases the SDK specifier
   here, so the app code runs unmodified.
 - `main.tsx` — seeds localStorage from the query string (`?groupBy=…`) and
-  mounts the registered panel component.
+  mounts the registered panel component through the mock router.
 - `index.html` — defines bb's built-in theme tokens (extracted from the bb
   app bundle): the dark set on `html.dark`, a light set on `html:not(.dark)`,
   plus a minimal preflight (the plugin's compiled CSS ships without one

@@ -1,0 +1,121 @@
+# Operator-assisted E2E: the open pane's thread lives in the panel's URL
+# subPath, so bb's back arrow reopens the pane state the user left — including
+# the trail of cards they lost track of.
+#
+# Rendered and driven for real: the harness mounts the actual app.tsx against
+# the mocked SDK (scripts/screenshot), whose mock router performs genuine
+# history.pushState / history.back. Every `back` step is the browser's own
+# back gesture, not a simulated state flip, and gestures run in the order the
+# step declares them.
+#
+# Assertions are URL-based, not `history.length`: Chrome reads
+# history.length stale after a back-then-push sequence (the entry is added —
+# forward reaches it — but the count lags), so the URL is the honest record.
+#
+# Run: npm run uat -- tests/manual/uat-pane-history.yaml
+#
+# The viewport is deliberately short: with the pane open the board's visible
+# range is 1920×~590, and a lane's cards overflow it — so the vertical
+# scroll-to-active-card behavior is exercised for real, not in a layout that
+# cannot overflow.
+suite: pane-history
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5174
+defaults:
+  groupBy: status
+  theme: dark
+  viewport: { width: 1920, height: 640 }
+
+steps:
+  - id: click-opens-pane-and-pushes-route
+    title: Clicking a card opens its pane and pushes a panel route
+    goto: "?groupBy=status"
+    click: { card: thr_uat_queue }
+    assert:
+      - pane: { threadId: thr_uat_queue }
+      - active_card: { id: thr_uat_queue }
+      - url: { suffix: "/board/t/thr_uat_queue" }
+
+  - id: switching-cards-stacks-history
+    title: Switching cards pushes, so each opened pane is one history entry
+    click: { card: thr_rpc_auth }
+    assert:
+      - pane: { threadId: thr_rpc_auth }
+      - url: { suffix: "/board/t/thr_rpc_auth" }
+
+  - id: back-through-the-trail
+    title: Back reopens the previous card's pane — the card you lost track of
+    back: true
+    assert:
+      - pane: { threadId: thr_uat_queue }
+      - active_card: { id: thr_uat_queue }
+      - url: { suffix: "/board/t/thr_uat_queue" }
+
+  - id: back-at-the-first-entry-closes-the-pane
+    title: Back from the first opened card closes the pane at the panel root
+    back: true
+    assert:
+      - pane: { open: false }
+      - active_card: { id: null }
+      # Two backs from the first pane land on the document the board started
+      # on — the pre-pane entry, before any pane route was pushed.
+      - url: { suffix: "?groupBy=status" }
+
+  - id: back-from-a-foreign-surface-restores-the-pane
+    title: The bb back-arrow case — out to another surface, back, pane restored
+    click: { card: thr_uat_queue }
+    # A push to a surface the mock router does not own — the shape of a
+    # link-out to main bb. The app's own state is untouched by it.
+    push_url: "/projects/web/threads/thr_review_pr"
+    back: true
+    assert:
+      - pane: { threadId: thr_uat_queue }
+      - active_card: { id: thr_uat_queue }
+      - url: { suffix: "/board/t/thr_uat_queue" }
+
+  - id: escape-close-keeps-the-trail
+    title: Escape closes the pane by pushing the root — back after a close reopens
+    press_escape: true
+    assert:
+      - pane: { open: false }
+      - active_card: { id: null }
+      - url: { suffix: "/board" }
+
+  - id: back-after-close-reopens-the-pane
+    title: Back after a close reopens the last pane — close is not lost work
+    back: true
+    assert:
+      - pane: { threadId: thr_uat_queue }
+      - url: { suffix: "/board/t/thr_uat_queue" }
+
+  - id: deep-link-opens-the-pane
+    title: A deep link to the panel's thread subPath opens the board with that pane
+    goto: "?groupBy=status#/plugins/focus-board/board/t/thr_rpc_auth"
+    assert:
+      - pane: { threadId: thr_rpc_auth }
+      - active_card: { id: thr_rpc_auth }
+
+  - id: scroll-brings-restored-card-into-view
+    title: A restored card below the fold is scrolled into view
+    goto: "?groupBy=status#/plugins/focus-board/board/t/thr_review_pr"
+    assert:
+      - pane: { threadId: thr_review_pr }
+      - active_card: { id: thr_review_pr, visible: true }
+
+  - id: lane-change-re-scrolls-active-card
+    title: Relocating the active card (drop to Done) re-scrolls to its new lane
+    # The drop marks the open thread Done; the card relocates to the Done
+    # lane, far right and offscreen behind the pane — the board must follow
+    # it. Pin/unpin, archive, and grouping changes relocate the same way.
+    drag_to_column: { from: thr_review_pr, column: done }
+    assert:
+      - pane: { threadId: thr_review_pr }
+      - active_card: { id: thr_review_pr, visible: true }
+
+  - id: malformed-deep-link-degrades-to-plain-board
+    title: A malformed deep link degrades to the plain board
+    goto: "?groupBy=status#/plugins/focus-board/board/t/a%20b"
+    assert:
+      - pane: { open: false }
+      - active_card: { id: null }

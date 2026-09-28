@@ -3,6 +3,39 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.0] — 2026-09-28
+
+### Added
+
+- **The open pane now lives in the panel's URL, so bb's back arrow restores
+  it.** Opening (or switching) a card's pane pushes a panel route
+  (`…/board/t/<threadId>`); a link-out to the full thread in main bb, a
+  reload, or a shared deep link all return to the pane the user left — and
+  back walks the trail of cards they lost track of, one pane per step.
+  Closing the pane (×, Escape, the phone back chevron) pushes the panel
+  root, so back after a close reopens the pane — close is never lost work —
+  and forward re-closes it. A host whose route owner cannot push degrades
+  to plain component state — the pane still opens, just without URL
+  restoration. The board also keeps the active card in view: horizontally
+  and vertically when a pane is restored from history (a deep link or back
+  navigation has no click to have brought the card into view), and whenever
+  the active card relocates to another lane — pin/unpin, done, archive, or
+  a grouping change. Same-lane data refreshes never yank the user's scroll.
+- **What's new**: a gift button in the toolbar lists recent changes after an
+  update. It pulses until opened (opening marks the version seen); the
+  button never disappears, so the changelog stays reachable. Fresh installs
+  are stamped silently — no pulse for a first visit. The condensed list
+  ships in the bundle (`lib/whats-new.ts`) and is pinned to
+  `package.json`'s version by a test.
+
+### Fixed
+
+- **The screenshot harness no longer render-loops.** The mock SDK returned a
+  fresh `useSdk()` object every render while the app holds it in effect deps
+  and its handlers setState on resolve — an endless setState → render →
+  new-sdk → setState loop (~1000 renders/s) that could eventually wedge the
+  page. The mock now returns one stable client, as the real host does.
+
 ## [0.4.4] — 2026-09-27
 
 ### Fixed

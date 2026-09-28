@@ -16,7 +16,7 @@
  * downloaded. Set CHROME_PATH if Chrome is not in the default place.
  */
 import { spawn } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
@@ -29,8 +29,15 @@ const HARNESS_CONFIG = "scripts/screenshot/vite.config.ts";
 const REPORT_DIR = fileURLToPath(new URL("../../docs/uat/", import.meta.url));
 
 const suites = process.argv.slice(2).filter((a) => !a.startsWith("-"));
-const DEFAULT_SUITE = fileURLToPath(new URL("../../tests/manual/uat-rank.yaml", import.meta.url));
-const suiteFiles = suites.length > 0 ? suites : [DEFAULT_SUITE];
+// No args → every suite in tests/manual, in name order (the README's
+// documented behavior); args name individual suites.
+const suiteFiles =
+  suites.length > 0
+    ? suites
+    : (await readdir(fileURLToPath(new URL("../../tests/manual", import.meta.url))))
+        .filter((name) => name.endsWith(".yaml"))
+        .sort()
+        .map((name) => fileURLToPath(new URL(`../../tests/manual/${name}`, import.meta.url)));
 
 /** Start vite and resolve once the harness is serving. */
 async function startHarness(port) {
@@ -251,6 +258,100 @@ const pageKey = ({ card, key, alt }) => {
 const pageLiveRegion = () =>
   [...document.querySelectorAll('[aria-live="polite"]')].map((el) => el.textContent?.trim() ?? "").join(" | ");
 
+/**
+ * The thread card the board itself considers active (`aria-current="true"`),
+ * plus whether it is actually visible in the viewport: a card that history
+ * restored but that no scroll brought into view would read as a board that
+ * forgot what the user was doing. The marker lives on the card's anchor,
+ * inside the element carrying data-thread-card.
+ */
+const pageActiveCard = () => {
+  const marker = document.querySelector('a[aria-current="true"]');
+  const card = marker?.closest("[data-thread-card]");
+  if (!marker || !card) return { id: null, visible: false };
+  const rect = card.getBoundingClientRect();
+  const visible =
+    rect.width > 0 &&
+    rect.height > 0 &&
+    rect.bottom > 0 &&
+    rect.right > 0 &&
+    rect.top < window.innerHeight &&
+    rect.left < window.innerWidth;
+  return { id: card.getAttribute("data-thread-card"), visible };
+};
+
+/** A real history back gesture, as the browser's back arrow performs it. */
+const pageGoBack = () => {
+  history.back();
+  return { ok: true };
+};
+
+/**
+ * A plain left click, programmatic because a real Puppeteer click can be
+ * swallowed by an HTML5 drag interaction on the same anchor. The card's
+ * handlers live on its anchor; a template wraps the anchor in a div that
+ * also carries data-thread-card, and that wrapper precedes the anchor in
+ * document order — so resolve the anchor explicitly instead of trusting
+ * the first attribute match.
+ */
+const pageClickCard = ({ card }) => {
+  const host = document.querySelector(`[data-thread-card="${card}"]`);
+  if (!host) throw new Error(`click: no card ${card}`);
+  const el = host.matches("a[href]") ? host : host.querySelector("a[href]");
+  if (!el) throw new Error(`click: card ${card} has no anchor`);
+  el.click();
+  return { ok: true };
+};
+
+/** Click a control by accessible name: an aria-label, else the button's own text. */
+const pageClickAria = ({ label }) => {
+  const el =
+    document.querySelector(`button[aria-label="${CSS.escape(label)}"]`) ??
+    document.querySelector(`[aria-label="${CSS.escape(label)}"]`) ??
+    [...document.querySelectorAll("button")].find(
+      (button) => button.textContent?.trim() === label,
+    );
+  if (!el) throw new Error(`click_aria: nothing labelled ${label}`);
+  el.click();
+  return { ok: true };
+};
+
+/**
+ * The what's-new surface: the gift button is always present; the pulse and
+ * the modal are the state. Read via aria-label so the assertion sees what
+ * the operator sees.
+ */
+const pageWhatsNew = () => {
+  const button = document.querySelector('button[aria-label="What\'s new"]');
+  const modal =
+    document.querySelector("[role=dialog]") ??
+    document.querySelector("[data-bb-portaled-overlay] [role=dialog]") ??
+    document.querySelector("[data-bb-portaled-overlay] [role=alertdialog]");
+  return {
+    icon: button !== null,
+    // The pulse ships as the motion-safe variant, compiled into one class
+    // name; the classList holds exactly that string.
+    unseen: button?.classList.contains("motion-safe:animate-pulse") ?? false,
+    modal: modal !== null,
+  };
+};
+
+/** Does a substring appear in the page's visible text? */
+const pageTextVisible = (needle) =>
+  document.body.textContent?.includes(needle) ?? false;
+
+/**
+ * The pane's side of the route: which thread it is showing, or whether it is
+ * closed. Read from the aside's aria-label so the assertion sees what the
+ * operator sees, not internal state.
+ */
+const pagePaneState = () => {
+  const aside = document.querySelector('aside[aria-label^="Thread: "]');
+  if (!aside) return { open: false, threadId: null };
+  const label = aside.getAttribute("aria-label") ?? "";
+  return { open: true, threadId: label.startsWith("Thread: ") ? label.slice(8) : null };
+};
+
 /** Does this step declare a top-level assertion of that name? */
 function rule_has(step, name) {
   return (step.assert ?? []).some((rule) => rule[name] !== undefined);
@@ -358,6 +459,93 @@ async function check(step, page, gestureResults = []) {
       );
       expect("no refusal banner", text === "", `banner said ${JSON.stringify(text)}`);
     }
+    if (rule.pane !== undefined) {
+      const got = await page.evaluate(pagePaneState);
+      const want = rule.pane;
+      if (want.threadId !== undefined) {
+        // The pane's aria-label carries the thread's display title, not its
+        // id; assert on the title the card and the pane share.
+        const title = await page.evaluate(
+          (id) =>
+            document.querySelector(`[data-thread-card="${id}"] p`)?.textContent?.trim() ??
+            null,
+          want.threadId,
+        );
+        expect(
+          `pane shows ${want.threadId}`,
+          want.threadId === null ? got.open === false : got.open && got.threadId === title,
+          `pane ${got.open ? `showing ${JSON.stringify(got.threadId)}` : "closed"}`,
+        );
+      } else {
+        expect(
+          `pane ${want.open ? "open" : "closed"}`,
+          got.open === want.open,
+          got.open ? "pane open" : "pane closed",
+        );
+      }
+    }
+    if (rule.active_card !== undefined) {
+      const want = rule.active_card;
+      const got = await page.evaluate(pageActiveCard);
+      expect(
+        `active card is ${want.id ?? "(none)"}`,
+        got.id === (want.id ?? null),
+        got.id === null ? "no active card" : `active card is ${got.id}`,
+      );
+      if (want.visible !== undefined) {
+        expect(
+          `active card ${want.visible ? "visible" : "offscreen"}`,
+          got.visible === want.visible,
+          got.visible ? "card in view" : "card scrolled out of view",
+        );
+      }
+    }
+    if (rule.url !== undefined) {
+      // URL assertions, not history.length: Chrome reads history.length
+      // stale after a back-then-push sequence (the entry is added — forward
+      // reaches it — but the count lags), so length is not a trustworthy
+      // assertion. The URL is the feature's own record.
+      const got = await page.evaluate(() => window.location.href);
+      const want = rule.url.suffix ?? rule.url;
+      expect(
+        `url ends with ${want}`,
+        got.endsWith(want),
+        `url is ${got}`,
+      );
+    }
+    if (rule.whats_new !== undefined) {
+      const want = rule.whats_new;
+      const got = await page.evaluate(pageWhatsNew);
+      if (want.icon !== undefined) {
+        expect(
+          `what's-new button ${want.icon ? "present" : "absent"}`,
+          got.icon === want.icon,
+          got.icon ? "gift button present" : "gift button absent",
+        );
+      }
+      if (want.unseen !== undefined) {
+        expect(
+          `what's-new ${want.unseen ? "unseen (pulsing)" : "seen (quiet)"}`,
+          got.unseen === want.unseen,
+          got.unseen ? "pulsing" : "quiet",
+        );
+      }
+      if (want.modal !== undefined) {
+        expect(
+          `what's-new modal ${want.modal ? "open" : "closed"}`,
+          got.modal === want.modal,
+          got.modal ? "modal open" : "modal closed",
+        );
+      }
+    }
+    if (rule.text_visible !== undefined) {
+      const got = await page.evaluate(pageTextVisible, rule.text_visible);
+      expect(
+        `text visible: ${JSON.stringify(rule.text_visible)}`,
+        got,
+        got ? "present" : "not found in page text",
+      );
+    }
     if (rule.rpc_called_method !== undefined) {
       const methods = await page.evaluate(() =>
         globalThis.__uat.calls().map((call) => call.method),
@@ -412,9 +600,10 @@ async function runSuite(file, { port, browser }) {
   const suite = parse(await readFile(file, "utf8"));
   const theme = suite.defaults?.theme ?? "dark";
   const groupBy = suite.defaults?.groupBy ?? "status";
+  const viewport = suite.defaults?.viewport ?? { width: 1920, height: 1080 };
   const { child, base } = await startHarness(port);
   const page = await browser.newPage();
-  await page.setViewport({ width: 1920, height: 1080 });
+  await page.setViewport(viewport);
   const report = { suite: suite.suite, file, theme, steps: [] };
 
   try {
@@ -438,40 +627,78 @@ async function runSuite(file, { port, browser }) {
       // assertions, so a broken drop shows up alongside what it broke rather
       // than replacing it.
       const gestureResults = [];
-      if (step.drag !== undefined) {
-        const outcome = await page.evaluate(pageDrag, step.drag);
-        if (outcome.dropped === false) {
-          report.steps.push({ id: step.id, title: step.title, ok: false, results: [
-            { name: "drag gesture", ok: false, detail: outcome.reason },
-          ] });
-          continue;
+      // Gestures run in the order the step declares them (YAML mapping order
+      // is insertion order), not in this runner's historical fixed order — a
+      // pane-history step sequences pushes and backs deliberately, and
+      // silently reordering them rewrites the history under test.
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "press_escape", "push_url"];
+      let gestureFailed = false;
+      for (const gesture of Object.keys(step).filter((key) => GESTURE_ORDER.includes(key))) {
+        if (gesture === "drag") {
+          const outcome = await page.evaluate(pageDrag, step.drag);
+          if (outcome.dropped === false) {
+            gestureFailed = true;
+            report.steps.push({ id: step.id, title: step.title, ok: false, results: [
+              { name: "drag gesture", ok: false, detail: outcome.reason },
+            ] });
+          } else {
+            // The rule a real browser enforces and a bare DataTransfer does
+            // not: some dragover handler must call preventDefault or the
+            // browser refuses the drop. `false` here means the reorder
+            // "works" in this harness and does nothing at all for the
+            // operator.
+            gestureResults.push({
+              name: "drop permitted during drag",
+              ok: outcome.dropAllowed !== false,
+              detail: "no dragover handler called preventDefault — a real browser would refuse this drop",
+            });
+            await sleep(200);
+          }
+        } else if (gesture === "drag_unidentified") {
+          await page.evaluate(pageDragUnidentified, step.drag_unidentified);
+          await sleep(200);
+        } else if (gesture === "drag_to_column") {
+          await page.evaluate(pageDragToColumn, step.drag_to_column);
+          await sleep(200);
+        } else if (gesture === "hover") {
+          // The insertion_line assertion re-runs the hover; nothing to do here.
+        } else if (gesture === "key") {
+          await page.evaluate(pageKey, step.key);
+          await sleep(200);
+        } else if (gesture === "back") {
+          // A popstate re-renders React, and the pane effect runs after the
+          // commit; settle before assertions sample the DOM.
+          await page.evaluate(pageGoBack);
+          await sleep(300);
+        } else if (gesture === "click") {
+          await page.evaluate(pageClickCard, step.click);
+          await sleep(300);
+        } else if (gesture === "click_aria") {
+          await page.evaluate(pageClickAria, step.click_aria);
+          await sleep(300);
+        } else if (gesture === "press_escape") {
+          // The pane listens on document capture, so a bubbling keydown from
+          // the body reaches it — the same path a real Escape takes.
+          await page.evaluate(() => {
+            document.body.dispatchEvent(
+              new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+            );
+          });
+          await sleep(300);
+        } else if (gesture === "push_url") {
+          // A push to a surface the mock router does not own — the shape of
+          // a link-out to main bb. The app's own state is untouched by it.
+          await page.evaluate(
+            (url) => history.pushState(null, "", url),
+            step.push_url,
+          );
+          await sleep(200);
         }
-        // The rule a real browser enforces and a bare DataTransfer does not:
-        // some dragover handler must call preventDefault or the browser
-        // refuses the drop. `false` here means the reorder "works" in this
-        // harness and does nothing at all for the operator.
-        gestureResults.push({
-          name: "drop permitted during drag",
-          ok: outcome.dropAllowed !== false,
-          detail: "no dragover handler called preventDefault — a real browser would refuse this drop",
-        });
-        await sleep(200);
+        if (gestureFailed) break;
       }
-      if (step.drag_unidentified !== undefined) {
-        await page.evaluate(pageDragUnidentified, step.drag_unidentified);
-        await sleep(200);
-      }
-      if (step.drag_to_column !== undefined) {
-        await page.evaluate(pageDragToColumn, step.drag_to_column);
-        await sleep(200);
-      }
-      if (step.hover !== undefined) {
-        // The insertion_line assertion re-runs the hover; nothing to do here.
-      }
-      if (step.key !== undefined) {
-        await page.evaluate(pageKey, step.key);
-        await sleep(200);
-      }
+      // A drag that cannot start records itself and skips the step's own
+      // assertions, as before the gesture loop existed.
+      if (gestureFailed) continue;
       const results = [
         ...preResults,
         ...(rule_has(step, "expect_drop_refused") ? [] : gestureResults),

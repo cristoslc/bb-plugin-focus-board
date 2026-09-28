@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   definePluginApp,
   experimental_useProviders,
@@ -29,6 +29,10 @@ import {
   assembleBoard,
 } from "./components/nesting";
 import { doneAtToEpochMs } from "./lib/done-metadata";
+import {
+  paneSubPathFor,
+  paneThreadIdFromSubPath,
+} from "./lib/pane-route";
 import { appendTo, applyMove, orderForColumn, type RankStore } from "./lib/rank";
 import {
   DEFAULT_DONE_ARCHIVE_DAYS,
@@ -48,10 +52,36 @@ import {
   parseNestStored,
 } from "./components/preferences";
 import { EmptyState } from "./components/empty-state";
+import { WhatsNewModal } from "./components/whats-new-modal";
+import {
+  APP_VERSION,
+  WHATS_NEW,
+  compareVersions,
+  entriesSince,
+  readLastSeenVersion,
+  writeLastSeenVersion,
+  type WhatsNewEntry,
+} from "./lib/whats-new";
 
 const GROUP_BY_KEY = "focus-board:groupBy";
 const FILTER_KEY = "focus-board:filter";
 const SEARCH_KEY = "focus-board:search";
+/** This panel's own registered route path, for pane-history pushes. */
+const PANEL_PATH = "board";
+
+/**
+ * `toPluginPanel` is typed `void`, but the host may return `false` when it
+ * could not push the route (no history owner on this surface) — or throw on
+ * one. Either way the push did not happen: report it as rejected so the pane
+ * falls back to local state instead of dying with the click.
+ */
+function pushRejected(push: () => void): boolean {
+  try {
+    return (push() as unknown as boolean | undefined) === false;
+  } catch {
+    return true;
+  }
+}
 
 /** Adapt metadata records ({doneAt: ISO, keep?}) into the sweep's extras
  *  shape ({doneAt: epoch-ms, keep?}). */
@@ -107,7 +137,7 @@ function readStoredList(key: string): string[] {
   return [];
 }
 
-function BoardPage() {
+function BoardPage({ subPath }: { subPath: string }) {
   const { status, threads, projects } = experimental_useSidebarThreads();
   const actions = experimental_useSidebarThreadActions();
   const { providers } = experimental_useProviders();
@@ -288,12 +318,50 @@ function BoardPage() {
   const [nestChildren, setNestChildren] = useState<boolean>(() =>
     parseNestStored(readStored(NEST_CHILDREN_KEY, ["on", "off"], "on")),
   );
-  const [openThreadId, setOpenThreadId] = useState<string | null>(null);
+  // The open pane lives in the panel's URL subPath (`t/<threadId>`), not in
+  // component state, so bb's back arrow, a reload, and deep links all land on
+  // the pane the user left. The ref mirrors the last pushed thread id; sync
+  // and push use it to tell an external route change from an echo of our own.
+  const paneThreadId = paneThreadIdFromSubPath(subPath);
+  const pushedThreadIdRef = useRef<string | null>(null);
+  // Fallback pane id for hosts whose toPluginPanel cannot push (returns
+  // false): pane state then lives in component state alone — no back-arrow
+  // restoration, but the board stays fully usable.
+  const [fallbackPaneThreadId, setFallbackPaneThreadId] = useState<string | null>(null);
+  const openThreadId = paneThreadId ?? fallbackPaneThreadId;
   // Sweep arm state: at most one armed column at a time. The candidate id
   // list is captured at arm time and frozen — late arrivals never join.
   const [armedSweep, setArmedSweep] = useState<ArmedSweep | null>(null);
   const disarmSweep = useCallback(() => setArmedSweep(null), []);
   useSweepClickAway(armedSweep !== null, disarmSweep);
+  // What's new: the stored last-seen version vs the running build. A fresh
+  // install (nothing stored) is stamped silently — everything is new, so
+  // nothing counts as new. An upgrade leaves the gift button pulsing until
+  // the modal is opened; opening marks seen, the button itself never leaves.
+  const [lastSeenVersion, setLastSeenVersion] = useState<string | null>(
+    () => readLastSeenVersion(),
+  );
+  useEffect(() => {
+    if (lastSeenVersion === null) {
+      writeLastSeenVersion(APP_VERSION);
+      setLastSeenVersion(APP_VERSION);
+    }
+  }, [lastSeenVersion]);
+  const whatsNewUnseen =
+    lastSeenVersion !== null && compareVersions(APP_VERSION, lastSeenVersion) > 0;
+  // The delta is captured at load (before opening marks it seen): entries
+  // since the stored version when one is pending, all recent entries when
+  // the quiet button is used.
+  const whatsNewEntries: readonly WhatsNewEntry[] = useMemo(
+    () => (whatsNewUnseen ? entriesSince(lastSeenVersion) : WHATS_NEW),
+    [whatsNewUnseen, lastSeenVersion],
+  );
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+  const openWhatsNew = useCallback(() => {
+    writeLastSeenVersion(APP_VERSION);
+    setLastSeenVersion(APP_VERSION);
+    setWhatsNewOpen(true);
+  }, []);
   // The selected thread's column is captured when it is opened and held until
   // it is deselected, so live state/age changes cannot slide the card.
   const [frozenColumn, setFrozenColumn] = useState<{
@@ -581,9 +649,20 @@ function BoardPage() {
           ? false
           : archivedThreads.some((thread) => thread.id === openThreadId));
 
+  // Opening (or switching) a pane pushes a panel route, so every pane is one
+  // history entry and the back arrow walks back through the cards the user
+  // opened — reopening a trail of panes they lost track of. Closing replaces
+  // instead, so × / Escape do not multiply entries. A failed push (host route
+  // owner unavailable — older bb, exotic embeds) falls back to the pane still
+  // opening locally, which keeps the board usable without URL state.
   const openThreadCard = useCallback(
     (threadId: string) => {
-      setOpenThreadId(threadId);
+      pushedThreadIdRef.current = threadId;
+      const rejected = pushRejected(() =>
+        navigate.toPluginPanel(PANEL_PATH, {
+          subPath: paneSubPathFor(threadId),
+        }),
+      );
       const thread = threads.find((candidate) => candidate.id === threadId);
       setFrozenColumn(
         thread === undefined
@@ -593,14 +672,56 @@ function BoardPage() {
               column: columnFor(thread, groupBy, { projects, providers }),
             },
       );
+      if (rejected && openThreadId !== threadId) {
+        // Without a working history integration the subPath never changes, so
+        // open locally: the pane opens now and closes via onClose below.
+        setFallbackPaneThreadId(threadId);
+      }
     },
-    [threads, groupBy, projects, providers],
+    [navigate, openThreadId, threads, groupBy, projects, providers],
   );
 
   const closeThreadPane = useCallback(() => {
-    setOpenThreadId(null);
-    setFrozenColumn(null);
-  }, []);
+    pushedThreadIdRef.current = null;
+    const rejected = pushRejected(() => navigate.toPluginPanel(PANEL_PATH, { subPath: "" }));
+    if (rejected && openThreadId !== null) {
+      setFallbackPaneThreadId(null);
+    }
+  }, [navigate, openThreadId]);
+
+  // The URL is the source of truth for the pane. A subPath change that our
+  // own push did not cause — bb's back arrow, a shared deep link, a reload —
+  // must move the pane, including closing it. The pushed-id ref identifies
+  // echoes: a push is only settled once the subPath prop actually carries the
+  // pushed id, so a dropped push (route owner said no) leaves no stale marker
+  // and the next back navigation still wins.
+  useEffect(() => {
+    if (paneThreadId === pushedThreadIdRef.current) {
+      if (paneThreadId !== null) pushedThreadIdRef.current = null;
+      return;
+    }
+    // External navigation onto a thread the board has open elsewhere in its
+    // history: adopt the URL's thread so the pane follows the route owner.
+    // The freeze is captured once per adopted thread — live thread updates
+    // must never re-freeze, or a thread that moved columns would slide the
+    // card after the fact (the same contract a click-opened pane has).
+    if (paneThreadId !== null) {
+      setFallbackPaneThreadId(null);
+      setFrozenColumn((current) => {
+        if (current !== null && current.threadId === paneThreadId) return current;
+        const thread = threads.find((candidate) => candidate.id === paneThreadId);
+        return thread === undefined
+          ? current
+          : {
+              threadId: paneThreadId,
+              column: columnFor(thread, groupBy, { projects, providers }),
+            };
+      });
+    } else {
+      setFallbackPaneThreadId(null);
+      setFrozenColumn(null);
+    }
+  }, [paneThreadId, threads, groupBy, projects, providers]);
 
   // Project creation needs a host checkout path; the personal workspace's
   // host hosts every project, so create under the first known host.
@@ -660,6 +781,8 @@ function BoardPage() {
           }}
           anyFilterActive={anyFilterActive}
           onNewThread={openNewThread}
+          whatsNewUnseen={whatsNewUnseen}
+          onOpenWhatsNew={openWhatsNew}
           nestChildren={nestChildren}
           onNestChildrenChange={persistNestChildren}
         />
@@ -841,6 +964,11 @@ function BoardPage() {
           onClose={closeThreadPane}
         />
       )}
+      <WhatsNewModal
+        open={whatsNewOpen}
+        onOpenChange={setWhatsNewOpen}
+        entries={whatsNewEntries}
+      />
     </div>
   );
 }
@@ -850,7 +978,10 @@ export default definePluginApp((app) => {
     id: "board",
     title: "Focus Board",
     icon: "Columns2",
-    path: "board",
+    path: PANEL_PATH,
+    // The pane's thread arrives through the `subPath` prop (`t/<id>`), so
+    // the open pane participates in browser history — bb's back arrow
+    // reopens the pane state the user left, and deep links restore it.
     component: BoardPage,
   });
 });

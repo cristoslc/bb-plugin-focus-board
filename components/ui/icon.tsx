@@ -28,6 +28,7 @@ import Delete02Icon from "@hugeicons/core-free-icons/Delete02Icon";
 import Download01Icon from "@hugeicons/core-free-icons/Download01Icon";
 import Edit02Icon from "@hugeicons/core-free-icons/Edit02Icon";
 import FilterHorizontalIcon from "@hugeicons/core-free-icons/FilterHorizontalIcon";
+import GiftIcon from "@hugeicons/core-free-icons/GiftIcon";
 import FolderAddIcon from "@hugeicons/core-free-icons/FolderAddIcon";
 import FolderExportIcon from "@hugeicons/core-free-icons/FolderExportIcon";
 import FolderGitTwoIcon from "@hugeicons/core-free-icons/FolderGit2Icon";
@@ -175,6 +176,7 @@ const CORE_ICON_MAP = {
   Download: Download01Icon,
   Edit: Edit02Icon,
   FilterHorizontal: FilterHorizontalIcon,
+  Gift: GiftIcon,
   Folder: FolderIcon,
   FolderExport: FolderExportIcon,
   FolderGit: FolderGitTwoIcon,

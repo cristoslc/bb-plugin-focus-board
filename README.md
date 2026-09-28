@@ -35,7 +35,20 @@ they've been quiet.
 - **Nest** subthreads under their parent card
 - **Sweep** stale Done and long-idle threads to Archive in two clicks
 - **Ticket chips** with GitHub status dots, linking to the tracker
-- **Thread pane** slides in beside the board; works on phone
+- **Thread pane** slides in beside the board; works on phone. The open pane
+  is part of the panel's URL (`…/board/t/<threadId>`), so bb's back arrow
+  returns you to the pane you left after following a link out to a full
+  thread in main bb — and walks back through cards you lost track of, one
+  pane per step. A deep link opens the board with that pane directly.
+  Grouping, filters, and search are preferences, not history: they persist
+  across sessions in localStorage and are deliberately not replayed by the
+  back arrow (see
+  [ADR 0001](docs/adr/0001-pane-history-in-url-preferences-in-localstorage.md)).
+  The board keeps the active card in view when its lane changes (pin, done,
+  grouping) and when a pane is restored from history.
+- **What's new**: a 🎁 button in the toolbar lists recent changes after an
+  update. It pulses until opened; the button never disappears, so the
+  changelog stays reachable.
 - **Answer questions in the pane**: when an agent asks a question (the
   ask-user-question tool), the pane renders the form and submits the answer
   from the board — the host's embedded chat only shows these in the main

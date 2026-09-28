@@ -1,10 +1,10 @@
-_Generated 2026-09-27T14:18:46.280Z by `npm run uat`._
+_Generated 2026-09-28T15:13:05.114Z by `npm run uat`._
 
 # UAT report
 
 ## rank-ordering
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_7xijhcyibk-1/bb-plugin-thread-board/tests/manual/uat-rank.yaml` · theme dark
+Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_kuq6se56e7-1/bb-plugin-focus-board/tests/manual/uat-rank.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

@@ -7,20 +7,104 @@
  * compiled Tailwind output and only contains classes the plugin's own source
  * uses, so utility classes invented here would silently not exist.
  */
+import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
 import { SIM_DONE_IDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS } from "./data";
 
-export const registeredNavPanel: { component?: ComponentType } = {};
+export const registeredNavPanel: {
+  path?: string;
+  component?: ComponentType<{ subPath: string }>;
+} = {};
 
 export function definePluginApp(setup: (app: unknown) => void): unknown {
   setup({
     slots: {
-      navPanel: (config: { component: ComponentType }) => {
+      navPanel: (config: {
+        path: string;
+        component: ComponentType<{ subPath: string }>;
+      }) => {
+        registeredNavPanel.path = config.path;
         registeredNavPanel.component = config.component;
       },
     },
   });
   return { id: "screenshot-mock" };
+}
+
+const MOCK_PLUGIN_ID = "focus-board";
+let mockSubPath = "";
+let mockRoot: ReturnType<typeof createRoot> | null = null;
+
+function mockRender(): void {
+  const Component = registeredNavPanel.component;
+  const rootElement = document.getElementById("root");
+  if (!Component || !rootElement) return;
+  if (mockRoot === null) mockRoot = createRoot(rootElement);
+  mockRoot.render(<Component subPath={mockSubPath} />);
+}
+
+/**
+ * A minimal real-history router for the panel route, so UAT steps can drive
+ * genuine browser back/forward against the app's pane-history behavior.
+ *
+ * Mirrors the two contract clauses the app is written against:
+ * - a push re-renders the panel with the new `subPath`;
+ * - an external history change (back/forward, popstate) re-renders it too.
+ */
+function installMockRouter(panelPath: string): void {
+  const base = `${window.location.pathname}#/plugins/${MOCK_PLUGIN_ID}/${panelPath}`;
+  const subPathFromUrl = (): string => {
+    const prefix = `#/plugins/${MOCK_PLUGIN_ID}/${panelPath}`;
+    const hash = window.location.hash;
+    if (!hash.startsWith(prefix)) return "";
+    const rest = hash.slice(prefix.length);
+    return rest.startsWith("/") ? rest.slice(1) : rest;
+  };
+  mockSubPath = subPathFromUrl();
+  window.addEventListener("popstate", () => {
+    mockSubPath = subPathFromUrl();
+    mockRender();
+  });
+  (window as unknown as {
+    __mockRouter: { push: (subPath: string, replace: boolean) => void };
+  }).__mockRouter = {
+    push: (subPath, replace) => {
+      const next = subPath === "" ? base : `${base}/${subPath}`;
+      const before = history.length;
+      if (replace) history.replaceState(null, "", next);
+      else history.pushState(null, "", next);
+      console.log("ROUTER", JSON.stringify({ subPath, replace, lenBefore: before, lenAfter: history.length }));
+      mockSubPath = subPath;
+      mockRender();
+    },
+  };
+}
+
+/** Mount (once) the panel the app registered, under the mock router. */
+export function mountRegisteredPanel(): void {
+  const panelPath = registeredNavPanel.path;
+  if (panelPath === undefined) throw new Error("harness: no nav panel registered");
+  installMockRouter(panelPath);
+  mockRender();
+}
+
+export function useBbNavigate(): unknown {
+  return {
+    toThread: () => {},
+    toPluginPanel: (
+      _path: string,
+      options?: { subPath?: string; replace?: boolean },
+    ): boolean => {
+      const router = (
+        window as unknown as {
+          __mockRouter?: { push: (subPath: string, replace: boolean) => void };
+        }
+      ).__mockRouter;
+      if (router === undefined) return false;
+      router.push(options?.subPath ?? "", options?.replace === true);
+      return true;
+    },
+  };
 }
 
 export function experimental_useSidebarThreads(): unknown {
@@ -49,30 +133,33 @@ export function experimental_useProviders(): unknown {
   return { status: "ready", providers: SIM_PROVIDERS };
 }
 
-export function useBbNavigate(): unknown {
-  return { toThread: () => {}, toPluginPanel: () => {} };
-}
+// One stable object across renders: the app holds `sdk` in effect deps
+// ([sdk]) and its handlers setState on resolve, so a per-render object here
+// is an endless setState→render→new-sdk→setState loop (~1000 renders/s) that
+// eventually wedges the page. The real host returns a stable client; the
+// mock must too.
+const mockSdk = {
+  subscribe: () => () => {},
+  threads: {
+    list: async () => [],
+    unarchive: async () => {},
+    interactions: {
+      list: async () => [],
+      respond: async () => ({}),
+      cancel: async () => ({}),
+    },
+  },
+  hosts: {
+    list: async () => [{ id: "host_local", name: "MacBook Pro", lifecycle: { phase: "active" } }],
+  },
+  projects: {
+    list: async () => SIM_PROJECTS.map((project) => ({ ...project, gitRemoteUrl: null })),
+    create: async () => ({}),
+  },
+};
 
 export function useSdk(): unknown {
-  return {
-    subscribe: () => () => {},
-    threads: {
-      list: async () => [],
-      unarchive: async () => {},
-      interactions: {
-        list: async () => [],
-        respond: async () => ({}),
-        cancel: async () => ({}),
-      },
-    },
-    hosts: {
-      list: async () => [{ id: "host_local", name: "MacBook Pro", lifecycle: { phase: "active" } }],
-    },
-    projects: {
-      list: async () => SIM_PROJECTS.map((project) => ({ ...project, gitRemoteUrl: null })),
-      create: async () => ({}),
-    },
-  };
+  return mockSdk;
 }
 
 /**

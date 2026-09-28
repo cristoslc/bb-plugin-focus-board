@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { BoardColumn, GroupBy } from "./grouping";
 import { threadState, withSweepGather } from "./grouping";
@@ -220,6 +220,20 @@ export function Board({
   // keep the open thread's card in view by scrolling it into the visible
   // horizontal range instead of letting the pane cover it.
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  // The lane the active card currently sits in (a stable id string, not the
+  // columns array identity). The effect re-fits when this changes — pin/
+  // unpin, done, archive, and grouping changes all relocate the card to a
+  // lane that can be offscreen — while mere data refreshes (same lane) never
+  // yank the user's scroll.
+  const activeCardLaneId = useMemo(() => {
+    if (activeThreadId === null) return null;
+    for (const column of columns) {
+      if (column.threads.some((thread) => thread.id === activeThreadId)) {
+        return column.id;
+      }
+    }
+    return null;
+  }, [columns, activeThreadId]);
   useEffect(() => {
     const container = scrollRef.current;
     if (container === null || activeThreadId === null) return;
@@ -228,11 +242,26 @@ export function Board({
       if (!(card instanceof HTMLElement)) return;
       const cardRect = card.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
-      // Adjust only horizontally; vertical card lists manage their own scroll.
+      // Horizontal: the pane opening (or a drag resize) narrows the visible
+      // range; slide the card back inside it.
       if (cardRect.left < containerRect.left) {
         container.scrollLeft -= containerRect.left - cardRect.left;
       } else if (cardRect.right > containerRect.right) {
         container.scrollLeft += cardRect.right - containerRect.right;
+      }
+      // Vertical: a lane taller than the board scrolls its own list, and a
+      // card that history just restored (deep link, back/forward — no click
+      // preceded it) can sit below the fold. scrollIntoView would scroll
+      // every ancestor including the host page, so adjust the lane list
+      // directly, the same way the horizontal case does.
+      const list = card.closest("[data-card-list]");
+      if (list instanceof HTMLElement) {
+        const listRect = list.getBoundingClientRect();
+        if (cardRect.top < listRect.top) {
+          list.scrollTop -= listRect.top - cardRect.top;
+        } else if (cardRect.bottom > listRect.bottom) {
+          list.scrollTop += cardRect.bottom - listRect.bottom;
+        }
       }
     };
     keepActiveCardInView();
@@ -241,7 +270,9 @@ export function Board({
     const observer = new ResizeObserver(keepActiveCardInView);
     observer.observe(container);
     return () => observer.disconnect();
-  }, [activeThreadId]);
+    // activeCardLaneId re-fits when the active card relocates (pin, done,
+    // archive, grouping change) without firing on same-lane data refreshes.
+  }, [activeThreadId, activeCardLaneId]);
 
   const sweepActive = sweepCandidatesFor !== undefined && onSweepArm !== undefined;
   const ranking = rankStore !== undefined && onRankMove !== undefined;
@@ -451,7 +482,10 @@ export function Board({
                   </span>
                 ) : null}
               </header>
-              <div className="min-h-0 flex-1 overflow-y-auto rounded-lg bg-muted/30 p-1.5">
+              <div
+                data-card-list
+                className="min-h-0 flex-1 overflow-y-auto rounded-lg bg-muted/30 p-1.5"
+              >
                 {column.threads.length === 0 && dragOverColumn !== column.id ? (
                   isDropTarget ? (
                     <p className="px-1 py-3 text-center text-xs text-muted-foreground/60">

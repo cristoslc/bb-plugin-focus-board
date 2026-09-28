@@ -343,6 +343,9 @@ interface BoardToolbarProps {
   onClearFilters: () => void;
   anyFilterActive: boolean;
   onNewThread: () => void;
+  /** An update landed since the stored last-seen version — the gift pulses. */
+  whatsNewUnseen: boolean;
+  onOpenWhatsNew: () => void;
 }
 
 const STATE_OPTIONS: readonly { value: ThreadState; label: string }[] = [
@@ -370,6 +373,8 @@ export function BoardToolbar({
   onClearFilters,
   anyFilterActive,
   onNewThread,
+  whatsNewUnseen,
+  onOpenWhatsNew,
 }: BoardToolbarProps) {
   const groupOptions = GROUP_BY_OPTIONS.map((option) => ({
     value: option.value,
@@ -512,6 +517,22 @@ export function BoardToolbar({
         New thread
       </button>
       <span className="text-xs text-muted-foreground">{totalCount} threads</span>
+      {/* Always present — the changelog never becomes unreachable. The pulse
+          (and the amber tint) is the only state, and it clears on open. */}
+      <button
+        type="button"
+        onClick={onOpenWhatsNew}
+        aria-label="What's new"
+        title="What's new"
+        className={cn(
+          "inline-flex size-8 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          whatsNewUnseen
+            ? "motion-safe:animate-pulse text-amber-500 hover:text-amber-400"
+            : "text-muted-foreground",
+        )}
+      >
+        <Icon name="Gift" className="size-4" aria-hidden />
+      </button>
     </div>
   );
 }
