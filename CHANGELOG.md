@@ -3,6 +3,39 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.5] — 2026-09-28
+
+### Changed
+
+- **Inline-code workspace paths now verify against the workspace before
+  they become clickable in the board's thread pane.** A path is
+  decorated (and clickable) only when the plugin backend confirms the
+  file exists in the thread's environment — checked on the
+  environment's own host, so remote workspaces verify correctly. Dead
+  names stay plain text: a bare `.md`, a path the model only planned,
+  or anything the workspace does not have no longer invites a preview
+  that opens nothing. Explicit markdown links keep the 0.5.3 behavior.
+
+## [0.5.4] — 2026-09-28
+
+### Added
+
+- **Recent decisions card in the thread pane.** bb's transcript drops every trace of an answered AskUserQuestion — the tool call is suppressed, the delivered result is a hidden system message, and the interaction row stores only "Submitted", never the answers — so once a question card was submitted, the pane forgot what was decided. The pane now shows a collapsed "Recent decisions" card (up to five) rebuilt from the raw event log, listing each question's header chip, prompt, and chosen answer; it auto-expands when a fresh answer lands and collapses with Escape.
+
+## [0.5.3] — 2026-09-28
+
+### Fixed
+
+- **Backticked workspace paths in thread messages are now clickable in the
+  board's thread pane.** The main thread pane turns inline code like
+  `docs/rfcs/rfc-support-triage-process.md` into a file-preview link; the
+  board's pane rendered the same text as dead code. Clicking a qualifying
+  path (a workspace-relative `.md`/`.markdown` file, optionally with a
+  `:12` or `#L12-L20` suffix) now opens the file preview, and qualifying
+  code spans gain the same underline and external-link icon the main pane
+  shows. Commit shas, `.ts` files, and block code stay plain, matching the
+  main pane's rules.
+
 ## [0.5.2] — 2026-09-28
 
 ### Fixed

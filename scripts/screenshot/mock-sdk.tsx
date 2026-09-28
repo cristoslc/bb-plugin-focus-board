@@ -149,6 +149,9 @@ const mockSdk = {
       respond: async () => ({}),
       cancel: async () => ({}),
     },
+    events: {
+      list: async () => [],
+    },
   },
   hosts: {
     list: async () => [{ id: "host_local", name: "MacBook Pro", lifecycle: { phase: "active" } }],

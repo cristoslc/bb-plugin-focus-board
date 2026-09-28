@@ -8,6 +8,7 @@ import {
 import {
   ThreadChat,
   useBbNavigate,
+  useRpc,
   useSdk,
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
@@ -15,7 +16,17 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { COARSE_POINTER_HEADER_ICON_BUTTON_CLASS } from "@/components/ui/coarse-pointer-sizing";
 import { PendingInteractionCard } from "@/components/pending-interaction-card";
-import { isExternalHref, workspacePathFromHref } from "@/components/chat-link-intercept";
+import { DecidedQuestionsCard } from "@/components/decided-questions-card";
+import {
+  isExternalHref,
+  workspacePathFromHref,
+} from "@/components/chat-link-intercept";
+import {
+  decorateVerifiedInlineCodeLinks,
+  decoratedCodePath,
+  type PathExistenceChecker,
+} from "@/components/decorate-inline-code";
+import type { rpcContract } from "@/server";
 import { useIsCompactViewport } from "@/components/ui/hooks/use-compact-viewport";
 
 // Shared header-button classes: a 28px ghost icon button that grows to a
@@ -203,6 +214,7 @@ export function ThreadPane({
   const isCompact = useIsCompactViewport();
   const sdk = useSdk();
   const navigate = useBbNavigate();
+  const rpc = useRpc<typeof rpcContract>();
   const dragStateRef = useRef<{ pointerId: number; startX: number; startWidth: number } | null>(
     null,
   );
@@ -222,20 +234,12 @@ export function ThreadPane({
   // the browser resolves against the bb app's origin — an error page. The
   // host's own thread view owns message link routing; this pane does not.
   // Capture clicks on relative anchors here and reopen them as live files
-  // against the thread's environment instead.
-  const onChatClickCapture = useCallback(
-    (event: MouseEvent<HTMLDivElement>) => {
-      if (event.button !== 0) return;
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const anchor = target.closest("a[href]");
-      if (anchor === null) return;
-      const href = anchor.getAttribute("href") ?? "";
-      if (href === "" || isExternalHref(href)) return;
-      const path = workspacePathFromHref(href);
-      if (path === null) return;
-      event.preventDefault();
-      event.stopPropagation();
+  // against the thread's environment instead. The same routing gap also
+  // hides the host's inline-code file links (see the decoration effect
+  // below), so inline code that names a workspace markdown file is claimed
+  // here too.
+  const openWorkspacePreview = useCallback(
+    (path: string) => {
       void sdk.threads
         .get({ threadId: thread.id })
         .then((result) => {
@@ -253,6 +257,38 @@ export function ThreadPane({
         });
     },
     [sdk, navigate, thread.id],
+  );
+
+  const onChatClickCapture = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      // Explicit markdown links win; code spans are only claimed when no
+      // anchor is involved.
+      const anchor = target.closest("a[href]");
+      if (anchor !== null) {
+        const href = anchor.getAttribute("href") ?? "";
+        if (href === "" || isExternalHref(href)) return;
+        const path = workspacePathFromHref(href);
+        if (path === null) return;
+        event.preventDefault();
+        event.stopPropagation();
+        openWorkspacePreview(path);
+        return;
+      }
+      const code = target.closest("code");
+      if (code === null || code.closest("pre") !== null) return;
+      // Only verified paths claim clicks: the decorator flags a code span
+      // after its path checked out against the workspace, so unverified or
+      // missing files stay inert instead of opening a dead preview.
+      const path = decoratedCodePath(code);
+      if (path === null) return;
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkspacePreview(path);
+    },
+    [openWorkspacePreview],
   );
 
   const endDrag = useCallback((event: PointerEvent) => {
@@ -308,6 +344,87 @@ export function ThreadPane({
     document.addEventListener("keydown", onKeyDown, { capture: true });
     return () => document.removeEventListener("keydown", onKeyDown, { capture: true });
   }, [onClose]);
+
+  // Existence checks for the inline-code file links (see
+  // decorate-inline-code.ts): a path verdict comes from the plugin
+  // backend, which resolves the thread's environment and stats the file
+  // on the environment's own host.
+  const checkWorkspacePaths = useCallback<PathExistenceChecker>(
+    (paths) => {
+      return rpc
+        .call("workspace_files_exist", { threadId: thread.id, paths })
+        .then((result) => new Map(Object.entries(result.existence)));
+    },
+    [rpc, thread.id],
+  );
+
+  // Paint the host's missing inline-code file links (see
+  // decorate-inline-code.ts), gated on workspace existence: ThreadChat
+  // streams and React rewrites its markdown over time, so verify once
+  // for the content already on screen, then re-scan on mutations,
+  // coalesced to one scan per frame. The environment id scopes the
+  // verdict cache (the same relative path exists in one workspace but
+  // not another) and is resolved once per thread.
+  const chatBodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = chatBodyRef.current;
+    if (root === null) return;
+    const view = root.ownerDocument.defaultView;
+    if (view === null) return;
+    // undefined = not yet resolved, null = thread has no workspace
+    // (stop retrying), string = scope for verdicts and decoration.
+    let environmentId: string | null | undefined;
+    let resolutionPending = false;
+    const decorate = () => {
+      if (environmentId === null) return;
+      const scope = environmentId;
+      if (scope !== undefined) {
+        void decorateVerifiedInlineCodeLinks(
+          root,
+          scope,
+          checkWorkspacePaths,
+        ).catch(() => {});
+        return;
+      }
+      if (resolutionPending) return;
+      resolutionPending = true;
+      sdk.threads
+        .get({ threadId: thread.id })
+        .then((result) => {
+          resolutionPending = false;
+          const resolved =
+            "environmentId" in result ? result.environmentId : null;
+          environmentId = resolved;
+          if (resolved === null) return;
+          return decorateVerifiedInlineCodeLinks(
+            root,
+            resolved,
+            checkWorkspacePaths,
+          );
+        })
+        // A transient resolution failure retries on the next mutation
+        // scan; without a resolvable environment there is nothing
+        // better to do.
+        .catch(() => {
+          resolutionPending = false;
+        });
+    };
+    decorate();
+    let frame: number | null = null;
+    const schedule = () => {
+      if (frame !== null) return;
+      frame = view.requestAnimationFrame(() => {
+        frame = null;
+        decorate();
+      });
+    };
+    const observer = new MutationObserver(schedule);
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    return () => {
+      observer.disconnect();
+      if (frame !== null) view.cancelAnimationFrame(frame);
+    };
+  }, [thread.id, sdk, checkWorkspacePaths]);
 
   return (
     <aside
@@ -410,7 +527,13 @@ export function ThreadPane({
           pane is open would block the tool call until timeout. This card
           renders the host's question form in the pane instead. */}
       <PendingInteractionCard threadId={thread.id} onOpenInMainView={onMaximize} />
+      {/* The host transcript drops every trace of an answered AskUserQuestion
+          (suppressed tool call, hidden delivered result, answers never stored
+          on the interaction row), so this card rebuilds recent decisions from
+          the raw event log. */}
+      <DecidedQuestionsCard threadId={thread.id} />
       <div
+        ref={chatBodyRef}
         className="min-h-0 flex-1"
         onClickCapture={onChatClickCapture}
       >
