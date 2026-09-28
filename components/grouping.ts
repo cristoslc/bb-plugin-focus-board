@@ -239,6 +239,7 @@ export function buildColumns(
   now: number = Date.now(),
   ranks: RankStore = {},
   doneTimes: ReadonlyMap<string, number> = new Map(),
+  columnOverrides: ReadonlyMap<string, { id: string; label: string }> = new Map(),
 ): BoardColumn[] {
   // Threads marked Done form their own column, always farthest right on the
   // Attention board and present (dimmed) on every other grouping.
@@ -252,11 +253,16 @@ export function buildColumns(
 
   // A thread whose column was frozen at selection time (because it is open in
   // the pane) keeps that column until it is deselected — state or age changes
-  // must not slide the card the user is looking at to another column.
+  // must not slide the card the user is looking at to another column. R4:
+  // next the family-column override (the family lands in its most
+  // attention-requiring member's column), then the thread's own assignment.
   const assignments = new Map<string, { id: string; label: string }>();
   for (const thread of unpinned) {
     const frozen = frozenColumns.get(thread.id);
-    assignments.set(thread.id, frozen ?? columnFor(thread, groupBy, context, now));
+    assignments.set(
+      thread.id,
+      frozen ?? columnOverrides.get(thread.id) ?? columnFor(thread, groupBy, context, now),
+    );
   }
 
   const buckets = new Map<string, { label: string; threads: PluginSidebarThread[] }>();

@@ -11,6 +11,7 @@ import {
 import {
   assembleBoard,
   buildFamilyIndex,
+  familyColumnOverrides,
   filterFamilies,
   filterIndividually,
   grandchildCountFor,
@@ -111,32 +112,32 @@ describe("buildFamilyIndex", () => {
   });
 });
 
-describe("nestUnderParents — Attention (status) grouping placement", () => {
-  it("promotes a Needs-you child under a Working parent to the attention column, absent from the parent's nest", () => {
+describe("nestUnderParents — Attention (status) grouping placement (R4: family moves as a unit)", () => {
+  it("nests a Needs-you child under its Working parent (the family relocates, nobody promotes)", () => {
     const parent = thread({ id: "p", status: "active" });
     const child = thread({ id: "c", parentThreadId: "p", hasPendingInteraction: true });
     const columns = buildColumns([parent, child], "status", CONTEXT, new Map(), new Set(), NOW);
     const nested = nestUnderParents(columns, [parent, child], "status", CONTEXT, NOW);
-    const attentionIds = idsIn(nested.columns, "attention");
-    expect(attentionIds).toContain("c");
-    expect(ids(nested.childrenByParent.get("p"))).not.toContain("c");
-    expect(nested.childrenByParent.has("p")).toBe(false);
+    expect(nested.childrenByParent.get("p")?.map((t) => t.id)).toEqual(["c"]);
+    expect(columnOf(nested.columns, "c")).toBeUndefined();
   });
 
-  it("promotes an Unread child under a Working parent to the unread column", () => {
+  it("nests an Unread child under its Working parent", () => {
     const parent = thread({ id: "p", status: "active" });
     const child = thread({ id: "c", parentThreadId: "p", isUnread: true });
     const columns = buildColumns([parent, child], "status", CONTEXT, new Map(), new Set(), NOW);
     const nested = nestUnderParents(columns, [parent, child], "status", CONTEXT, NOW);
-    expect(idsIn(nested.columns, "unread")).toContain("c");
+    expect(nested.childrenByParent.get("p")?.map((t) => t.id)).toEqual(["c"]);
+    expect(idsIn(nested.columns, "unread")).not.toContain("c");
   });
 
-  it("promotes a Working child under an Idle parent to the working column", () => {
+  it("nests a Working child under its Idle parent instead of promoting", () => {
     const parent = thread({ id: "p" }); // idle
     const child = thread({ id: "c", parentThreadId: "p", status: "active" });
     const columns = buildColumns([parent, child], "status", CONTEXT, new Map(), new Set(), NOW);
     const nested = nestUnderParents(columns, [parent, child], "status", CONTEXT, NOW);
-    expect(idsIn(nested.columns, "working")).toContain("c");
+    expect(nested.childrenByParent.get("p")?.map((t) => t.id)).toEqual(["c"]);
+    expect(idsIn(nested.columns, "working")).not.toContain("c");
   });
 
   it("nests an Idle child under any parent", () => {
@@ -170,13 +171,13 @@ describe("nestUnderParents — Attention (status) grouping placement", () => {
     const child = thread({ id: "c", parentThreadId: "p", isUnread: true });
     const doneIds = new Set(["p"]);
     const columns = buildColumns([parent, child], "status", CONTEXT, new Map(), doneIds, NOW);
-    const nested = nestUnderParents(columns, [parent, child], "status", CONTEXT, NOW);
+    const nested = nestUnderParents(columns, [parent, child], "status", CONTEXT, NOW, buildFamilyIndex([parent, child]), { doneIds });
     expect(idsIn(nested.columns, "unread")).toContain("c");
     expect(nested.childrenByParent.has("p")).toBe(false);
   });
 
   it("keeps the existing sorted() order inside a column for a promoted child", () => {
-    const parent = thread({ id: "p", status: "active", updatedAt: NOW - HOUR });
+    const parent = thread({ id: "p", updatedAt: NOW - HOUR });
     const olderChild = thread({
       id: "older",
       parentThreadId: "p",
@@ -184,12 +185,13 @@ describe("nestUnderParents — Attention (status) grouping placement", () => {
       updatedAt: NOW - 2 * HOUR,
     });
     const newerStandalone = thread({ id: "newer", isUnread: true, updatedAt: NOW - HOUR });
+    const doneIds = new Set(["p"]);
     const columns = buildColumns(
       [parent, olderChild, newerStandalone],
       "status",
       CONTEXT,
       new Map(),
-      new Set(),
+      doneIds,
       NOW,
     );
     const nested = nestUnderParents(
@@ -198,6 +200,8 @@ describe("nestUnderParents — Attention (status) grouping placement", () => {
       "status",
       CONTEXT,
       NOW,
+      buildFamilyIndex([parent, olderChild, newerStandalone]),
+      { doneIds },
     );
     // newest-first: newerStandalone (1h) before olderChild (2h)
     expect(idsIn(nested.columns, "unread")).toEqual(["newer", "older"]);
@@ -407,8 +411,8 @@ describe("filterFamilies", () => {
   });
 });
 
-describe("family filtering composes with nesting — promotion applied after filtering", () => {
-  it("a Needs-you child matched by a state filter also stands alone in the attention column", () => {
+describe("family filtering composes with nesting — the filtered family relocates as a unit", () => {
+  it("a Needs-you child matched by a state filter lifts its family into the attention column, nested", () => {
     const parent = thread({ id: "p", status: "active", updatedAt: NOW - HOUR });
     const child = thread({
       id: "c",
@@ -426,24 +430,17 @@ describe("family filtering composes with nesting — promotion applied after fil
     );
     // family kept, parent dimmed
     expect(filtered.dimmedIds.has("p")).toBe(true);
-    const columns = buildColumns(
-      filtered.kept,
-      "status",
-      CONTEXT,
-      new Map(),
-      new Set(),
-      NOW,
-    );
-    const nested = nestUnderParents(columns, filtered.kept, "status", CONTEXT, NOW);
-    expect(idsIn(nested.columns, "attention")).toContain("c");
-    expect(nested.childrenByParent.has("p")).toBe(false);
-    // parent still renders (dimmed), in its own column
-    expect(columnOf(nested.columns, "p")).toBeDefined();
+    const result = assembleBoard(filtered.kept, "status", CONTEXT, new Map(), new Set(), NOW);
+    // the family lands in the attention column: parent card (dimmed), child nested
+    expect(idsIn(result.columns, "attention")).toEqual(["p"]);
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
+    // the child renders exactly once — as a nested row, never standalone
+    expect(columnOf(result.columns, "c")).toBeUndefined();
   });
 });
 
 describe("assembleBoard — the composition app.tsx wires", () => {
-  it("a promoted child renders as a standalone card and NOT as a nested row (no duplication)", () => {
+  it("an attention child moves its Working family into the attention column and nests (no duplication)", () => {
     const parent = thread({ id: "p", status: "active", updatedAt: NOW - HOUR });
     const child = thread({
       id: "c",
@@ -452,9 +449,9 @@ describe("assembleBoard — the composition app.tsx wires", () => {
       updatedAt: NOW - 2 * HOUR,
     });
     const result = assembleBoard([parent, child], "status", CONTEXT, new Map(), new Set(), NOW);
-    expect(idsIn(result.columns, "attention")).toContain("c");
-    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).not.toContain("c");
-    expect(result.nestedChildrenByParent.has("p")).toBe(false);
+    expect(idsIn(result.columns, "attention")).toEqual(["p"]);
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
+    expect(columnOf(result.columns, "c")).toBeUndefined();
     // chip counts from the raw family index, independent of nesting
     expect(result.childCountByParent.get("p")).toBe(1);
   });
@@ -494,6 +491,179 @@ describe("assembleBoard — the composition app.tsx wires", () => {
     // renders the chip whenever this count is > 0, even with zero nested
     // rows; only the chevron (which toggles rows) stays gated on rows.
     expect(result.childCountByParent.get("p")).toBe(1);
+  });
+});
+
+describe("assembleBoard — family columns (R4: the family moves as one unit)", () => {
+  it("a Working child lifts its Idle family into the working column, child nested", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - 2 * DAY }); // idle-earlier
+    const child = thread({
+      id: "c",
+      parentThreadId: "p",
+      status: "active",
+      updatedAt: NOW - HOUR,
+    });
+    const result = assembleBoard([parent, child], "status", CONTEXT, new Map(), new Set(), NOW);
+    expect(idsIn(result.columns, "working")).toEqual(["p"]);
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
+    expect(columnOf(result.columns, "c")).toBeUndefined();
+  });
+
+  it("a pinned Idle parent keeps its family in the Pinned column and nests its Working child", () => {
+    const parent = thread({ id: "p", isPinned: true });
+    const child = thread({
+      id: "c",
+      parentThreadId: "p",
+      status: "active",
+      updatedAt: NOW - HOUR,
+    });
+    const result = assembleBoard([parent, child], "status", CONTEXT, new Map(), new Set(), NOW);
+    expect(idsIn(result.columns, "pinned")).toEqual(["p"]);
+    expect(idsIn(result.columns, "working")).toEqual([]);
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
+  });
+
+  it("a Needs-you child lifts a Working family into the attention column", () => {
+    const parent = thread({ id: "p", status: "active", updatedAt: NOW - HOUR });
+    const child = thread({
+      id: "c",
+      parentThreadId: "p",
+      hasPendingInteraction: true,
+      updatedAt: NOW - 2 * HOUR,
+    });
+    const result = assembleBoard([parent, child], "status", CONTEXT, new Map(), new Set(), NOW);
+    expect(idsIn(result.columns, "attention")).toEqual(["p"]);
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
+  });
+
+  it("an Unread child lifts a Working family into the unread column", () => {
+    const parent = thread({ id: "p", status: "active", updatedAt: NOW - HOUR });
+    const child = thread({
+      id: "c",
+      parentThreadId: "p",
+      isUnread: true,
+      updatedAt: NOW - 2 * HOUR,
+    });
+    const result = assembleBoard([parent, child], "status", CONTEXT, new Map(), new Set(), NOW);
+    expect(idsIn(result.columns, "unread")).toEqual(["p"]);
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
+  });
+
+  it("a Needs-you grandchild lifts the whole family into the attention column", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - 2 * DAY });
+    const child = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - HOUR });
+    const grandchild = thread({
+      id: "g",
+      parentThreadId: "c",
+      hasPendingInteraction: true,
+      updatedAt: NOW - 3 * HOUR,
+    });
+    const result = assembleBoard(
+      [parent, child, grandchild],
+      "status",
+      CONTEXT,
+      new Map(),
+      new Set(),
+      NOW,
+    );
+    expect(idsIn(result.columns, "attention")).toEqual(["p"]);
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
+    // grandchildren never take column slots; they ride as the +N chip
+    expect(columnOf(result.columns, "g")).toBeUndefined();
+    expect(columnOf(result.columns, "c")).toBeUndefined();
+  });
+
+  it("an all-idle family keeps the parent's own bucket (a fresher idle child does not lift it)", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - 2 * DAY }); // idle-earlier
+    const child = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - 2 * HOUR }); // idle-today
+    const result = assembleBoard([parent, child], "status", CONTEXT, new Map(), new Set(), NOW);
+    expect(idsIn(result.columns, "idle-earlier")).toEqual(["p"]);
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
+  });
+
+  it("archived and done children do not lift the family column", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - 2 * DAY }); // idle-earlier
+    const archivedChild = thread({
+      id: "a",
+      parentThreadId: "p",
+      isArchived: true,
+      hasPendingInteraction: true,
+    });
+    const doneChild = thread({
+      id: "d",
+      parentThreadId: "p",
+      status: "active",
+      updatedAt: NOW - HOUR,
+    });
+    const doneIds = new Set(["d"]);
+    const result = assembleBoard(
+      [parent, archivedChild, doneChild],
+      "status",
+      CONTEXT,
+      new Map(),
+      doneIds,
+      NOW,
+    );
+    // neither member demands attention for placement: the family stays idle
+    expect(idsIn(result.columns, "idle-earlier")).toEqual(["p"]);
+    expect(idsIn(result.columns, "attention")).toEqual([]);
+    expect(idsIn(result.columns, "working")).toEqual([]);
+    // both children still nest under the live parent
+    expect(ids(result.nestedChildrenByParent.get("p") ?? []).sort()).toEqual(["a", "d"]);
+  });
+
+  it("a frozen column keeps a lifted family's parent where it was frozen", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - 2 * DAY }); // idle-earlier
+    const child = thread({
+      id: "c",
+      parentThreadId: "p",
+      status: "active",
+      updatedAt: NOW - HOUR,
+    });
+    const frozenColumns = new Map([["p", { id: "idle-earlier", label: "Idle · Earlier" }]]);
+    const result = assembleBoard(
+      [parent, child],
+      "status",
+      CONTEXT,
+      frozenColumns,
+      new Set(),
+      NOW,
+    );
+    expect(idsIn(result.columns, "idle-earlier")).toEqual(["p"]);
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
+  });
+
+  it("a Done parent's family does not relocate: live children still promote", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - HOUR });
+    const child = thread({
+      id: "c",
+      parentThreadId: "p",
+      hasPendingInteraction: true,
+      updatedAt: NOW - 2 * HOUR,
+    });
+    const doneIds = new Set(["p"]);
+    const result = assembleBoard([parent, child], "status", CONTEXT, new Map(), doneIds, NOW);
+    expect(idsIn(result.columns, "attention")).toContain("c");
+    expect(result.nestedChildrenByParent.has("p")).toBe(false);
+  });
+});
+
+describe("familyColumnOverrides — the placement override map", () => {
+  it("is empty outside the status grouping", () => {
+    const parent = thread({ id: "p" });
+    const child = thread({ id: "c", parentThreadId: "p", status: "active" });
+    const index = buildFamilyIndex([parent, child]);
+    expect(familyColumnOverrides([parent, child], index, "project", CONTEXT, new Set())).toHaveLength(0);
+    expect(familyColumnOverrides([parent, child], index, "recency", CONTEXT, new Set())).toHaveLength(0);
+  });
+
+  it("maps only the family root to its most attention-requiring live member's column", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - 2 * DAY });
+    const child = thread({ id: "c", parentThreadId: "p", status: "active", updatedAt: NOW - HOUR });
+    const index = buildFamilyIndex([parent, child]);
+    const overrides = familyColumnOverrides([parent, child], index, "status", CONTEXT, new Set());
+    expect([...overrides.keys()]).toEqual(["p"]);
+    expect(overrides.get("p")).toEqual({ id: "working", label: "Working" });
   });
 });
 
