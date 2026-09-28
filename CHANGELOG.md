@@ -3,6 +3,18 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.2] — 2026-09-28
+
+### Fixed
+
+- **Right-clicking a nested child thread opened the parent card's menu on top
+  of the child's.** The child row's own menu did open, but the right-click
+  also bubbled up to the parent card's menu wrapper, so the parent's actions
+  covered it and the child's actions were unreachable. The right-click no
+  longer propagates past the card it hit. Every card menu now also names the
+  thread it acts on: the menu opens with a muted header line showing the
+  thread's title.
+
 ## [0.5.1] — 2026-09-28
 
 ### Added
