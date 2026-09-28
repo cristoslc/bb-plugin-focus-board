@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.6";
+export const APP_VERSION = "0.5.7";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    version: "0.5.7",
+    items: [
+      "Urgent child threads now float to the top of the rows nested under a parent card, so a child that needs you can't get buried under quieter siblings.",
+    ],
+  },
   {
     version: "0.5.6",
     items: [
