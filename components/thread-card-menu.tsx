@@ -18,20 +18,25 @@ interface ThreadCardMenuProps {
   actions: readonly CardMenuAction[];
   onOpen: () => void;
   href: string;
+  /** The thread the menu acts on, shown as the menu's header. */
+  title: string;
 }
 
 /**
  * Right-click menu for a board card, mirroring the sidebar thread menu's
  * relevant actions. Left-click still opens the pane; modified clicks fall
- * through to the anchor's native href behavior.
+ * through to the anchor's native href behavior. The anchor stops the
+ * context-menu event's propagation so a nested card's menu cannot also open
+ * its ancestor card's menu.
  */
-export function ThreadCardMenu({ anchor, actions, onOpen, href }: ThreadCardMenuProps) {
+export function ThreadCardMenu({ anchor, actions, onOpen, href, title }: ThreadCardMenuProps) {
   const [open, setOpen] = useState<{ x: number; y: number } | null>(null);
   return (
     <>
       <div
         onContextMenu={(event) => {
           event.preventDefault();
+          event.stopPropagation();
           setOpen({ x: event.clientX, y: event.clientY });
         }}
       >
@@ -67,6 +72,12 @@ export function ThreadCardMenu({ anchor, actions, onOpen, href }: ThreadCardMenu
               if (clampedY !== node.offsetTop) node.style.top = `${Math.max(8, clampedY)}px`;
             }}
           >
+            <div
+              aria-hidden
+              className="max-w-64 truncate px-2 pb-1 pt-1.5 text-[11px] font-medium text-muted-foreground"
+            >
+              {title}
+            </div>
             <button
               type="button"
               role="menuitem"

@@ -190,6 +190,7 @@ function ChildRow({
       actions={menuActions}
       href={child.href}
       onOpen={() => onOpenThread(child.id)}
+      title={child.displayTitle}
     />
   );
 }
@@ -384,6 +385,12 @@ export function ThreadCard({
   );
   if (menuActions === undefined) return card;
   return (
-    <ThreadCardMenu anchor={card} actions={menuActions} href={thread.href} onOpen={onOpen} />
+    <ThreadCardMenu
+      anchor={card}
+      actions={menuActions}
+      href={thread.href}
+      onOpen={onOpen}
+      title={thread.displayTitle}
+    />
   );
 }
