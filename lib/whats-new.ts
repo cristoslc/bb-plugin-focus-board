@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.5";
+export const APP_VERSION = "0.5.6";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -22,6 +22,13 @@ export interface WhatsNewEntry {
 
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    version: "0.5.6",
+    items: [
+      "Child threads now nest as one family: the family's card sits in the column of its most attention-requiring member, with urgent children rendered as rows under the parent card instead of floating away as standalone cards.",
+      "A pinned parent keeps its whole family in the Pinned column — an active child no longer detaches into its own column.",
+    ],
+  },
   {
     version: "0.5.5",
     items: [
