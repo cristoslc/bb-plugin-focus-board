@@ -58,6 +58,6 @@ steps:
 
   - id: up-to-date-is-quiet
     title: Revisiting at the same version stays quiet
-    goto: "?groupBy=status&lastSeenVersion=0.5.0"
+    goto: "?groupBy=status&lastSeenVersion=0.5.8"
     assert:
       - whats_new: { icon: true, unseen: false, modal: false }

@@ -19,6 +19,10 @@ window.localStorage.setItem(
   "focus-board:paneWidth",
   params.get("paneWidth") ?? "480",
 );
+window.localStorage.setItem(
+  "focus-board:search",
+  params.get("q") ?? "",
+);
 // Seed the stored last-seen plugin version (the what's-new gift button's
 // state): `?lastSeenVersion=0.4.4` simulates an upgrade from that version;
 // absent, the first visit stamps the running version as seen.

@@ -259,6 +259,22 @@ export const SIM_THREADS: readonly SimThread[] = [
     lastReadAt: SIM_NOW - 9 * DAY,
   }),
 
+  // Parent-lane UAT fixture: one family with an idle parent and idle child so
+  // the suite can exercise lane headers, child cards, and the Standalone lane.
+  thread({
+    id: "thr_parent_lane",
+    displayTitle: "Parent thread lane fixture",
+    updatedAt: SIM_NOW - 10 * DAY,
+    lastReadAt: SIM_NOW - 10 * DAY,
+  }),
+  thread({
+    id: "thr_child_lane",
+    displayTitle: "Child thread lane fixture",
+    parentThreadId: "thr_parent_lane",
+    updatedAt: SIM_NOW - 9 * DAY,
+    lastReadAt: SIM_NOW - 9 * DAY,
+  }),
+
   // Done
   thread({
     id: "thr_pane_padding",

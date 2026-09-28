@@ -291,6 +291,7 @@ export function ParentLaneBoard({
             <section
               key={lane.id}
               data-lane-id={lane.id}
+              aria-label={lane.label}
               className="flex h-full min-h-0 w-64 shrink-0 flex-col rounded-lg"
             >
               <div data-lane-header className="h-[52px] shrink-0 px-1 pb-1.5">
