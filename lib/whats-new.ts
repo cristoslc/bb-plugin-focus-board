@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.3";
+export const APP_VERSION = "0.5.4";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    version: "0.5.4",
+    items: [
+      "Backticked workspace paths now only show as clickable links when the file actually exists: a path the model merely planned (or a bare `.md`) stays plain text instead of opening a dead preview.",
+    ],
+  },
   {
     version: "0.5.3",
     items: [
