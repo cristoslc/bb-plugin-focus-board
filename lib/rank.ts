@@ -154,6 +154,64 @@ export function applyMove(
   return [...rest.slice(0, at), threadId, ...rest.slice(at)];
 }
 
+/**
+ * The column's DISPLAYED order after a move: `visibleIds` rearranged, without
+ * touching stored ranks. `applyMoveVisible` derives its write from this, and
+ * the board's position announcement reads the card's slot out of it, so both
+ * agree with what the operator sees.
+ */
+export function displayAfterMove(
+  visibleIds: readonly string[],
+  threadId: string,
+  beforeId: string | null,
+  toEnd: boolean,
+): string[] {
+  return toEnd
+    ? appendTo(visibleIds, threadId)
+    : applyMove(visibleIds, threadId, beforeId);
+}
+
+/**
+ * Place `threadId` and rank everything ABOVE the drop point.
+ *
+ * `visibleIds` is the order the column is currently DISPLAYED in (ranked
+ * cards first, then unranked by recency). Only the moved card moves; but
+ * unlike `applyMove`, every card above its new position is also written
+ * into the resulting order. That is what makes a first drop into an
+ * unranked column work: with only the moved card ranked, the sparse
+ * comparator (`compareByRank`) still sorts it above every unranked card,
+ * so "drop below the second card" would silently no-op. Ranking the cards
+ * above the drop point is the smallest write that honours the intent.
+ *
+ * Cards BELOW the drop point keep whatever rank they had — previously
+ * unranked ones stay unranked (gaps below are preserved, so the
+ * never-densify property survives everywhere the operator did not
+ * explicitly order), and previously ranked ones keep their rank AFTER the
+ * new head rather than being silently unranked by a move they took no part
+ * in. Dropping those ranks would corrupt the NEXT move: once recency and
+ * rank disagree below the drop point, a later move scatters the cards the
+ * earlier one demoted.
+ *
+ * A `toEnd` drop ranks every visible card: landing below the last card
+ * means landing below the unranked ones too. Returns a NEW order; the
+ * input is untouched.
+ */
+export function applyMoveVisible(
+  order: ColumnOrder,
+  visibleIds: readonly string[],
+  threadId: string,
+  beforeId: string | null,
+  toEnd: boolean,
+): string[] {
+  if (threadId === "") return [...order];
+  const arranged = displayAfterMove(visibleIds, threadId, beforeId, toEnd);
+  const at = arranged.indexOf(threadId);
+  if (at === -1) return [...order];
+  const head = arranged.slice(0, at + 1);
+  const headSet = new Set(head);
+  return [...head, ...order.filter((id) => !headSet.has(id))];
+}
+
 /** Which half of a card the pointer was over. */
 export type DropEdge = "before" | "after";
 
