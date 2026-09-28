@@ -27,8 +27,7 @@ import {
 import { DEFAULT_DONE_ARCHIVE_DAYS, DEFAULT_IDLE_ARCHIVE_DAYS } from "./lib/sweep";
 import {
   RANK_KV_KEY,
-  appendTo,
-  applyMove,
+  applyMoveVisible,
   orderForColumn,
   parseRankStore,
   rankRowFromStore,
@@ -100,6 +99,13 @@ export const rpcContract = defineRpcContract({
       beforeId: z.string().nullable(),
       /** Drop below the last ranked card instead of at an anchor. */
       toEnd: z.boolean(),
+      /**
+       * The column's displayed order at drop time. The move ranks every card
+       * above the drop point from this list — a first drop into an unranked
+       * column otherwise ranks one card and reorders nothing, because the
+       * sparse comparator sorts all ranked cards above unranked ones.
+       */
+      visibleIds: z.array(z.string()),
     }),
     output: z.object({ columnKey: z.string().min(1), order: z.array(z.string()) }),
   },
@@ -411,12 +417,16 @@ export default async function plugin(bb: BbPluginApi) {
       const store = await readRanks();
       return { orders: rankRowFromStore(store) };
     },
-    rank_move: async ({ columnKey, threadId, beforeId, toEnd }) => {
+    rank_move: async ({ columnKey, threadId, beforeId, toEnd, visibleIds }) => {
       const store = await readRanks();
       const current = orderForColumn(store, columnKey);
-      const next = toEnd
-        ? appendTo(current, threadId)
-        : applyMove(current, threadId, beforeId);
+      const next = applyMoveVisible(
+        current,
+        visibleIds,
+        threadId,
+        beforeId,
+        toEnd,
+      );
       // Skip the write (and the refetch) when the move changes nothing, so
       // a drop that lands where the card already sits is a no-op everywhere.
       if (next.join("\u0000") !== current.join("\u0000")) {

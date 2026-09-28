@@ -39,6 +39,23 @@ steps:
       - store: { "status:unread": ["thr_review_pr"] }
       - column_ordered: { column: unread, ordered: true }
 
+  - id: fresh-install-drop-below-second-card-resorts
+    title: The first drop BELOW another card re-sorts, instead of leaving the card on top
+    # THE regression this suite exists to catch: the rank model is sparse, and
+    # a move that ranked only the dragged card left it sorted above every
+    # unranked card — so dragging the top card below the second one did
+    # nothing at all. A move now ranks every card above the drop point.
+    # Recency here: thr_rpc_auth (26m) · thr_uat_queue (2h) · thr_review_pr (3h).
+    goto: "?groupBy=status"
+    drag: { from: thr_rpc_auth, to: thr_uat_queue, edge: after }
+    assert:
+      - column: unread
+        ordered: [thr_uat_queue, thr_rpc_auth, thr_review_pr]
+      # Sparse where it may: thr_review_pr sits BELOW the drop point and
+      # keeps recency instead of gaining a rank.
+      - store: { "status:unread": [thr_uat_queue, thr_rpc_auth] }
+      - column_ordered: { column: unread, ordered: true }
+
   - id: fresh-install-drop-to-done-still-works
     title: With every lane draggable, dropping on Done still marks done
     # The cost of removing the gate: a drag now carries a rank key, which used

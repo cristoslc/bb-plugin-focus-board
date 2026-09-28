@@ -131,3 +131,22 @@ Plugin metadata, same namespace and same fail-loud parsing as `done`:
   can be scripted and inspected. Probably yes, eventually.
 - Live reordering animation. Cards moving under a cursor read as responsive;
   cards teleporting read as broken. Worth doing, worth not doing badly.
+
+## Postscript (2026-09-27): the first drop into a column must densify the head
+
+The shipped model is a sparse ordered id list (not fractional ranks), compared
+by `compareByRank`: ranked cards first, then unranked in derived order. That
+comparator has a sharp edge the sketch above missed: **ranking only the dragged
+card still sorts it above every unranked card**, so a first drop into an
+unranked column re-sorted nothing unless it landed at the top — "drop below the
+second card" was a silent no-op that looked exactly like a dropped drag.
+
+`applyMoveVisible` (lib/rank.ts) is the fix and the standing rule: a move also
+ranks every card ABOVE the drop point, computed from the column's DISPLAYED
+order (`visibleIds`, which the board threads through `commitMove` →
+`onRankMove` → the `rank_move` RPC). Cards below the drop point stay unranked,
+so the leave-a-gap, re-enter-in-the-gap property survives everywhere the
+operator did not explicitly order; a `toEnd` drop ranks every visible card,
+because landing below the last card means landing below the unranked ones too.
+Do not simplify this back to `applyMove` — the sparse model is only safe once
+the cards above the drop point are ranked with the moved card.
