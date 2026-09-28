@@ -11,6 +11,7 @@ import type { PluginBrowserBbSdk } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { usePointerCoarse } from "@/components/ui/hooks/use-pointer-coarse";
+import { cn } from "@/lib/utils";
 
 /**
  * Pending interactions are invisible inside `ThreadChat`: the host's embedded
@@ -261,11 +262,13 @@ function OptionRow({
         className="flex w-full min-w-0 items-start gap-2 rounded-sm px-2 py-1.5 text-left outline-none hover:bg-state-hover focus-visible:bg-state-hover disabled:cursor-not-allowed disabled:opacity-60"
       >
         <span
-          className={
-            multiSelect
-              ? "mt-0.5 flex size-3.5 shrink-0 items-center justify-center rounded-[4px] border border-input text-primary-foreground"
-              : "mt-0.5 flex size-3.5 shrink-0 items-center justify-center rounded-full border border-input text-primary-foreground"
-          }
+          className={cn(
+            "mt-0.5 flex size-3.5 shrink-0 items-center justify-center border",
+            // This theme's `primary` is not a strong fill; the plugin's own
+            // checkbox marks checked with foreground-on-background.
+            selected ? "border-foreground bg-foreground text-background" : "border-input",
+            multiSelect ? "rounded-[4px]" : "rounded-full",
+          )}
           aria-hidden
         >
           {selected ? <Icon name="Check" className="size-2.5" /> : null}
