@@ -3,6 +3,18 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.3] — 2026-09-27
+
+### Fixed
+
+- **Relative file links in pane messages no longer open as broken browser
+  URLs.** A message like `[ERD](docs/erd.mmd)` rendered as an anchor the
+  browser resolved against the bb app origin, landing on an error page. The
+  pane now intercepts left-clicks on relative anchors and reopens the target
+  as a live workspace file in bb's preview panel, resolved against the
+  thread's environment. Absolute URLs and fragment links keep native
+  routing; `../` climbs that escape the workspace root are refused.
+
 ## [0.4.2] — 2026-09-27
 
 ### Fixed
