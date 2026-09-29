@@ -63,6 +63,16 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   cards' hrefs; `ranked` reports whether the lane has a STORED order
   (`data-column-ordered`), and `rank_slots` how many cards offer themselves as
   drop targets.
+- `glyph_glue` measures the pane's inline-code open glyph in the real line
+  breaker (jsdom cannot wrap, so this one exists for the real
+  geometry): it waits up to 4s for the decoration to fire (environment
+  resolution plus a `workspace_files_exist` verdict are async), fails when
+  the icon carries no word joiners, fails when the code span never wrapped
+  (the check would be vacuous), and passes when the glyph shares a baseline
+  with the path's last character. The harness side: `scripts/screenshot/mock-sdk.tsx`
+  renders backtick spans as real `<code>`, `threads.get` resolves the
+  fixture's environment id, and the `workspace_files_exist` RPC vouches for
+  `SIM_WORKSPACE_FILES` (`scripts/screenshot/data.ts`).
 - `assert_before_drag` runs before the gesture, so a step can prove both the
   starting state and the resulting one.
 - `drag_to_column` drops on a whole lane rather than a card within it, which is
@@ -93,6 +103,11 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   opening the modal lists the delta and marks the version seen (the button
   stays), the quiet button still opens the full recent list, Escape closes
   the modal, and fresh installs / same-version revisits never pulse.
+- `uat-glyph-glue.yaml` — the pane's inline-code open glyph in Chrome's real
+  line breaker: a ~70-character workspace path in the fixture thread wraps
+  in the 480px pane and the glyph stays glued to the path's last character,
+  holding as the viewport shrinks; the probe refuses to pass vacuously when
+  the span never wrapped.
 
 ## Notes
 

@@ -546,6 +546,72 @@ const pagePaneState = () => {
   return { open: true, threadId: label.startsWith("Thread: ") ? label.slice(8) : null };
 };
 
+/**
+ * The inline-code open glyph, measured in a real line breaker. jsdom cannot
+ * wrap text, so this probe is the automated counterpart of staring at a
+ * narrow pane: wait for the decoration (its verdict flow is async — environment
+ * resolution plus an existence RPC — so poll rather than sample once), then
+ * measure. The regression this pins: the glyph appended after a long code
+ * text is an atomic inline, a legal break position, so the glyph dropped to
+ * its own line when the path filled the pane. decorateCode glues the icon
+ * with word joiners, so the glyph may move with the text but never alone:
+ * the icon and the code's last path character must share a visual line.
+ */
+const pageGlyphGlue = async () => {
+  const deadline = window.performance.now() + 4000;
+  let code = null;
+  while (window.performance.now() < deadline) {
+    code = document.querySelector(
+      'aside[aria-label^="Thread: "] code[data-focus-board-path-link]',
+    );
+    if (code !== null) break;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  if (code === null) {
+    return { ok: false, reason: "no decorated code span appeared in the pane (decoration never fired?)" };
+  }
+  const icon = code.querySelector("[data-focus-board-path-link-icon]");
+  if (icon === null) {
+    return { ok: false, reason: "decorated code carries no icon span" };
+  }
+  const glue = (node) =>
+    node !== null && node.nodeType === 3 && node.textContent === "\u2060";
+  if (!glue(icon.previousSibling) || !glue(icon.nextSibling)) {
+    return {
+      ok: false,
+      reason: "icon is not glued with word joiners — it can wrap onto its own line",
+    };
+  }
+  // Sanity: the path must actually wrap at this pane width, or the same-line
+  // assertion below passes vacuously.
+  if (code.getClientRects().length < 2) {
+    return { ok: false, reason: "the code span did not wrap; this check would be vacuous" };
+  }
+  // Same-line check: a Range over the code's final path character shares a
+  // baseline with the icon (the joiner text sits between them but carries
+  // no rects of interest; the icon's top must match the last character's).
+  const pathText = code.firstChild;
+  if (pathText === null || pathText.nodeType !== 3) {
+    return { ok: false, reason: "the code's first child is not the path text" };
+  }
+  const range = document.createRange();
+  range.setStart(pathText, pathText.textContent.length - 1);
+  range.setEnd(pathText, pathText.textContent.length);
+  const charRect = range.getClientRects();
+  const iconRect = icon.getBoundingClientRect();
+  if (charRect.length === 0) {
+    return { ok: false, reason: "the last path character produced no line box" };
+  }
+  const top = charRect[0].top;
+  const sameLine = Math.abs(top - iconRect.top) < 4;
+  return {
+    ok: sameLine,
+    reason: sameLine
+      ? `glyph shares the line with the path's last character (tops ${top.toFixed(1)} / ${iconRect.top.toFixed(1)}), path wraps across ${code.getClientRects().length} line boxes`
+      : `glyph dropped off the path's last line (char top ${top.toFixed(1)} vs icon top ${iconRect.top.toFixed(1)})`,
+  };
+};
+
 /** Does this step declare a top-level assertion of that name? */
 function rule_has(step, name) {
   return (step.assert ?? []).some((rule) => rule[name] !== undefined);
@@ -860,6 +926,10 @@ async function check(step, page, gestureResults = []) {
         }
       }
     }
+    if (rule.glyph_glue !== undefined) {
+      const got = await page.evaluate(pageGlyphGlue);
+      expect("open glyph glued to the code text", got.ok === true, got.reason);
+    }
     if (rule.live_region !== undefined) {
       const text = await page.evaluate(pageLiveRegion);
       const re = rule.live_region instanceof RegExp ? rule.live_region : new RegExp(rule.live_region);
@@ -1051,21 +1121,27 @@ for (const file of suiteFiles) {
 await browser.close();
 
 const failed = reports.flatMap((r) => r.steps).filter((s) => !s.ok).length;
-const lines = ["# UAT report", ""];
+const stamp = new Date().toISOString();
+// One report per suite, named after it: a combined run that wrote a single
+// file (the first suite's name) left every other suite's report stale — an
+// old pass sitting in docs/uat while the run that just failed wrote nothing
+// to the file someone actually opens.
+if (reports.length === 0) throw new Error("no suites ran");
+const outFiles = [];
 for (const report of reports) {
-  lines.push(`## ${report.suite}`, "", `Source: \`${report.file}\` · theme ${report.theme}`, "");
-  lines.push("| Step | Result | Detail |", "| --- | --- | --- |");
+  const suiteLines = ["# UAT report", "", `_Generated ${stamp} by \`npm run uat\`._`, ""];
+  suiteLines.push(`## ${report.suite}`, "", `Source: \`${report.file}\` · theme ${report.theme}`, "");
+  suiteLines.push("| Step | Result | Detail |", "| --- | --- | --- |");
   for (const step of report.steps) {
     const detail = step.results.map((r) => `${r.ok ? "✓" : "×"} ${r.name}${r.ok || !r.detail ? "" : ` (${r.detail})`}`).join("; ");
-    lines.push(`| ${step.title} | ${step.ok ? "pass" : "FAIL"} | ${detail} |`);
+    suiteLines.push(`| ${step.title} | ${step.ok ? "pass" : "FAIL"} | ${detail} |`);
   }
-  lines.push("");
+  suiteLines.push("");
+  const outFile = `${REPORT_DIR}${report.suite}.md`;
+  await writeFile(outFile, suiteLines.join("\n"));
+  outFiles.push(outFile);
 }
-const stamp = new Date().toISOString();
-lines.unshift(`_Generated ${stamp} by \`npm run uat\`._`, "");
-const outFile = `${REPORT_DIR}${reports[0].suite}.md`;
-await writeFile(outFile, lines.join("\n"));
 
 console.log(`\n${failed === 0 ? "all steps passed" : `${failed} step(s) failed`}`);
-console.log(`report: ${outFile}`);
+console.log(`reports:\n${outFiles.map((f) => `  ${f}`).join("\n")}`);
 process.exit(failed === 0 ? 0 : 1);

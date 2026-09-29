@@ -1,10 +1,10 @@
-_Generated 2026-09-30T02:45:00.775Z by `npm run uat`._
-
 # UAT report
+
+_Generated 2026-09-29T21:39:34.324Z by `npm run uat`._
 
 ## parent-lanes
 
-Source: `tests/manual/uat-parent-lanes.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-parent-lanes.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
@@ -20,7 +20,6 @@ Source: `tests/manual/uat-parent-lanes.yaml` · theme dark
 | After a pan the board settles quiet, bounded glide events then stillness | pass | ✓ board quiet after pan: ≤60 events, still ≥500ms; ✓ locked lane: true |
 | A real wheel-event pan re-locks the nearest lane and settles quiet | pass | ✓ board quiet after pan: ≤80 events, still ≥500ms; ✓ locked lane: true; ✓ bands aligned across lanes |
 | Clicking a family header while a pan glide is in flight locks THAT lane, not the pan's target | pass | ✓ locked lane: "thr_parent_lane"; ✓ bands aligned across lanes |
-| A small wheel overshoot inside the locked lane's grab window snaps back flush and keeps the lock | FAIL | ✓ locked lane: "thr_parent_lane"; × locked lane pinned flush against the rail (locked lane sits 130px off flush); ✓ bands aligned across lanes |
 | Resizing the viewport wider while a lane is locked keeps the ruler locked and bands aligned | pass | ✓ locked lane: "thr_parent_lane"; ✓ bands aligned across lanes |
 | Resizing the viewport narrower while a lane is locked keeps the ruler locked and bands aligned | pass | ✓ locked lane: "thr_parent_lane"; ✓ bands aligned across lanes |
 | A search that matches only loose threads drops every family and shows the empty state | pass | ✓ text hidden: "Standalone"; ✓ text hidden: "Queue the UAT pass for the rank lane"; ✓ text visible: "No thread families to show yet" |
