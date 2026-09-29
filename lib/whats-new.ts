@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.15";
+export const APP_VERSION = "0.5.16";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    version: "0.5.16",
+    items: [
+      "No board behavior changes in this version: the same update now carries the pin a card when you drop it on the Pinned lane change from 0.5.15, and release tags are signed with a dedicated signing key.",
+    ],
+  },
   {
     version: "0.5.15",
     items: [
