@@ -4,25 +4,28 @@ import type { ParentLane } from "./parent-lanes";
 /**
  * Pure geometry for the ruler+wrap parent board (ported from the
  * lanes-mock.html prototype). The lane locked to position 1 renders large
- * readable cards; every other lane renders mini cards that wrap to fill its
- * bands up to a viewport-derived column cap. Band heights are uniform per
- * status row across all lanes — driven by the locked lane — so the rail
- * labels and band seams line up board-wide. The pin-before-recut scroll
- * interaction predicts flush positions from these pure functions while the
- * board geometry is still frozen (no lock assigned).
+ * readable cards; every other lane renders mini cards that wrap to the size
+ * of its busiest band — lane widths are content-driven, never reserved for
+ * capacity that is not there. Band heights are uniform per status row across
+ * all lanes — driven by the locked lane — so the rail labels and band seams
+ * line up board-wide. The pin-before-recut scroll interaction predicts flush
+ * positions from these pure functions while the board geometry is still
+ * frozen (no lock assigned).
  */
 
 export const RULER = { w: 216, h: 140 } as const;
 export const MINI = { w: 136, h: 92 } as const;
+/** Ruler cards lay out in up to this many columns inside the locked lane. */
 export const RULER_COLS = 2;
-export const RULER_MIN_W = 460;
 export const CONTEXT_MAX_COLS = 5;
 export const GAP = 8;
 /** Inner cell padding: the lane body insets cards from the lane edge. */
 export const CELL_PAD = 4;
 export const MIN_BAND_H = 96;
 export const RAIL_W_DEFAULT = 140;
-/** Total horizontal margin between the rail's inner edge and the first lane. */
+/** Horizontal lane rhythm: rail → first lane and lane → lane. The board
+ *  render keeps each section's margin-left at this value, so predictions
+ *  match the DOM exactly. */
 export const RAIL_TO_LANE_GAP = 16;
 
 export type CardVariant = "ruler" | "mini";
@@ -53,7 +56,7 @@ export interface ParentLaneLayout {
   totalWidth: number;
 }
 
-/** How many mini-card columns fit next to the rail in the current viewport. */
+/** Hard cap on mini-card columns next to the rail in the current viewport. */
 export function viewportContextCols(
   viewportWidth: number,
   railWidth: number = RAIL_W_DEFAULT,
@@ -62,12 +65,37 @@ export function viewportContextCols(
   return Math.max(1, Math.min(CONTEXT_MAX_COLS, Math.floor(budget / (RULER.w + GAP))));
 }
 
-function laneInnerColumns(width: number, cellW: number): number {
-  return Math.max(1, Math.floor((width - CELL_PAD * 2 + GAP) / (cellW + GAP)));
+/** Mini-card rows that fit one shared band of the given height. */
+function miniRowsForBand(bandHeight: number): number {
+  const inner = bandHeight - CELL_PAD * 2;
+  return Math.max(1, Math.floor((inner + GAP) / (MINI.h + GAP)));
 }
 
-function lockedLaneWidth(): number {
-  return Math.max(RULER_MIN_W, RULER_COLS * RULER.w + (RULER_COLS - 1) * GAP) + CELL_PAD * 2;
+/** The locked lane's column count: its busiest band, one ruler column per
+ *  RULER_COLS cards, floored at one so an empty lane still has a column. */
+function lockedColumnsFor(lane: ParentLane): number {
+  let cols = 1;
+  for (const row of lane.rows) {
+    cols = Math.max(cols, Math.ceil(row.threads.length / RULER_COLS));
+  }
+  return cols;
+}
+
+/** A context lane's column count: its busiest band's cards over the mini
+ *  rows that band affords, capped by the viewport cap. Overflow above the
+ *  capacity renders as a chip, so width never reserves unseen cards. */
+function contextColumnsFor(lane: ParentLane, bandHeights: readonly number[], cap: number): number {
+  let cols = 1;
+  lane.rows.forEach((row, rowIndex) => {
+    if (row.threads.length === 0) return;
+    const rows = miniRowsForBand(bandHeights[rowIndex]);
+    cols = Math.max(cols, Math.ceil(row.threads.length / rows));
+  });
+  return Math.max(1, Math.min(cap, cols));
+}
+
+function lockedLaneWidth(cols: number): number {
+  return cols * RULER.w + (cols - 1) * GAP + CELL_PAD * 2;
 }
 
 function contextLaneWidth(cols: number): number {
@@ -85,21 +113,24 @@ export function computeParentLaneLayout(
   viewportWidth: number,
   railWidth: number = RAIL_W_DEFAULT,
 ): ParentLaneLayout {
-  const cols = viewportContextCols(viewportWidth, railWidth);
-  const laneWidths = lanes.map((_, index) =>
-    index === lockedIndex ? lockedLaneWidth() : contextLaneWidth(cols),
-  );
+  const cap = viewportContextCols(viewportWidth, railWidth);
+  const rulerLane = lockedIndex === null ? undefined : lanes[lockedIndex];
+  const lockedCols = rulerLane === undefined ? 0 : lockedColumnsFor(rulerLane);
+  const lockedWidth = lockedLaneWidth(Math.max(1, lockedCols));
 
   // Band heights: the locked lane's ruler content dictates each status row's
   // height; empty locked bands collapse to the minimum. Context lanes always
   // fit (wrap or chip) inside the shared band height.
   const bandHeights = (lanes[0]?.rows ?? []).map((_, rowIndex) => {
-    const rulerLane = lockedIndex === null ? undefined : lanes[lockedIndex];
     const count = rulerLane ? rulerLane.rows[rowIndex]?.threads.length ?? 0 : 0;
     if (count === 0) return MIN_BAND_H;
-    const rows = Math.ceil(count / RULER_COLS);
+    const rows = Math.ceil(count / Math.max(1, lockedCols));
     return Math.max(MIN_BAND_H, rows * RULER.h + (rows - 1) * GAP);
   });
+
+  const laneWidths = lanes.map((lane, index) =>
+    index === lockedIndex ? lockedWidth : contextLaneWidth(contextColumnsFor(lane, bandHeights, cap)),
+  );
 
   const layoutLanes: LaneLayout[] = lanes.map((lane, laneIndex) => {
     const locked = laneIndex === lockedIndex;
@@ -107,9 +138,7 @@ export function computeParentLaneLayout(
     const cells: LaneCell[] = [];
     const chipFor: Record<number, number> = {};
     const emptyRows: number[] = [];
-    const columns = locked
-      ? RULER_COLS
-      : laneInnerColumns(width, MINI.w);
+    const columns = locked ? lockedCols : contextColumnsFor(lane, bandHeights, cap);
 
     lane.rows.forEach((row, rowIndex) => {
       const count = row.threads.length;
@@ -120,18 +149,13 @@ export function computeParentLaneLayout(
       if (locked) {
         // The locked lane's overflow grows the band (shared height) instead
         // of chipping: the ruler's full stack stays visible, going down the
-        // page. Rows fit by construction: bandH ≈ ceil(count/RULER_COLS)
-        // rows of RULER height.
+        // page. Rows follow the lane's own column count.
         row.threads.forEach((t, i) => {
           cells.push({ thread: t, row: rowIndex, col: i, variant: "ruler" });
         });
         return;
       }
-      const innerRowHeight = bandHeights[rowIndex] - CELL_PAD * 2;
-      const rowsPerBand = Math.max(
-        1,
-        Math.floor((innerRowHeight + GAP) / (MINI.h + GAP)),
-      );
+      const rowsPerBand = miniRowsForBand(bandHeights[rowIndex]);
       const capacity = rowsPerBand * columns;
       const chip = count > capacity;
       const visible = chip ? capacity - 1 : count;
@@ -148,12 +172,15 @@ export function computeParentLaneLayout(
     laneWidths,
     bandHeights,
     lanes: layoutLanes,
-    totalWidth: railWidth + RAIL_TO_LANE_GAP + laneWidths.reduce((a, b) => a + b + GAP, 0),
+    totalWidth: railWidth + RAIL_TO_LANE_GAP + laneWidths.reduce((a, b) => a + b + RAIL_TO_LANE_GAP, 0),
   };
 }
 
-/** Horizontal position of lane `index` given final lane widths — the flush
- *  target for the pin glide is `predictedStart(index, ..., rail) - 1`. */
+/** Content-space x of lane `index`'s left edge given final lane widths — the
+ *  DOM renders every section's margin-left at RAIL_TO_LANE_GAP, so this
+ *  matches the real layout. The flush target scroll is
+ *  `predictedStart(index, ..., rail) - (rail + RAIL_TO_LANE_GAP)`: the locked
+ *  lane's left edge rests just past the rail. */
 export function predictedStart(
   index: number,
   laneWidths: readonly number[],
@@ -162,6 +189,6 @@ export function predictedStart(
   return (
     railWidth +
     RAIL_TO_LANE_GAP +
-    laneWidths.slice(0, index).reduce((a, b) => a + b + GAP, 0)
+    laneWidths.slice(0, index).reduce((a, b) => a + b + RAIL_TO_LANE_GAP, 0)
   );
 }

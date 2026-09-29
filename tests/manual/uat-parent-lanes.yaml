@@ -61,6 +61,18 @@ steps:
       - pane: { threadId: thr_child_lane }
       - active_card: { id: thr_child_lane, visible: true }
 
+  - id: clicking-context-card-keeps-it-visible-after-relock
+    title: Clicking a card in a context lane keeps it fully visible after the relock and recut
+    goto: "?groupBy=parent"
+    scroll: { dy: 260 }
+    click: { card: thr_sweep_child }
+    # The relock glides, the recut resizes bands, then the post-recut
+    # corrections (flush drift + vertical bring-into-view) land at ~300ms.
+    sleep: 1800
+    assert:
+      - locked_lane: thr_sweep_parent
+      - card_visible: thr_sweep_child
+
   - id: horizontal-pan-relocks-nearest-family
     title: A horizontal pan releases the ruler lock and re-locks the nearest family at rest
     goto: "?groupBy=parent"
