@@ -3,6 +3,16 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.16] - 2026-09-29
+
+### Changed
+
+- No user-visible board changes. The 0.5.15 Pinned-lane drop behavior is
+  restated in the What's-new modal; release tags from this version on are
+  signed by a dedicated Ed25519 release key (see
+  `.agents/agents-md-detail/release.md` § 7a), with the allowed-signers
+  file keeping the previous era's key so older tags keep verifying.
+
 ## [0.5.15] - 2026-09-28
 
 ### Fixed
