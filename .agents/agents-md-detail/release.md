@@ -90,41 +90,27 @@ last build of that checkout, not the tag:
 `bb plugin dev` is the watch-mode alternative for iterating, not for
 releases.
 
-## 7a. Signing a tag without unlocking 1Password (Vault-only key)
+## 7a. Tag signing (plain key file)
 
-Tag signing never touches 1Password or the workstation's personal key.
-A dedicated Ed25519 key was generated for release signing alone; its
-private half lives ONLY in cove's Vault:
+Tag signing uses a plain, dedicated key file: no 1Password, no wrapper.
 
-- `op://Private/Focus Board Release Signing/private key` (OpenSSH format)
-- Public key: `scripts/release-signing.pub` (committed)
+- Private key: `~/.ssh/focus_board_release` (0600, never in 1Password)
+- Public key: committed at `scripts/release-signing.pub`
+- Trust: committed at `scripts/release-signing.allowed` (one line per
+  signing key, oldest releases' keys kept so old tags still `git tag -v`)
 
-Repo wiring (already configured; point the absolute paths at the main
-checkout):
+Repo wiring (absolute paths into the main checkout; already configured):
 
-- `gpg.format=ssh`, `tag.gpgSign=true` (unchanged)
-- `user.signingkey=<repo>/scripts/release-signing.pub`
-- `gpg.ssh.program=<repo>/scripts/release-ssh-sign.sh`
+- `gpg.format=ssh`, `gpg.ssh.program=/usr/bin/ssh-keygen`, `tag.gpgSign=true`
+- `user.signingkey=$HOME/.ssh/focus_board_release.pub`
 - `gpg.ssh.allowedSignersFile=<repo>/scripts/release-signing.allowed`
 
-`scripts/release-ssh-sign.sh` intercepts git's `-Y sign`, materializes the
-private key from the Vault into a 0600 temp file for the duration of one
-signature, calls stock `ssh-keygen` (NOT the 1Password `op-ssh-sign`
-wrapper), and deletes it. Verification passes through with
-`check-novalidate`-style reads, so `git tag -v` works against the
-allowed-signers file. Release procedure is unchanged otherwise: the signed
-tag is just `git tag -a vX.Y.Z <commit> -m "Release X.Y.Z: <summary>"`.
-
-The key is scoped to this job: it signs Focus Board release tags, nothing
-more (keep it that way). It was generated fresh — it is not a copy of the
-1Password identity key, whose Vault cache was purged when this key was
-created. Anyone able to read cove's Vault can sign as this key; recover
-by deleting the Vault entry and re-keying (new `.pub` + new
-allowed-signers, then a new version's first signed tag re-establishes
-trust). Tags do not retroactively re-sign: each is final, and a
-compromised-era tag can be identified by its key fingerprint
-(`SHA256:Js8QZbfl64XV2rqavEP/XY5qOSOLYkUnU6ldrHXoaEQ`, starting with
-v0.5.16's first tag).
+Releasing a signed tag is then just
+`git tag -a vX.Y.Z <commit> -m "Release X.Y.Z: <summary>"` — `git tag -v`
+verifies against the allowed-signers file. Rotate by generating a new
+`~/.ssh/focus_board_release`, replacing the `.pub` line and adding the old
+one to the allowed file with its era noted (tags never re-sign; a tag's
+fingerprint says which key era produced it).
 
 ## 8. Release ledger
 

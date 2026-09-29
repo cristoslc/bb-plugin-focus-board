@@ -1,1 +1,2 @@
-* ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHLFCKTvCZKUWCtCJmSx8SX95DeE+IeXNKKAZ7e37Be9 focus-board release signing (cove vault)
+* ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGd3+gQQeDekbSIdr97Ylda9zxABWG4zxUm9TOmlYvbw focus-board release signing (v0.5.16+)
+* ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIpBT/EmANLV6yeVXDe4XB0uwKI/24m4cxD3nEqx3cSa workstation key (through v0.5.15, incl. v0.5.15 tag)
