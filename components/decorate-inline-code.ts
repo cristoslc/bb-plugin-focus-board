@@ -36,7 +36,15 @@ export function decoratedCodePath(code: Element): string | null {
 
 const PATH_FLAG_ICON_ATTR = "data-focus-board-path-link-icon";
 
-/** Attach the path flag, link styling, and trailing icon to one code element. */
+/** U+2060 WORD JOINER: forbids line breaks around the icon it glues. */
+const WORD_JOINER = "\u2060";
+
+/** Attach the path flag, link styling, and trailing icon to one code element.
+ * The icon glues to the code text with word joiners on both sides: an atomic
+ * inline after the path text is a legal break position, so on a narrow pane
+ * the glyph could wrap onto its own line (and pull the following `)` apart
+ * with it). A U+2060 joiner before and after the icon forbids those breaks,
+ * so the glyph always moves together with the code's last fragment. */
 export function decorateCode(code: Element, path: string): void {
 	code.setAttribute(PATH_FLAG, path);
 	code.classList.add("cursor-pointer", "underline", "underline-offset-2");
@@ -48,7 +56,9 @@ export function decorateCode(code: Element, path: string): void {
 	icon.setAttribute("aria-hidden", "true");
 	icon.className = "ml-1 inline size-3 align-[-0.125em] text-muted-foreground";
 	icon.innerHTML = EXTERNAL_LINK_ICON;
+	code.appendChild(doc.createTextNode(WORD_JOINER));
 	code.appendChild(icon);
+	code.appendChild(doc.createTextNode(WORD_JOINER));
 }
 
 export interface InlineCodeCandidate {
