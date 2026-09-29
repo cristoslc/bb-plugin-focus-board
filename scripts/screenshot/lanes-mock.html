@@ -205,6 +205,7 @@ let variant = "locked";   // "locked" ("Ruler + wrap") | "max" ("Max + stack")
 let lockIdx = 0;
 let pendingLock = null;   // click intent: settle must honor it, nearestLane on
                           // frozen geometry can disagree with the predicted pin
+let settleLane = null;    // lane frozen by phase 1 across the pin-then-recut chain
 
 // ---- geometry ----
 function viewportCols() {
@@ -442,6 +443,7 @@ function unassign() {
   // release the ruler WITHOUT touching geometry: no resize while unassigned
   lockIdx = null;
   pendingLock = null;  // a manual pan voids any pending click intent
+  settleLane = null;   // a fresh pan re-picks from the new position
   laneEls.forEach(({ col }) => col.classList.remove("locked"));
   railLabelEls.forEach(el => {
     el.classList.remove("live");
@@ -480,7 +482,8 @@ scroller.addEventListener("scroll", () => {
 
 let correction = null;   // one-shot suppression while the board pins the locked lane
 function assign(bi) {
-  if (bi === lockIdx) return;
+  if (bi === lockIdx) { (window.__trace ??= []).push({ fn: "assign-same", bi, sl: Math.round(scroller.scrollLeft) }); return; }
+  (window.__trace ??= []).push({ fn: "assign", bi, sl: Math.round(scroller.scrollLeft) });
   pendingLock = null;
   const prevRects = captureRects();
   const frozenTotal = laneWidthSum();
@@ -513,14 +516,20 @@ function assign(bi) {
 function onSettle() {
   hActive = false;
   settleTimer = null;
+  (window.__trace ??= []).push({ fn: "settle", sl: Math.round(scroller.scrollLeft), lane: settleLane, pend: pendingLock });
   if (variant !== "locked") { scroller.style.scrollSnapType = ""; return; }
-  const bi = pendingLock !== null ? pendingLock : nearestLane();
+  // A chain continuation reuses the lane this settle already chose: the pin
+  // carries scrollLeft past the FROZEN midpoint, so a fresh nearestLane()
+  // here would flip the pick to the following lane (the double-scroll bug).
+  const bi = pendingLock !== null ? pendingLock : (settleLane !== null ? settleLane : nearestLane());
+  settleLane = null;
   pendingLock = null;
   const target = predictedStart(bi, bi) - 1;
   if (Math.abs(scroller.scrollLeft - target) > 2) {
     // phase 1 — the PIN: glide to the predicted FINAL post-recut flush point
     // while geometry stays frozen (lock unassigned). Snap is muted so its
     // pre-recut alignment can't override the predictive target.
+    settleLane = bi;
     scroller.style.scrollSnapType = "none";
     ensureReachable(target);
     gliding = true;
@@ -537,6 +546,7 @@ function onSettle() {
 function lockTo(i) {
   // one path for click + scroll: glide to the predicted final flush position;
   // the rest handler assigns the lock (recut waits for the pin)
+  (window.__trace ??= []).push({ fn: "lockTo", i, sl: Math.round(scroller.scrollLeft) });
   pendingLock = i;
   const target = predictedStart(i, i) - 1;
   const dx = scroller.scrollLeft - target;
