@@ -190,6 +190,11 @@ export interface FamilyFilterResult {
  * thread not in the set (deleted) leaves the child a root — flat fallback.
  * Corrupt parent cycles are treated as roots: cycle members keep their cards
  * instead of hanging the board.
+ *
+ * Depth cap (two levels, everywhere): every family renders parent → children
+ * only. A thread whose parent itself has a parent re-attaches to its family
+ * root, so no member is ever multiple display tiers deep; the raw data is
+ * untouched.
  */
 export function buildFamilyIndex(threads: readonly PluginSidebarThread[]): FamilyIndex {
   const present = new Set(threads.map((thread) => thread.id));
@@ -224,8 +229,23 @@ export function buildFamilyIndex(threads: readonly PluginSidebarThread[]): Famil
   for (const id of cyclic) parentOf.delete(id);
 
   const childrenByParent = new Map<string, PluginSidebarThread[]>();
+  // Depth cap (two levels, everywhere): a thread whose parent itself has a
+  // parent re-attaches to its family root, so every descendant renders as a
+  // real child of the root — never hidden behind a `+N more` chip. Chains
+  // were flattened before this walk; every edge now points at a root.
+  const displayParentOf = new Map(parentOf);
   for (const thread of threads) {
-    const parentId = parentOf.get(thread.id);
+    const chain: string[] = [];
+    let cursor = thread.id;
+    while (displayParentOf.has(cursor)) {
+      chain.push(cursor);
+      cursor = displayParentOf.get(cursor) as string;
+    }
+    for (const id of chain) displayParentOf.set(id, cursor);
+  }
+
+  for (const thread of threads) {
+    const parentId = displayParentOf.get(thread.id);
     if (parentId === undefined) continue;
     const siblings = childrenByParent.get(parentId);
     if (siblings === undefined) childrenByParent.set(parentId, [thread]);
@@ -233,9 +253,9 @@ export function buildFamilyIndex(threads: readonly PluginSidebarThread[]): Famil
   }
 
   const rootIds = new Set(
-    threads.filter((thread) => !parentOf.has(thread.id)).map((thread) => thread.id),
+    threads.filter((thread) => !displayParentOf.has(thread.id)).map((thread) => thread.id),
   );
-  return { childrenByParent, parentOf, rootIds };
+  return { childrenByParent, parentOf: displayParentOf, rootIds };
 }
 
 /**
@@ -468,19 +488,6 @@ function nestedKeys(nested: ReadonlyMap<string, readonly PluginSidebarThread[]>)
     for (const child of children) ids.add(child.id);
   }
   return ids;
-}
-
-/**
- * The `+N more` number for a level-1 child: how many visible grandchildren it
- * has, i.e. the size of the child's own nested-children entry. Zero means no
- * chip. (The parent card's own entry counts its level-1 children, not
- * grandchildren.)
- */
-export function grandchildCountFor(
-  child: PluginSidebarThread,
-  childrenByParent: ReadonlyMap<string, readonly PluginSidebarThread[]>,
-): number {
-  return childrenByParent.get(child.id)?.length ?? 0;
 }
 
 /**

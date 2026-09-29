@@ -9,6 +9,7 @@ import {
   RULER,
   RAIL_TO_LANE_GAP,
   computeParentLaneLayout,
+  lockIndexFor,
   predictedStart,
   viewportContextCols,
 } from "../components/parent-lane-layout";
@@ -45,6 +46,34 @@ function workingIndex(lanes: { rows: { id: string }[] }[]): number {
 function doneIndex(lanes: { rows: { id: string }[] }[]): number {
   return lanes[0].rows.findIndex((row) => row.id === "done");
 }
+
+describe("lockIndexFor", () => {
+  const flushes = [0, 300, 700];
+
+  it("grabs a lane once its flush point is reached", () => {
+    expect(lockIndexFor(300, flushes)).toBe(1);
+  });
+
+  it("widens each lane's grab range a few pixels into the lane to its left", () => {
+    // Stop with the previous lane's right sliver at the lock point: the
+    // next lane still grabs.
+    expect(lockIndexFor(295, flushes)).toBe(1);
+  });
+
+  it("keeps the previous lane when the stop is short of the padded boundary", () => {
+    expect(lockIndexFor(290, flushes)).toBe(0);
+    expect(lockIndexFor(688, flushes)).toBe(1);
+  });
+
+  it("returns the first lane before any lock point", () => {
+    expect(lockIndexFor(-30, flushes)).toBe(0);
+  });
+
+  it("locks the last lane with no further lanes to its right", () => {
+    expect(lockIndexFor(2000, flushes)).toBe(2);
+    expect(lockIndexFor(695, flushes)).toBe(2);
+  });
+});
 
 describe("computeParentLaneLayout", () => {
   it("a locked band lays ruler rows following the lane's own column count", () => {

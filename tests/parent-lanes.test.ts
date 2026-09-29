@@ -9,7 +9,6 @@ import {
   type ParentLaneSection,
 } from "../components/parent-lanes";
 import { STATUS_COLUMN_ORDER, THREAD_STATE_LABELS } from "../components/grouping";
-import { grandchildCountFor } from "../components/nesting";
 import { parseGroupStored } from "../components/preferences";
 import { thread } from "./thread-fixture";
 
@@ -362,28 +361,19 @@ describe("buildParentLanes — family filtering (D10)", () => {
   });
 });
 
-describe("buildParentLanes — depth cap (D8)", () => {
-  it("level-1 child carries a +N chip via grandchildCountFor", () => {
+describe("buildParentLanes — depth cap (D8, two levels)", () => {
+  it("grandchildren re-attach to the root and render as lane cards", () => {
     const parent = thread({ id: "p" });
     const child = thread({ id: "c", parentThreadId: "p" });
     const gc1 = thread({ id: "g1", parentThreadId: "c" });
     const gc2 = thread({ id: "g2", parentThreadId: "c" });
     const lanes = buildParentLanes([parent, child, gc1, gc2], new Set(), NOW);
     const lane = laneOf(lanes, "p")!;
-    const c = rowOf(lane, "idle-awhile")?.find((t) => t.id === "c")!;
-    const familyIndex = { childrenByParent: new Map([["c", [gc1, gc2]]]), parentOf: new Map(), rootIds: new Set() };
-    expect(grandchildCountFor(c, familyIndex.childrenByParent)).toBe(2);
-  });
-
-  it("grandchildren never render as lane cards", () => {
-    const parent = thread({ id: "p" });
-    const child = thread({ id: "c", parentThreadId: "p" });
-    const gc1 = thread({ id: "g1", parentThreadId: "c" });
-    const lanes = buildParentLanes([parent, child, gc1], new Set(), NOW);
-    const lane = laneOf(lanes, "p")!;
     const allCardIds = lane.rows.flatMap((row) => idsOf(row.threads));
     expect(allCardIds).toContain("c");
-    expect(allCardIds).not.toContain("g1");
+    expect(allCardIds.sort()).toEqual(["c", "g1", "g2"]);
+    // No display tier beyond children: the chip bookkeeping is gone.
+    expect(lane.childCount).toBe(3);
   });
 });
 

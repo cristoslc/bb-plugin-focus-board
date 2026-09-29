@@ -655,7 +655,6 @@ export function Board({
                           menuActions={menuActionsFor(thread)}
                           childThreads={nestedChildrenByParent.get(thread.id)}
                           childCount={childCountByParent.get(thread.id) ?? 0}
-                          childrenByParent={nestedChildrenByParent}
                           doneIds={doneIds}
                           activeThreadId={activeThreadId}
                           dimmed={dimmedIds.has(thread.id)}

@@ -14,9 +14,9 @@ import {
   familyColumnOverrides,
   filterFamilies,
   filterIndividually,
-  grandchildCountFor,
   nestUnderParents,
 } from "../components/nesting";
+import { buildParentLanes } from "../components/parent-lanes";
 import { thread } from "./thread-fixture";
 
 const HOUR = 60 * 60 * 1000;
@@ -279,47 +279,45 @@ describe("nestUnderParents — axis groupings", () => {
   });
 });
 
-describe("nestUnderParents — depth cap", () => {
-  it("grandchildren do not render as cards; the level-1 child carries +N more with the correct count", () => {
+describe("nestUnderParents — depth cap (two levels, everywhere)", () => {
+  it("a three-tier family re-attaches its grandchildren to the family root", () => {
     const parent = thread({ id: "p", updatedAt: NOW - HOUR });
     const child = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
     const gc1 = thread({ id: "g1", parentThreadId: "c", updatedAt: NOW - 3 * HOUR });
     const gc2 = thread({ id: "g2", parentThreadId: "c", updatedAt: NOW - 4 * HOUR });
     const threads = [parent, child, gc1, gc2];
+    const index = buildFamilyIndex(threads);
+    // Every member is a direct child of p in the display index — two levels
+    // only: grandchildren render as real members of the family, never as +N.
+    const familyMembers = index.childrenByParent.get("p") ?? [];
+    expect(familyMembers.map((t) => t.id).sort()).toEqual(["c", "g1", "g2"]);
+    expect(index.childrenByParent.has("c")).toBe(false);
     const columns = buildColumns(threads, "status", CONTEXT, new Map(), new Set(), NOW);
-    const nested = nestUnderParents(columns, threads, "status", CONTEXT, NOW);
-    const nestedChildren = nested.childrenByParent.get("p") ?? [];
-    expect(nestedChildren.map((t) => t.id)).toEqual(["c"]);
+    const nested = nestUnderParents(columns, threads, "status", CONTEXT, NOW, index);
+    expect(nested.childrenByParent.get("p")?.map((t) => t.id).sort()).toEqual(["c", "g1", "g2"]);
     expect(nested.columns.flatMap((col) => col.threads.map((t) => t.id))).toEqual(["p"]);
-    // The +N chip lives on the level-1 child: its own map entry is the
-    // grandchild count. The parent's entry counts level-1 children.
-    expect(grandchildCountFor(child, nested.childrenByParent)).toBe(2);
   });
 
-  it("a level-1 child with no grandchildren carries no chip count", () => {
+  it("a fourth-tier descendant re-attaches to the same root", () => {
     const parent = thread({ id: "p", updatedAt: NOW - HOUR });
     const child = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
-    const columns = buildColumns([parent, child], "status", CONTEXT, new Map(), new Set(), NOW);
-    const nested = nestUnderParents(columns, [parent, child], "status", CONTEXT, NOW);
-    const nestedChildren = nested.childrenByParent.get("p") ?? [];
-    expect(nestedChildren).toHaveLength(1);
-    expect(grandchildCountFor(nestedChildren[0], nested.childrenByParent)).toBe(0);
+    const gc = thread({ id: "g", parentThreadId: "c", updatedAt: NOW - 3 * HOUR });
+    const ggc = thread({ id: "gg", parentThreadId: "g", updatedAt: NOW - 4 * HOUR });
+    const index = buildFamilyIndex([parent, child, gc, ggc]);
+    expect(index.parentOf.get("g")).toBe("p");
+    expect(index.parentOf.get("gg")).toBe("p");
+    expect((index.childrenByParent.get("p") ?? []).map((t) => t.id).sort()).toEqual(["c", "g", "gg"]);
   });
 
-  it("per-child chip: each level-1 child reports only its own grandchildren", () => {
+  it("the parent view stays two-level: a grandchild's own child rides the same family", () => {
     const parent = thread({ id: "p", updatedAt: NOW - HOUR });
-    const childA = thread({ id: "a", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
-    const childB = thread({ id: "b", parentThreadId: "p", updatedAt: NOW - 3 * HOUR });
-    const gcA1 = thread({ id: "ga1", parentThreadId: "a", updatedAt: NOW - 4 * HOUR });
-    const gcA2 = thread({ id: "ga2", parentThreadId: "a", updatedAt: NOW - 5 * HOUR });
-    const gcB1 = thread({ id: "gb1", parentThreadId: "b", updatedAt: NOW - 6 * HOUR });
-    const threads = [parent, childA, childB, gcA1, gcA2, gcB1];
-    const columns = buildColumns(threads, "status", CONTEXT, new Map(), new Set(), NOW);
-    const nested = nestUnderParents(columns, threads, "status", CONTEXT, NOW);
-    const level1 = nested.childrenByParent.get("p") ?? [];
-    expect(ids(level1)).toEqual(["a", "b"]);
-    expect(grandchildCountFor(level1[0], nested.childrenByParent)).toBe(2);
-    expect(grandchildCountFor(level1[1], nested.childrenByParent)).toBe(1);
+    const child = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
+    const gc1 = thread({ id: "g1", parentThreadId: "c", updatedAt: NOW - 3 * HOUR, isDone: false });
+    const index = buildFamilyIndex([parent, child, gc1]);
+    const lanes = buildParentLanes([parent, child, gc1], new Set(), NOW);
+    expect(lanes).toHaveLength(1);
+    const cards = lanes[0]!.rows.flatMap((r) => r.threads.map((t) => t.id));
+    expect(cards.sort()).toEqual(["c", "g1"]);
   });
 });
 
@@ -567,8 +565,9 @@ describe("assembleBoard — family columns (R4: the family moves as one unit)", 
       NOW,
     );
     expect(idsIn(result.columns, "attention")).toEqual(["p"]);
-    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
-    // grandchildren never take column slots; they ride as the +N chip
+    // The grandchild re-attaches to the root: it rides as a real child row,
+    // urgent first, never as a +N chip.
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["g", "c"]);
     expect(columnOf(result.columns, "g")).toBeUndefined();
     expect(columnOf(result.columns, "c")).toBeUndefined();
   });

@@ -1,4 +1,4 @@
-_Generated 2026-09-29T18:04:26.470Z by `npm run uat`._
+_Generated 2026-09-29T20:17:06.498Z by `npm run uat`._
 
 # UAT report
 
@@ -27,7 +27,7 @@ Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees
 | Step | Result | Detail |
 | --- | --- | --- |
 | Parent-thread grouping shows family lanes and excludes loose threads | pass | ✓ text visible: "Parent thread lane fixture"; ✓ text visible: "Child thread lane fixture"; ✓ text hidden: "Standalone" |
-| The board opens with a family locked as the ruler lane and band tracks aligned | pass | ✓ locked lane: true; ✓ bands aligned across lanes; ✓ text hidden: "Standalone" |
+| The board opens with a family locked as the ruler lane and band tracks aligned | pass | ✓ locked lane: true; ✓ bands aligned across lanes; ✓ nest toggle: aria-checked=true aria-disabled=true; ✓ text hidden: "Standalone" |
 | Clicking a lane header opens the parent thread's pane | pass | ✓ pane open; ✓ text visible: "Parent thread lane fixture"; ✓ url ends with /board/t/thr_parent_lane |
 | Clicking a child card opens its thread pane | pass | ✓ pane shows thr_child_lane; ✓ active card is thr_child_lane; ✓ url ends with /board/t/thr_child_lane |
 | A deep-linked child in the rightmost lane is scrolled into view | pass | ✓ pane shows thr_child_lane; ✓ active card is thr_child_lane; ✓ active card visible |

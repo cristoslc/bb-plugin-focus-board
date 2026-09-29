@@ -480,6 +480,22 @@ const pageCardVisible = (threadId) => {
 };
 
 /**
+ * The "Nest child threads" toolbar checkbox, read as the operator sees it:
+ * role=checkbox, checked = aria-checked, disabled = aria-disabled present.
+ */
+const pageNestToggle = () => {
+  const button = [...document.querySelectorAll('button[role="checkbox"]')].find(
+    (el) => el.textContent?.includes("Nest child threads"),
+  );
+  if (!button) return { present: false, checked: null, disabled: null };
+  return {
+    present: true,
+    checked: button.getAttribute("aria-checked") === "true",
+    disabled: button.hasAttribute("aria-disabled"),
+  };
+};
+
+/**
  * The pane's side of the route: which thread it is showing, or whether it is
  * closed. Read from the aside's aria-label so the assertion sees what the
  * operator sees, not internal state.
@@ -714,6 +730,21 @@ async function check(step, page, gestureResults = []) {
     if (rule.card_visible !== undefined) {
       const got = await page.evaluate(pageCardVisible, rule.card_visible);
       expect(`card visible: ${rule.card_visible}`, got.ok === true, got.reason);
+    }
+    if (rule.nest_locked !== undefined) {
+      const toggle = await page.evaluate(pageNestToggle);
+      if (!toggle.present) {
+        expect(`nest toggle locked: ${rule.nest_locked}`, false, "Nest child threads checkbox not found");
+      } else {
+        const ok = rule.nest_locked
+          ? toggle.checked === true && toggle.disabled === true
+          : toggle.checked === true && toggle.disabled !== true;
+        expect(
+          `nest toggle: aria-checked=${String(toggle.checked)} aria-disabled=${String(toggle.disabled)}`,
+          ok,
+          `locked=${String(rule.nest_locked)}`,
+        );
+      }
     }
     if (rule.board_quiet !== undefined) {
       const want = rule.board_quiet;

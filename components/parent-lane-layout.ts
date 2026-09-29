@@ -192,3 +192,28 @@ export function predictedStart(
     laneWidths.slice(0, index).reduce((a, b) => a + b + RAIL_TO_LANE_GAP, 0)
   );
 }
+
+/** How far past its flush point a lane must sit before it can grab the lock —
+ *  actually: how wide the grab range reads in the other direction. Each lane's
+ *  grab range extends GRAB_PAD pixels to the left of its flush point (into the
+ *  lane to its left), so stopping with the previous lane's right sliver at the
+ *  lock point still lands the incoming lane. There is no special case when a
+ *  lane has no further lane to its right: a stop past the last lock point is
+ *  the last lane. */
+export const GRAB_PAD = 8;
+
+/** The lane that grabs the lock for a given resting scroll position. `flush`
+ *  holds each lane's flush scrollLeft (ascending). A lane grabs once the
+ *  scroll position reaches its flush point minus GRAB_PAD; the previous lane
+ *  keeps the lock until then. */
+export function lockIndexFor(
+  scrollLeft: number,
+  flush: readonly number[],
+  grabPad: number = GRAB_PAD,
+): number {
+  let grabbed = 0;
+  for (let i = 0; i < flush.length; i += 1) {
+    if (scrollLeft >= flush[i]! - grabPad) grabbed = i;
+  }
+  return grabbed;
+}
