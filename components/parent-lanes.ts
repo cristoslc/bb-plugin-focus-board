@@ -27,13 +27,11 @@ export interface ParentLaneRow {
 
 export interface ParentLane {
   id: string;
-  /** The lane's parent thread, or null for the catch-all Standalone lane. */
-  parent: PluginSidebarThread | null;
+  /** The lane's parent thread. */
+  parent: PluginSidebarThread;
   label: string;
-  /** Total children of the parent (archived included); zero for Standalone. */
+  /** Total children of the parent (archived included). */
   childCount: number;
-  /** Thread that drives the lane header's state dot and click target. */
-  headerThread: PluginSidebarThread | null;
   rows: ParentLaneRow[];
   /** Archived children render under the family lane header (R2/D7). */
   archivedChildren: PluginSidebarThread[];
@@ -144,17 +142,18 @@ function buildRows(
 /**
  * Build the parent-lane model: vertical lanes are parent threads, horizontal
  * rows are the pivoted Attention ladder. Only level-1 children render as
- * cards; the parent is a lane header. Threads with no family land in the
- * Standalone lane. Done children sit in the bottom Done row; archived children
- * ride as dimmed riders under the family header (R2/D7).
+ * cards; the parent is a lane header. Done children sit in the bottom Done
+ * row; archived children ride as dimmed riders under the family header
+ * (R2/D7). Loose (unparented) threads render no lane at all — they stay in
+ * the Attention view.
  *
  * Lane order defaults to family recency: the most recent touch or response
  * across the family (max `updatedAt` over the parent and its non-archived
  * members, done children included), most recently touched at the left (D5).
- * Ties break by the lane representative's derived order, so a pinned parent
- * still floats its lane leftmost (D13). The Standalone lane always trails.
- * Within a row, urgent ("attention") children float to the top, then the
- * derived order (D6). The Done row sorts by done recency (D9).
+ * Ties break by the parent's derived order, so a pinned parent still floats
+ * its lane leftmost (D13). Within a row, urgent ("attention") children float
+ * to the top, then the derived order (D6). The Done row sorts by done
+ * recency (D9).
  */
 export function buildParentLanes(
   threads: readonly PluginSidebarThread[],
@@ -180,52 +179,26 @@ export function buildParentLanes(
       parent,
       label: parent.displayTitle,
       childCount: allChildren.length,
-      headerThread: parent,
       rows: buildRows(rowCards, doneIds, now, doneTimes),
       archivedChildren: [...archivedChildren].sort(derivedCompare),
     });
   }
 
-  const standaloneIds = [...familyIndex.rootIds].filter(
-    (id) => (familyIndex.childrenByParent.get(id)?.length ?? 0) === 0,
-  );
-  const standaloneThreads = standaloneIds
-    .map((id) => threadById.get(id))
-    .filter((t): t is PluginSidebarThread => t !== undefined && !t.isArchived);
-
-  lanes.push({
-    id: "standalone",
-    parent: null,
-    label: "Standalone",
-    childCount: 0,
-    headerThread: null,
-    rows: buildRows(standaloneThreads, doneIds, now, doneTimes),
-    archivedChildren: [],
-  });
-
-  const familyLanes = lanes.filter((lane) => lane.id !== "standalone");
-  familyLanes.sort(recencyCompare);
-
-  const standaloneLane = lanes.find((lane) => lane.id === "standalone");
-  return standaloneLane !== undefined ? [...familyLanes, standaloneLane] : familyLanes;
+  lanes.sort(recencyCompare);
+  return lanes;
 }
 
 /**
  * Section family lanes by the parent's `projectId` (D5a). Sections order by
  * their most recent lane; lanes within a section keep the same recency order.
- * The Standalone lane is always a trailing ungrouped section, regardless of
- * whether project grouping is enabled.
  */
 export function sectionParentLanes(
   lanes: readonly ParentLane[],
   projectNameFor: (projectId: string) => string,
 ): ParentLaneSection[] {
-  const familyLanes = lanes.filter((lane) => lane.id !== "standalone");
-  const standaloneLane = lanes.find((lane) => lane.id === "standalone");
-
   const byProject = new Map<string, ParentLane[]>();
-  for (const lane of familyLanes) {
-    const projectId = lane.parent?.projectId ?? "";
+  for (const lane of lanes) {
+    const projectId = lane.parent.projectId;
     const list = byProject.get(projectId);
     if (list === undefined) {
       byProject.set(projectId, [lane]);
@@ -249,10 +222,6 @@ export function sectionParentLanes(
     if (diff !== 0) return diff;
     return a.label.localeCompare(b.label);
   });
-
-  if (standaloneLane !== undefined) {
-    sections.push({ id: "standalone", label: "Standalone", lanes: [standaloneLane] });
-  }
 
   return sections;
 }

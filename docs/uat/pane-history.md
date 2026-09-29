@@ -1,10 +1,10 @@
-_Generated 2026-09-28T22:33:58.319Z by `npm run uat`._
+_Generated 2026-09-29T01:21:40.091Z by `npm run uat`._
 
 # UAT report
 
 ## pane-history
 
-Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/.subagents/parent-lanes-impl/worktree/tests/manual/uat-pane-history.yaml` · theme dark
+Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_x8wcvgqee9-1/bb-plugin-focus-board/tests/manual/uat-pane-history.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
@@ -22,20 +22,24 @@ Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/.subagents/parent-l
 
 ## parent-lanes
 
-Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/.subagents/parent-lanes-impl/worktree/tests/manual/uat-parent-lanes.yaml` · theme dark
+Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_x8wcvgqee9-1/bb-plugin-focus-board/tests/manual/uat-parent-lanes.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
-| Parent-thread grouping shows the family lane and the Standalone lane | pass | ✓ text visible: "Parent thread lane fixture"; ✓ text visible: "Standalone"; ✓ text visible: "Child thread lane fixture" |
+| Parent-thread grouping shows family lanes and excludes loose threads | pass | ✓ text visible: "Parent thread lane fixture"; ✓ text visible: "Child thread lane fixture"; ✓ text hidden: "Standalone" |
 | Clicking a lane header opens the parent thread's pane | pass | ✓ pane open; ✓ text visible: "Parent thread lane fixture"; ✓ url ends with /board/t/thr_parent_lane |
 | Clicking a child card opens its thread pane | pass | ✓ pane shows thr_child_lane; ✓ active card is thr_child_lane; ✓ url ends with /board/t/thr_child_lane |
 | A deep-linked child in the rightmost lane is scrolled into view | pass | ✓ pane shows thr_child_lane; ✓ active card is thr_child_lane; ✓ active card visible |
-| A search that matches only standalone threads drops every family | pass | ✓ text visible: "Standalone"; ✓ text visible: "Queue the UAT pass for the rank lane" |
+| A search that matches only loose threads drops every family and shows the empty state | pass | ✓ text hidden: "Standalone"; ✓ text hidden: "Queue the UAT pass for the rank lane"; ✓ text visible: "No thread families to show yet" |
+| The lane-order toggle defaults to Recency in parent-thread mode | pass | ✓ text visible: "Recency"; ✓ text visible: "Parent thread lane fixture"; ✓ text hidden: "Standalone" |
+| Switching lane order to By project groups family lanes under their project | pass | ✓ text visible: "By project"; ✓ text visible: "Parent thread lane fixture" |
+| Toggling lane order to By project then back to Recency keeps the board usable | pass | ✓ text visible: "By project"; ✓ text visible: "Parent thread lane fixture" |
+| Returning to Recency order removes project sections | pass | ✓ text visible: "Parent thread lane fixture"; ✓ text hidden: "Standalone" |
 | Switching back to Attention grouping renders normal columns | pass | ✓ unread order |
 
 ## rank-ordering
 
-Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/.subagents/parent-lanes-impl/worktree/tests/manual/uat-rank.yaml` · theme dark
+Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_x8wcvgqee9-1/bb-plugin-focus-board/tests/manual/uat-rank.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
@@ -59,7 +63,7 @@ Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/.subagents/parent-l
 
 ## whats-new
 
-Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/.subagents/parent-lanes-impl/worktree/tests/manual/uat-whats-new.yaml` · theme dark
+Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_x8wcvgqee9-1/bb-plugin-focus-board/tests/manual/uat-whats-new.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

@@ -121,6 +121,15 @@ function readStored<T extends string>(key: string, allowed: readonly T[], fallba
   return fallback;
 }
 
+function readStoredText(key: string, fallback: string): string {
+  try {
+    return window.localStorage.getItem(key) ?? fallback;
+  } catch {
+    // localStorage can throw in embedded contexts; fall through to default.
+  }
+  return fallback;
+}
+
 function writeStored(key: string, value: string): void {
   try {
     window.localStorage.setItem(key, value);
@@ -337,7 +346,7 @@ function BoardPage({ subPath }: { subPath: string }) {
       ),
     ),
   }));
-  const [search, setSearch] = useState<string>(() => readStored(SEARCH_KEY, [], ""));
+  const [search, setSearch] = useState<string>(() => readStoredText(SEARCH_KEY, ""));
   // R3 "Nest child threads" toggle, default ON, persisted like groupBy.
   const [nestChildren, setNestChildren] = useState<boolean>(() =>
     parseNestStored(readStored(NEST_CHILDREN_KEY, ["on", "off"], "on")),

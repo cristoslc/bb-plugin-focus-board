@@ -38,13 +38,14 @@ function renderBoard(threads: ReturnType<typeof thread>[], overrides: Partial<Pa
 }
 
 describe("ParentLaneBoard rendering", () => {
-  it("renders a lane header per family lane and the Standalone lane", () => {
+  it("renders a lane header per family lane and no Standalone lane", () => {
     const parent = thread({ id: "p", displayTitle: "Parent epic" });
     const child = thread({ id: "c", parentThreadId: "p", displayTitle: "Child task" });
     const standalone = thread({ id: "s", displayTitle: "Solo task" });
     renderBoard([parent, child, standalone]);
     expect(screen.getByText("Parent epic")).toBeTruthy();
-    expect(screen.getByText("Standalone")).toBeTruthy();
+    expect(screen.queryByText("Standalone")).toBeNull();
+    expect(screen.queryByText("Solo task")).toBeNull();
   });
 
   it("shows the child-count chip on the family header", () => {
@@ -80,7 +81,9 @@ describe("ParentLaneBoard rendering", () => {
   });
 
   it("renders the row rail with every row label", () => {
-    renderBoard([]);
+    const parent = thread({ id: "p" });
+    const child = thread({ id: "c", parentThreadId: "p" });
+    renderBoard([parent, child]);
     expect(screen.getByText("Needs you")).toBeTruthy();
     expect(screen.getByText("Unread")).toBeTruthy();
     expect(screen.getByText("Working")).toBeTruthy();
@@ -88,15 +91,17 @@ describe("ParentLaneBoard rendering", () => {
     expect(screen.getByText("Done")).toBeTruthy();
   });
 
-  it("an empty board still shows the Standalone lane", () => {
+  it("an empty board renders the no-families empty state", () => {
     renderBoard([]);
-    expect(screen.getByText("Standalone")).toBeTruthy();
+    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.queryByText("Standalone")).toBeNull();
   });
 
-  it("standalone threads render as cards in the Standalone lane", () => {
+  it("loose threads render no lane and no cards (excluded from the parent view)", () => {
     const solo = thread({ id: "solo", displayTitle: "Solo task" });
     renderBoard([solo]);
-    expect(screen.getByText("Solo task")).toBeTruthy();
+    expect(screen.queryByText("Solo task")).toBeNull();
+    expect(screen.getByRole("status")).toBeTruthy();
   });
 
   it("clicking By project calls onParentLaneOrderChange", () => {

@@ -71,47 +71,36 @@ describe("buildParentLanes — lane building", () => {
     const parent = thread({ id: "p" });
     const child = thread({ id: "c", parentThreadId: "p" });
     const lanes = buildParentLanes([parent, child], new Set(), NOW);
-    expect(laneIds(lanes)).toEqual(["p", "standalone"]);
+    expect(laneIds(lanes)).toEqual(["p"]);
     expect(laneOf(lanes, "p")?.childCount).toBe(1);
-    expect(laneOf(lanes, "p")?.headerThread?.id).toBe("p");
+    expect(laneOf(lanes, "p")?.parent?.id).toBe("p");
   });
 
-  it("a board with no families renders a single Standalone lane with the row ladder", () => {
+  it("excludes loose threads: a board with no families renders no lanes", () => {
     const a = thread({ id: "a" });
     const b = thread({ id: "b", updatedAt: NOW - HOUR });
     const lanes = buildParentLanes([a, b], new Set(), NOW);
-    expect(lanes).toHaveLength(1);
-    expect(lanes[0].id).toBe("standalone");
-    expect(lanes[0].parent).toBeNull();
-    expect(idsOf(rowOf(lanes[0], "idle-awhile"))).toContain("a");
-    expect(idsOf(rowOf(lanes[0], "idle-today"))).toContain("b");
+    expect(lanes).toHaveLength(0);
   });
 
-
-  it("puts orphans (deleted parent) in Standalone", () => {
+  it("orphan threads (deleted parent) render no lane", () => {
     const orphan = thread({ id: "o", parentThreadId: "gone" });
     const lanes = buildParentLanes([orphan], new Set(), NOW);
-    expect(lanes).toHaveLength(1);
-    expect(lanes[0].id).toBe("standalone");
-    expect(idsOf(rowOf(lanes[0], "idle-awhile"))).toContain("o");
+    expect(lanes).toHaveLength(0);
   });
 
-  it("tolerates cycles: cycle members become standalone roots", () => {
+  it("tolerates cycles: cycle members render no lane", () => {
     const a = thread({ id: "a", parentThreadId: "b" });
     const b = thread({ id: "b", parentThreadId: "a" });
     const lanes = buildParentLanes([a, b], new Set(), NOW);
-    expect(lanes).toHaveLength(1);
-    expect(lanes[0].id).toBe("standalone");
-    const ids = idsOf(lanes[0].rows.flatMap((row) => row.threads));
-    expect(ids).toContain("a");
-    expect(ids).toContain("b");
+    expect(lanes).toHaveLength(0);
   });
 
   it("an archived-only family still shows a lane header with archived riders", () => {
     const parent = thread({ id: "p" });
     const archived = thread({ id: "a", parentThreadId: "p", isArchived: true });
     const lanes = buildParentLanes([parent, archived], new Set(), NOW);
-    expect(laneIds(lanes)).toEqual(["p", "standalone"]);
+    expect(laneIds(lanes)).toEqual(["p"]);
     const lane = laneOf(lanes, "p")!;
     expect(lane.childCount).toBe(1);
     expect(idsOf(lane.archivedChildren)).toEqual(["a"]);
@@ -228,28 +217,26 @@ describe("buildParentLanes — lane order", () => {
     expect(laneIds(lanes).slice(0, 2)).toEqual(["other_p", "p"]);
   });
 
-  it("trails the Standalone lane after family lanes in the flat recency list", () => {
+  it("excludes loose threads entirely (no Standalone lane)", () => {
     const parent = thread({ id: "p", updatedAt: NOW - HOUR });
     const child = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
     const solo = thread({ id: "solo", updatedAt: NOW - MINUTE });
     const lanes = buildParentLanes([parent, child, solo], new Set(), NOW);
-    expect(laneIds(lanes)).toEqual(["p", "standalone"]);
+    expect(laneIds(lanes)).toEqual(["p"]);
   });
 });
 
 describe("sectionParentLanes", () => {
-  it("groups family lanes by parent projectId and keeps Standalone trailing", () => {
+  it("groups family lanes by parent projectId", () => {
     const projA = thread({ id: "projA", projectId: "a", updatedAt: NOW - HOUR });
     const childA = thread({ id: "childA", parentThreadId: "projA", projectId: "a", updatedAt: NOW - 2 * HOUR });
     const projB = thread({ id: "projB", projectId: "b", updatedAt: NOW - 3 * HOUR });
     const childB = thread({ id: "childB", parentThreadId: "projB", projectId: "b", updatedAt: NOW - 4 * HOUR });
-    const solo = thread({ id: "solo", projectId: "a", updatedAt: NOW - 5 * HOUR });
-    const lanes = buildParentLanes([projA, childA, projB, childB, solo], new Set(), NOW);
+    const lanes = buildParentLanes([projA, childA, projB, childB], new Set(), NOW);
     const sections = sectionParentLanes(lanes, (id) => ({ a: "Alpha", b: "Beta" }[id] ?? "Unknown"));
-    expect(sectionIds(sections)).toEqual(["a", "b", "standalone"]);
+    expect(sectionIds(sections)).toEqual(["a", "b"]);
     expect(sectionLaneIds(sections[0])).toEqual(["projA"]);
     expect(sectionLaneIds(sections[1])).toEqual(["projB"]);
-    expect(sectionLaneIds(sections[2])).toEqual(["standalone"]);
   });
 
   it("orders sections by their most recent lane", () => {
@@ -259,7 +246,7 @@ describe("sectionParentLanes", () => {
     const bChild = thread({ id: "b_c", parentThreadId: "b_p", projectId: "b", updatedAt: NOW - 2 * HOUR });
     const lanes = buildParentLanes([aParent, aChild, bParent, bChild], new Set(), NOW);
     const sections = sectionParentLanes(lanes, (id) => ({ a: "Alpha", b: "Beta" }[id] ?? "Unknown"));
-    expect(sectionIds(sections)).toEqual(["b", "a", "standalone"]);
+    expect(sectionIds(sections)).toEqual(["b", "a"]);
   });
 
   it("orders lanes inside a section by the same recency rule", () => {
@@ -272,14 +259,12 @@ describe("sectionParentLanes", () => {
     expect(sectionLaneIds(sections[0])).toEqual(["a2", "a1"]);
   });
 
-  it("labels sections by projectNameFor and Standalone explicitly", () => {
+  it("labels sections by projectNameFor", () => {
     const parent = thread({ id: "p", projectId: "x" });
     const child = thread({ id: "c", parentThreadId: "p", projectId: "x" });
-    const solo = thread({ id: "solo" });
-    const lanes = buildParentLanes([parent, child, solo], new Set(), NOW);
+    const lanes = buildParentLanes([parent, child], new Set(), NOW);
     const sections = sectionParentLanes(lanes, (id) => (id === "x" ? "Chi" : "Other"));
     expect(sections[0].label).toBe("Chi");
-    expect(sections[1].label).toBe("Standalone");
   });
 });
 
@@ -328,7 +313,7 @@ describe("buildParentLanes — header facts", () => {
     const workingParent = thread({ id: "wp", status: "active" });
     const child = thread({ id: "c", parentThreadId: "wp" });
     const lanes = buildParentLanes([workingParent, child], new Set(), NOW);
-    expect(laneOf(lanes, "wp")?.headerThread?.id).toBe("wp");
+    expect(laneOf(lanes, "wp")?.parent.id).toBe("wp");
   });
 
   it("a done parent still serves as its lane's header", () => {
@@ -336,35 +321,8 @@ describe("buildParentLanes — header facts", () => {
     const child = thread({ id: "c", parentThreadId: "p", isUnread: true });
     const lanes = buildParentLanes([parent, child], new Set(["p"]), NOW);
     const lane = laneOf(lanes, "p")!;
-    expect(lane.headerThread?.id).toBe("p");
+    expect(lane.parent.id).toBe("p");
     expect(idsOf(rowOf(lane, "unread"))).toEqual(["c"]);
-  });
-});
-
-describe("buildParentLanes — Standalone lane", () => {
-  it("uses the same row ladder as family lanes", () => {
-    const urgent = thread({ id: "urgent", hasPendingInteraction: true });
-    const working = thread({ id: "working", status: "active" });
-    const idle = thread({ id: "idle", updatedAt: NOW - HOUR });
-    const lanes = buildParentLanes([urgent, working, idle], new Set(), NOW);
-    const standalone = laneOf(lanes, "standalone")!;
-    expect(idsOf(rowOf(standalone, "attention"))).toEqual(["urgent"]);
-    expect(idsOf(rowOf(standalone, "working"))).toEqual(["working"]);
-    expect(idsOf(rowOf(standalone, "idle-today"))).toEqual(["idle"]);
-  });
-
-  it("empty input still produces a single empty Standalone lane", () => {
-    const lanes = buildParentLanes([], new Set(), NOW);
-    expect(lanes).toHaveLength(1);
-    expect(lanes[0].id).toBe("standalone");
-  });
-
-  it("pinned standalone floats to the top of its in-lane cell", () => {
-    const plain = thread({ id: "plain", updatedAt: NOW - HOUR });
-    const pinned = thread({ id: "pinned", isPinned: true, updatedAt: NOW - 2 * HOUR });
-    const lanes = buildParentLanes([plain, pinned], new Set(), NOW);
-    const standalone = laneOf(lanes, "standalone")!;
-    expect(idsOf(rowOf(standalone, "idle-today"))).toEqual(["pinned", "plain"]);
   });
 });
 
