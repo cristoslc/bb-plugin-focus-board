@@ -25,7 +25,7 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     version: "0.5.16",
     items: [
-      "No board behavior changes in this version: the same update now carries the pin a card when you drop it on the Pinned lane change from 0.5.15, and release tags are signed with a dedicated signing key.",
+      "No board behavior changes in this version — 0.5.16 ships the same build as 0.5.15: drop a card on the Pinned lane to pin it.",
     ],
   },
   {
