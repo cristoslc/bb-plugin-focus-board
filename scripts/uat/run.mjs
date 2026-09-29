@@ -341,6 +341,47 @@ const pageTextVisible = (needle) =>
   document.body.textContent?.includes(needle) ?? false;
 
 /**
+ * Horizontal pan over the parent-lane board: a programmatic scrollLeft delta.
+ * The board's scroll manager treats any horizontal delta as a pan the same
+ * way it treats a real wheel gesture (release lock, settle, re-lock), and a
+ * programmatic assignment is trusted enough to fire a real scroll event.
+ */
+const pageBoardScroll = ({ dx }) => {
+  const board = document.querySelector("[data-parent-board]");
+  if (!board) throw new Error("scroll: no [data-parent-board] on the page");
+  board.scrollLeft += dx;
+  return { scrollLeft: board.scrollLeft };
+};
+
+/** Which lane is the locked ruler lane (or null when the lock is released)? */
+const pageLockedLane = () => {
+  const locked = document.querySelector("section[data-locked]");
+  if (!locked) return null;
+  return locked.getAttribute("data-lane-id");
+};
+
+/**
+ * Do the shared band tracks line up across lanes? Groups band cells by their
+ * status id and compares the top edge of each group's members: a working
+ * band must start at the same y in every lane, or the rail labels lie.
+ */
+const pageBandsAligned = () => {
+  const byId = new Map();
+  for (const band of document.querySelectorAll("[data-band]")) {
+    const id = band.getAttribute("data-band");
+    const list = byId.get(id) ?? [];
+    list.push(band.getBoundingClientRect().top);
+    byId.set(id, list);
+  }
+  if (byId.size === 0) return { ok: false, reason: "no bands rendered" };
+  for (const [id, tops] of byId) {
+    const spread = Math.max(...tops) - Math.min(...tops);
+    if (spread > 2) return { ok: false, reason: `band ${id} spread ${spread.toFixed(1)}px` };
+  }
+  return { ok: true, reason: `${byId.size} bands aligned` };
+};
+
+/**
  * The pane's side of the route: which thread it is showing, or whether it is
  * closed. Read from the aside's aria-label so the assertion sees what the
  * operator sees, not internal state.
@@ -554,6 +595,24 @@ async function check(step, page, gestureResults = []) {
         !got ? "absent" : "found in page text",
       );
     }
+    if (rule.locked_lane !== undefined) {
+      const got = await page.evaluate(pageLockedLane);
+      const want = rule.locked_lane;
+      const ok = want === true ? got !== null : got === want;
+      expect(
+        `locked lane: ${JSON.stringify(want)}`,
+        ok,
+        ok ? `locked=${got}` : `locked=${got}`,
+      );
+    }
+    if (rule.bands_aligned !== undefined) {
+      const got = await page.evaluate(pageBandsAligned);
+      expect(
+        "bands aligned across lanes",
+        got.ok === rule.bands_aligned,
+        got.reason,
+      );
+    }
     if (rule.rpc_called_method !== undefined) {
       const methods = await page.evaluate(() =>
         globalThis.__uat.calls().map((call) => call.method),
@@ -642,7 +701,7 @@ async function runSuite(file, { port, browser }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "press_escape", "push_url"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "scroll", "press_escape", "push_url"];
       let gestureFailed = false;
       for (const gesture of Object.keys(step).filter((key) => GESTURE_ORDER.includes(key))) {
         if (gesture === "drag") {
@@ -687,6 +746,11 @@ async function runSuite(file, { port, browser }) {
         } else if (gesture === "click_aria") {
           await page.evaluate(pageClickAria, step.click_aria);
           await sleep(300);
+        } else if (gesture === "scroll") {
+          await page.evaluate(pageBoardScroll, step.scroll);
+          // The board settles on a 200ms quiet-period debounce plus a smooth
+          // pin glide before it re-locks; give it room before assertions.
+          await sleep(1200);
         } else if (gesture === "press_escape") {
           // The pane listens on document capture, so a bubbling keydown from
           // the body reaches it — the same path a real Escape takes.
