@@ -1000,6 +1000,15 @@ function BoardPage({ subPath }: { subPath: string }) {
                 void actions.setRead(threadId, false);
               }
             }}
+            // Drop on Pinned pins, unless the card is already pinned: a
+            // pinned card's drop is a same-lane reorder (claimed by the card
+            // or lane handler) and never reaches this path.
+            onDropPinned={(threadId) => {
+              const thread = threads.find((candidate) => candidate.id === threadId);
+              if (thread !== undefined && !thread.isPinned) {
+                void actions.setPinned(threadId, true);
+              }
+            }}
             rankStore={ranks}
             onRankMove={(columnKey, threadId, beforeId, toEnd, visibleIds) => {
               // Optimistic: the card snaps to its slot immediately, and the
