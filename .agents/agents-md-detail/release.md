@@ -4,16 +4,27 @@ How to ship a new Focus Board version: coordinate with main, bump, verify,
 commit, merge, tag, push, reload. Read this spoke whenever a turn involves
 releasing, version bumping, changelog writing, or tagging.
 
-## 0. Coordinate with main first
+## 0. Branch model and coordination
 
-- Concurrent threads release independently; main may have advanced past this
-  branch's base. Merge `main` into the working branch (or rebase) before
-  touching any version, and resolve conflicts before proceeding.
-- Read the version from the **main checkout** (`/Users/cristos/Documents/code/bb-plugin-focus-board`),
-  not from the branch. Concurrent releases have double-bumped before (two
-  "Release 0.5.3" commits exist in history) because branches bumped from a
-  stale base. The next version is always main's version + one patch bump
-  unless the change warrants a minor or major bump.
+- This repo is public, so it runs a two-branch model:
+  - `main` is the stable public branch. It moves only by release merges
+    from `dev` and is never worked on directly.
+  - `dev` is the integration branch. Thread branches are based on `dev`
+    and merge into `dev`. Public installs resolve git tags, which ride on
+    release commits, so the dev/main split does not change distribution.
+- The **main checkout** (`/Users/cristos/Documents/code/bb-plugin-focus-board`)
+  is checked out on `dev` — that registered path is what the running bb
+  serves, so dev is what bb points at. `main` has no permanent local
+  checkout; release merges create a temporary one (section 5).
+- Concurrent threads release independently; `dev` may have advanced past
+  this branch's base. Merge `dev` into the working branch (or rebase)
+  before touching any version, and resolve conflicts before proceeding.
+- Read the version from **`origin/dev`** (or the main checkout on `dev`),
+  not from the working branch. Concurrent releases have double-bumped
+  before (two "Release 0.5.3" commits exist in history) because branches
+  bumped from a stale base. The next version is always dev's current
+  version + one patch bump unless the change warrants a minor or major
+  bump.
 
 ## 1. Bump the version in three places
 
@@ -72,16 +83,16 @@ One commit on the working branch containing the version bump, the
 
 ## 6. Push
 
-- Push the working branch, main, and tags to `origin` (the public
+- Push `dev`, the working branch, `main`, and tags to `origin` (the public
   repository). Git-tag releases let users install semver ranges
   (`git:...@^X.Y`), so a pushed tag is the actual distribution surface.
 
 ## 7. Reload the running plugin
 
-bb runs focus-board from a local path (the main checkout), so it serves the
-last build of that checkout, not the tag:
+bb runs focus-board from the main checkout (its registered plugin path), and
+that checkout sits on `dev`, so the running plugin serves dev:
 
-1. `npm run build` in the main checkout.
+1. `npm run build` in the main checkout (on `dev`).
 2. `bb plugin reload focus-board`.
 3. Confirm with `bb plugin list` (version reads `X.Y.Z`, status `running`)
    and open the board; the What's-new gift button should pulse for the new
