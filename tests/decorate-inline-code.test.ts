@@ -95,24 +95,27 @@ describe("glyph glue", () => {
   // The wrap bug a board card showed: the appended icon is an atomic
   // inline that the line breaker may drop to its own line when the code
   // text reaches the right edge, so the glyph and the trailing `)`
-  // wrap apart. A word joiner on each side of the icon forbids those
-  // breaks, so the icon glues to the code's last fragment.
-  it("glues the icon into the code text: joiner on each side, never a lone wrap", async () => {
+  // wrap apart. Chromium ignores U+2060 word joiners at that boundary
+  // (measured headlessly), so the fix is structural: the icon joins the
+  // code's final character inside one white-space-nowrap unit.
+  it("fuses the icon with the code's final character under nowrap", async () => {
     const root = markdownMessage("<p><code>docs/notes.md</code></p>");
     const exists = checker(new Map([["docs/notes.md", true]]));
     await decorateVerifiedInlineCodeLinks(root, "env-glue", exists.check);
     const code = root.querySelector("code")!;
-    const icon = code.querySelector<HTMLElement>(
-      "[data-focus-board-path-link-icon]",
+    const glue = code.querySelector<HTMLElement>(
+      "[data-focus-board-path-link-glue]",
     );
+    expect(glue).not.toBeNull();
+    expect(glue!.style.whiteSpace).toBe("nowrap");
+    // The icon sits inside the glue unit, after the moved final char.
+    const icon = glue!.querySelector("[data-focus-board-path-link-icon]");
     expect(icon).not.toBeNull();
-    expect(icon!.previousSibling?.nodeType).toBe(Node.TEXT_NODE);
-    expect(icon!.previousSibling?.textContent).toBe("\u2060");
-    expect(icon!.nextSibling?.nodeType).toBe(Node.TEXT_NODE);
-    expect(icon!.nextSibling?.textContent).toBe("\u2060");
-    // The visible path text is untouched: the joiners sit only at the
-    // icon's edges, so the code still begins with the literal path.
-    expect(code.firstChild?.textContent).toBe("docs/notes.md");
+    expect(glue!.firstChild?.nodeType).toBe(Node.TEXT_NODE);
+    expect(glue!.firstChild?.textContent).toBe("d");
+    expect(code.firstChild?.textContent).toBe("docs/notes.m");
+    // The visible path text is untouched in sum: only moved, none added.
+    expect(code.textContent).toBe("docs/notes.md");
   });
 });
 
@@ -208,10 +211,9 @@ describe("decorateVerifiedInlineCodeLinks", () => {
     const exists = checker(new Map([["docs/notes.md", true]]));
     await decorateVerifiedInlineCodeLinks(root, "env-text", exists.check);
     const code = root.querySelector("code")!;
-    // The path itself is untouched; the only added characters are the
-    // invisible word joiners at the icon's edges (see glyph glue above).
-    expect(code.firstChild?.textContent).toBe("docs/notes.md");
-    expect(code.textContent).toBe("docs/notes.md\u2060\u2060");
+    // The path itself is untouched: decoration only moves the final
+    // character next to the glue icon (see glyph glue above).
+    expect(code.textContent).toBe("docs/notes.md");
   });
 
   it("decorates inside a scoped subtree, mirroring the pane's observer root", async () => {

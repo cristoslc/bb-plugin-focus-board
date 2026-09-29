@@ -67,12 +67,13 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   breaker (jsdom cannot wrap, so this one exists for the real
   geometry): it waits up to 4s for the decoration to fire (environment
   resolution plus a `workspace_files_exist` verdict are async), fails when
-  the icon carries no word joiners, fails when the code span never wrapped
-  (the check would be vacuous), and passes when the glyph shares a baseline
-  with the path's last character. The harness side: `scripts/screenshot/mock-sdk.tsx`
-  renders backtick spans as real `<code>`, `threads.get` resolves the
-  fixture's environment id, and the `workspace_files_exist` RPC vouches for
-  `SIM_WORKSPACE_FILES` (`scripts/screenshot/data.ts`).
+  the icon is not fused into the nowrap glue unit, fails when the code span
+  never wrapped (the check would be vacuous), and passes when the glyph
+  shares a baseline with the path's last character. The harness side:
+  `scripts/screenshot/mock-sdk.tsx` renders backtick spans as real `<code>`,
+  `threads.get` resolves the fixture's environment id, and the
+  `workspace_files_exist` RPC vouches for `SIM_WORKSPACE_FILES`
+  (`scripts/screenshot/data.ts`).
 - `assert_before_drag` runs before the gesture, so a step can prove both the
   starting state and the resulting one.
 - `drag_to_column` drops on a whole lane rather than a card within it, which is

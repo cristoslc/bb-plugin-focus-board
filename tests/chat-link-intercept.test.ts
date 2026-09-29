@@ -106,10 +106,11 @@ describe("inlineCodeMarkdownPath", () => {
   });
 
   it("classifies a code span that still carries decoration glue", () => {
-    // decorateCode glues the trailing icon with word joiners inside the
-    // code element. If a host re-render ever strips the decoration flag
-    // but leaves those joiners behind, the repaint scan must still
-    // classify the span instead of discarding it forever.
+    // This decoration's nowrap glue replaced the older word-joiner
+    // approach, but an older build's decoration can still leave stray
+    // U+2060 joiners if a host re-render strips the glue span. The
+    // repaint scan must still classify the span instead of discarding
+    // it forever; a real host path never contains U+2060.
     expect(inlineCodeMarkdownPath("docs/erd.md\u2060")).toBe("docs/erd.md");
     expect(inlineCodeMarkdownPath("\u2060docs/erd.md\u2060\u2060")).toBe(
       "docs/erd.md",
