@@ -383,6 +383,39 @@ const pageBandsAligned = () => {
 };
 
 /**
+ * How noisy is the board after a pan? A real scroll event listener records
+ * every horizontal scroll event from a programmatic pan (the same gesture
+ * the scroll step uses) through the whole settle sequence — release, quiet
+ * debounce, pin glide, recut, post-pin corrections — and reports the event
+ * count plus how long the board has been still at the end.
+ *
+ * The regression "super jittery" produced: events continuing indefinitely
+ * (settle re-arming its own glide) and lock churn. A quiet board shows a
+ * bounded event count (glide motion is legitimate, capped) and a tail of
+ * stillness at the end of the hold window.
+ */
+const pageBoardNoise = ({ dx, holdMs }) => {
+  const board = document.querySelector("[data-parent-board]");
+  if (!board) throw new Error("board_quiet: no [data-parent-board] on the page");
+  const times = [];
+  let prev = board.scrollLeft;
+  const onScroll = () => {
+    if (Math.abs(board.scrollLeft - prev) > 1) times.push(window.performance.now());
+    prev = board.scrollLeft;
+  };
+  board.addEventListener("scroll", onScroll, { passive: true });
+  board.scrollLeft += dx;
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      board.removeEventListener("scroll", onScroll);
+      const now = window.performance.now();
+      const tail = times.length > 0 ? now - times[times.length - 1] : holdMs;
+      resolve({ events: times.length, tail });
+    }, holdMs);
+  });
+};
+
+/**
  * Is the given thread card fully visible inside the board's scroll viewport?
  * The sticky rail (140px) and the sticky lane headers (76px) overlay the
  * viewport edges, so a card under either is treated as hidden — that is the
@@ -639,6 +672,19 @@ async function check(step, page, gestureResults = []) {
     if (rule.card_visible !== undefined) {
       const got = await page.evaluate(pageCardVisible, rule.card_visible);
       expect(`card visible: ${rule.card_visible}`, got.ok === true, got.reason);
+    }
+    if (rule.board_quiet !== undefined) {
+      const want = rule.board_quiet;
+      const got = await page.evaluate(pageBoardNoise, {
+        dx: want.dx ?? 480,
+        holdMs: want.hold_ms ?? 2500,
+      });
+      const quietOk = got.events <= (want.max_events ?? 60) && got.tail >= (want.max_tail_ms ?? 500);
+      expect(
+        `board quiet after pan: ≤${want.max_events ?? 60} events, still ≥${want.max_tail_ms ?? 500}ms`,
+        quietOk,
+        `${got.events} events over the hold, last ${Math.round(got.tail)}ms ago`,
+      );
     }
     if (rule.rpc_called_method !== undefined) {
       const methods = await page.evaluate(() =>
