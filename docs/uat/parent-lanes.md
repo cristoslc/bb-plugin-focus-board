@@ -1,10 +1,10 @@
-# UAT report
+_Generated 2026-09-29T21:38:41.431Z by `npm run uat`._
 
-_Generated 2026-09-29T21:39:34.324Z by `npm run uat`._
+# UAT report
 
 ## parent-lanes
 
-Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-parent-lanes.yaml` · theme dark
+Source: `tests/manual/uat-parent-lanes.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
