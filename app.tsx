@@ -961,6 +961,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           onOpenWhatsNew={openWhatsNew}
           nestChildren={nestChildren}
           onNestChildrenChange={persistNestChildren}
+          nestingLocked={isParentGroupBy}
         />
         {groupBy === "parent" ? (
           <ParentLaneBoard

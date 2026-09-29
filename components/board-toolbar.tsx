@@ -330,6 +330,9 @@ interface BoardToolbarProps {
   /** R3: "Nest child threads" toggle — nested rendering on/off. */
   nestChildren: boolean;
   onNestChildrenChange: (enabled: boolean) => void;
+  /** Parent grouping always renders two-level families: the toggle reads
+   *  checked and is greyed out (a depth cap, not a user choice). */
+  nestingLocked?: boolean;
   filter: FilterState;
   onFilterChange: (filter: FilterState) => void;
   search: string;
@@ -360,6 +363,7 @@ export function BoardToolbar({
   onGroupByChange,
   nestChildren,
   onNestChildrenChange,
+  nestingLocked,
   filter,
   onFilterChange,
   search,
@@ -402,11 +406,16 @@ export function BoardToolbar({
       <button
         type="button"
         role="checkbox"
-        aria-checked={nestChildren}
-        onClick={() => onNestChildrenChange(!nestChildren)}
+        aria-checked={nestingLocked || nestChildren}
+        aria-disabled={nestingLocked || undefined}
+        onClick={() => {
+          if (nestingLocked) return;
+          onNestChildrenChange(!nestChildren);
+        }}
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-foreground",
           "hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          nestingLocked && "cursor-not-allowed opacity-50 hover:bg-transparent",
         )}
       >
         <span
@@ -418,7 +427,7 @@ export function BoardToolbar({
           )}
           aria-hidden
         >
-          {nestChildren ? <Icon name="Check" className="size-2.5" aria-hidden /> : null}
+          {nestingLocked || nestChildren ? <Icon name="Check" className="size-2.5" aria-hidden /> : null}
         </span>
         Nest child threads
       </button>
