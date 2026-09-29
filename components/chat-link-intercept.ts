@@ -75,18 +75,24 @@ export function workspacePathFromHref(href: string): string | null {
  * commit hashes, never `~`-home paths.
  */
 export function inlineCodeMarkdownPath(text: string): string | null {
-	if (text === "" || text.trim() !== text) return null;
-	if (text.includes("\n") || text.includes("\r")) return null;
+	// Decoration glue: decorateCode joins its trailing icon with word
+	// joiners inside the code element. If a host re-render strips the
+	// decoration but leaves the joiners, this gate must still recognize
+	// the span so the repaint scan can re-decorate it. A real host path
+	// never contains U+2060.
+	const joined = text.replace(/\u2060/gu, "");
+	if (joined === "" || joined.trim() !== joined) return null;
+	if (joined.includes("\n") || joined.includes("\r")) return null;
 	// Defensive cap so a pathological giant code span can never drive the
 	// decorator's scans; the host has no bound but real paths stay short.
-	if (text.length > 512) return null;
+	if (joined.length > 512) return null;
 	// Scheme-qualified and protocol-relative urls are not workspace paths,
 	// even when they end in `.md`.
-	if (isExternalHref(text)) return null;
+	if (isExternalHref(joined)) return null;
 	// Home-relative paths (`~/.agents/AGENTS.md`) cannot resolve inside the
 	// workspace root, and the host's relative-link parser rejects them too.
-	if (/^~(?:[^/]*\/|$)/u.test(text)) return null;
-	const path = workspacePathFromHref(text);
+	if (/^~(?:[^/]*\/|$)/u.test(joined)) return null;
+	const path = workspacePathFromHref(joined);
 	if (path === null) return null;
 	return /\.(?:md|markdown)$/iu.test(path) ? path : null;
 }

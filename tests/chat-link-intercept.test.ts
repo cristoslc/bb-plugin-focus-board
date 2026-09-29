@@ -105,6 +105,17 @@ describe("inlineCodeMarkdownPath", () => {
     expect(inlineCodeMarkdownPath("docs/erd.md#L12-L20")).toBe("docs/erd.md");
   });
 
+  it("classifies a code span that still carries decoration glue", () => {
+    // decorateCode glues the trailing icon with word joiners inside the
+    // code element. If a host re-render ever strips the decoration flag
+    // but leaves those joiners behind, the repaint scan must still
+    // classify the span instead of discarding it forever.
+    expect(inlineCodeMarkdownPath("docs/erd.md\u2060")).toBe("docs/erd.md");
+    expect(inlineCodeMarkdownPath("\u2060docs/erd.md\u2060\u2060")).toBe(
+      "docs/erd.md",
+    );
+  });
+
   it("rejects whitespace-padded and multiline spans like the host does", () => {
     expect(inlineCodeMarkdownPath(" docs/erd.md ")).toBeNull();
     expect(inlineCodeMarkdownPath("docs/erd.md\n")).toBeNull();
