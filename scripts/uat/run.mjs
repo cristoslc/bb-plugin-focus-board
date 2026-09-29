@@ -341,6 +341,145 @@ const pageTextVisible = (needle) =>
   document.body.textContent?.includes(needle) ?? false;
 
 /**
+ * Horizontal pan over the parent-lane board: a programmatic scrollLeft delta.
+ * The board's scroll manager treats any horizontal delta as a pan the same
+ * way it treats a real wheel gesture (release lock, settle, re-lock), and a
+ * programmatic assignment is trusted enough to fire a real scroll event.
+ */
+const pageBoardScroll = ({ dx, dy }) => {
+  const board = document.querySelector("[data-parent-board]");
+  if (!board) throw new Error("scroll: no [data-parent-board] on the page");
+  if (dx !== undefined) board.scrollLeft += dx;
+  if (dy !== undefined) board.scrollTop += dy;
+  return { scrollLeft: board.scrollLeft, scrollTop: board.scrollTop };
+};
+
+/** Which lane is the locked ruler lane (or null when the lock is released)? */
+const pageLockedLane = () => {
+  const locked = document.querySelector("section[data-locked]");
+  if (!locked) return null;
+  return locked.getAttribute("data-lane-id");
+};
+
+/**
+ * Do the shared band tracks line up across lanes? Groups band cells by their
+ * status id and compares the top edge of each group's members: a working
+ * band must start at the same y in every lane, or the rail labels lie.
+ */
+const pageBandsAligned = () => {
+  const byId = new Map();
+  for (const band of document.querySelectorAll("[data-band]")) {
+    const id = band.getAttribute("data-band");
+    const list = byId.get(id) ?? [];
+    list.push(band.getBoundingClientRect().top);
+    byId.set(id, list);
+  }
+  if (byId.size === 0) return { ok: false, reason: "no bands rendered" };
+  for (const [id, tops] of byId) {
+    const spread = Math.max(...tops) - Math.min(...tops);
+    if (spread > 2) return { ok: false, reason: `band ${id} spread ${spread.toFixed(1)}px` };
+  }
+  return { ok: true, reason: `${byId.size} bands aligned` };
+};
+
+/**
+ * How noisy is the board after a pan? A real scroll event listener records
+ * every horizontal scroll event from a programmatic pan (the same gesture
+ * the scroll step uses) through the whole settle sequence — release, quiet
+ * debounce, pin glide, recut, post-pin corrections — and reports the event
+ * count plus how long the board has been still at the end.
+ *
+ * The regression "super jittery" produced: events continuing indefinitely
+ * (settle re-arming its own glide) and lock churn. A quiet board shows a
+ * bounded event count (glide motion is legitimate, capped) and a tail of
+ * stillness at the end of the hold window.
+ */
+const pageBoardNoise = ({ dx, holdMs }) => {
+  const board = document.querySelector("[data-parent-board]");
+  if (!board) throw new Error("board_quiet: no [data-parent-board] on the page");
+  const times = [];
+  let prev = board.scrollLeft;
+  const onScroll = () => {
+    if (Math.abs(board.scrollLeft - prev) > 1) times.push(window.performance.now());
+    prev = board.scrollLeft;
+  };
+  board.addEventListener("scroll", onScroll, { passive: true });
+  board.scrollLeft += dx;
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      board.removeEventListener("scroll", onScroll);
+      const now = window.performance.now();
+      const tail = times.length > 0 ? now - times[times.length - 1] : holdMs;
+      resolve({ events: times.length, tail });
+    }, holdMs);
+  });
+};
+
+/**
+ * Armed variant of the noise listener for REAL wheel input: arm it in the
+ * page first (the listener must already exist when the wheel arrives), pump
+ * wheel events through Puppeteer's input pipeline from Node, then read the
+ * signature. This exercises the same input path a trackpad pan uses —
+ * smooth-animated wheel deltas — instead of a bare scrollLeft assignment.
+ */
+const pageBoardNoiseArm = () => {
+  const board = document.querySelector("[data-parent-board]");
+  if (!board) throw new Error("board_quiet wheel: no [data-parent-board]");
+  const times = [];
+  let prev = board.scrollLeft;
+  board.addEventListener(
+    "scroll",
+    () => {
+      if (Math.abs(board.scrollLeft - prev) > 1) times.push(window.performance.now());
+      prev = board.scrollLeft;
+    },
+    { passive: true },
+  );
+  window.__uatNoise = { times, start: window.performance.now() };
+};
+
+const pageBoardNoiseRead = ({ holdMs }) =>
+  new Promise((resolve) => {
+    setTimeout(() => {
+      const noise = window.__uatNoise;
+      const now = window.performance.now();
+      const tail = noise.times.length > 0 ? now - noise.times[noise.times.length - 1] : now - noise.start;
+      resolve({ events: noise.times.length, tail });
+    }, holdMs);
+  });
+
+/** Real wheel input: 10 discrete wheel ticks through the input pipeline. */
+const wheelPan = async (page, dx) => {
+  const board = await page.$("[data-parent-board]");
+  if (!board) throw new Error("board_quiet wheel: no board element");
+  const box = await board.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  for (let i = 0; i < 10; i++) await page.mouse.wheel({ deltaX: dx / 10 });
+};
+
+/**
+ * Is the given thread card fully visible inside the board's scroll viewport?
+ * The sticky rail (140px) and the sticky lane headers (76px) overlay the
+ * viewport edges, so a card under either is treated as hidden — that is the
+ * regression the clicked-card-off-screen bug report described.
+ */
+const pageCardVisible = (threadId) => {
+  const board = document.querySelector("[data-parent-board]");
+  if (!board) return { ok: false, reason: "no board" };
+  const host = document.querySelector(`[data-thread-card="${threadId}"]`);
+  if (!host) return { ok: false, reason: `no card ${threadId}` };
+  const b = board.getBoundingClientRect();
+  const c = host.getBoundingClientRect();
+  const minTop = b.top + 76;
+  const minLeft = b.left + 140 + 16;
+  if (c.top < minTop) return { ok: false, reason: `top ${Math.round(c.top)} hides behind the header` };
+  if (c.bottom > b.bottom) return { ok: false, reason: `bottom ${Math.round(c.bottom)} falls below the fold` };
+  if (c.left < minLeft) return { ok: false, reason: `left ${Math.round(c.left)} hides behind the rail` };
+  if (c.right > b.right) return { ok: false, reason: `right ${Math.round(c.right)} runs past the viewport` };
+  return { ok: true, reason: `card ${threadId} fully visible` };
+};
+
+/**
  * The pane's side of the route: which thread it is showing, or whether it is
  * closed. Read from the aside's aria-label so the assertion sees what the
  * operator sees, not internal state.
@@ -546,6 +685,58 @@ async function check(step, page, gestureResults = []) {
         got ? "present" : "not found in page text",
       );
     }
+    if (rule.text_hidden !== undefined) {
+      const got = await page.evaluate(pageTextVisible, rule.text_hidden);
+      expect(
+        `text hidden: ${JSON.stringify(rule.text_hidden)}`,
+        !got,
+        !got ? "absent" : "found in page text",
+      );
+    }
+    if (rule.locked_lane !== undefined) {
+      const got = await page.evaluate(pageLockedLane);
+      const want = rule.locked_lane;
+      const ok = want === true ? got !== null : got === want;
+      expect(
+        `locked lane: ${JSON.stringify(want)}`,
+        ok,
+        ok ? `locked=${got}` : `locked=${got}`,
+      );
+    }
+    if (rule.bands_aligned !== undefined) {
+      const got = await page.evaluate(pageBandsAligned);
+      expect(
+        "bands aligned across lanes",
+        got.ok === rule.bands_aligned,
+        got.reason,
+      );
+    }
+    if (rule.card_visible !== undefined) {
+      const got = await page.evaluate(pageCardVisible, rule.card_visible);
+      expect(`card visible: ${rule.card_visible}`, got.ok === true, got.reason);
+    }
+    if (rule.board_quiet !== undefined) {
+      const want = rule.board_quiet;
+      let noise;
+      if (want.mode === "wheel") {
+        // mode: wheel pans with real wheel events through the browser's
+        // input pipeline instead of a scrollLeft assignment.
+        await page.evaluate(pageBoardNoiseArm);
+        await wheelPan(page, want.dx ?? 480);
+        noise = await page.evaluate(pageBoardNoiseRead, { holdMs: want.hold_ms ?? 2500 });
+      } else {
+        noise = await page.evaluate(pageBoardNoise, {
+          dx: want.dx ?? 480,
+          holdMs: want.hold_ms ?? 2500,
+        });
+      }
+      const quietOk = noise.events <= (want.max_events ?? 60) && noise.tail >= (want.max_tail_ms ?? 500);
+      expect(
+        `board quiet after pan: ≤${want.max_events ?? 60} events, still ≥${want.max_tail_ms ?? 500}ms`,
+        quietOk,
+        `${noise.events} events over the hold, last ${Math.round(noise.tail)}ms ago`,
+      );
+    }
     if (rule.rpc_called_method !== undefined) {
       const methods = await page.evaluate(() =>
         globalThis.__uat.calls().map((call) => call.method),
@@ -613,7 +804,10 @@ async function runSuite(file, { port, browser }) {
         // one page.
         await page.evaluateOnNewDocument(installProtectedDrag);
         await page.goto(`${base}${step.goto}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-        await page.waitForSelector("section[aria-label]", { timeout: 30_000 });
+        // The board surface: a grouped board (sections) or an empty state.
+        // The parent-thread view legitimately renders no sections when a
+        // filter/search drops every family, so the wait must accept both.
+        await page.waitForSelector("section[aria-label], [role=status]", { timeout: 30_000 });
         await page.evaluate((t) => document.documentElement.classList.toggle("dark", t === "dark"), theme);
         await page.evaluate(() => globalThis.__uat.resetCalls());
         await sleep(300);
@@ -631,7 +825,7 @@ async function runSuite(file, { port, browser }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "press_escape", "push_url"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "scroll", "resize", "sleep", "press_escape", "push_url"];
       let gestureFailed = false;
       for (const gesture of Object.keys(step).filter((key) => GESTURE_ORDER.includes(key))) {
         if (gesture === "drag") {
@@ -676,6 +870,23 @@ async function runSuite(file, { port, browser }) {
         } else if (gesture === "click_aria") {
           await page.evaluate(pageClickAria, step.click_aria);
           await sleep(300);
+        } else if (gesture === "scroll") {
+          await page.evaluate(pageBoardScroll, step.scroll);
+          // The board settles on a 200ms quiet-period debounce plus a smooth
+          // pin glide before it re-locks; give it room before assertions.
+          // settle_ms: 0 skips the wait so a following click lands while the
+          // glide is in flight (the click-during-glide adversarial step).
+          await sleep(Math.max(0, Number(step.scroll.settle_ms ?? 1200)));
+        } else if (gesture === "resize") {
+          // A viewport change while the lock is held re-runs the layout; let
+          // the resize observer commit before assertions sample the DOM.
+          await page.setViewport({ width: step.resize.width, height: step.resize.height });
+          await sleep(800);
+        } else if (gesture === "sleep") {
+          // A wait between gestures, for multi-phase board reactions (pin
+          // glide, recut, post-recut corrections) that no single event
+          // boundary covers.
+          await sleep(Math.max(0, Number(step.sleep) || 0));
         } else if (gesture === "press_escape") {
           // The pane listens on document capture, so a bubbling keydown from
           // the body reaches it — the same path a real Escape takes.

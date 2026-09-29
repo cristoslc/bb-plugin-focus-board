@@ -259,8 +259,11 @@ export const SIM_THREADS: readonly SimThread[] = [
     lastReadAt: SIM_NOW - 9 * DAY,
   }),
 
-  // Parent-lane UAT fixture: one family with an idle parent and idle child so
-  // the suite can exercise lane headers, child cards, and the Standalone lane.
+  // Parent-lane UAT fixtures: two families. Family A (thr_parent_lane /
+  // thr_child_lane) exercises a sparse ruler lane; family B (thr_sweep_*)
+  // stacks six old, still-working children so locking it grows the Working
+  // band under a visible lower card — the regression case for the clicked
+  // card being pushed off-screen by the recut. B stays lane 1 (older than A).
   thread({
     id: "thr_parent_lane",
     displayTitle: "Parent thread lane fixture",
@@ -273,6 +276,30 @@ export const SIM_THREADS: readonly SimThread[] = [
     parentThreadId: "thr_parent_lane",
     updatedAt: SIM_NOW - 9 * DAY,
     lastReadAt: SIM_NOW - 9 * DAY,
+  }),
+  thread({
+    id: "thr_sweep_parent",
+    displayTitle: "Archive sweep program",
+    updatedAt: SIM_NOW - 14 * DAY,
+    lastReadAt: SIM_NOW - 14 * DAY,
+  }),
+  ...Array.from({ length: 6 }, (_, index) =>
+    thread({
+      id: `thr_sweep_w${index}`,
+      displayTitle: `Sweep worker ${index}: retire stale records`,
+      parentThreadId: "thr_sweep_parent",
+      status: "active",
+      runtimeStatus: "active",
+      updatedAt: SIM_NOW - 13 * DAY - index * MINUTE,
+      lastReadAt: SIM_NOW - 13 * DAY,
+    }),
+  ),
+  thread({
+    id: "thr_sweep_child",
+    displayTitle: "Sweep the done archive",
+    parentThreadId: "thr_sweep_parent",
+    updatedAt: SIM_NOW - 12 * DAY,
+    lastReadAt: SIM_NOW - 12 * DAY,
   }),
 
   // Done

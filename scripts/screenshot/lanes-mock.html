@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parent lanes: ruler + context columns</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #10161d;
+    --cell: #131b24;
+    --card: #1c2531;
+    --line: #1e2833;
+    --text: #dbe4ee;
+    --muted: #7b8a99;
+    --accent: #4cc2ff;
+    --rail-w: 96px;
+    --gap: 8px;
+    --pad: 10px;
+    --header-h: 46px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif;
+    display: flex; flex-direction: column;
+  }
+  .topbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--panel);
+    flex: none;
+  }
+  .topbar h1 { font-size: 13px; font-weight: 600; margin: 0; color: var(--muted); white-space: nowrap; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; flex: none; }
+  .seg button {
+    appearance: none; border: 0; background: transparent; color: var(--muted);
+    padding: 6px 12px; font: inherit; cursor: pointer; white-space: nowrap;
+  }
+  .seg button.on { background: #1d2836; color: var(--text); }
+  .hint { color: var(--muted); font-size: 12px; margin-left: auto; }
+  .board { flex: 1; min-height: 0; position: relative; }
+  .scroller {
+    position: absolute; inset: 0;
+    overflow: auto;
+    scroll-snap-type: x mandatory;
+  }
+  .content { position: relative; display: flex; width: max-content; min-width: 100%; }
+  /* rail */
+  .rail {
+    position: sticky; left: 0; z-index: 30;
+    width: var(--rail-w); flex: none;
+    background: var(--bg);
+    border-right: 1px solid var(--line);
+  }
+  .rail-corner {
+    position: sticky; top: 0; z-index: 40; height: var(--header-h);
+    background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  .rail-labels { position: relative; }
+  .rail-label {
+    position: absolute; right: 10px; top: 0;
+    padding-top: 8px;
+    color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+    text-align: right; width: 84px;
+    transition: transform 240ms ease;
+    border-top: 1px dashed transparent;
+    display: flex; flex-direction: column; gap: 1px;
+  }
+  .rail-label .who { font-size: 10px; font-weight: 600; }
+  .rail-label.live { color: var(--accent); border-top-color: #2b9fd466; }
+  /* lanes */
+  .lane { flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--line); transition: width 240ms ease; }
+  .lane-header {
+    position: sticky; top: 0; z-index: 20; height: var(--header-h);
+    display: flex; align-items: center; gap: 7px;
+    padding: 0 10px;
+    background: var(--panel); border-bottom: 1px solid var(--line);
+    border-top: 2px solid transparent;
+    transition: border-top-color 240ms ease;
+    cursor: pointer;
+    user-select: none;
+  }
+  .lane.locked .lane-header { border-top-color: var(--accent); }
+  .lane.locked { box-shadow: inset 0 0 0 1px #2b9fd42e; }
+  .lane.locked .lane-name { color: var(--accent); }
+  .lane-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lane-total { color: var(--muted); font-size: 11px; }
+  .lane:not(.locked) .lane-name { font-size: 11.5px; }
+  .lane:not(.locked) .lane-header { gap: 5px; padding: 0 8px; }
+  /* bands */
+  .cell {
+    position: relative; flex: none;
+    margin: var(--pad);
+    border-radius: 9px;
+    background: var(--cell);
+    transition: height 240ms ease, width 240ms ease;
+    overflow: hidden;
+  }
+  .cell.empty { background: #10161dcc; box-shadow: inset 0 0 0 1px #1c2531; }
+  .seam { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--line); z-index: 10; transition: transform 240ms ease; }
+  .cards { display: grid; gap: var(--gap); align-content: start; padding: var(--pad); }
+  .card {
+    border-radius: 7px;
+    background: var(--card);
+    border-left: 3px solid var(--st, #64748b);
+    font-size: 10.5px; line-height: 1.3;
+    display: flex; flex-direction: column; gap: 3px;
+    min-width: 0;
+    padding: 6px 8px;
+    will-change: transform;
+  }
+  .card.ruler { font-size: 12.5px; padding: 10px 12px; border-left-width: 4px; }
+  .card.ruler b { font-size: 13px; }
+  .card.ruler span { font-size: 11px; }
+  .card b {
+    font-weight: 600; font-size: 10.5px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; overflow-wrap: anywhere;
+  }
+  .card span { color: var(--muted); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card.sel { box-shadow: 0 0 0 2px var(--accent) inset; }
+  .more {
+    border-radius: 7px;
+    border: 1px dashed #33445a; color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    min-width: 0;
+  }
+  .cards { height: 100%; }
+  .legendbar { display: flex; gap: 14px; padding: 6px 14px 2px; color: var(--muted); font-size: 11px; }
+  .legendbar i { display: inline-block; width: 8px; height: 8px; border-radius: 3px; margin-right: 5px; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Parent lanes mock</h1>
+    <div class="seg" role="tablist">
+      <button id="btn-locked" class="on">Ruler + wrap</button>
+      <button id="btn-max">Max + stack</button>
+    </div>
+    <div class="hint">Scroll → ruler releases (no reflow while panning). Stop → the lane in position 1 re-cuts as ruler. Click a title to scroll+lock it. Cards are clickable.</div>
+  </div>
+  <div class="legendbar">
+    <span><i style="background:#f59e0b"></i>Needs you</span>
+    <span><i style="background:#3b82f6"></i>Unread</span>
+    <span><i style="background:#22c55e"></i>Working</span>
+    <span><i style="background:#64748b"></i>Idle · Recent</span>
+    <span><i style="background:#475569"></i>Done</span>
+  </div>
+  <div class="board">
+    <div class="scroller" id="scroller">
+      <div class="content" id="content">
+        <div class="rail">
+          <div class="rail-corner"></div>
+          <div class="rail-labels" id="railLabels"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+<script>
+"use strict";
+
+const STATUSES = [
+  { key: "needsYou", label: "Needs you",      color: "#f59e0b" },
+  { key: "unread",   label: "Unread",         color: "#3b82f6" },
+  { key: "working",  label: "Working",        color: "#22c55e" },
+  { key: "idle",     label: "Idle · Recent",  color: "#64748b" },
+  { key: "done",     label: "Done",           color: "#475569" },
+];
+
+const LANES = [
+  { name: "Aurora relaunch",  dot: "#f59e0b", counts: { needsYou: 5, unread: 0, working: 2, idle: 1, done: 0 } },
+  { name: "Beacon migration", dot: "#3b82f6", counts: { needsYou: 3, unread: 0, working: 10, idle: 0, done: 1 } },
+  { name: "Chore tracker",    dot: "#a855f7", counts: { needsYou: 0, unread: 1, working: 1, idle: 0, done: 3 } },
+  { name: "Docs refresh",     dot: "#ec4899", counts: { needsYou: 1, unread: 2, working: 0, idle: 4, done: 2 } },
+];
+
+// ruler (locked) lane uses big readable LANDSCAPE cards; context lanes use minis
+const RULER = { w: 216, h: 132 };   // wide, 2-line titles
+const MINI  = { w: 136, h: 82 };    // wide mini, 2-line titles
+const GAP = 8, CELL_PAD = 10, RAIL_W = 96, HEADER_H = 46;
+const RULER_COLS = 2, RULER_MIN_W = 460, CONTEXT_MAX_COLS = 5;
+
+const TITLES = [
+  "Fix flaky sync retry after resume",
+  "Unify thread sort keys across views",
+  "Draft release notes for 0.5.14",
+  "Investigate stale unread badges",
+  "Split auth token refresh path",
+  "Rekey the family index when parents change",
+  "Trim orphaned follow-ups nightly",
+  "Document the search persistence contract",
+  "Guard against duplicate done lanes",
+  "Add keyboard affordance for card selection",
+  "Backfill lane recency from done-times",
+  "Audit empty-cell slab rendering",
+];
+
+const content = document.getElementById("content");
+const scroller = document.getElementById("scroller");
+const railLabels = document.getElementById("railLabels");
+
+let variant = "locked";   // "locked" ("Ruler + wrap") | "max" ("Max + stack")
+let lockIdx = 0;
+let pendingLock = null;   // click intent: settle must honor it, nearestLane on
+                          // frozen geometry can disagree with the predicted pin
+
+// ---- geometry ----
+function viewportCols() {
+  return Math.max(1, Math.floor((scroller.clientWidth - RAIL_W - 40) / (RULER.w + GAP)));
+}
+
+function rulerRows(s, lock = lockIdx) {
+  if (variant === "max") return Math.max(1, ...LANES.map(l => l.counts[s]));
+  return Math.max(1, Math.ceil(LANES[lock].counts[s] / RULER_COLS));
+}
+
+function bandHeight(s, lock = lockIdx) {
+  const rows = rulerRows(s, lock);
+  const ch = variant === "max" ? MINI.h : RULER.h;
+  return rows * ch + (rows - 1) * GAP + CELL_PAD * 2;
+}
+
+// returns { cells: [cardIdx|"more"], cols, size } for one lane cell
+function cellLayout(li, s, lock = lockIdx) {
+  const lane = LANES[li];
+  const count = lane.counts[s];
+  const rows = rulerRows(s, lock);
+  if (variant === "max") {
+    if (count === 0) return { size: MINI, cols: 1, items: [{ t: "empty" }] };
+    return { size: MINI, cols: 1, items: Array.from({ length: count }, (_, i) => ({ t: "card", i })) };
+  }
+  if (li === lock) {
+    const cols = Math.max(1, Math.min(RULER_COLS, count));
+    return { size: RULER, cols, items: count === 0 ? [{ t: "empty" }] : Array.from({ length: count }, (_, i) => ({ t: "card", i })) };
+  }
+  // context lane: minis sized to fit the band's fixed height
+  if (count === 0) return { size: MINI, cols: 1, items: [{ t: "empty" }] };
+  const innerH = rows * RULER.h + (rows - 1) * GAP;
+  const miniRows = Math.max(1, Math.floor((innerH + GAP) / (MINI.h + GAP)));
+  const capCols = Math.min(CONTEXT_MAX_COLS, viewportCols());
+  const capacity = capCols * miniRows;
+  const colsNeeded = Math.ceil(count / miniRows);
+  if (colsNeeded > capCols) {
+    const shown = Math.min(count, capacity - 1);
+    const items = Array.from({ length: shown }, (_, i) => ({ t: "card", i }));
+    items.push({ t: "more", hidden: count - shown });
+    return { size: MINI, cols: capCols, items };
+  }
+  return { size: MINI, cols: Math.max(1, colsNeeded), items: Array.from({ length: count }, (_, i) => ({ t: "card", i })) };
+}
+
+// ---- build static DOM once ----
+const laneEls = LANES.map((lane, li) => {
+  const col = document.createElement("div");
+  col.className = "lane";
+  const header = document.createElement("div");
+  header.className = "lane-header";
+  header.title = "Scroll this lane into position 1 as the ruler";
+  header.innerHTML = `<span class="lane-name"></span><span class="lane-total"></span>`;
+  header.addEventListener("click", () => { if (li !== lockIdx) lockTo(li); });
+  col.appendChild(header);
+  const cells = STATUSES.map(st => {
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    col.appendChild(cell);
+    return cell;
+  });
+  header.querySelector(".lane-name").textContent = lane.name;
+  content.appendChild(col);
+  return { col, header, cells, li };
+});
+const spacer = document.createElement("div");
+spacer.className = "spacer";
+content.appendChild(spacer);
+const seams = STATUSES.slice(1).map(() => {
+  const el = document.createElement("div");
+  el.className = "seam";
+  el.style.left = "0";
+  content.appendChild(el);
+  return el;
+});
+const railLabelEls = STATUSES.map(st => {
+  const el = document.createElement("div");
+  el.className = "rail-label";
+  railLabels.appendChild(el);
+  return el;
+});
+
+// ---- render ----
+function render(opts) {
+  opts = opts || {};
+  const tops = [];
+  let y = HEADER_H;
+  STATUSES.forEach(st => {
+    tops.push({ top: y, status: st });
+    y += bandHeight(st.key);
+  });
+
+  content.style.height = y + "px";
+  railLabels.style.height = y + "px";
+  spacer.style.width = Math.max(0, scroller.clientWidth - RAIL_W) + "px";
+
+  laneEls.forEach(({ col, header, cells, li }) => {
+    const lane = LANES[li];
+    col.classList.toggle("locked", variant === "locked" && li === lockIdx);
+    header.querySelector(".lane-total").textContent =
+      STATUSES.reduce((a, st) => a + lane.counts[st.key], 0) + "";
+    let laneW = MINI.w + CELL_PAD * 2;
+    const empties = [];
+    STATUSES.forEach((st, si) => {
+      const g = cellLayout(li, st.key);
+      const cell = cells[si];
+      const w = g.cols * g.size.w + (g.cols - 1) * GAP + CELL_PAD * 2;
+      if (g.items.length === 1 && g.items[0].t === "empty") empties.push(cell);
+      else laneW = Math.max(laneW, w);
+      cell.style.height = bandHeight(st.key) + "px";
+      cell.style.width = w + "px";
+      cell.classList.toggle("empty", g.items.length === 1 && g.items[0].t === "empty");
+      cell.innerHTML = "";
+      const grid = document.createElement("div");
+      grid.className = "cards";
+      grid.style.gridTemplateColumns = "repeat(" + g.cols + ", " + g.size.w + "px)";
+      grid.style.gridAutoRows = g.size.h + "px";
+      g.items.forEach(item => {
+        const el = document.createElement("div");
+        el.dataset.key = li + ":" + si + ":" + (item.t === "card" ? item.i : item.t);
+        if (item.t === "empty") { el.className = "card"; el.style.visibility = "hidden"; }
+        else if (item.t === "more") { el.className = "more"; el.textContent = "+" + item.hidden + " more"; }
+        else {
+          el.className = "card" + (g.size === RULER ? " ruler" : "");
+          el.style.borderLeftColor = st.color;
+          el.innerHTML = `<b>${TITLES[(li * 7 + item.i * 3) % TITLES.length]}</b><span style="color:${st.color}">${st.label}</span>`;
+        }
+        grid.appendChild(el);
+      });
+      cell.appendChild(grid);
+      void cell; // noop
+    });
+    if (variant === "locked" && li === lockIdx || variant === "max") {
+      laneW = Math.max(laneW, RULER_MIN_W, MINI.w + 120);
+    }
+    empties.forEach(cell => { cell.style.width = (laneW + 2) + "px"; });
+    col.style.width = (laneW + 2) + "px";
+  });
+
+  seams.forEach((el, i) => { el.style.transform = "translateY(" + tops[i + 1].top + "px)"; el.style.width = "100%"; });
+  railLabelEls.forEach((el, i) => {
+    const t = tops[i];
+    el.style.transform = "translateY(" + t.top + "px)";
+    const hasRuler = variant === "locked" && lockIdx !== null;
+    el.innerHTML = `<span>${t.status.label}</span>` + (hasRuler
+      ? `<span class="who" style="color:${LANES[lockIdx].dot}">${LANES[lockIdx].counts[t.status.key]} · ${LANES[lockIdx].name.split(" ")[0]}</span>`
+      : "");
+    el.classList.toggle("live", hasRuler);
+    el.style.borderTopColor = hasRuler ? "#2b9fd466" : "transparent";
+  });
+
+  if (opts.flipFrom) flip(opts.flipFrom);
+}
+
+
+
+// ---- FLIP: glide + scale cards to their new slots ----
+function captureRects() {
+  const m = new Map();
+  content.querySelectorAll(".card[data-key], .more[data-key]").forEach(el => {
+    m.set(el.dataset.key, el.getBoundingClientRect());
+  });
+  return m;
+}
+function flip(prev) {
+  content.querySelectorAll(".card[data-key], .more[data-key]").forEach(el => {
+    const r0 = prev.get(el.dataset.key);
+    if (!r0) return;
+    const r1 = el.getBoundingClientRect();
+    const dx = r0.left - r1.left, dy = r0.top - r1.top;
+    const sx = r1.width ? r0.width / r1.width : 1, sy = r1.height ? r0.height / r1.height : 1;
+    if (Math.abs(dx) < 2 && Math.abs(dy) < 2 && Math.abs(sx - 1) < 0.02 && Math.abs(sy - 1) < 0.02) return;
+    el.style.transition = "none";
+    el.style.transformOrigin = "top left";
+    el.style.transform = "translate(" + dx + "px, " + dy + "px) scale(" + sx + ", " + sy + ")";
+    void el.offsetWidth;
+    el.style.transition = "transform 240ms ease";
+    el.style.transform = "";
+  });
+}
+
+// ---- lock: released at scroll start, assigned at rest ----
+// laneStart from FINAL rendered widths: reading offsetLeft mid-width-transition
+// produces stale targets (the residual jump).
+function laneStart(i) {
+  let x = 0;
+  for (let k = 0; k < i; k++) x += parseFloat(laneEls[k].col.style.width) || 0;
+  return x;
+}
+
+// predicted lane start under a hypothetical lock — lets the pan glide to the
+// FINAL post-recut flush position BEFORE the re-cut, so resize never moves the
+// scroll (the pin precedes the recut)
+function predictedLaneW(li, lock) {
+  let laneW = MINI.w + CELL_PAD * 2;
+  STATUSES.forEach(st => {
+    const g = cellLayout(li, st.key, lock);
+    const w = g.cols * g.size.w + (g.cols - 1) * GAP + CELL_PAD * 2;
+    const isEmpty = g.items.length === 1 && g.items[0].t === "empty";
+    if (!isEmpty) laneW = Math.max(laneW, w);
+  });
+  if (li === lock) laneW = Math.max(laneW, RULER_MIN_W, MINI.w + 120);
+  return laneW + 2;
+}
+
+function predictedStart(i, lock) {
+  let x = 0;
+  for (let k = 0; k < i; k++) x += predictedLaneW(k, lock);
+  return x;
+}
+
+function laneWidthSum() {
+  let total = 0;
+  laneEls.forEach(({ col }) => total += parseFloat(col.style.width) || 0);
+  return total;
+}
+
+// max scroll is tight (spacer = clientWidth - RAIL_W), so a rightward lane's
+// predicted flush point can exceed the FROZEN board's reach. Grow the trailing
+// spacer just enough that the pin can land before any recut.
+function ensureReachable(target) {
+  const maxSl = scroller.scrollWidth - scroller.clientWidth;
+  if (target > maxSl) {
+    spacer.style.width = (parseFloat(spacer.style.width) + (target - maxSl) + 2) + "px";
+  }
+}
+
+let lastLeft = 0;
+let hActive = false;      // horizontal scroll in progress
+let gliding = false;      // programmatic pin-glide in progress (not a user pan)
+let settleTimer = null;
+
+function unassign() {
+  // release the ruler WITHOUT touching geometry: no resize while unassigned
+  lockIdx = null;
+  pendingLock = null;  // a manual pan voids any pending click intent
+  laneEls.forEach(({ col }) => col.classList.remove("locked"));
+  railLabelEls.forEach(el => {
+    el.classList.remove("live");
+    el.style.borderTopColor = "transparent";
+    const who = el.querySelector(".who");
+    if (who) who.remove();
+  });
+}
+
+function nearestLane() {
+  let best = 0, bd = Infinity;
+  laneEls.forEach((e, i) => {
+    const d = Math.abs(scroller.scrollLeft - laneStart(i));
+    if (d < bd) { bd = d; best = i; }
+  });
+  return best;
+}
+
+scroller.addEventListener("scroll", () => {
+  if (variant !== "locked") { lastLeft = scroller.scrollLeft; return; }
+  const dx = scroller.scrollLeft - lastLeft;
+  lastLeft = scroller.scrollLeft;
+  if (dx === 0) return;                    // vertical-only scroll: lock stays
+  if (correction) { correction = null; return; }  // our own post-recut pin: ignore one burst
+  if (gliding) {            // programmatic pin-glide: releases nothing, still settles
+    if (settleTimer) clearTimeout(settleTimer);
+    settleTimer = setTimeout(onSettle, 200);
+    return;
+  }
+  hActive = true;
+  if (lockIdx !== null) unassign();
+  if (settleTimer) clearTimeout(settleTimer);
+  settleTimer = setTimeout(onSettle, 200);  // rest = event quiet period; scrollend
+                                            // is per-assignment in headless, unusable
+});
+
+let correction = null;   // one-shot suppression while the board pins the locked lane
+function assign(bi) {
+  if (bi === lockIdx) return;
+  pendingLock = null;
+  const prevRects = captureRects();
+  const frozenTotal = laneWidthSum();
+  lockIdx = bi;
+  render({});
+  // drift fallback only: the pin already glided to the predicted post-recut
+  // flush point, so this should rarely exceed the 2px tolerance
+  const target = laneStart(bi) - 1;
+  const dx = target - scroller.scrollLeft;
+  if (Math.abs(dx) > 2) {
+    correction = 1;
+    setTimeout(() => { correction = null; }, 600);
+    scroller.scrollLeft += dx;
+    lastLeft = scroller.scrollLeft;
+  }
+  flip(prevRects);
+  scroller.style.scrollSnapType = "";  // snap holds the new flush position
+  gliding = false;
+  // render reset the spacer to its default; during the width transition the
+  // board must stay wide enough that the pinned position can't clamp mid-glide
+  const finalTotal = predictedStart(laneEls.length, bi);
+  const spacerMin = Math.max(
+    scroller.clientWidth - RAIL_W,
+    scroller.scrollLeft + scroller.clientWidth - RAIL_W
+      - Math.min(frozenTotal, finalTotal)
+  );
+  spacer.style.width = spacerMin + "px";
+}
+
+function onSettle() {
+  hActive = false;
+  settleTimer = null;
+  if (variant !== "locked") { scroller.style.scrollSnapType = ""; return; }
+  const bi = pendingLock !== null ? pendingLock : nearestLane();
+  pendingLock = null;
+  const target = predictedStart(bi, bi) - 1;
+  if (Math.abs(scroller.scrollLeft - target) > 2) {
+    // phase 1 — the PIN: glide to the predicted FINAL post-recut flush point
+    // while geometry stays frozen (lock unassigned). Snap is muted so its
+    // pre-recut alignment can't override the predictive target.
+    scroller.style.scrollSnapType = "none";
+    ensureReachable(target);
+    gliding = true;
+    scroller.scrollTo({ left: target, behavior: "smooth" });
+    settleTimer = setTimeout(onSettle, 400);
+    return;
+  }
+  // phase 2 — the RECUT: pinned at the final position, now resize (FLIP)
+  gliding = false;
+  scroller.style.scrollSnapType = "";
+  assign(bi);
+}
+
+function lockTo(i) {
+  // one path for click + scroll: glide to the predicted final flush position;
+  // the rest handler assigns the lock (recut waits for the pin)
+  pendingLock = i;
+  const target = predictedStart(i, i) - 1;
+  const dx = scroller.scrollLeft - target;
+  if (Math.abs(dx) < 3) {
+    scroller.style.scrollSnapType = "";
+    if (i !== lockIdx) assign(i);
+    pendingLock = null;
+    return;
+  }
+  scroller.style.scrollSnapType = "none";
+  ensureReachable(target);
+  gliding = true;
+  scroller.scrollTo({ left: target, behavior: "smooth" });
+}
+
+// ---- variant toggle ----
+const btnLocked = document.getElementById("btn-locked");
+const btnMax = document.getElementById("btn-max");
+function setVariant(v) {
+  variant = v;
+  btnLocked.classList.toggle("on", v === "locked");
+  btnMax.classList.toggle("on", v === "max");
+  lockIdx = 0;
+  lastLeft = 0;
+  hActive = false;
+  if (settleTimer) clearTimeout(settleTimer);
+  settleTimer = null;
+  scroller.scrollLeft = 0;
+  scroller.scrollTop = 0;
+  render();
+}
+btnLocked.addEventListener("click", () => setVariant("locked"));
+btnMax.addEventListener("click", () => setVariant("max"));
+
+// card selection (mock of "easily selectable")
+content.addEventListener("click", e => {
+  const card = e.target.closest(".card[data-key]");
+  if (!card || card.style.visibility === "hidden") return;
+  card.classList.toggle("sel");
+});
+
+window.addEventListener("resize", () => { if (variant === "locked") render(); });
+
+const vh = new URLSearchParams(location.search).get("vh");
+if (vh) document.querySelector(".board").style.height = vh + "px";
+
+render();
+</script>
+</body>
+</html>

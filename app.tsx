@@ -121,6 +121,15 @@ function readStored<T extends string>(key: string, allowed: readonly T[], fallba
   return fallback;
 }
 
+function readStoredText(key: string, fallback: string): string {
+  try {
+    return window.localStorage.getItem(key) ?? fallback;
+  } catch {
+    // localStorage can throw in embedded contexts; fall through to default.
+  }
+  return fallback;
+}
+
 function writeStored(key: string, value: string): void {
   try {
     window.localStorage.setItem(key, value);
@@ -337,7 +346,7 @@ function BoardPage({ subPath }: { subPath: string }) {
       ),
     ),
   }));
-  const [search, setSearch] = useState<string>(() => readStored(SEARCH_KEY, [], ""));
+  const [search, setSearch] = useState<string>(() => readStoredText(SEARCH_KEY, ""));
   // R3 "Nest child threads" toggle, default ON, persisted like groupBy.
   const [nestChildren, setNestChildren] = useState<boolean>(() =>
     parseNestStored(readStored(NEST_CHILDREN_KEY, ["on", "off"], "on")),
@@ -657,6 +666,14 @@ function BoardPage({ subPath }: { subPath: string }) {
     const projectId = [...filter.projects][0];
     return projects.some((project) => project.id === projectId) ? projectId : undefined;
   }, [filter.projects, projects]);
+  // "Personal" is the board card's label for a thread whose project is not in
+  // the sidebar's project list (bb's default personal project); the pane
+  // header uses the same resolution so the two surfaces agree.
+  const projectNameFor = useCallback(
+    (projectId: string) =>
+      projects.find((project) => project.id === projectId)?.name ?? "Personal",
+    [projects],
+  );
   const openNewThread = useCallback(() => {
     actions.openNewThread({
       ...(newThreadProjectId === undefined ? {} : { projectId: newThreadProjectId }),
@@ -690,6 +707,10 @@ function BoardPage({ subPath }: { subPath: string }) {
           displayTitle: openThreadActive.displayTitle,
           status: openThreadActive.status,
           isUnread: openThreadActive.isUnread,
+          projectName:
+            projectNameFor(openThreadActive.projectId),
+          branchName:
+            openThreadActive.environment?.branchName ?? openThreadActive.host?.name ?? null,
         }
       : openThreadArchived !== null
         ? {
@@ -698,6 +719,8 @@ function BoardPage({ subPath }: { subPath: string }) {
               openThreadArchived.title ?? openThreadArchived.titleFallback ?? openThreadArchived.id,
             status: "idle",
             isUnread: false,
+            projectName: null,
+            branchName: null,
           }
         : null;
 
@@ -946,9 +969,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             doneIds={doneIds}
             dimmedIds={dimmedIds}
             childrenByParent={parentLaneChildrenByParent}
-            projectNameFor={(projectId) =>
-              projects.find((project) => project.id === projectId)?.name ?? "Personal"
-            }
+            projectNameFor={projectNameFor}
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
             parentLaneOrder={parentLaneOrder}
@@ -975,9 +996,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             nestedChildrenByParent={assembly?.nestedChildrenByParent ?? new Map()}
             childCountByParent={assembly?.childCountByParent ?? new Map()}
             dimmedIds={dimmedIds}
-            projectNameFor={(projectId) =>
-              projects.find((project) => project.id === projectId)?.name ?? "Personal"
-            }
+            projectNameFor={projectNameFor}
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
             onOpenThread={openThreadCard}

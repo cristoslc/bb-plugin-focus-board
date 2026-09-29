@@ -1,10 +1,13 @@
 # Operator-assisted E2E: parent-thread lanes.
 #
 # The harness mounts the actual app.tsx against the mocked SDK
-# (scripts/screenshot), with one seeded family (thr_parent_lane /
-# thr_child_lane) plus the normal fixture threads. The suite exercises the
-# pivoted Attention grid: vertical lanes are families, horizontal rows are the
-# attention ladder, and only children render as cards.
+# (scripts/screenshot), with the family fixtures (thr_parent_lane /
+# thr_child_lane, thr_fam_*) plus the normal fixture threads. The suite
+# exercises the ruler+wrap board: horizontal lanes are families, the locked
+# "ruler" lane renders big readable cards while context lanes wrap compact
+# cards, shared band heights per status row keep the left rail labels
+# truthful, and horizontal panning re-locks the nearest lane at rest. Loose
+# (unparented) threads render no lane at all.
 #
 # Run: npm run uat -- tests/manual/uat-parent-lanes.yaml
 suite: parent-lanes
@@ -17,13 +20,21 @@ defaults:
   viewport: { width: 900, height: 640 }
 
 steps:
-  - id: parent-mode-renders-family-and-standalone-lanes
-    title: Parent-thread grouping shows the family lane and the Standalone lane
+  - id: parent-mode-renders-family-lanes-only
+    title: Parent-thread grouping shows family lanes and excludes loose threads
     goto: "?groupBy=parent"
     assert:
       - text_visible: "Parent thread lane fixture"
-      - text_visible: "Standalone"
       - text_visible: "Child thread lane fixture"
+      - text_hidden: "Standalone"
+
+  - id: ruler-lane-locked-with-aligned-bands
+    title: The board opens with a family locked as the ruler lane and band tracks aligned
+    goto: "?groupBy=parent"
+    assert:
+      - locked_lane: true
+      - bands_aligned: true
+      - text_hidden: "Standalone"
 
   - id: header-click-opens-parent-pane
     title: Clicking a lane header opens the parent thread's pane
@@ -50,12 +61,84 @@ steps:
       - pane: { threadId: thr_child_lane }
       - active_card: { id: thr_child_lane, visible: true }
 
-  - id: search-drops-families-shows-standalone
-    title: A search that matches only standalone threads drops every family
+  - id: clicking-context-card-keeps-it-visible-after-relock
+    title: Clicking a card in a context lane keeps it fully visible after the relock and recut
+    goto: "?groupBy=parent"
+    scroll: { dy: 260 }
+    click: { card: thr_sweep_child }
+    # The relock glides, the recut resizes bands, then the post-recut
+    # corrections (flush drift + vertical bring-into-view) land at ~300ms.
+    sleep: 1800
+    assert:
+      - locked_lane: thr_sweep_parent
+      - card_visible: thr_sweep_child
+
+  - id: horizontal-pan-relocks-nearest-family
+    title: A horizontal pan releases the ruler lock and re-locks the nearest family at rest
+    goto: "?groupBy=parent"
+    scroll: { dx: 900 }
+    assert:
+      - locked_lane: true
+      - bands_aligned: true
+
+  - id: pan-settles-to-a-quiet-board
+    title: After a pan the board settles quiet, bounded glide events then stillness
+    goto: "?groupBy=parent"
+    # The rule itself performs the pan and listens the whole way through
+    # release, debounce, glide, recut, and post-pin corrections: the glide's
+    # motion is legitimate (bounded event count), the jitter regression was
+    # events continuing indefinitely to the end of the window.
+    assert:
+      - board_quiet: { dx: 480, hold_ms: 2500, max_events: 60, max_tail_ms: 500 }
+      - locked_lane: true
+
+  - id: wheel-pan-locks-and-quiets-like-a-trackpad
+    title: A real wheel-event pan re-locks the nearest lane and settles quiet
+    goto: "?groupBy=parent"
+    # mode: wheel pans through the browser's input pipeline (real wheel
+    # events, smooth-animated like a trackpad) instead of a scrollLeft
+    # assignment — the same input path the operator's trackpad uses.
+    assert:
+      - board_quiet: { dx: 480, hold_ms: 2500, mode: wheel, max_events: 80, max_tail_ms: 500 }
+      - locked_lane: true
+      - bands_aligned: true
+
+  - id: click-during-a-glide-wins-the-lock
+    title: Clicking a family header while a pan glide is in flight locks THAT lane, not the pan's target
+    goto: "?groupBy=parent"
+    # The pan starts a glide toward the sweep family; the click (no settle
+    # wait) lands while that glide is in flight and must win the lock back
+    # for family A instead of the pan's target.
+    scroll: { dx: 400, settle_ms: 0 }
+    click_aria: { label: "Open Parent thread lane fixture" }
+    sleep: 3000
+    assert:
+      - locked_lane: thr_parent_lane
+      - bands_aligned: true
+
+  - id: viewport-resize-while-locked-stays-aligned
+    title: Resizing the viewport wider while a lane is locked keeps the ruler locked and bands aligned
+    goto: "?groupBy=parent"
+    resize: { width: 1400, height: 800 }
+    assert:
+      - locked_lane: thr_parent_lane
+      - bands_aligned: true
+
+  - id: viewport-shrink-while-locked-stays-aligned
+    title: Resizing the viewport narrower while a lane is locked keeps the ruler locked and bands aligned
+    goto: "?groupBy=parent"
+    resize: { width: 700, height: 640 }
+    assert:
+      - locked_lane: thr_parent_lane
+      - bands_aligned: true
+
+  - id: search-matching-only-loose-threads-shows-empty-state
+    title: A search that matches only loose threads drops every family and shows the empty state
     goto: "?groupBy=parent&q=Queue%20the%20UAT%20pass%20for%20the%20rank%20lane"
     assert:
-      - text_visible: "Standalone"
-      - text_visible: "Queue the UAT pass for the rank lane"
+      - text_hidden: "Standalone"
+      - text_hidden: "Queue the UAT pass for the rank lane"
+      - text_visible: "No thread families to show yet"
 
   - id: lane-order-toggle-defaults-to-recency
     title: The lane-order toggle defaults to Recency in parent-thread mode
@@ -63,7 +146,7 @@ steps:
     assert:
       - text_visible: "Recency"
       - text_visible: "Parent thread lane fixture"
-      - text_visible: "Standalone"
+      - text_hidden: "Standalone"
 
   - id: lane-order-toggle-switches-to-project
     title: Switching lane order to By project groups family lanes under their project
@@ -71,7 +154,7 @@ steps:
     click_aria: { label: "By project" }
     assert:
       - text_visible: "By project"
-      - text_visible: "Standalone"
+      - text_visible: "Parent thread lane fixture"
 
   - id: lane-order-toggle-on-then-off
     title: Toggling lane order to By project then back to Recency keeps the board usable
@@ -79,7 +162,7 @@ steps:
     click_aria: { label: "By project" }
     assert:
       - text_visible: "By project"
-      - text_visible: "Standalone"
+      - text_visible: "Parent thread lane fixture"
 
   - id: lane-order-toggle-back-to-recency
     title: Returning to Recency order removes project sections
@@ -87,7 +170,7 @@ steps:
     click_aria: { label: "Recency" }
     assert:
       - text_visible: "Parent thread lane fixture"
-      - text_visible: "Standalone"
+      - text_hidden: "Standalone"
 
   - id: group-switch-back-to-attention
     title: Switching back to Attention grouping renders normal columns

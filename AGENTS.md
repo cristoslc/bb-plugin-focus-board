@@ -16,12 +16,15 @@ if it is not in the default place. Run a single suite with
 
 ## Release
 
-Releasing a new plugin version: coordinate with main before bumping (concurrent
-threads release independently), bump `package.json` + `APP_VERSION` +
-`WHATS_NEW` in one release commit, verify with `npm test` and `npm run build`,
-merge to main, tag annotated `vX.Y.Z` on the release commit, push, then
-rebuild in the main checkout and `bb plugin reload focus-board`. Includes
-changelog formatting standards and the never-retag rule.
+Releasing a new plugin version: work flows into `dev` (the integration
+branch; the main checkout sits on it and that is what bb serves), while
+`main` is stable and moves only by release merges from `dev`. Coordinate
+with dev before bumping (concurrent threads release independently), bump
+`package.json` + `APP_VERSION` + `WHATS_NEW` in one release commit,
+verify with `npm test` and `npm run build`, merge dev to main (via a
+temporary worktree), tag annotated `vX.Y.Z` on the release commit, push,
+then rebuild in the main checkout and `bb plugin reload focus-board`.
+Includes changelog formatting standards and the never-retag rule.
 Full reference: `.agents/agents-md-detail/release.md`
 
 ## Test coverage matrix
