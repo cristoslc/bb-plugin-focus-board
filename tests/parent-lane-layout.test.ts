@@ -54,15 +54,16 @@ describe("lockIndexFor", () => {
     expect(lockIndexFor(300, flushes)).toBe(1);
   });
 
-  it("widens each lane's grab range a few pixels into the lane to its left", () => {
+  it("widens each lane's grab range across the lane gap into the lane to its left", () => {
     // Stop with the previous lane's right sliver at the lock point: the
-    // next lane still grabs.
-    expect(lockIndexFor(295, flushes)).toBe(1);
+    // next lane still grabs (pad covers the inter-lane gap plus the sliver).
+    expect(lockIndexFor(277, flushes)).toBe(1);
+    expect(lockIndexFor(680, flushes)).toBe(2);
   });
 
   it("keeps the previous lane when the stop is short of the padded boundary", () => {
-    expect(lockIndexFor(290, flushes)).toBe(0);
-    expect(lockIndexFor(688, flushes)).toBe(1);
+    expect(lockIndexFor(275, flushes)).toBe(0);
+    expect(lockIndexFor(675, flushes)).toBe(1);
   });
 
   it("returns the first lane before any lock point", () => {
