@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.13";
+export const APP_VERSION = "0.5.16";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -22,6 +22,24 @@ export interface WhatsNewEntry {
 
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    version: "0.5.16",
+    items: [
+      "No board behavior changes in this version — 0.5.16 ships the same build as 0.5.15: drop a card on the Pinned lane to pin it.",
+    ],
+  },
+  {
+    version: "0.5.15",
+    items: [
+      "The board's Pinned column now accepts a dragged card: dropping one there pins it, so pinning no longer needs the card's right-click menu.",
+    ],
+  },
+  {
+    version: "0.5.14",
+    items: [
+      "Thread pane on phones: the actions menu now offers Full Screen, so opening a thread in the main view is one tap even where the full-screen button is hidden.",
+    ],
+  },
   {
     version: "0.5.13",
     items: [

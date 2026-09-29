@@ -499,6 +499,16 @@ export function ThreadPane({
               run: onToggleArchived,
             },
           ];
+          // On compact viewports the full-screen button is dropped from the
+          // header to save space, so the menu carries "Full Screen" instead.
+          if (isCompact) {
+            actionItems.push({
+              id: "maximize",
+              label: "Full Screen",
+              icon: "Maximize2",
+              run: onMaximize,
+            });
+          }
           return <ActionsMenu items={actionItems} />;
         })()}
         {!isCompact ? (

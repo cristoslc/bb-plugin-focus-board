@@ -111,18 +111,34 @@ export function useBbNavigate(): unknown {
 export function experimental_useSidebarThreads(): unknown {
   return {
     status: "ready",
-    threads: SIM_THREADS,
+    // The live array, not the constant: setPinned rewrites it, and the app's
+    // memo chain keyed on this identity must see a fresh object to re-sort
+    // the Pinned lane.
+    threads: simThreads,
     projects: SIM_PROJECTS,
     sections: SIM_SECTIONS,
     experimental_archived: null,
   };
 }
 
+/** A copy the mock actions can rewrite; the constant stays pristine. */
+let simThreads: readonly SimThread[] = SIM_THREADS;
+
 export function experimental_useSidebarThreadActions(): unknown {
   return {
     open: () => {},
     openNewThread: () => {},
-    setPinned: async () => {},
+    setPinned: async (threadId: string, pinned: boolean) => {
+      const before = simThreads.length;
+      simThreads = simThreads.map((candidate) =>
+        candidate.id === threadId ? { ...candidate, isPinned: pinned } : candidate,
+      );
+      const after = simThreads.length;
+      if (before !== after) throw new Error(`setPinned changed the thread count (${before} → ${after})`);
+      const moved = simThreads.find((candidate) => candidate.id === threadId);
+      if (moved === undefined) throw new Error(`setPinned: unknown thread ${threadId}`);
+      mockRender();
+    },
     setRead: async () => {},
     rename: async () => {},
     archive: () => {},

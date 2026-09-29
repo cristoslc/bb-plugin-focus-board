@@ -107,6 +107,12 @@ interface BoardProps {
   onDropDone: (threadId: string) => void;
   /** Drop a card onto the Unread column (Attention grouping only). */
   onDropUnread: (threadId: string) => void;
+  /**
+   * Drop a card onto the Pinned column. Optional because pinning is a state
+   * change the caller may not wire: the column then stays a no-drop target,
+   * exactly as before this prop existed.
+   */
+  onDropPinned?: (threadId: string) => void;
   /** Right-click menu actions for one thread, sidebar-menu style. */
   menuActionsFor: (thread: PluginSidebarThread) => readonly CardMenuAction[];
   /**
@@ -207,6 +213,7 @@ export function Board({
   onRankMove,
   onDropDone,
   onDropUnread,
+  onDropPinned,
   menuActionsFor,
   sweepCandidatesFor,
   armedSweep = null,
@@ -376,11 +383,15 @@ export function Board({
       `Moved to position ${after.indexOf(threadId) + 1} of ${after.length} in ${column.label}.`,
     );
   }
-  // Only the Done and Unread lanes accept drops; Unread exists as a column
-  // only in the Attention grouping.
+  // Done, Unread, and Pinned lanes accept state-change drops; Unread exists
+  // as a column only in the Attention grouping, and Pinned only once a card
+  // is in it. Pinned without a handler stays a plain no-drop lane: dropping
+  // anywhere else then reads as the browser's no-drop cursor, not as the
+  // board eating the gesture silently.
   const dropHandlerFor = (columnId: string): ((threadId: string) => void) | null => {
     if (columnId === "done") return onDropDone;
     if (columnId === "unread") return onDropUnread;
+    if (columnId === "pinned") return onDropPinned ?? null;
     return null;
   };
   return (
@@ -537,8 +548,8 @@ export function Board({
                           (event) => {
                             // Same lane only. A drag from another lane would
                             // write an order for a card that is not in this
-                            // one — invisible on drop — so it falls through to
-                            // the column's Done/Unread handler instead.
+                            // one — invisible on drop — so it falls through
+                            // to the column's state-change handler instead.
                             if (!ranking) return;
                             if (!isLaneDrag(event.dataTransfer.types, rankKey)) return;
                             event.preventDefault();
