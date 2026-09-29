@@ -24,6 +24,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   refusal check moved to a plain lane, and a new step pins this gesture for
   real (`tests/manual/uat-rank.yaml`).
 
+## [0.5.14] - 2026-09-28
+
+### Added
+
+- **Full Screen moves into the phone thread pane's actions menu.** A phone pane covered the whole board as a full-screen sheet but hid the maximise icon that desktop shows next to the header, so reaching the main thread view (with its full message routing and question handling) was impossible from the pane. The "More thread actions" menu now offers "Full Screen" on compact viewports, calling the same navigation as the desktop button; desktop keeps the visible button and the menu does not duplicate it (`tests/thread-pane-actions.test.tsx`, red-test first).
+
 ## [0.5.13] - 2026-09-28
 
 ### Added

@@ -114,7 +114,12 @@ fingerprint says which key era produced it).
 
 ## 8. Release ledger
 
-- The in-plugin changelog (`lib/whats-new.ts`) is the only changelog; there
-  is no CHANGELOG.md. Git tags plus release commits serve as the history.
+- `lib/whats-new.ts` is the user-facing What's-new modal feed: one
+  condensed, behavior-first entry per release, newest first.
+- `CHANGELOG.md` is the full Keep-a-Changelog record; every release commit
+  also adds its version's section there, ordered newest first. Both surfaces
+  must name the same version at the top. Git tags (`git tag -v vX.Y.Z`) plus
+  release commits serve as the distribution history.
 - Release notes for what shipped in each version are recoverable from
-  `git log --oneline vX.Y-1..vX.Y` plus the `WHATS_NEW` entry.
+  `git log --oneline vX.Y-1..vX.Y`, the `WHATS_NEW` entry, and the
+  CHANGELOG.md section.
