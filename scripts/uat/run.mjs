@@ -416,6 +416,48 @@ const pageBoardNoise = ({ dx, holdMs }) => {
 };
 
 /**
+ * Armed variant of the noise listener for REAL wheel input: arm it in the
+ * page first (the listener must already exist when the wheel arrives), pump
+ * wheel events through Puppeteer's input pipeline from Node, then read the
+ * signature. This exercises the same input path a trackpad pan uses —
+ * smooth-animated wheel deltas — instead of a bare scrollLeft assignment.
+ */
+const pageBoardNoiseArm = () => {
+  const board = document.querySelector("[data-parent-board]");
+  if (!board) throw new Error("board_quiet wheel: no [data-parent-board]");
+  const times = [];
+  let prev = board.scrollLeft;
+  board.addEventListener(
+    "scroll",
+    () => {
+      if (Math.abs(board.scrollLeft - prev) > 1) times.push(window.performance.now());
+      prev = board.scrollLeft;
+    },
+    { passive: true },
+  );
+  window.__uatNoise = { times, start: window.performance.now() };
+};
+
+const pageBoardNoiseRead = ({ holdMs }) =>
+  new Promise((resolve) => {
+    setTimeout(() => {
+      const noise = window.__uatNoise;
+      const now = window.performance.now();
+      const tail = noise.times.length > 0 ? now - noise.times[noise.times.length - 1] : now - noise.start;
+      resolve({ events: noise.times.length, tail });
+    }, holdMs);
+  });
+
+/** Real wheel input: 10 discrete wheel ticks through the input pipeline. */
+const wheelPan = async (page, dx) => {
+  const board = await page.$("[data-parent-board]");
+  if (!board) throw new Error("board_quiet wheel: no board element");
+  const box = await board.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  for (let i = 0; i < 10; i++) await page.mouse.wheel({ deltaX: dx / 10 });
+};
+
+/**
  * Is the given thread card fully visible inside the board's scroll viewport?
  * The sticky rail (140px) and the sticky lane headers (76px) overlay the
  * viewport edges, so a card under either is treated as hidden — that is the
@@ -675,15 +717,24 @@ async function check(step, page, gestureResults = []) {
     }
     if (rule.board_quiet !== undefined) {
       const want = rule.board_quiet;
-      const got = await page.evaluate(pageBoardNoise, {
-        dx: want.dx ?? 480,
-        holdMs: want.hold_ms ?? 2500,
-      });
-      const quietOk = got.events <= (want.max_events ?? 60) && got.tail >= (want.max_tail_ms ?? 500);
+      let noise;
+      if (want.mode === "wheel") {
+        // mode: wheel pans with real wheel events through the browser's
+        // input pipeline instead of a scrollLeft assignment.
+        await page.evaluate(pageBoardNoiseArm);
+        await wheelPan(page, want.dx ?? 480);
+        noise = await page.evaluate(pageBoardNoiseRead, { holdMs: want.hold_ms ?? 2500 });
+      } else {
+        noise = await page.evaluate(pageBoardNoise, {
+          dx: want.dx ?? 480,
+          holdMs: want.hold_ms ?? 2500,
+        });
+      }
+      const quietOk = noise.events <= (want.max_events ?? 60) && noise.tail >= (want.max_tail_ms ?? 500);
       expect(
         `board quiet after pan: ≤${want.max_events ?? 60} events, still ≥${want.max_tail_ms ?? 500}ms`,
         quietOk,
-        `${got.events} events over the hold, last ${Math.round(got.tail)}ms ago`,
+        `${noise.events} events over the hold, last ${Math.round(noise.tail)}ms ago`,
       );
     }
     if (rule.rpc_called_method !== undefined) {
@@ -774,7 +825,7 @@ async function runSuite(file, { port, browser }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "scroll", "sleep", "press_escape", "push_url"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "scroll", "resize", "sleep", "press_escape", "push_url"];
       let gestureFailed = false;
       for (const gesture of Object.keys(step).filter((key) => GESTURE_ORDER.includes(key))) {
         if (gesture === "drag") {
@@ -823,7 +874,14 @@ async function runSuite(file, { port, browser }) {
           await page.evaluate(pageBoardScroll, step.scroll);
           // The board settles on a 200ms quiet-period debounce plus a smooth
           // pin glide before it re-locks; give it room before assertions.
-          await sleep(1200);
+          // settle_ms: 0 skips the wait so a following click lands while the
+          // glide is in flight (the click-during-glide adversarial step).
+          await sleep(Math.max(0, Number(step.scroll.settle_ms ?? 1200)));
+        } else if (gesture === "resize") {
+          // A viewport change while the lock is held re-runs the layout; let
+          // the resize observer commit before assertions sample the DOM.
+          await page.setViewport({ width: step.resize.width, height: step.resize.height });
+          await sleep(800);
         } else if (gesture === "sleep") {
           // A wait between gestures, for multi-phase board reactions (pin
           // glide, recut, post-recut corrections) that no single event

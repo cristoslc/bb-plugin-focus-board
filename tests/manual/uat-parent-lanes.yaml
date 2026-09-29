@@ -92,6 +92,46 @@ steps:
       - board_quiet: { dx: 480, hold_ms: 2500, max_events: 60, max_tail_ms: 500 }
       - locked_lane: true
 
+  - id: wheel-pan-locks-and-quiets-like-a-trackpad
+    title: A real wheel-event pan re-locks the nearest lane and settles quiet
+    goto: "?groupBy=parent"
+    # mode: wheel pans through the browser's input pipeline (real wheel
+    # events, smooth-animated like a trackpad) instead of a scrollLeft
+    # assignment — the same input path the operator's trackpad uses.
+    assert:
+      - board_quiet: { dx: 480, hold_ms: 2500, mode: wheel, max_events: 80, max_tail_ms: 500 }
+      - locked_lane: true
+      - bands_aligned: true
+
+  - id: click-during-a-glide-wins-the-lock
+    title: Clicking a family header while a pan glide is in flight locks THAT lane, not the pan's target
+    goto: "?groupBy=parent"
+    # The pan starts a glide toward the sweep family; the click (no settle
+    # wait) lands while that glide is in flight and must win the lock back
+    # for family A instead of the pan's target.
+    scroll: { dx: 400, settle_ms: 0 }
+    click_aria: { label: "Open Parent thread lane fixture" }
+    sleep: 3000
+    assert:
+      - locked_lane: thr_parent_lane
+      - bands_aligned: true
+
+  - id: viewport-resize-while-locked-stays-aligned
+    title: Resizing the viewport wider while a lane is locked keeps the ruler locked and bands aligned
+    goto: "?groupBy=parent"
+    resize: { width: 1400, height: 800 }
+    assert:
+      - locked_lane: thr_parent_lane
+      - bands_aligned: true
+
+  - id: viewport-shrink-while-locked-stays-aligned
+    title: Resizing the viewport narrower while a lane is locked keeps the ruler locked and bands aligned
+    goto: "?groupBy=parent"
+    resize: { width: 700, height: 640 }
+    assert:
+      - locked_lane: thr_parent_lane
+      - bands_aligned: true
+
   - id: search-matching-only-loose-threads-shows-empty-state
     title: A search that matches only loose threads drops every family and shows the empty state
     goto: "?groupBy=parent&q=Queue%20the%20UAT%20pass%20for%20the%20rank%20lane"
