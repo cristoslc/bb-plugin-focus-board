@@ -195,12 +195,12 @@ export function predictedStart(
 
 /** How far past its flush point a lane must sit before it can grab the lock —
  *  actually: how wide the grab range reads in the other direction. Each lane's
- *  grab range extends GRAB_PAD pixels to the left of its flush point (into the
- *  lane to its left), so stopping with the previous lane's right sliver at the
- *  lock point still lands the incoming lane. There is no special case when a
- *  lane has no further lane to its right: a stop past the last lock point is
- *  the last lane. */
-export const GRAB_PAD = 8;
+ *  grab range extends left of its flush point across the inter-lane gap and a
+ *  few pixels of the lane to its left, so stopping with the previous lane's
+ *  right sliver at the position-one marker still lands the incoming lane
+ *  (operator: "the right 5-10 pixels of a column jump the selector to its
+ *  right, unless there are no more columns to its right"). */
+export const GRAB_PAD = 24;
 
 /** The lane that grabs the lock for a given resting scroll position. `flush`
  *  holds each lane's flush scrollLeft (ascending). A lane grabs once the

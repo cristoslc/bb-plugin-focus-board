@@ -1,17 +1,17 @@
-_Generated 2026-09-29T20:26:14.967Z by `npm run uat`._
+_Generated 2026-09-29T21:38:41.431Z by `npm run uat`._
 
 # UAT report
 
 ## parent-lanes
 
-Source: `tests/manual/tmp-red.yaml` · theme dark
+Source: `tests/manual/uat-parent-lanes.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
 | Parent-thread grouping shows family lanes and excludes loose threads | pass | ✓ text visible: "Parent thread lane fixture"; ✓ text visible: "Child thread lane fixture"; ✓ text hidden: "Standalone" |
 | The board opens with a family locked as the ruler lane and band tracks aligned | pass | ✓ locked lane: true; ✓ bands aligned across lanes; ✓ nest toggle: aria-checked=true aria-disabled=true; ✓ text hidden: "Standalone" |
 | A short pan that mostly brings the next lane in locks that lane | pass | ✓ locked lane: "thr_sweep_parent"; ✓ bands aligned across lanes |
-| Hovering a swimlane shades that row across every lane | FAIL | × swimlane hover shades one row across lanes (no band carries the hover shading) |
+| Hovering a swimlane shades that row across every lane | pass | ✓ swimlane hover shades one row across lanes |
 | Clicking a lane header opens the parent thread's pane | pass | ✓ pane open; ✓ text visible: "Parent thread lane fixture"; ✓ url ends with /board/t/thr_parent_lane |
 | Clicking a child card opens its thread pane | pass | ✓ pane shows thr_child_lane; ✓ active card is thr_child_lane; ✓ url ends with /board/t/thr_child_lane |
 | A deep-linked child in the rightmost lane is scrolled into view | pass | ✓ pane shows thr_child_lane; ✓ active card is thr_child_lane; ✓ active card visible |
