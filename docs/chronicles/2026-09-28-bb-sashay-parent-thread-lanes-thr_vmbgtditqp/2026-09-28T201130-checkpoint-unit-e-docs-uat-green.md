@@ -17,3 +17,5 @@ Housekeeping completed:
 Verification: `npx tsc --noEmit`, `npm test` (466 tests), `npm run build`, and `CHROME_PATH=... npm run uat -- tests/manual/uat-parent-lanes.yaml` all pass.
 
 **Commits in this unit:**
+- `3e27191` Unit E: recency lane order + optional project grouping for parent-thread board
+- `20e6031` Unit E: docs, UAT, and renderer toggle test

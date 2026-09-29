@@ -17,3 +17,5 @@ Implemented and verified:
 Verification: `npx tsc --noEmit` and `npm test` both pass (465 tests).
 
 **Commits in this unit:**
+- `3e27191` Unit E: recency lane order + optional project grouping for parent-thread board
+- `20e6031` Unit E: docs, UAT, and renderer toggle test

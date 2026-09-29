@@ -11,3 +11,5 @@ responding-to: operator steering while PR #9 sits at the merge gate
 This unit turns the revised D5 and new D5a into code: a recency comparator over the whole family, a persisted "By project" toggle that sections family lanes by the parent's `projectId`, and the Standalone lane trailing as an ungrouped section. The attention-derived lane walk (`walkLiveFamilyRank`/`standaloneLaneRank`) leaves the default ordering and will be removed or narrowed if nothing else needs it.
 
 **Commits in this unit:**
+- `3e27191` Unit E: recency lane order + optional project grouping for parent-thread board
+- `20e6031` Unit E: docs, UAT, and renderer toggle test
