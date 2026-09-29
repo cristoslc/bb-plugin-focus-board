@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { threadState } from "./grouping";
 import { findTicketRefs, resolveRepoSlug, type TicketRef } from "@/lib/tickets";
 import type { GitHubItemStatus } from "@/lib/tracker-status";
-import { grandchildCountFor } from "./nesting";
+
 import { rankDragType } from "../lib/rank";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
 
@@ -52,8 +52,6 @@ interface ThreadCardProps {
    * (including ones rendering standalone), not just the nested rows.
    */
   childCount?: number;
-  /** Parent id → nested children; used for the per-child `+N more` count. */
-  childrenByParent?: ReadonlyMap<string, readonly PluginSidebarThread[]>;
   /** Reduced opacity for family members that did not match the filters. */
   dimmed?: boolean;
   /**
@@ -210,7 +208,6 @@ export function ThreadCard({
   menuActions,
   childThreads,
   childCount,
-  childrenByParent,
   dimmed,
   rankKey,
   onRankDragStart,
@@ -355,7 +352,6 @@ export function ThreadCard({
           <ul className="flex flex-col gap-1">
             {children.map((child) => {
               const childDone = doneIds?.has(child.id) ?? false;
-              const grandchildCount = grandchildCountFor(child, childrenByParent ?? new Map());
               return (
                 <li key={child.id}>
                   <ChildRow
@@ -365,23 +361,6 @@ export function ThreadCard({
                     onOpenThread={onOpenThread}
                     menuActions={childMenuActions?.(child)}
                   />
-                  {grandchildCount > 0 ? (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        onOpenThread(child.id);
-                      }}
-                      className={cn(
-                        "ml-1.5 flex items-center rounded-sm px-1.5 py-0.5 text-left text-[10px] text-muted-foreground/70",
-                        "transition-colors hover:bg-accent/50 hover:text-foreground",
-                        "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      )}
-                    >
-                      +{grandchildCount} more
-                    </button>
-                  ) : null}
                 </li>
               );
             })}

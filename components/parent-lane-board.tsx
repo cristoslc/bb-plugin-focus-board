@@ -13,7 +13,6 @@ import { ThreadCard } from "./thread-card";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
 import { EmptyState } from "./empty-state";
 import { threadState } from "./grouping";
-import { grandchildCountFor } from "./nesting";
 import {
   sectionParentLanes,
   type ParentLane,
@@ -25,6 +24,7 @@ import {
   RULER,
   computeParentLaneLayout,
   predictedStart,
+  lockIndexFor,
 } from "./parent-lane-layout";
 import type { ParentLaneOrder } from "./preferences";
 
@@ -402,16 +402,11 @@ export function ParentLaneBoard({
 
     const nearestLane = () => {
       const widths = layoutRef.current?.laneWidths ?? [];
-      let best = 0;
-      let bestDist = Number.POSITIVE_INFINITY;
-      for (let i = 0; i < widths.length; i += 1) {
-        const dist = Math.abs(el.scrollLeft - (predictedStart(i, widths, RAIL_W) - 1));
-        if (dist < bestDist) {
-          best = i;
-          bestDist = dist;
-        }
-      }
-      return best;
+      const flush = widths.map((_, i) => predictedStart(i, widths, RAIL_W) - 1);
+      // Padded grab range: a lane grabs a little before its flush point, so
+      // a stop with the previous lane's right sliver at the lock point still
+      // locks it (operator: "a wider grab range for the left-most column").
+      return lockIndexFor(el.scrollLeft, flush);
     };
 
     const assign = (laneIndex: number) => {
@@ -799,8 +794,6 @@ export function ParentLaneBoard({
                           repoHrefBase={repoBaseFor(cell.thread.projectId) ?? undefined}
                           statusFor={statusFor}
                           menuActions={menuActionsFor(cell.thread)}
-                          childCount={grandchildCountFor(cell.thread, childrenByParent)}
-                          childrenByParent={childrenByParent}
                           activeThreadId={activeThreadId}
                           dimmed={dimmedIds.has(cell.thread.id)}
                           onOpen={() => onOpenThread(cell.thread.id)}
