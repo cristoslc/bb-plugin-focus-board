@@ -9,13 +9,13 @@ happy-path coverage suffices except where a cell is filled anyway.
 | Workflow path | Blast radius | Happy | Sad | Edge | Corner |
 |---------------|--------------|-------|-----|------|--------|
 | Group threads into columns (`buildColumns`, `columnFor`) | low | auto (`tests/grouping.test.ts`) | auto (unknown group-by falls back) | auto (frozen column, pinned, done ordering) | skip (pure ordering) |
-| Parent lane building (`buildParentLanes`) | low | auto (`tests/parent-lanes.test.ts`: a parent with visible children becomes a lane) | auto (no families → one Standalone lane) | auto (deleted parent → orphan in Standalone; cycle → roots) | auto (lane with only archived children renders as a rider-only lane) |
+| Parent lane building (`buildParentLanes`) | low | auto (`tests/parent-lanes.test.ts`: a parent with visible children becomes a lane) | auto (no families → no lanes; orphan/cycle threads render none) | auto (archived-only family renders as a rider-only lane) | skip |
 | Parent row placement | low | auto (`tests/parent-lanes.test.ts`: child state → row, incl. idle buckets) | auto (Done child in Done row) | auto (state change moves the card between rows) | skip (pure placement) |
 | Parent lane order | low | auto (`tests/parent-lanes.test.ts`: family recency — most recent touch at left, done children included) | auto (untouched families tie → derived order) | auto (pinned parent floats left) | auto (archived members excluded from the lift) |
-| Parent lane project grouping | low | auto (`tests/parent-lanes.test.ts`: sections grouped by parent projectId, Standalone trailing) | auto (sections order by most recent lane) | auto (lanes inside a section keep recency order) | skip |
+| Parent lane project grouping | low | auto (`tests/parent-lanes.test.ts`: sections grouped by parent projectId) | auto (sections order by most recent lane) | auto (lanes inside a section keep recency order) | skip |
 | Parent cell order | low | auto (`tests/parent-lanes.test.ts`: urgent child first) | auto (no urgent → derived order) | auto (rank-free: stored column ranks ignored in lane mode) | skip |
 | Parent lane header facts | low | auto (`tests/parent-lanes.test.ts` + `tests/parent-lane-board.test.tsx`: child-count chip counts all children, archived included) | auto (state dot present for every state) | auto (done parent muted) | skip |
-| Parent Standalone lane | low | auto (`tests/parent-lanes.test.ts`: same ladder, urgent-first order) | auto (empty board → single empty lane) | auto (pinned standalone floats in-lane) | skip |
+| Parent loose-thread exclusion (no Standalone lane) | low | auto (`tests/parent-lane-board.test.tsx`: loose threads render no lane, no cards) | auto (empty board → no-families empty state) | skip | skip |
 | Parent archived riders (D7) | low | auto (`tests/parent-lanes.test.ts`: render under header, dimmed) | auto (archived-only family → rider-only lane still shows header) | auto (archived child never in a row cell) | skip |
 | Parent-mode family filter + search | low | auto (`tests/parent-lanes.test.ts`: child match keeps lane, members dim) | auto (no match drops lane) | auto (search by title matches through the lane) | skip |
 | Parent-mode depth cap (D8) | low | auto (`tests/parent-lanes.test.ts`: `+N` chip on level-1 child) | auto (no chip without grandchildren) | auto (grandchild never a card) | skip |

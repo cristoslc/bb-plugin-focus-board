@@ -1,14 +1,15 @@
-_Generated 2026-09-28T15:13:05.114Z by `npm run uat`._
+_Generated 2026-09-29T01:19:54.763Z by `npm run uat`._
 
 # UAT report
 
 ## rank-ordering
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_kuq6se56e7-1/bb-plugin-focus-board/tests/manual/uat-rank.yaml` · theme dark
+Source: `tests/manual/uat-rank.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
 | A first-time user with no stored order can drag, and the drop writes one | pass | ✓ unread has 3 reorder slots; ✓ unread hand-ordered=false; ✓ drop permitted during drag; ✓ unread order; ✓ stored order {"status:unread":["thr_review_pr"]}; ✓ unread hand-ordered=true |
+| The first drop BELOW another card re-sorts, instead of leaving the card on top | pass | ✓ drop permitted during drag; ✓ unread order; ✓ stored order {"status:unread":["thr_uat_queue","thr_rpc_auth"]}; ✓ unread hand-ordered=true |
 | With every lane draggable, dropping on Done still marks done | pass | ✓ called done_set |
 | A lane with no cross-column drop handler still authorises its own reorder | pass | ✓ pinned has 2 reorder slots; ✓ drop permitted during drag; ✓ pinned order; ✓ stored order {"pinned":["thr_roadmap"]} |
 | A drop whose payload has no card id falls back to the dragstart ref | pass | ✓ pinned has 2 reorder slots; ✓ pinned order; ✓ stored order {"pinned":["thr_roadmap"]}; ✓ no refusal banner |

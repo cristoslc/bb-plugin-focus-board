@@ -58,6 +58,9 @@ steps:
 
   - id: up-to-date-is-quiet
     title: Revisiting at the same version stays quiet
-    goto: "?groupBy=status&lastSeenVersion=0.5.8"
+    # No lastSeenVersion param: the harness leaves the stamp alone, so the
+    # running version counts as already seen and the button stays quiet.
+    # (Hardcoding a lastSeenVersion here rots on every release bump.)
+    goto: "?groupBy=status"
     assert:
       - whats_new: { icon: true, unseen: false, modal: false }

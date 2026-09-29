@@ -1,10 +1,11 @@
 # Operator-assisted E2E: parent-thread lanes.
 #
 # The harness mounts the actual app.tsx against the mocked SDK
-# (scripts/screenshot), with one seeded family (thr_parent_lane /
-# thr_child_lane) plus the normal fixture threads. The suite exercises the
-# pivoted Attention grid: vertical lanes are families, horizontal rows are the
-# attention ladder, and only children render as cards.
+# (scripts/screenshot), with the family fixtures (thr_parent_lane /
+# thr_child_lane, thr_fam_*) plus the normal fixture threads. The suite
+# exercises the pivoted Attention grid: vertical lanes are families,
+# horizontal rows are the attention ladder, and only children render as
+# cards. Loose (unparented) threads render no lane at all.
 #
 # Run: npm run uat -- tests/manual/uat-parent-lanes.yaml
 suite: parent-lanes
@@ -17,13 +18,13 @@ defaults:
   viewport: { width: 900, height: 640 }
 
 steps:
-  - id: parent-mode-renders-family-and-standalone-lanes
-    title: Parent-thread grouping shows the family lane and the Standalone lane
+  - id: parent-mode-renders-family-lanes-only
+    title: Parent-thread grouping shows family lanes and excludes loose threads
     goto: "?groupBy=parent"
     assert:
       - text_visible: "Parent thread lane fixture"
-      - text_visible: "Standalone"
       - text_visible: "Child thread lane fixture"
+      - text_hidden: "Standalone"
 
   - id: header-click-opens-parent-pane
     title: Clicking a lane header opens the parent thread's pane
@@ -50,12 +51,13 @@ steps:
       - pane: { threadId: thr_child_lane }
       - active_card: { id: thr_child_lane, visible: true }
 
-  - id: search-drops-families-shows-standalone
-    title: A search that matches only standalone threads drops every family
+  - id: search-matching-only-loose-threads-shows-empty-state
+    title: A search that matches only loose threads drops every family and shows the empty state
     goto: "?groupBy=parent&q=Queue%20the%20UAT%20pass%20for%20the%20rank%20lane"
     assert:
-      - text_visible: "Standalone"
-      - text_visible: "Queue the UAT pass for the rank lane"
+      - text_hidden: "Standalone"
+      - text_hidden: "Queue the UAT pass for the rank lane"
+      - text_visible: "No thread families to show yet"
 
   - id: lane-order-toggle-defaults-to-recency
     title: The lane-order toggle defaults to Recency in parent-thread mode
@@ -63,7 +65,7 @@ steps:
     assert:
       - text_visible: "Recency"
       - text_visible: "Parent thread lane fixture"
-      - text_visible: "Standalone"
+      - text_hidden: "Standalone"
 
   - id: lane-order-toggle-switches-to-project
     title: Switching lane order to By project groups family lanes under their project
@@ -71,7 +73,7 @@ steps:
     click_aria: { label: "By project" }
     assert:
       - text_visible: "By project"
-      - text_visible: "Standalone"
+      - text_visible: "Parent thread lane fixture"
 
   - id: lane-order-toggle-on-then-off
     title: Toggling lane order to By project then back to Recency keeps the board usable
@@ -79,7 +81,7 @@ steps:
     click_aria: { label: "By project" }
     assert:
       - text_visible: "By project"
-      - text_visible: "Standalone"
+      - text_visible: "Parent thread lane fixture"
 
   - id: lane-order-toggle-back-to-recency
     title: Returning to Recency order removes project sections
@@ -87,7 +89,7 @@ steps:
     click_aria: { label: "Recency" }
     assert:
       - text_visible: "Parent thread lane fixture"
-      - text_visible: "Standalone"
+      - text_hidden: "Standalone"
 
   - id: group-switch-back-to-attention
     title: Switching back to Attention grouping renders normal columns

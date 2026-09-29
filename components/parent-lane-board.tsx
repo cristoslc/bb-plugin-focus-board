@@ -4,6 +4,7 @@ import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { ThreadCard } from "./thread-card";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
+import { EmptyState } from "./empty-state";
 import { threadState } from "./grouping";
 import { grandchildCountFor } from "./nesting";
 import {
@@ -118,17 +119,17 @@ function LaneHeader({
   doneIds: ReadonlySet<string>;
   onOpenThread: (threadId: string) => void;
 }) {
-  const parent = lane.headerThread;
-  const isDone = parent !== null && doneIds.has(parent.id);
+  const parent = lane.parent;
+  const isDone = doneIds.has(parent.id);
   const content = (
     <div
       className={cn(
         "flex items-center gap-1.5 rounded-md px-2 py-1.5",
-        parent !== null && "hover:bg-accent/50",
+        "hover:bg-accent/50",
         isDone && "opacity-50 saturate-50",
       )}
     >
-      {parent !== null ? <LaneStateDot thread={parent} /> : null}
+      <LaneStateDot thread={parent} />
       <span className="truncate text-[13px] font-medium leading-snug">{lane.label}</span>
       {lane.childCount > 0 ? (
         <span className="rounded-full bg-muted px-1.5 text-[10px] tabular-nums text-muted-foreground">
@@ -137,7 +138,6 @@ function LaneHeader({
       ) : null}
     </div>
   );
-  if (parent === null) return content;
   return (
     <button
       type="button"
@@ -420,7 +420,16 @@ export function ParentLaneBoard({
     onClosePane();
   };
 
-  if (lanes.length === 0) return null;
+  if (lanes.length === 0) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center p-4">
+        <EmptyState>
+          No thread families to show yet. Loose (unparented) threads stay in the Attention
+          view — set a parent on a thread to start a lane here.
+        </EmptyState>
+      </div>
+    );
+  }
   const rowIds = lanes[0].rows.map((row) => row.id);
   const rowLabels = lanes[0].rows.map((row) => row.label);
   const childProps = {

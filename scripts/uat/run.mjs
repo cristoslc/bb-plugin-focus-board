@@ -546,6 +546,14 @@ async function check(step, page, gestureResults = []) {
         got ? "present" : "not found in page text",
       );
     }
+    if (rule.text_hidden !== undefined) {
+      const got = await page.evaluate(pageTextVisible, rule.text_hidden);
+      expect(
+        `text hidden: ${JSON.stringify(rule.text_hidden)}`,
+        !got,
+        !got ? "absent" : "found in page text",
+      );
+    }
     if (rule.rpc_called_method !== undefined) {
       const methods = await page.evaluate(() =>
         globalThis.__uat.calls().map((call) => call.method),
@@ -613,7 +621,10 @@ async function runSuite(file, { port, browser }) {
         // one page.
         await page.evaluateOnNewDocument(installProtectedDrag);
         await page.goto(`${base}${step.goto}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-        await page.waitForSelector("section[aria-label]", { timeout: 30_000 });
+        // The board surface: a grouped board (sections) or an empty state.
+        // The parent-thread view legitimately renders no sections when a
+        // filter/search drops every family, so the wait must accept both.
+        await page.waitForSelector("section[aria-label], [role=status]", { timeout: 30_000 });
         await page.evaluate((t) => document.documentElement.classList.toggle("dark", t === "dark"), theme);
         await page.evaluate(() => globalThis.__uat.resetCalls());
         await sleep(300);
