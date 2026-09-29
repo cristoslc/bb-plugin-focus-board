@@ -53,10 +53,6 @@ interface ParentLaneBoardProps {
 /** Ruler+wrap board chrome measurements (shared with parent-lane-layout.ts). */
 const RAIL_W = 140;
 const HEADER_H = 76;
-/** Snap target: lanes rest flush against the rail (rail + gap + 1px kiss). */
-const SNAP_MARGIN = RAIL_W + RAIL_TO_LANE_GAP + 1;
-/** Board-level CSS snap; muted inline during pin glides. */
-const SNAP_TYPE = "x mandatory";
 
 const DOT_CLASS: Record<string, string> = {
   working: "bg-blue-500",
@@ -75,6 +71,25 @@ function LaneStateDot({ thread }: { thread: PluginSidebarThread }) {
       aria-hidden
     />
   );
+}
+
+/**
+ * Vertical bring-into-view correction for the active card, relative to the
+ * board's scroll viewport. Accounts for the sticky header band (cards can
+ * hide under it) and leaves a small breathing margin at the edges. Returns
+ * the scroll delta to apply; 0 means the card is fully visible.
+ */
+export function verticalCardCorrection(
+  el: HTMLElement,
+  card: HTMLElement,
+  headerH: number,
+): number {
+  const boardRect = el.getBoundingClientRect();
+  const cardRect = card.getBoundingClientRect();
+  const visibleTop = boardRect.top + headerH;
+  if (cardRect.top < visibleTop) return -(visibleTop - cardRect.top) - 8;
+  if (cardRect.bottom > boardRect.bottom) return cardRect.bottom - boardRect.bottom + 8;
+  return 0;
 }
 
 function ArchivedRider({
@@ -192,40 +207,37 @@ function LaneOrderToggle({
   value: ParentLaneOrder;
   onChange: (value: ParentLaneOrder) => void;
 }) {
+  const option = (id: ParentLaneOrder, label: string) => (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={value === id}
+      onClick={() => onChange(id)}
+      className={cn(
+        "flex items-center gap-1.5 rounded px-1.5 py-0.5 text-left w-full transition-colors",
+        value === id
+          ? "bg-primary/15 text-foreground"
+          : "text-muted-foreground hover:text-foreground hover:bg-accent/40",
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "block size-1.5 rounded-full shrink-0",
+          value === id ? "bg-primary" : "bg-muted-foreground/40",
+        )}
+      />
+      {label}
+    </button>
+  );
   return (
     <div
       role="radiogroup"
       aria-label="Lane order"
-      className="flex h-6 items-center self-start rounded-md border border-border bg-background p-0.5 text-[11px] font-medium"
+      className="flex flex-col gap-0.5 text-[11px] font-medium"
     >
-      <button
-        type="button"
-        role="radio"
-        aria-checked={value === "recency"}
-        onClick={() => onChange("recency")}
-        className={cn(
-          "rounded px-1.5 py-0.5 transition-colors",
-          value === "recency"
-            ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground hover:text-foreground",
-        )}
-      >
-        Recency
-      </button>
-      <button
-        type="button"
-        role="radio"
-        aria-checked={value === "project"}
-        onClick={() => onChange("project")}
-        className={cn(
-          "rounded px-1.5 py-0.5 transition-colors",
-          value === "project"
-            ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground hover:text-foreground",
-        )}
-      >
-        By project
-      </button>
+      {option("recency", "Recency")}
+      {option("project", "By project")}
     </div>
   );
 }
@@ -269,10 +281,13 @@ export function ParentLaneBoard({
   const pendingLockRef = useRef<number | null>(null);
   const glideLaneRef = useRef<number | null>(null);
   const glideTargetRef = useRef<number | null>(null);
+  /** True while a post-recut correction is self-scrolling, so the scroll
+   *  listener does not mistake its own events for a user pan. */
+  const postPinRef = useRef(false);
   const flatRef = useRef<{ lane: ParentLane; sectionLabel: string | null }[]>([]);
   const layoutRef = useRef<ReturnType<typeof computeParentLaneLayout> | null>(null);
   const viewportRef = useRef(0);
-  const frozenTotalRef = useRef(0);
+  const activeThreadIdRef = useRef<string | null>(null);
   const prevRectsRef = useRef<Map<string, DOMRect> | null>(null);
   const lockToRef = useRef<(index: number) => void>(() => {});
 
@@ -311,6 +326,7 @@ export function ParentLaneBoard({
   flatRef.current = flat;
   layoutRef.current = layout;
   viewportRef.current = viewportW;
+  activeThreadIdRef.current = activeThreadId;
 
   // Measure the scrollport for the context-column cap.
   useLayoutEffect(() => {
@@ -338,6 +354,51 @@ export function ParentLaneBoard({
     let lastLeft = el.scrollLeft;
     let settleTimer = 0;
     let glideTimer = 0;
+    let postPinTimer = 0;
+
+    /** DOM-measured corrections, shared by the post-pin timer and the
+     *  same-lane fast path: re-pin the locked lane's flush edge and bring
+     *  the active card into vertical view (instant on the fast path — no
+     *  glide is pending there, so nothing races). */
+    const runCorrections = () => {
+      const locked = el.querySelector("section[data-locked]");
+      if (locked instanceof HTMLElement) {
+        const drift =
+          locked.getBoundingClientRect().left -
+          (el.getBoundingClientRect().left + RAIL_W + RAIL_TO_LANE_GAP);
+        if (Math.abs(drift) > 2) el.scrollLeft += drift;
+      }
+      const id = activeThreadIdRef.current;
+      if (id !== null) {
+        const card = el.querySelector(`[data-thread-card="${CSS.escape(id)}"]`);
+        if (card instanceof HTMLElement) {
+          const delta = verticalCardCorrection(el, card, HEADER_H);
+          if (delta !== 0) el.scrollTop += delta;
+        }
+      }
+    };
+
+    /** After a recut's transitions settle: re-measure the pinned lane's
+     *  flush against the DOM (correcting prediction drift or transition
+     *  clamping) and bring the active card back into vertical view — the
+     *  recut resizes bands above it, which can push it off-screen. */
+    const schedulePostPin = () => {
+      window.clearTimeout(postPinTimer);
+      postPinRef.current = true;
+      postPinTimer = window.setTimeout(() => {
+        if (releasedRef.current || glidingRef.current) {
+          postPinRef.current = false;
+          return;
+        }
+        runCorrections();
+        // Keep the guard up through the corrections' own scroll events, so
+        // the drift jump and the smooth glide are not misread as a user pan.
+        window.clearTimeout(postPinTimer);
+        postPinTimer = window.setTimeout(() => {
+          postPinRef.current = false;
+        }, 250);
+      }, 300);
+    };
 
     const nearestLane = () => {
       const widths = layoutRef.current?.laneWidths ?? [];
@@ -358,16 +419,20 @@ export function ParentLaneBoard({
       glideLaneRef.current = null;
       glideTargetRef.current = null;
       pendingLockRef.current = null;
-      if (el.style.scrollSnapType !== "") el.style.scrollSnapType = "";
       if (laneIndex !== geoIdxRef.current) {
         prevRectsRef.current = captureCardRects(el);
-        frozenTotalRef.current = layoutRef.current?.totalWidth ?? 0;
         geoIdxRef.current = laneIndex;
         setGeoIdx(laneIndex);
       }
+      // Both paths: a recut needs the drift/vertical corrections after its
+      // transitions; a same-lane re-lock still owes the active card a
+      // vertical bring-into-view.
+      schedulePostPin();
       releasedRef.current = false;
       setReleased(false);
     };
+
+    let glideDeadline = 0;
 
     const glideCheck = () => {
       if (
@@ -377,7 +442,12 @@ export function ParentLaneBoard({
       ) {
         return;
       }
-      if (Math.abs(el.scrollLeft - glideTargetRef.current) <= 3) {
+      // Converged to the predicted flush, or the glide stalled (another
+      // scroll claimed the element): assign the intended lane either way.
+      if (
+        Math.abs(el.scrollLeft - glideTargetRef.current) <= 3 ||
+        performance.now() > glideDeadline
+      ) {
         assign(glideLaneRef.current);
         return;
       }
@@ -404,15 +474,13 @@ export function ParentLaneBoard({
       );
       const target = Math.max(
         0,
-        predictedStart(laneIndex, predicted.laneWidths, RAIL_W) - 1,
+        predictedStart(laneIndex, predicted.laneWidths, RAIL_W) - (RAIL_W + RAIL_TO_LANE_GAP),
       );
       ensureReachable(target);
       glidingRef.current = true;
       glideLaneRef.current = laneIndex;
       glideTargetRef.current = target;
-      // Mute the mandatory snap so CSS cannot re-align to the pre-recut
-      // flush position while the glide approaches the predicted one.
-      el.style.scrollSnapType = "none";
+      glideDeadline = performance.now() + 2500;
       el.scrollTo({ left: target, behavior: "smooth" });
       glideTimer = window.setTimeout(glideCheck, 400);
     };
@@ -430,7 +498,18 @@ export function ParentLaneBoard({
     };
 
     const lockTo = (laneIndex: number) => {
-      if (laneIndex === geoIdxRef.current && !releasedRef.current) return;
+      if (laneIndex === geoIdxRef.current && !releasedRef.current) {
+        // Same lane, still locked: no recut and no glide pending, so correct
+        // immediately (a delayed fix would show a deep-linked card below the
+        // fold), then re-check after any pane-driven relayout.
+        postPinRef.current = true;
+        runCorrections();
+        window.clearTimeout(postPinTimer);
+        postPinTimer = window.setTimeout(() => {
+          postPinRef.current = false;
+        }, 250);
+        return;
+      }
       pendingLockRef.current = laneIndex;
       releasedRef.current = true;
       setReleased(true);
@@ -441,7 +520,7 @@ export function ParentLaneBoard({
     const onScroll = () => {
       const dx = el.scrollLeft - lastLeft;
       lastLeft = el.scrollLeft;
-      if (glidingRef.current) return; // glide progress is polled by its timer
+      if (glidingRef.current || postPinRef.current) return; // managed scrolls poll their own timers
       if (dx === 0) return; // vertical scroll never releases the lock
       if (!releasedRef.current) {
         releasedRef.current = true;
@@ -457,6 +536,7 @@ export function ParentLaneBoard({
       el.removeEventListener("scroll", onScroll);
       window.clearTimeout(settleTimer);
       window.clearTimeout(glideTimer);
+      window.clearTimeout(postPinTimer);
     };
     // The manager binds once per lane-count change; live state flows
     // through refs, so the handlers never go stale.
@@ -477,21 +557,16 @@ export function ParentLaneBoard({
     return null;
   }, [flat, activeThreadId]);
 
+  // Active thread: its lane becomes the locked (pinned) lane. The vertical
+  // card bring-into-view does NOT run here: a programmatic smooth scroll
+  // cancels Chrome's previous one, so it would kill the horizontal pin
+  // glide mid-flight and leave the board drifting. The correction rides the
+  // post-pin schedule instead (assign → 300ms post-transition).
   useEffect(() => {
     const el = scrollRef.current;
     if (el === null || activeThreadId === null || activeLaneId === null) return;
     const index = flat.findIndex((entry) => entry.lane.id === activeLaneId);
     if (index >= 0) lockToRef.current(index);
-    const card = el.querySelector(`[data-thread-card="${CSS.escape(activeThreadId)}"]`);
-    if (card instanceof HTMLElement) {
-      const cardRect = card.getBoundingClientRect();
-      const boardRect = el.getBoundingClientRect();
-      if (cardRect.top < boardRect.top) {
-        el.scrollTop -= boardRect.top - cardRect.top;
-      } else if (cardRect.bottom > boardRect.bottom) {
-        el.scrollTop += cardRect.bottom - boardRect.bottom;
-      }
-    }
   }, [activeThreadId, activeLaneId, flat]);
 
   // FLIP: cards moved by a recut glide from their pre-recut rects into place.
@@ -514,7 +589,7 @@ export function ParentLaneBoard({
       node.style.transition = "none";
       node.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
       requestAnimationFrame(() => {
-        node.style.transition = "transform 240ms ease";
+        node.style.transition = "transform 200ms ease";
         node.style.transform = "";
       });
     }
@@ -547,20 +622,11 @@ export function ParentLaneBoard({
   const rowIds = flat[0].lane.rows.map((row) => row.id);
   const rowLabels = flat[0].lane.rows.map((row) => row.label);
   const lockedLane = lockedIndex === null ? undefined : flat[lockedIndex].lane;
-  // Spacer: trailing negative space so the last lane can reach the locked
-  // position. It also guarantees the pinned position stays reachable across
-  // the recut's width transition: coverage is computed against the smaller
-  // of the frozen and final totals (the board can only shrink mid-flip).
-  const spacerMin = Math.max(0, viewportW - RAIL_W - RAIL_TO_LANE_GAP);
-  const scrollLeftNow = scrollRef.current?.scrollLeft ?? 0;
-  const coverageTotal = Math.min(
-    frozenTotalRef.current === 0 ? layout.totalWidth : frozenTotalRef.current,
-    layout.totalWidth,
-  );
-  const spacerW = Math.max(
-    spacerMin,
-    scrollLeftNow + viewportW - coverageTotal + RAIL_TO_LANE_GAP,
-  );
+  // Trailing spacer: enough room for a full viewport past the last lane so
+  // it can reach the locked position. Constant per viewport — it never
+  // depends on the live scroll position, so it cannot wobble mid-pan
+  // (ensureReachable grows it only while a glide needs the reach).
+  const spacerW = Math.max(0, viewportW - RAIL_W - RAIL_TO_LANE_GAP);
 
   return (
     <div
@@ -623,7 +689,9 @@ export function ParentLaneBoard({
         </div>
         <div className="w-4 shrink-0" aria-hidden />
         {/* Lanes: one column per family; the locked lane renders rulers,
-            the rest minis, all sharing the same per-row band heights. */}
+            the rest minis, all sharing the same per-row band heights. From
+            lane 2 on, each section carries the 16px lane-gap margin that
+            predictedStart models (the w-4 div covers the rail → lane 1 gap). */}
         {flat.map((entry, laneIndex) => {
           const laneLayout = layout.lanes[laneIndex];
           const lane = entry.lane;
@@ -634,7 +702,10 @@ export function ParentLaneBoard({
               data-lane-id={lane.id}
               aria-label={lane.label}
               data-locked={locked ? "true" : undefined}
-              style={{ width: laneLayout.width, scrollMarginLeft: SNAP_MARGIN }}
+              style={{
+                width: laneLayout.width,
+                marginLeft: laneIndex === 0 ? 0 : RAIL_TO_LANE_GAP,
+              }}
               className={cn(
                 "shrink-0",
                 locked && "rounded-lg bg-primary/[0.02] shadow-[inset_0_0_0_1px] shadow-primary/20",
@@ -683,24 +754,41 @@ export function ParentLaneBoard({
                       "flex flex-wrap content-start gap-2 overflow-hidden p-1",
                       "border-b border-border/40 last:border-b-0",
                       "transition-[height] duration-200",
+                      // Ruler bands left-pack so a lone card stays pinned to
+                      // the flush edge (visible even on narrow scrollports);
+                      // context bands center their minis.
+                      locked ? "" : "justify-center",
                       locked && "bg-primary/[0.04]",
                     )}
                   >
                     {cells.length === 0 && chip === undefined ? (
-                      <div data-slab className="h-full min-w-4 flex-1 rounded-md bg-muted/20" aria-hidden />
+                      <div data-slab className="rounded-md bg-muted/10 outline outline-1 outline-dashed outline-border/25 flex-1 min-w-4 h-full" aria-hidden />
                     ) : null}
-                    {cells.map((cell) => (
-                      <div
-                        key={cell.thread.id}
-                        data-key={cell.thread.id}
-                        data-cell
-                        data-variant={cell.variant}
-                        style={{
-                          width: cell.variant === "ruler" ? RULER.w : MINI.w,
-                          height: cell.variant === "ruler" ? RULER.h : MINI.h,
-                        }}
-                        className="shrink-0 overflow-hidden rounded-md"
-                      >
+                    {cells.map((cell) => {
+                      // A lone context card fills its band row instead of
+                      // leaving dead space on both sides; rulers stay
+                      // uniform and center.
+                      const fillRow =
+                        cell.variant === "mini" && cells.length === 1 && chip === undefined;
+                      return (
+                        <div
+                          key={cell.thread.id}
+                          data-key={cell.thread.id}
+                          data-cell
+                          data-variant={cell.variant}
+                          style={
+                            fillRow
+                              ? { height: MINI.h }
+                              : {
+                                  width: cell.variant === "ruler" ? RULER.w : MINI.w,
+                                  height: cell.variant === "ruler" ? RULER.h : MINI.h,
+                                }
+                          }
+                          className={cn(
+                            "shrink-0 overflow-hidden rounded-md",
+                            fillRow && "min-w-[136px] flex-1",
+                          )}
+                        >
                         <ThreadCard
                           thread={cell.thread}
                           compact={cell.variant === "mini"}
@@ -718,8 +806,9 @@ export function ParentLaneBoard({
                           onOpen={() => onOpenThread(cell.thread.id)}
                           onOpenThread={onOpenThread}
                         />
-                      </div>
-                    ))}
+                        </div>
+                      );
+                    })}
                     {chip === undefined ? null : (
                       <div
                         data-cell
@@ -747,7 +836,6 @@ export function ParentLaneBoard({
           className="shrink-0 transition-[width] duration-200"
         />
       </div>
-      <style>{`[data-parent-board]{scroll-snap-type:${SNAP_TYPE};}[data-parent-board] > div > section{scroll-snap-align:start;}`}</style>
     </div>
   );
 }

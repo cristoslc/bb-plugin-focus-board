@@ -7,9 +7,7 @@ import {
   MIN_BAND_H,
   MINI,
   RULER,
-  RULER_COLS,
   RAIL_TO_LANE_GAP,
-  RULER_MIN_W,
   computeParentLaneLayout,
   predictedStart,
   viewportContextCols,
@@ -49,15 +47,13 @@ function doneIndex(lanes: { rows: { id: string }[] }[]): number {
 }
 
 describe("computeParentLaneLayout", () => {
-  it("gives every lane the same band height per status row, driven by the locked lane", () => {
-    const lanes = familyLanes([1, 5, 2, 0]); // lane 1 has 5 working children
+  it("a locked band lays ruler rows following the lane's own column count", () => {
+    const lanes = familyLanes([1, 5, 1, 0]); // the family at lane 1 has 5 working children
     const layout = computeParentLaneLayout(lanes, 1, VIEWPORT, RAIL_W);
     const w = workingIndex(lanes);
-    // The band height is a row-level property shared by all lanes, so the
-    // render can align seams: one bandHeights array governs every lane cell.
+    // Locked columns for lane 1 = ceil(5 / 2) = 3; rows per band = ceil(5 / 3) = 2.
+    const expected = Math.max(MIN_BAND_H, 2 * RULER.h + GAP);
     expect(layout.bandHeights).toHaveLength(lanes[0].rows.length);
-    const rulerRows = Math.ceil(5 / RULER_COLS);
-    const expected = Math.max(MIN_BAND_H, rulerRows * RULER.h + (rulerRows - 1) * GAP);
     expect(layout.bandHeights[w]).toBe(expected);
     expect(layout.bandHeights[w]).toBeGreaterThan(MIN_BAND_H);
   });
@@ -68,10 +64,9 @@ describe("computeParentLaneLayout", () => {
     expect(layout.bandHeights[doneIndex(lanes)]).toBe(MIN_BAND_H);
   });
 
-  it("the locked lane is at least RULER_MIN_W wide and lays rulers in RULER_COLS columns", () => {
+  it("the locked lane width is content-driven: one ruler column per two cards", () => {
     const lanes = familyLanes([7, 1, 1, 0]);
     const layout = computeParentLaneLayout(lanes, 0, VIEWPORT, RAIL_W);
-    expect(layout.laneWidths[0]).toBeGreaterThanOrEqual(RULER_MIN_W);
     const w = workingIndex(lanes);
     const rulerCells = layout.lanes[0].cells.filter((cell) => cell.row === w);
     expect(rulerCells).toHaveLength(7);
@@ -79,11 +74,28 @@ describe("computeParentLaneLayout", () => {
     // Every ruler card is rendered — the locked lane's overflow grows the
     // shared band height instead of chipping.
     expect(layout.lanes[0].chipFor[w]).toBeUndefined();
-    // Two columns: a band never places rulers beyond RULER_COLS columns.
-    for (const cell of rulerCells) {
-      expect(cell.col % RULER_COLS).toBeLessThan(RULER_COLS);
-    }
-    expect(Math.max(...rulerCells.map((cell) => Math.floor(cell.col / RULER_COLS)))).toBe(3);
+    // Locked columns = ceil(7 / 2) = 4; width follows the content, not a
+    // reserved floor.
+    expect(layout.laneWidths[0]).toBe(4 * RULER.w + 3 * GAP + CELL_PAD * 2);
+  });
+
+  it("a locked lane whose busiest band holds one card stays one ruler column wide", () => {
+    const lanes = familyLanes([1, 0, 1, 0]);
+    const layout = computeParentLaneLayout(lanes, 0, VIEWPORT, RAIL_W);
+    expect(layout.laneWidths[0]).toBe(RULER.w + CELL_PAD * 2);
+    const w = workingIndex(lanes);
+    expect(layout.bandHeights[w]).toBe(RULER.h);
+  });
+
+  it("context lane widths fit their busiest band, not the viewport cap", () => {
+    const lanes = familyLanes([2, 1, 0, 0]);
+    const layout = computeParentLaneLayout(lanes, 1, VIEWPORT, RAIL_W);
+    const w = workingIndex(lanes);
+    // The locked lane 1 has one working child → band height = 140 → one mini
+    // row per band; lane 0's two working children need two mini columns.
+    expect(layout.bandHeights[w]).toBe(RULER.h);
+    expect(layout.laneWidths[0]).toBe(2 * MINI.w + GAP + CELL_PAD * 2);
+    expect(layout.laneWidths[0]).toBeLessThan(CONTEXT_MAX_COLS * MINI.w);
   });
 
   it("context lanes wrap minis up to the viewport cap and overflow renders a +N chip", () => {
@@ -127,7 +139,9 @@ describe("computeParentLaneLayout", () => {
     expect(predictedStart(0, layout.laneWidths, RAIL_W)).toBe(RAIL_W + RAIL_TO_LANE_GAP);
     for (let i = 1; i < lanes.length; i += 1) {
       expect(predictedStart(i, layout.laneWidths, RAIL_W)).toBe(
-        predictedStart(i - 1, layout.laneWidths, RAIL_W) + layout.laneWidths[i - 1] + GAP,
+        predictedStart(i - 1, layout.laneWidths, RAIL_W) +
+          layout.laneWidths[i - 1] +
+          RAIL_TO_LANE_GAP,
       );
     }
     const again = computeParentLaneLayout(lanes, 1, VIEWPORT, RAIL_W);

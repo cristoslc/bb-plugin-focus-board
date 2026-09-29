@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { ParentLaneBoard } from "../components/parent-lane-board";
+import { ParentLaneBoard, verticalCardCorrection } from "../components/parent-lane-board";
 import { buildParentLanes } from "../components/parent-lanes";
 import { computeParentLaneLayout } from "../components/parent-lane-layout";
 import { thread } from "./thread-fixture";
@@ -37,6 +37,41 @@ function renderBoard(threads: ReturnType<typeof thread>[], overrides: Partial<Pa
     ),
   };
 }
+
+describe("verticalCardCorrection", () => {
+  /** Stub a scroll container + card with viewport-space rects. */
+  function stub(top: number, bottom: number, cardTop: number, cardBottom: number, scrollTop = 100) {
+    const el = {
+      getBoundingClientRect: () => ({ top, left: 0, right: 900, bottom, width: 900, height: bottom - top }),
+      scrollTop,
+    } as unknown as HTMLElement;
+    const card = {
+      getBoundingClientRect: () => ({ top: cardTop, left: 200, right: 400, bottom: cardBottom, width: 200, height: cardBottom - cardTop }),
+    } as unknown as HTMLElement;
+    return { el, card };
+  }
+
+  it("returns zero for a card already fully visible below the header", () => {
+    const { el, card } = stub(0, 600, 300, 380);
+    expect(verticalCardCorrection(el, card, 76)).toBe(0);
+  });
+
+  it("scrolls a card that fell below the fold back into view (recut case)", () => {
+    const { el, card } = stub(0, 640, 912, 969, 260);
+    const delta = verticalCardCorrection(el, card, 76);
+    expect(delta).toBe(969 - 640 + 8);
+  });
+
+  it("lifts a card hidden behind the sticky header band", () => {
+    const { el, card } = stub(0, 640, 50, 118, 40);
+    expect(verticalCardCorrection(el, card, 76)).toBeLessThan(0);
+  });
+
+  it("lifts a card scrolled above the viewport", () => {
+    const { el, card } = stub(0, 640, -40, 30, 500);
+    expect(verticalCardCorrection(el, card, 76)).toBeLessThan(0);
+  });
+});
 
 describe("ParentLaneBoard rendering", () => {
   it("renders a lane header per family lane and no Standalone lane", () => {

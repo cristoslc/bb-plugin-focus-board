@@ -1,4 +1,4 @@
-_Generated 2026-09-29T17:08:54.674Z by `npm run uat`._
+_Generated 2026-09-29T17:48:56.024Z by `npm run uat`._
 
 # UAT report
 
@@ -13,6 +13,7 @@ Source: `tests/manual/uat-parent-lanes.yaml` · theme dark
 | Clicking a lane header opens the parent thread's pane | pass | ✓ pane open; ✓ text visible: "Parent thread lane fixture"; ✓ url ends with /board/t/thr_parent_lane |
 | Clicking a child card opens its thread pane | pass | ✓ pane shows thr_child_lane; ✓ active card is thr_child_lane; ✓ url ends with /board/t/thr_child_lane |
 | A deep-linked child in the rightmost lane is scrolled into view | pass | ✓ pane shows thr_child_lane; ✓ active card is thr_child_lane; ✓ active card visible |
+| Clicking a card in a context lane keeps it fully visible after the relock and recut | pass | ✓ locked lane: "thr_sweep_parent"; ✓ card visible: thr_sweep_child |
 | A horizontal pan releases the ruler lock and re-locks the nearest family at rest | pass | ✓ locked lane: true; ✓ bands aligned across lanes |
 | A search that matches only loose threads drops every family and shows the empty state | pass | ✓ text hidden: "Standalone"; ✓ text hidden: "Queue the UAT pass for the rank lane"; ✓ text visible: "No thread families to show yet" |
 | The lane-order toggle defaults to Recency in parent-thread mode | pass | ✓ text visible: "Recency"; ✓ text visible: "Parent thread lane fixture"; ✓ text hidden: "Standalone" |

@@ -346,11 +346,12 @@ const pageTextVisible = (needle) =>
  * way it treats a real wheel gesture (release lock, settle, re-lock), and a
  * programmatic assignment is trusted enough to fire a real scroll event.
  */
-const pageBoardScroll = ({ dx }) => {
+const pageBoardScroll = ({ dx, dy }) => {
   const board = document.querySelector("[data-parent-board]");
   if (!board) throw new Error("scroll: no [data-parent-board] on the page");
-  board.scrollLeft += dx;
-  return { scrollLeft: board.scrollLeft };
+  if (dx !== undefined) board.scrollLeft += dx;
+  if (dy !== undefined) board.scrollTop += dy;
+  return { scrollLeft: board.scrollLeft, scrollTop: board.scrollTop };
 };
 
 /** Which lane is the locked ruler lane (or null when the lock is released)? */
@@ -379,6 +380,28 @@ const pageBandsAligned = () => {
     if (spread > 2) return { ok: false, reason: `band ${id} spread ${spread.toFixed(1)}px` };
   }
   return { ok: true, reason: `${byId.size} bands aligned` };
+};
+
+/**
+ * Is the given thread card fully visible inside the board's scroll viewport?
+ * The sticky rail (140px) and the sticky lane headers (76px) overlay the
+ * viewport edges, so a card under either is treated as hidden — that is the
+ * regression the clicked-card-off-screen bug report described.
+ */
+const pageCardVisible = (threadId) => {
+  const board = document.querySelector("[data-parent-board]");
+  if (!board) return { ok: false, reason: "no board" };
+  const host = document.querySelector(`[data-thread-card="${threadId}"]`);
+  if (!host) return { ok: false, reason: `no card ${threadId}` };
+  const b = board.getBoundingClientRect();
+  const c = host.getBoundingClientRect();
+  const minTop = b.top + 76;
+  const minLeft = b.left + 140 + 16;
+  if (c.top < minTop) return { ok: false, reason: `top ${Math.round(c.top)} hides behind the header` };
+  if (c.bottom > b.bottom) return { ok: false, reason: `bottom ${Math.round(c.bottom)} falls below the fold` };
+  if (c.left < minLeft) return { ok: false, reason: `left ${Math.round(c.left)} hides behind the rail` };
+  if (c.right > b.right) return { ok: false, reason: `right ${Math.round(c.right)} runs past the viewport` };
+  return { ok: true, reason: `card ${threadId} fully visible` };
 };
 
 /**
@@ -613,6 +636,10 @@ async function check(step, page, gestureResults = []) {
         got.reason,
       );
     }
+    if (rule.card_visible !== undefined) {
+      const got = await page.evaluate(pageCardVisible, rule.card_visible);
+      expect(`card visible: ${rule.card_visible}`, got.ok === true, got.reason);
+    }
     if (rule.rpc_called_method !== undefined) {
       const methods = await page.evaluate(() =>
         globalThis.__uat.calls().map((call) => call.method),
@@ -701,7 +728,7 @@ async function runSuite(file, { port, browser }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "scroll", "press_escape", "push_url"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "scroll", "sleep", "press_escape", "push_url"];
       let gestureFailed = false;
       for (const gesture of Object.keys(step).filter((key) => GESTURE_ORDER.includes(key))) {
         if (gesture === "drag") {
@@ -751,6 +778,11 @@ async function runSuite(file, { port, browser }) {
           // The board settles on a 200ms quiet-period debounce plus a smooth
           // pin glide before it re-locks; give it room before assertions.
           await sleep(1200);
+        } else if (gesture === "sleep") {
+          // A wait between gestures, for multi-phase board reactions (pin
+          // glide, recut, post-recut corrections) that no single event
+          // boundary covers.
+          await sleep(Math.max(0, Number(step.sleep) || 0));
         } else if (gesture === "press_escape") {
           // The pane listens on document capture, so a bubbling keydown from
           // the body reaches it — the same path a real Escape takes.
