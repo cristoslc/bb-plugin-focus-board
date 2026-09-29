@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.14";
+export const APP_VERSION = "0.5.15";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    version: "0.5.15",
+    items: [
+      "The board's Pinned column now accepts a dragged card: dropping one there pins it, so pinning no longer needs the card's right-click menu.",
+    ],
+  },
   {
     version: "0.5.14",
     items: [
