@@ -528,9 +528,11 @@ const pagePaneState = () => {
  * resolution plus an existence RPC — so poll rather than sample once), then
  * measure. The regression this pins: the glyph appended after a long code
  * text is an atomic inline, a legal break position, so the glyph dropped to
- * its own line when the path filled the pane. decorateCode glues the icon
- * with word joiners, so the glyph may move with the text but never alone:
- * the icon and the code's last path character must share a visual line.
+ * its own line when the path filled the pane. Chromium ignores U+2060 word
+ * joiners at that boundary, so decorateCode fuses the icon with the code's
+ * final character inside one white-space-nowrap unit: the glyph may move
+ * with the text but never alone — the icon and the code's last path
+ * character must share a visual line.
  */
 const pageGlyphGlue = async () => {
   const deadline = window.performance.now() + 4000;
@@ -549,12 +551,15 @@ const pageGlyphGlue = async () => {
   if (icon === null) {
     return { ok: false, reason: "decorated code carries no icon span" };
   }
-  const glue = (node) =>
-    node !== null && node.nodeType === 3 && node.textContent === "\u2060";
-  if (!glue(icon.previousSibling) || !glue(icon.nextSibling)) {
+  const glue = icon.closest("[data-focus-board-path-link-glue]");
+  if (
+    glue === null ||
+    glue.style.whiteSpace !== "nowrap" ||
+    icon.parentElement !== glue
+  ) {
     return {
       ok: false,
-      reason: "icon is not glued with word joiners — it can wrap onto its own line",
+      reason: "icon is not fused into a nowrap glue unit — it can wrap onto its own line",
     };
   }
   // Sanity: the path must actually wrap at this pane width, or the same-line
@@ -562,16 +567,22 @@ const pageGlyphGlue = async () => {
   if (code.getClientRects().length < 2) {
     return { ok: false, reason: "the code span did not wrap; this check would be vacuous" };
   }
-  // Same-line check: a Range over the code's final path character shares a
-  // baseline with the icon (the joiner text sits between them but carries
-  // no rects of interest; the icon's top must match the last character's).
-  const pathText = code.firstChild;
-  if (pathText === null || pathText.nodeType !== 3) {
-    return { ok: false, reason: "the code's first child is not the path text" };
+  // Same-line check: a Range over the code's final visible text character —
+  // the one the glue unit carries next to the icon — shares a baseline with
+  // the icon.
+  const textNodes = [];
+  const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT);
+  let node;
+  while ((node = walker.nextNode()) !== null) {
+    if (node.textContent.replace(/\u2060/gu, "").length > 0) textNodes.push(node);
+  }
+  const lastText = textNodes[textNodes.length - 1];
+  if (lastText === undefined) {
+    return { ok: false, reason: "the decorated code carries no visible text" };
   }
   const range = document.createRange();
-  range.setStart(pathText, pathText.textContent.length - 1);
-  range.setEnd(pathText, pathText.textContent.length);
+  range.setStart(lastText, lastText.textContent.length - 1);
+  range.setEnd(lastText, lastText.textContent.length);
   const charRect = range.getClientRects();
   const iconRect = icon.getBoundingClientRect();
   if (charRect.length === 0) {
