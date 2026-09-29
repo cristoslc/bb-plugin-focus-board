@@ -3,6 +3,18 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.18] - 2026-09-29
+
+### Fixed
+
+- **Answering a question now clears the card from Needs you right away.** The
+  board read its needs-you state from bb's sidebar thread cache, which could
+  keep a stale flag after the server had already settled the interaction: the
+  answered card stayed in the Needs-you column until something unrelated
+  refreshed the list. The board now verifies every interaction change against
+  the interaction records and corrects the card's state the moment a question
+  is answered (or asked).
+
 ## [0.5.17] - 2026-09-29
 
 ### Changed
