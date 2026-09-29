@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.12";
+export const APP_VERSION = "0.5.13";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    version: "0.5.13",
+    items: [
+      "Parent thread lanes: the Group-by dropdown offers \"Parent thread\" — one vertical lane per parent thread with the Attention ladder pivoted into rows, only children as cards, a catch-all Standalone lane, lane order by family recency with a toggle to section lanes by project.",
+    ],
+  },
   {
     version: "0.5.12",
     items: [
