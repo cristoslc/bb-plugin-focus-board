@@ -480,6 +480,20 @@ const pageCardVisible = (threadId) => {
 };
 
 /**
+ * The swimlane hover: which band row (if any) carries the shared shading
+ * attribute, and whether it extends across more than one lane at one seam.
+ */
+const pageBandHover = () => {
+  const bands = [...document.querySelectorAll('[data-band-hover="true"]')];
+  if (bands.length === 0) return { ok: false, reason: "no band carries the hover shading" };
+  const ids = new Set(bands.map((band) => band.getAttribute("data-band")));
+  const tops = new Set(bands.map((band) => Math.round(band.getBoundingClientRect().top)));
+  if (ids.size !== 1) return { ok: false, reason: `hover spans ${ids.size} different rows` };
+  if (tops.size !== 1) return { ok: false, reason: `hovered bands sit at ${tops.size} different tops` };
+  return { ok: true, count: bands.length, reason: `${bands.length} bands share the shaded row` };
+};
+
+/**
  * The "Nest child threads" toolbar checkbox, read as the operator sees it:
  * role=checkbox, checked = aria-checked, disabled = aria-disabled present.
  */
@@ -731,6 +745,10 @@ async function check(step, page, gestureResults = []) {
       const got = await page.evaluate(pageCardVisible, rule.card_visible);
       expect(`card visible: ${rule.card_visible}`, got.ok === true, got.reason);
     }
+    if (rule.band_hover !== undefined) {
+      const got = await page.evaluate(pageBandHover);
+      expect(`swimlane hover shades one row across lanes`, got.ok === rule.band_hover, got.reason ?? "");
+    }
     if (rule.nest_locked !== undefined) {
       const toggle = await page.evaluate(pageNestToggle);
       if (!toggle.present) {
@@ -886,7 +904,21 @@ async function runSuite(file, { port, browser }) {
           await page.evaluate(pageDragToColumn, step.drag_to_column);
           await sleep(200);
         } else if (gesture === "hover") {
-          // The insertion_line assertion re-runs the hover; nothing to do here.
+          // A hover with a board y-fraction moves the real mouse into that
+          // swimlane band (used by the band_hover assertion); other hovers
+          // carry their own assertion-side evaluation already.
+          if (step.hover && step.hover.board_y !== undefined) {
+            const rect = await page.evaluate(() => {
+              const board = document.querySelector("[data-parent-board]");
+              if (!board) return null;
+              const box = board.getBoundingClientRect();
+              return { top: box.top, height: box.height, left: box.left + box.width / 2 };
+            });
+            if (rect === null) throw new Error("no [data-parent-board] to hover");
+            const y = rect.top + rect.height * Number(step.hover.board_y);
+            await page.mouse.move(rect.left, y);
+            await sleep(120);
+          }
         } else if (gesture === "key") {
           await page.evaluate(pageKey, step.key);
           await sleep(200);
