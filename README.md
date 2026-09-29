@@ -25,7 +25,7 @@ The default grouping reads left to right in order of attention: **Pinned,
 Needs you, Unread, Working**, then idle threads bucketed by how long
 they've been quiet.
 
-- **Group by** Attention, Last activity, Project, Provider, or Machine
+- **Group by** Attention, Last activity, Project, Provider, Machine, or Parent thread. In Parent-thread mode lanes sort by family recency (most recently touched family at left) and can optionally group by project.
 - **Filter and search** by state, project, provider, or title
 - **Reorder a column** by dragging cards into your own order instead of the
   board's recency order. The order belongs to the column, not the thread, so

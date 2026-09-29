@@ -143,6 +143,7 @@ const mockSdk = {
   subscribe: () => () => {},
   threads: {
     list: async () => [],
+    get: async () => ({ environmentId: null }),
     unarchive: async () => {},
     interactions: {
       list: async () => [],

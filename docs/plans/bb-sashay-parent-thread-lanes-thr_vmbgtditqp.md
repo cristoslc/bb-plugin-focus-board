@@ -45,10 +45,21 @@ Working children under it, Idle ones lower, Done ones at the bottom.
   `buildFamilyIndex`) render in one lane labeled "Standalone", placed by the
   same row ladder. A board with no families renders as that one lane, which
   is the attention board turned sideways.
-- **D5 — derived lane order.** Lanes sort by their family's most
-  attention-requiring live member (the walk `familyColumnOverrides` already
-  does, promoted from a placement rule to a sort key), ties by
-  `derivedCompare` (pinned first, newest first). No new stored rank in v1.
+- **D5 — derived lane order (revised by steering).** The purpose of this
+  view is swarm management: one orchestration task (the parent) with many
+  subthreads at once. Lane order therefore defaults to recency — the lane's
+  recency is the most recent touch or response across the family (max
+  `updatedAt` over the parent and its non-archived members), most recently
+  touched at the left; ties keep the derived order of the lane's
+  representative, so a pinned parent still floats leftmost. The
+  attention-derived walk (`familyColumnOverrides` promoted to a sort key)
+  is no longer the default; a lane whose children churn still floats left
+  because child activity is family activity.
+- **D5a — optional project grouping.** A persisted toggle (default off)
+  groups family lanes into project sections by the parent's `projectId`.
+  Sections order by their most recently touched lane; lanes within a
+  section order by the same recency. The Standalone lane renders as a
+  trailing ungrouped section regardless.
 - **D6 — cell order.** Within a row cell, urgent children (state
   "attention") float to the top, then the derived order, mirroring
   `sortNestedByColumnRank`.
@@ -115,7 +126,7 @@ Working children under it, Idle ones lower, Done ones at the bottom.
 |------|--------------|-------|-----|------|--------|
 | Lane building (`buildParentLanes`) | low | auto (`tests/parent-lanes.test.ts`: parent with visible children becomes a lane) | auto (no families → one Standalone lane) | auto (deleted parent → orphan in Standalone; cycle → roots) | auto (lane with only archived children does not render as a family lane) |
 | Row placement | low | auto (child state → row, incl. idle buckets) | auto (Done child in Done row) | auto (state change moves the card between rows) | skip (pure placement) |
-| Lane order | low | auto (most attention-needing member first) | auto (all-idle families tie → derived order) | auto (pinned parent floats left) | auto (archived and done members excluded from the lift) |
+| Lane order | low | auto (family recency — most recent touch at left) | auto (untouched families tie → derived order) | auto (pinned parent floats left) | auto (archived members excluded from the recency lift) |
 | Cell order | low | auto (urgent child first) | auto (no urgent → derived) | auto (rank-free: stored column ranks ignored in lane mode) | skip |
 | Header facts | low | auto (child-count chip counts all children, archived included) | auto (state dot present for every state) | auto (done parent muted) | skip |
 | Standalone lane | low | auto (same ladder, urgent-first order) | auto (empty board → single empty lane) | auto (pinned standalone floats in-lane) | skip |

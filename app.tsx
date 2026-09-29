@@ -16,6 +16,7 @@ import { Board } from "./components/board";
 import { BoardToolbar } from "./components/board-toolbar";
 import { ThreadPane } from "./components/thread-pane";
 import type { ThreadPaneThread } from "./components/thread-pane";
+import type { CardMenuAction } from "./components/thread-card-menu";
 import type { FilterState, GroupBy, ThreadState } from "./components/grouping";
 import {
   buildColumns,
@@ -28,6 +29,8 @@ import {
   filterIndividually,
   assembleBoard,
 } from "./components/nesting";
+import { buildParentLanes } from "./components/parent-lanes";
+import { ParentLaneBoard } from "./components/parent-lane-board";
 import { doneAtToEpochMs } from "./lib/done-metadata";
 import {
   paneSubPathFor,
@@ -47,9 +50,14 @@ import {
 } from "./lib/sweep";
 import { useSweepClickAway } from "./components/board";
 import {
+  GROUP_BY_KEY,
   NEST_CHILDREN_KEY,
+  PARENT_LANE_ORDER_KEY,
   nestStoredValue,
   parseNestStored,
+  parseGroupStored,
+  parseParentLaneOrderStored,
+  type ParentLaneOrder,
 } from "./components/preferences";
 import { EmptyState } from "./components/empty-state";
 import { WhatsNewModal } from "./components/whats-new-modal";
@@ -63,7 +71,6 @@ import {
   type WhatsNewEntry,
 } from "./lib/whats-new";
 
-const GROUP_BY_KEY = "focus-board:groupBy";
 const FILTER_KEY = "focus-board:filter";
 const SEARCH_KEY = "focus-board:search";
 /** This panel's own registered route path, for pane-history pushes. */
@@ -282,8 +289,15 @@ function BoardPage({ subPath }: { subPath: string }) {
 
   const [groupBy, setGroupBy] = useState<GroupBy>(() =>
     // "section"/"environment" were dropped in 0.1.4; stale stored values fall
-    // back to the default below.
-    readStored(GROUP_BY_KEY, ["none", "status", "recency", "project", "provider", "machine"], "status"),
+    // back to the default below. The new "parent" grouping is added in this
+    // sashay and validated by parseGroupStored.
+    parseGroupStored(
+      readStored(
+        GROUP_BY_KEY,
+        ["none", "status", "recency", "project", "provider", "machine", "parent"],
+        "status",
+      ),
+    ),
   );
   // GitHub repo base per project, for ticket-chip link-outs. Best-effort:
   // a failed or non-GitHub lookup just means chips render without links.
@@ -327,6 +341,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   // R3 "Nest child threads" toggle, default ON, persisted like groupBy.
   const [nestChildren, setNestChildren] = useState<boolean>(() =>
     parseNestStored(readStored(NEST_CHILDREN_KEY, ["on", "off"], "on")),
+  );
+  // D5a parent-lane board lane order: recency (default) or project grouping.
+  const [parentLaneOrder, setParentLaneOrder] = useState<ParentLaneOrder>(() =>
+    parseParentLaneOrderStored(readStored(PARENT_LANE_ORDER_KEY, ["recency", "project"], "recency")),
   );
   // The open pane lives in the panel's URL subPath (`t/<threadId>`), not in
   // component state, so bb's back arrow, a reload, and deep links all land on
@@ -397,6 +415,10 @@ function BoardPage({ subPath }: { subPath: string }) {
     setNestChildren(enabled);
     writeStored(NEST_CHILDREN_KEY, nestStoredValue(enabled));
   }, []);
+  const persistParentLaneOrder = useCallback((value: ParentLaneOrder) => {
+    setParentLaneOrder(value);
+    writeStored(PARENT_LANE_ORDER_KEY, value);
+  }, []);
 
   // The sidebar view pushes fresh thread data continuously; this signal
   // additionally fires on host-side changes so cards never sit stale.
@@ -428,14 +450,16 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Family-aware filtering replaces per-thread filtering when nesting is ON:
   // a family passes when any member matches, non-matching members render
   // dimmed (archived riders always dim; they never contribute a match).
-  // Nesting OFF means a fully flat board — per-thread filtering again.
+  // Nesting OFF means a fully flat board — per-thread filtering again. The
+  // "parent" grouping overrides that (D11): the nesting toggle is inert
+  // there, and lane mode always filters family-first (D10 keep-and-dim).
   const familyIndex = useMemo(() => buildFamilyIndex(nonHiddenThreads), [nonHiddenThreads]);
   const familyFiltered = useMemo(
     () =>
-      nestChildren
+      nestChildren || groupBy === "parent"
         ? filterFamilies(nonHiddenThreads, familyIndex, filter, search.trim())
         : filterIndividually(nonHiddenThreads, filter, search.trim()),
-    [nestChildren, nonHiddenThreads, familyIndex, filter, search],
+    [nestChildren, groupBy, nonHiddenThreads, familyIndex, filter, search],
   );
   const filtered = familyFiltered.kept;
 
@@ -458,16 +482,27 @@ function BoardPage({ subPath }: { subPath: string }) {
   // card — never both standalone AND nested. The raw index's counts drive the
   // parent card's child-count chip, which counts every child (archived
   // included). With nesting OFF the board is flat: no rows, no chips.
+  const isParentGroupBy = groupBy === "parent";
+  const parentLanes = useMemo(
+    () => (isParentGroupBy ? buildParentLanes(searched, doneIds, Date.now(), doneTimes) : null),
+    [isParentGroupBy, searched, doneIds, doneTimes],
+  );
+  const parentLaneChildrenByParent = useMemo(
+    () => (isParentGroupBy ? familyIndex.childrenByParent : new Map<string, readonly PluginSidebarThread[]>()),
+    [isParentGroupBy, familyIndex],
+  );
   const assembly = useMemo(
     () =>
-      assembleBoard(searched, groupBy, { projects, providers }, frozenColumns, doneIds, Date.now(), {
-        nestingEnabled: nestChildren,
-        ranks,
-        doneTimes,
-      }),
-    [searched, groupBy, projects, providers, frozenColumns, doneIds, nestChildren, ranks, doneTimes],
+      isParentGroupBy
+        ? null
+        : assembleBoard(searched, groupBy, { projects, providers }, frozenColumns, doneIds, Date.now(), {
+            nestingEnabled: nestChildren,
+            ranks,
+            doneTimes,
+          }),
+    [isParentGroupBy, searched, groupBy, projects, providers, frozenColumns, doneIds, nestChildren, ranks, doneTimes],
   );
-  const columns = assembly.columns;
+  const columns = assembly?.columns ?? [];
 
   // Sweep eligibility per sweepable column, computed from the current board
   // data. Arming (in armSweepFor) captures this list at arm time; while a
@@ -691,7 +726,7 @@ function BoardPage({ subPath }: { subPath: string }) {
       );
       const thread = threads.find((candidate) => candidate.id === threadId);
       setFrozenColumn(
-        thread === undefined
+        thread === undefined || groupBy === "parent"
           ? null
           : {
               threadId,
@@ -736,7 +771,7 @@ function BoardPage({ subPath }: { subPath: string }) {
       setFrozenColumn((current) => {
         if (current !== null && current.threadId === paneThreadId) return current;
         const thread = threads.find((candidate) => candidate.id === paneThreadId);
-        return thread === undefined
+        return thread === undefined || groupBy === "parent"
           ? current
           : {
               threadId: paneThreadId,
@@ -768,6 +803,98 @@ function BoardPage({ subPath }: { subPath: string }) {
       });
     },
     [sdk],
+  );
+
+  const menuActionsFor = useCallback(
+    (thread: PluginSidebarThread): CardMenuAction[] => {
+      const isThreadDone = doneIds.has(thread.id);
+      return [
+        {
+          id: "open-new-window",
+          label: "Open in new window",
+          icon: "NewTab",
+          run: () => {
+            // noopener: the opened tab must not reach back through
+            // window.opener into this board.
+            window.open(
+              new URL(thread.href, window.location.origin).toString(),
+              "_blank",
+              "noopener",
+            );
+          },
+        },
+        {
+          id: "pin",
+          label: thread.isPinned ? "Unpin" : "Pin",
+          icon: thread.isPinned ? "PinOff" : "Pin",
+          run: () => void actions.setPinned(thread.id, !thread.isPinned),
+        },
+        {
+          id: "read",
+          label: thread.isUnread ? "Mark Read" : "Mark Unread",
+          icon: thread.isUnread ? "MailOpen" : "Mail",
+          run: () => void actions.setRead(thread.id, thread.isUnread),
+        },
+        {
+          id: "done",
+          label: isThreadDone ? "Mark Not Done" : "Mark Done",
+          icon: isThreadDone ? "CircleCheck" : "Check",
+          run: () => {
+            setDoneIds((current) => {
+              const next = new Set(current);
+              if (isThreadDone) next.delete(thread.id);
+              else next.add(thread.id);
+              return next;
+            });
+            rpc.call("done_set", { threadId: thread.id, done: !isThreadDone }).catch(() => {});
+          },
+        },
+        {
+          id: "sweep-keep",
+          label: doneAgeSource.kept(thread.id) ? "Allow sweep" : "Keep from sweep",
+          icon: doneAgeSource.kept(thread.id) ? "Archive" : "Pin",
+          run: () => {
+            const nextKeep = !doneAgeSource.kept(thread.id);
+            setDoneExtras((current) => ({
+              ...current,
+              [thread.id]: { ...current[thread.id], keep: nextKeep },
+            }));
+            rpc
+              .call("sweep_keep_set", { threadId: thread.id, keep: nextKeep })
+              .catch(() => {
+                // Roll the optimistic update back when the server
+                // rejects; the board must not show a keep the server
+                // never recorded.
+                setDoneExtras((current) => ({
+                  ...current,
+                  [thread.id]: { ...current[thread.id], keep: !nextKeep },
+                }));
+              });
+          },
+        },
+        {
+          id: "archive",
+          label: thread.isArchived ? "Unarchive" : "Archive",
+          icon: thread.isArchived ? "ArchiveRestore" : "Archive",
+          dividerAbove: true,
+          run: () => {
+            if (thread.isArchived) {
+              sdk.threads.unarchive({ threadId: thread.id }).catch(() => {});
+            } else {
+              actions.archive(thread.id);
+            }
+          },
+        },
+        {
+          id: "delete",
+          label: "Delete…",
+          icon: "Trash2",
+          danger: true,
+          run: () => actions.requestDelete(thread.id),
+        },
+      ];
+    },
+    [actions, doneAgeSource, doneIds, rpc, setDoneExtras, setDoneIds, sdk],
   );
 
   if (status === "loading" && threads.length === 0) {
@@ -812,7 +939,26 @@ function BoardPage({ subPath }: { subPath: string }) {
           nestChildren={nestChildren}
           onNestChildrenChange={persistNestChildren}
         />
-        {boardCount === 0 ? (
+        {groupBy === "parent" ? (
+          <ParentLaneBoard
+            lanes={parentLanes ?? []}
+            activeThreadId={openThreadId}
+            doneIds={doneIds}
+            dimmedIds={dimmedIds}
+            childrenByParent={parentLaneChildrenByParent}
+            projectNameFor={(projectId) =>
+              projects.find((project) => project.id === projectId)?.name ?? "Personal"
+            }
+            repoBaseFor={repoBaseFor}
+            statusFor={statusFor}
+            parentLaneOrder={parentLaneOrder}
+            onParentLaneOrderChange={persistParentLaneOrder}
+            onOpenThread={openThreadCard}
+            onClosePane={closeThreadPane}
+            onNewTask={openNewThread}
+            menuActionsFor={menuActionsFor}
+          />
+        ) : boardCount === 0 ? (
           <div className="p-4">
             <EmptyState>
               {emptyBecauseFiltered
@@ -826,8 +972,8 @@ function BoardPage({ subPath }: { subPath: string }) {
             groupBy={groupBy}
             activeThreadId={openThreadId}
             doneIds={doneIds}
-            nestedChildrenByParent={assembly.nestedChildrenByParent}
-            childCountByParent={assembly.childCountByParent}
+            nestedChildrenByParent={assembly?.nestedChildrenByParent ?? new Map()}
+            childCountByParent={assembly?.childCountByParent ?? new Map()}
             dimmedIds={dimmedIds}
             projectNameFor={(projectId) =>
               projects.find((project) => project.id === projectId)?.name ?? "Personal"
@@ -879,96 +1025,7 @@ function BoardPage({ subPath }: { subPath: string }) {
                 })
                 .catch(() => refetchRanks());
             }}
-            menuActionsFor={(thread) => {
-              const isThreadDone = doneIds.has(thread.id);
-              return [
-                {
-                  id: "open-new-window",
-                  label: "Open in new window",
-                  icon: "NewTab",
-                  run: () => {
-                    // noopener: the opened tab must not reach back through
-                    // window.opener into this board.
-                    window.open(
-                      new URL(thread.href, window.location.origin).toString(),
-                      "_blank",
-                      "noopener",
-                    );
-                  },
-                },
-                {
-                  id: "pin",
-                  label: thread.isPinned ? "Unpin" : "Pin",
-                  icon: thread.isPinned ? "PinOff" : "Pin",
-                  run: () => void actions.setPinned(thread.id, !thread.isPinned),
-                },
-                {
-                  id: "read",
-                  label: thread.isUnread ? "Mark Read" : "Mark Unread",
-                  icon: thread.isUnread ? "MailOpen" : "Mail",
-                  run: () => void actions.setRead(thread.id, thread.isUnread),
-                },
-                {
-                  id: "done",
-                  label: isThreadDone ? "Mark Not Done" : "Mark Done",
-                  icon: isThreadDone ? "CircleCheck" : "Check",
-                  run: () => {
-                    setDoneIds((current) => {
-                      const next = new Set(current);
-                      if (isThreadDone) next.delete(thread.id);
-                      else next.add(thread.id);
-                      return next;
-                    });
-                    rpc.call("done_set", { threadId: thread.id, done: !isThreadDone }).catch(
-                      () => {},
-                    );
-                  },
-                },
-                {
-                  id: "sweep-keep",
-                  label: doneAgeSource.kept(thread.id) ? "Allow sweep" : "Keep from sweep",
-                  icon: doneAgeSource.kept(thread.id) ? "Archive" : "Pin",
-                  run: () => {
-                    const nextKeep = !doneAgeSource.kept(thread.id);
-                    setDoneExtras((current) => ({
-                      ...current,
-                      [thread.id]: { ...current[thread.id], keep: nextKeep },
-                    }));
-                    rpc
-                      .call("sweep_keep_set", { threadId: thread.id, keep: nextKeep })
-                      .catch(() => {
-                        // Roll the optimistic update back when the server
-                        // rejects; the board must not show a keep the server
-                        // never recorded.
-                        setDoneExtras((current) => ({
-                          ...current,
-                          [thread.id]: { ...current[thread.id], keep: !nextKeep },
-                        }));
-                      });
-                  },
-                },
-                {
-                  id: "archive",
-                  label: thread.isArchived ? "Unarchive" : "Archive",
-                  icon: thread.isArchived ? "ArchiveRestore" : "Archive",
-                  dividerAbove: true,
-                  run: () => {
-                    if (thread.isArchived) {
-                      sdk.threads.unarchive({ threadId: thread.id }).catch(() => {});
-                    } else {
-                      actions.archive(thread.id);
-                    }
-                  },
-                },
-                {
-                  id: "delete",
-                  label: "Delete…",
-                  icon: "Trash2",
-                  danger: true,
-                  run: () => actions.requestDelete(thread.id),
-                },
-              ];
-            }}
+            menuActionsFor={menuActionsFor}
           />
         )}
       </div>
