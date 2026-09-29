@@ -9,7 +9,7 @@
  */
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
-import { SIM_DONE_IDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS } from "./data";
+import { SIM_DONE_IDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES } from "./data";
 import { applyMoveVisible } from "../../lib/rank";
 
 export const registeredNavPanel: {
@@ -159,7 +159,13 @@ const mockSdk = {
   subscribe: () => () => {},
   threads: {
     list: async () => [],
-    get: async () => ({ environmentId: null }),
+    // The pane resolves the thread's environment once (the inline-code
+    // decoration gates on it); mirror the fixture's own environment id.
+    get: async ({ threadId }: { threadId: string }) => {
+      const sim = SIM_THREADS.find((candidate) => candidate.id === threadId);
+      const environment = sim?.environment as { id?: string } | null;
+      return { environmentId: environment?.id ?? null };
+    },
     unarchive: async () => {},
     interactions: {
       list: async () => [],
@@ -210,6 +216,13 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     return { doneArchiveDays: 7, idleArchiveDays: 30 };
   }
   if (method === "rank_list") return { orders: structuredClone(simRanks) };
+  if (method === "workspace_files_exist") {
+    // The decoration's existence gate (components/decorate-inline-code.ts):
+    // a path the workspace has verifies true, everything else stays plain.
+    const { paths } = args as { paths: string[] };
+    const known = new Set(SIM_WORKSPACE_FILES);
+    return { existence: Object.fromEntries(paths.map((path) => [path, known.has(path)])) };
+  }
   if (method === "rank_move") {
     // The server's move semantics — applyMoveVisible, not a re-spelled copy
     // of them — so a UAT pass exercises the real state change. The copy this
@@ -252,6 +265,13 @@ interface MockMessage {
 }
 
 const CONVERSATIONS: Record<string, MockMessage[]> = {
+  thr_glyph_glue: [
+    {
+      role: "agent",
+      text:
+        "Sync design is settled. ADR-0004 (`docs/rfcs/rfc-support-triage-process-workflow-acceptance-checklist.md`) accepts background sync through cloud storage scoped to the household — an append-only record log of week statuses, ledger lines, and setup revisions.",
+    },
+  ],
   thr_permissions: [
     { role: "user", text: "The environment connect flow shows the permission prompt twice on macOS hosts. Can you dig in?" },
     { role: "agent", text: "Found it — the connect handler awaits the scope grant twice: once in connectEnvironment() and again in the retry wrapper, so the host rejects the second prompt and loops. I have a fix drafted in fix/permission-loop." },
@@ -264,9 +284,39 @@ const CONVERSATIONS: Record<string, MockMessage[]> = {
   ],
 };
 
+/**
+ * Markdown-lite agent text: backtick spans become real `<code>` elements, the
+ * shape the host's markdown preview renders and the pane's inline-code
+ * decoration scans. The harness chat used to render plain text, which meant
+ * the decoration never had a candidate in a UAT run. Inline styles only —
+ * invented utility classes do not exist in the compiled app.css.
+ */
+function inlineMarkup(text: string): ReactNode {
+  const parts = text.split(/`([^`]+)`/g);
+  if (parts.length === 1) return text;
+  return parts.map((part, index) =>
+    index % 2 === 1 ? (
+      <code
+        key={index}
+        style={{
+          fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+          fontSize: "0.92em",
+          background: "var(--secondary)",
+          borderRadius: 4,
+          padding: "1px 4px",
+        }}
+      >
+        {part}
+      </code>
+    ) : (
+      part
+    ),
+  );
+}
+
 function MockChat({ threadId }: { threadId: string }): ReactNode {
   const messages = CONVERSATIONS[threadId] ?? CONVERSATIONS.default;
-  const bubble = (role: "user" | "agent", text: string, key: string): ReactNode => (
+  const bubble = (role: "user" | "agent", content: ReactNode, key: string): ReactNode => (
     <div
       key={key}
       style={{
@@ -282,7 +332,7 @@ function MockChat({ threadId }: { threadId: string }): ReactNode {
           : { background: "var(--secondary)", color: "var(--secondary-foreground)" }),
       }}
     >
-      {text}
+      {content}
     </div>
   );
   return (
@@ -300,7 +350,7 @@ function MockChat({ threadId }: { threadId: string }): ReactNode {
         <div style={{ textAlign: "center", fontSize: 10.5, color: "var(--muted-foreground)", padding: "4px 0" }}>
           Today
         </div>
-        {messages.map((message, index) => bubble(message.role, message.text, String(index)))}
+        {messages.map((message, index) => bubble(message.role, inlineMarkup(message.text), String(index)))}
       </div>
       <div
         style={{

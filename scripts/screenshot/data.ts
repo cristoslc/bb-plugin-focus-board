@@ -28,6 +28,17 @@ export const SIM_PROJECTS: readonly SimProject[] = [
 
 export const SIM_SECTIONS: readonly { id: string; name: string }[] = [];
 
+/**
+ * Workspace files the mocked `workspace_files_exist` RPC vouches for,
+ * keyed by nothing — existence, not content. The inline-code decoration
+ * (components/decorate-inline-code.ts) refuses to linkify a path the
+ * thread's workspace does not have, so the UAT fixture's message names a
+ * path from this list.
+ */
+export const SIM_WORKSPACE_FILES: readonly string[] = [
+  "docs/rfcs/rfc-support-triage-process-workflow-acceptance-checklist.md",
+];
+
 export const SIM_PROVIDERS: readonly { id: string; displayName: string }[] = [
   { id: "pi", displayName: "Pi" },
   { id: "claude-code", displayName: "Claude Code" },
@@ -300,6 +311,14 @@ export const SIM_THREADS: readonly SimThread[] = [
     parentThreadId: "thr_sweep_parent",
     updatedAt: SIM_NOW - 12 * DAY,
     lastReadAt: SIM_NOW - 12 * DAY,
+  }),
+
+  thread({
+    id: "thr_glyph_glue",
+    displayTitle: "Wrap check: long path with the open glyph",
+    updatedAt: SIM_NOW - 14 * MINUTE,
+    lastReadAt: SIM_NOW - 14 * MINUTE,
+    environment: boardEnv("dev"),
   }),
 
   // Done
