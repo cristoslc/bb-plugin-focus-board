@@ -1,14 +1,15 @@
-_Generated 2026-09-28T15:13:05.114Z by `npm run uat`._
+_Generated 2026-09-29T00:41:41.352Z by `npm run uat`._
 
 # UAT report
 
 ## rank-ordering
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_kuq6se56e7-1/bb-plugin-focus-board/tests/manual/uat-rank.yaml` · theme dark
+Source: `tests/manual/uat-rank.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
 | A first-time user with no stored order can drag, and the drop writes one | pass | ✓ unread has 3 reorder slots; ✓ unread hand-ordered=false; ✓ drop permitted during drag; ✓ unread order; ✓ stored order {"status:unread":["thr_review_pr"]}; ✓ unread hand-ordered=true |
+| The first drop BELOW another card re-sorts, instead of leaving the card on top | pass | ✓ drop permitted during drag; ✓ unread order; ✓ stored order {"status:unread":["thr_uat_queue","thr_rpc_auth"]}; ✓ unread hand-ordered=true |
 | With every lane draggable, dropping on Done still marks done | pass | ✓ called done_set |
 | A lane with no cross-column drop handler still authorises its own reorder | pass | ✓ pinned has 2 reorder slots; ✓ drop permitted during drag; ✓ pinned order; ✓ stored order {"pinned":["thr_roadmap"]} |
 | A drop whose payload has no card id falls back to the dragstart ref | pass | ✓ pinned has 2 reorder slots; ✓ pinned order; ✓ stored order {"pinned":["thr_roadmap"]}; ✓ no refusal banner |
@@ -18,7 +19,8 @@ Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees
 | Dropping on a card's bottom half lands past it, not on it | pass | ✓ drop permitted during drag; ✓ unread order; ✓ stored order {"status:unread":["thr_rpc_auth","thr_review_pr","thr_uat_queue"]} |
 | Dropping below the last card appends | pass | ✓ drop permitted during drag; ✓ unread order; ✓ rank_move {"columnKey":"status:unread","threadId":"thr_rpc_auth","beforeId":null,"toEnd":true} |
 | Dropping a card on itself writes nothing | pass | ✓ drop permitted during drag; ✓ stored order {"status:unread":["thr_rpc_auth","thr_uat_queue","thr_review_pr"]}; ✓ no rank_move call |
-| A rank drag into a different lane's order is refused, not silently swallowed | pass | ✓ cross-lane drop refused; ✓ stored order {"status:unread":["thr_rpc_auth"],"pinned":["thr_roadmap","thr_ship_release"]}; ✓ no rank_move call |
+| A rank drag into a plain lane's order is refused, not silently swallowed | pass | ✓ cross-lane drop refused; ✓ stored order {"status:unread":["thr_rpc_auth"]}; ✓ no rank_move call |
+| Dropping an Unread card on the Pinned lane pins it | pass | ✓ pinned order; ✓ stored order {"pinned":["thr_roadmap"]}; ✓ no rank_move call; ✓ no refusal banner |
 | The Pinned lane is ranked under every grouping | pass | ✓ pinned order; ✓ pinned hand-ordered=true |
 | Alt+ArrowDown moves a card down one slot | pass | ✓ unread order; ✓ stored order {"status:unread":["thr_uat_queue","thr_rpc_auth","thr_review_pr"]} |
 | Alt+ArrowUp on the second card lands it at the very top | pass | ✓ unread order |

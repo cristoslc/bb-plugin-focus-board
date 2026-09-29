@@ -154,18 +154,36 @@ steps:
       - rpc_not_called: rank_move
 
   - id: cross-lane-drag-is-refused
-    title: A rank drag into a different lane's order is refused, not silently swallowed
+    title: A rank drag into a plain lane's order is refused, not silently swallowed
     # Not a bug: reordering a card INTO another lane's order would write a rank
     # for a card that is not in that lane, which is invisible until the order
-    # is read back. Moving a card between lanes is a different feature (a
-    # transfer, not a reorder) and is not built. Here the drop is refused
+    # is read back. A lane with no cross-column handler refuses the drop
     # outright, so the browser shows a no-drop cursor instead of pretending.
-    goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_rpc_auth\"],\"pinned\":[\"thr_roadmap\",\"thr_ship_release\"]}"
-    drag: { from: thr_rpc_auth, to: thr_roadmap, edge: before }
+    # Pinned is no longer such a lane (it pins on drop); the Needs-you lane
+    # still has no cross-column handler and still refuses.
+    goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_rpc_auth\"]}"
+    drag: { from: thr_rpc_auth, to: thr_permissions, edge: before }
     assert:
       - expect_drop_refused: true
-      - store: { "status:unread": [thr_rpc_auth], pinned: [thr_roadmap, thr_ship_release] }
+      - store: { "status:unread": [thr_rpc_auth] }
       - rpc_not_called: rank_move
+
+  - id: drop-on-pinned-lane-pins
+    title: Dropping an Unread card on the Pinned lane pins it
+    # The bug this pins: the Pinned lane was the one visible lane with no
+    # cross-column drop handler, so an unread → pinned drag was refused by
+    # the browser and pinning needed the card's right-click menu. A drop on
+    # Pinned is now a pin; it must not touch the lane's rank order, and the
+    # card must actually land in the lane (the harness applies the pin state,
+    # like the real host does).
+    goto: "?groupBy=status&ranks={\"pinned\":[\"thr_roadmap\"]}"
+    drag_to_column: { from: thr_review_pr, column: pinned }
+    assert:
+      - column: pinned
+        ordered: [thr_roadmap, thr_ship_release, thr_review_pr]
+      - store: { pinned: ["thr_roadmap"] }
+      - rpc_not_called: rank_move
+      - no_visible_error: true
 
   - id: pinned-lane-ranks-across-groupings
     title: The Pinned lane is ranked under every grouping

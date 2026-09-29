@@ -3,6 +3,20 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.15] - 2026-09-28
+
+### Fixed
+
+- **Dragging a card onto the Pinned lane now pins it.** Pinned was the one
+  visible lane that had no cross-column drop handler — only Done ("mark
+  done") and Unread ("mark unread") accepted drops — so a drag from Unread
+  to Pinned was refused by the browser (no-drop cursor) and pinning needed
+  the card's right-click menu. A drop on Pinned now pins, like a Done drop
+  marks done. The pin writes no lane rank order and refuses nothing; cards
+  already pinned keep their reorder gesture. The UAT suite's cross-lane
+  refusal check moved to a plain lane, and a new step pins this gesture for
+  real (`tests/manual/uat-rank.yaml`).
+
 ## [0.5.13] - 2026-09-28
 
 ### Added
