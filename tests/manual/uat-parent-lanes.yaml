@@ -3,9 +3,11 @@
 # The harness mounts the actual app.tsx against the mocked SDK
 # (scripts/screenshot), with the family fixtures (thr_parent_lane /
 # thr_child_lane, thr_fam_*) plus the normal fixture threads. The suite
-# exercises the pivoted Attention grid: vertical lanes are families,
-# horizontal rows are the attention ladder, and only children render as
-# cards. Loose (unparented) threads render no lane at all.
+# exercises the ruler+wrap board: horizontal lanes are families, the locked
+# "ruler" lane renders big readable cards while context lanes wrap compact
+# cards, shared band heights per status row keep the left rail labels
+# truthful, and horizontal panning re-locks the nearest lane at rest. Loose
+# (unparented) threads render no lane at all.
 #
 # Run: npm run uat -- tests/manual/uat-parent-lanes.yaml
 suite: parent-lanes
@@ -24,6 +26,14 @@ steps:
     assert:
       - text_visible: "Parent thread lane fixture"
       - text_visible: "Child thread lane fixture"
+      - text_hidden: "Standalone"
+
+  - id: ruler-lane-locked-with-aligned-bands
+    title: The board opens with a family locked as the ruler lane and band tracks aligned
+    goto: "?groupBy=parent"
+    assert:
+      - locked_lane: true
+      - bands_aligned: true
       - text_hidden: "Standalone"
 
   - id: header-click-opens-parent-pane
@@ -50,6 +60,14 @@ steps:
     assert:
       - pane: { threadId: thr_child_lane }
       - active_card: { id: thr_child_lane, visible: true }
+
+  - id: horizontal-pan-relocks-nearest-family
+    title: A horizontal pan releases the ruler lock and re-locks the nearest family at rest
+    goto: "?groupBy=parent"
+    scroll: { dx: 900 }
+    assert:
+      - locked_lane: true
+      - bands_aligned: true
 
   - id: search-matching-only-loose-threads-shows-empty-state
     title: A search that matches only loose threads drops every family and shows the empty state

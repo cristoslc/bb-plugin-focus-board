@@ -1,4 +1,4 @@
-_Generated 2026-09-29T01:21:40.091Z by `npm run uat`._
+_Generated 2026-09-29T17:10:34.714Z by `npm run uat`._
 
 # UAT report
 
@@ -27,9 +27,11 @@ Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees
 | Step | Result | Detail |
 | --- | --- | --- |
 | Parent-thread grouping shows family lanes and excludes loose threads | pass | ✓ text visible: "Parent thread lane fixture"; ✓ text visible: "Child thread lane fixture"; ✓ text hidden: "Standalone" |
+| The board opens with a family locked as the ruler lane and band tracks aligned | pass | ✓ locked lane: true; ✓ bands aligned across lanes; ✓ text hidden: "Standalone" |
 | Clicking a lane header opens the parent thread's pane | pass | ✓ pane open; ✓ text visible: "Parent thread lane fixture"; ✓ url ends with /board/t/thr_parent_lane |
 | Clicking a child card opens its thread pane | pass | ✓ pane shows thr_child_lane; ✓ active card is thr_child_lane; ✓ url ends with /board/t/thr_child_lane |
 | A deep-linked child in the rightmost lane is scrolled into view | pass | ✓ pane shows thr_child_lane; ✓ active card is thr_child_lane; ✓ active card visible |
+| A horizontal pan releases the ruler lock and re-locks the nearest family at rest | pass | ✓ locked lane: true; ✓ bands aligned across lanes |
 | A search that matches only loose threads drops every family and shows the empty state | pass | ✓ text hidden: "Standalone"; ✓ text hidden: "Queue the UAT pass for the rank lane"; ✓ text visible: "No thread families to show yet" |
 | The lane-order toggle defaults to Recency in parent-thread mode | pass | ✓ text visible: "Recency"; ✓ text visible: "Parent thread lane fixture"; ✓ text hidden: "Standalone" |
 | Switching lane order to By project groups family lanes under their project | pass | ✓ text visible: "By project"; ✓ text visible: "Parent thread lane fixture" |
@@ -54,7 +56,8 @@ Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees
 | Dropping on a card's bottom half lands past it, not on it | pass | ✓ drop permitted during drag; ✓ unread order; ✓ stored order {"status:unread":["thr_rpc_auth","thr_review_pr","thr_uat_queue"]} |
 | Dropping below the last card appends | pass | ✓ drop permitted during drag; ✓ unread order; ✓ rank_move {"columnKey":"status:unread","threadId":"thr_rpc_auth","beforeId":null,"toEnd":true} |
 | Dropping a card on itself writes nothing | pass | ✓ drop permitted during drag; ✓ stored order {"status:unread":["thr_rpc_auth","thr_uat_queue","thr_review_pr"]}; ✓ no rank_move call |
-| A rank drag into a different lane's order is refused, not silently swallowed | pass | ✓ cross-lane drop refused; ✓ stored order {"status:unread":["thr_rpc_auth"],"pinned":["thr_roadmap","thr_ship_release"]}; ✓ no rank_move call |
+| A rank drag into a plain lane's order is refused, not silently swallowed | pass | ✓ cross-lane drop refused; ✓ stored order {"status:unread":["thr_rpc_auth"]}; ✓ no rank_move call |
+| Dropping an Unread card on the Pinned lane pins it | pass | ✓ pinned order; ✓ stored order {"pinned":["thr_roadmap"]}; ✓ no rank_move call; ✓ no refusal banner |
 | The Pinned lane is ranked under every grouping | pass | ✓ pinned order; ✓ pinned hand-ordered=true |
 | Alt+ArrowDown moves a card down one slot | pass | ✓ unread order; ✓ stored order {"status:unread":["thr_uat_queue","thr_rpc_auth","thr_review_pr"]} |
 | Alt+ArrowUp on the second card lands it at the very top | pass | ✓ unread order |

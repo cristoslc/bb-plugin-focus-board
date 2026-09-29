@@ -75,6 +75,8 @@ interface ThreadCardProps {
   repoHrefBase?: string;
   /** GitHub cache status lookup (repo slug + number), when wired. */
   statusFor?: (repo: string | null, number: number | undefined) => GitHubItemStatus | undefined;
+  // Ruler+wrap mini variant: fits the 136×92 context card grid.
+  compact?: boolean;
 }
 
 /** Chip state-dot colors, mirroring the card's own state language. */
@@ -216,6 +218,8 @@ export function ThreadCard({
   activeThreadId,
   onOpenThread,
   childMenuActions,
+  // Ruler+wrap mini cards: tighter padding and type, no ticket chips.
+  compact = false,
 }: ThreadCardProps) {
   const now = Date.now();
   const [collapsed, setCollapsed] = useState(false);
@@ -281,7 +285,10 @@ export function ThreadCard({
             event.preventDefault();
             onOpen();
           }}
-          className="relative min-w-0 flex-1 px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={cn(
+            "relative min-w-0 flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            compact ? "px-2 py-1" : "px-3 py-2",
+          )}
         >
           <div className="flex items-center gap-1.5 pl-1.5">
             {stateDot}
@@ -299,12 +306,12 @@ export function ThreadCard({
               {relativeTime(thread.updatedAt, now)}
             </span>
           </div>
-          <p className="mt-0.5 line-clamp-2 pl-1.5 text-[13px] leading-snug">{thread.displayTitle}</p>
+          <p className={cn("mt-0.5 line-clamp-2 pl-1.5 leading-snug", compact ? "text-[11px]" : "text-[13px]")}>{thread.displayTitle}</p>
           <p className="mt-0.5 truncate pl-1.5 text-[11px] text-muted-foreground/70">
             {projectName}
             {branch === "" ? null : <span className="text-muted-foreground/40"> · {branch}</span>}
           </p>
-          {ticketRefs.length === 0 ? null : (
+          {ticketRefs.length === 0 || compact ? null : (
             <div className="mt-1 flex flex-wrap gap-1 pl-1.5">
               {ticketRefs.map((ticket) => (
                 <TicketChip key={ticket.raw} ticket={ticket} status={statusFor?.(repo, ticket.number)} />
