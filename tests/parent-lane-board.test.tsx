@@ -25,6 +25,8 @@ function renderBoard(threads: ReturnType<typeof thread>[], overrides: Partial<Pa
         childrenByParent={new Map()}
         projectNameFor={() => "Proj"}
         repoBaseFor={() => null}
+        parentLaneOrder="recency"
+        onParentLaneOrderChange={vi.fn()}
         onOpenThread={openThread}
         onClosePane={vi.fn()}
         onNewTask={vi.fn()}

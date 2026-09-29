@@ -39,6 +39,13 @@ export interface ParentLane {
   archivedChildren: PluginSidebarThread[];
 }
 
+/** A project section of family lanes, with the Standalone lane always trailing. */
+export interface ParentLaneSection {
+  id: string;
+  label: string;
+  lanes: ParentLane[];
+}
+
 const EMPTY_CONTEXT: GroupingContext = { projects: [], providers: [] };
 
 function rowFor(
@@ -52,11 +59,6 @@ function rowFor(
 
 function isLive(thread: PluginSidebarThread, doneIds: ReadonlySet<string>): boolean {
   return !thread.isArchived && !doneIds.has(thread.id);
-}
-
-function stateRank(state: ThreadState | string): number {
-  const index = STATUS_COLUMN_ORDER.indexOf(state);
-  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }
 
 /** Label for a row id, even when the row is empty. */
@@ -74,6 +76,41 @@ function sortActiveRow(threads: readonly PluginSidebarThread[]): PluginSidebarTh
     if (aUrgent !== bUrgent) return aUrgent - bUrgent;
     return derivedCompare(a, b);
   });
+}
+
+/** A lane's recency is the most recent touch across its non-archived members
+ *  (done children included — a just-done child is the family's last touch).
+ *  Archived members are excluded so stale archived noise cannot vault a lane. */
+function laneRecency(lane: ParentLane): number {
+  let best = 0;
+  if (lane.parent !== null && !lane.parent.isArchived) {
+    best = Math.max(best, lane.parent.updatedAt);
+  }
+  for (const row of lane.rows) {
+    for (const thread of row.threads) {
+      // Row cards are already non-archived; done children count as a touch.
+      best = Math.max(best, thread.updatedAt);
+    }
+  }
+  return best;
+}
+
+/** Tiebreak representative for a lane. Family lanes use the parent so a pinned
+ *  parent floats leftmost; Standalone uses its most-derived thread. */
+function laneRepresentative(lane: ParentLane): PluginSidebarThread | null {
+  if (lane.parent !== null) return lane.parent;
+  const all = lane.rows.flatMap((row) => row.threads);
+  if (all.length === 0) return null;
+  return [...all].sort(derivedCompare)[0];
+}
+
+function recencyCompare(a: ParentLane, b: ParentLane): number {
+  const diff = laneRecency(b) - laneRecency(a);
+  if (diff !== 0) return diff;
+  const repA = laneRepresentative(a);
+  const repB = laneRepresentative(b);
+  if (repA === null || repB === null) return 0;
+  return derivedCompare(repA, repB);
 }
 
 function buildRows(
@@ -102,55 +139,7 @@ function buildRows(
   });
 }
 
-function walkLiveFamilyRank(
-  rootId: string,
-  familyIndex: ReturnType<typeof buildFamilyIndex>,
-  threadById: ReadonlyMap<string, PluginSidebarThread>,
-  doneIds: ReadonlySet<string>,
-): number {
-  let best = Number.MAX_SAFE_INTEGER;
-  const seen = new Set<string>();
-  const visit = (id: string) => {
-    if (seen.has(id)) return;
-    seen.add(id);
-    const member = threadById.get(id);
-    if (member !== undefined && isLive(member, doneIds)) {
-      best = Math.min(best, stateRank(threadState(member)));
-    }
-    for (const child of familyIndex.childrenByParent.get(id) ?? []) {
-      visit(child.id);
-    }
-  };
-  visit(rootId);
-  return best;
-}
 
-function standaloneRepresentative(
-  lane: ParentLane,
-  doneIds: ReadonlySet<string>,
-): PluginSidebarThread | null {
-  let best: PluginSidebarThread | null = null;
-  let bestRank = Number.MAX_SAFE_INTEGER;
-  for (const row of lane.rows) {
-    if (row.id === "done") continue;
-    for (const thread of row.threads) {
-      if (!isLive(thread, doneIds)) continue;
-      const rank = stateRank(threadState(thread));
-      if (
-        best === null ||
-        rank < bestRank ||
-        (rank === bestRank && derivedCompare(thread, best) < 0)
-      ) {
-        best = thread;
-        bestRank = rank;
-      }
-    }
-  }
-  if (best !== null) return best;
-  const all = lane.rows.flatMap((row) => row.threads);
-  if (all.length === 0) return null;
-  return [...all].sort(derivedCompare)[0];
-}
 
 /**
  * Build the parent-lane model: vertical lanes are parent threads, horizontal
@@ -159,11 +148,13 @@ function standaloneRepresentative(
  * Standalone lane. Done children sit in the bottom Done row; archived children
  * ride as dimmed riders under the family header (R2/D7).
  *
- * Lane order derives from the family's most attention-requiring live member
- * (D5); ties break by the parent's derived order, so a pinned parent floats
- * its lane leftmost (D13). Within a row, urgent ("attention") children float
- * to the top, then the derived order (D6). The Done row sorts by done
- * recency (D9).
+ * Lane order defaults to family recency: the most recent touch or response
+ * across the family (max `updatedAt` over the parent and its non-archived
+ * members, done children included), most recently touched at the left (D5).
+ * Ties break by the lane representative's derived order, so a pinned parent
+ * still floats its lane leftmost (D13). The Standalone lane always trails.
+ * Within a row, urgent ("attention") children float to the top, then the
+ * derived order (D6). The Done row sorts by done recency (D9).
  */
 export function buildParentLanes(
   threads: readonly PluginSidebarThread[],
@@ -212,33 +203,56 @@ export function buildParentLanes(
     archivedChildren: [],
   });
 
-  const ranked = lanes.map((lane) => {
-    const rank =
-      lane.parent !== null
-        ? walkLiveFamilyRank(lane.parent.id, familyIndex, threadById, doneIds)
-        : standaloneLaneRank(lane, doneIds);
-    const representative = lane.parent ?? standaloneRepresentative(lane, doneIds);
-    return { lane, rank, representative };
-  });
+  const familyLanes = lanes.filter((lane) => lane.id !== "standalone");
+  familyLanes.sort(recencyCompare);
 
-  ranked.sort((a, b) => {
-    if (a.rank !== b.rank) return a.rank - b.rank;
-    if (a.representative === null || b.representative === null) return 0;
-    return derivedCompare(a.representative, b.representative);
-  });
-
-  return ranked.map((entry) => entry.lane);
+  const standaloneLane = lanes.find((lane) => lane.id === "standalone");
+  return standaloneLane !== undefined ? [...familyLanes, standaloneLane] : familyLanes;
 }
 
-function standaloneLaneRank(lane: ParentLane, doneIds: ReadonlySet<string>): number {
-  let best = Number.MAX_SAFE_INTEGER;
-  for (const row of lane.rows) {
-    if (row.id === "done") continue;
-    for (const thread of row.threads) {
-      if (isLive(thread, doneIds)) {
-        best = Math.min(best, stateRank(threadState(thread)));
-      }
+/**
+ * Section family lanes by the parent's `projectId` (D5a). Sections order by
+ * their most recent lane; lanes within a section keep the same recency order.
+ * The Standalone lane is always a trailing ungrouped section, regardless of
+ * whether project grouping is enabled.
+ */
+export function sectionParentLanes(
+  lanes: readonly ParentLane[],
+  projectNameFor: (projectId: string) => string,
+): ParentLaneSection[] {
+  const familyLanes = lanes.filter((lane) => lane.id !== "standalone");
+  const standaloneLane = lanes.find((lane) => lane.id === "standalone");
+
+  const byProject = new Map<string, ParentLane[]>();
+  for (const lane of familyLanes) {
+    const projectId = lane.parent?.projectId ?? "";
+    const list = byProject.get(projectId);
+    if (list === undefined) {
+      byProject.set(projectId, [lane]);
+    } else {
+      list.push(lane);
     }
   }
-  return best;
+
+  const sections: ParentLaneSection[] = [];
+  for (const [projectId, sectionLanes] of byProject) {
+    sectionLanes.sort(recencyCompare);
+    sections.push({
+      id: projectId === "" ? "none" : projectId,
+      label: projectNameFor(projectId),
+      lanes: sectionLanes,
+    });
+  }
+
+  sections.sort((a, b) => {
+    const diff = laneRecency(b.lanes[0]!) - laneRecency(a.lanes[0]!);
+    if (diff !== 0) return diff;
+    return a.label.localeCompare(b.label);
+  });
+
+  if (standaloneLane !== undefined) {
+    sections.push({ id: "standalone", label: "Standalone", lanes: [standaloneLane] });
+  }
+
+  return sections;
 }

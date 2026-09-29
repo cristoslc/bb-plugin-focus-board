@@ -52,9 +52,12 @@ import { useSweepClickAway } from "./components/board";
 import {
   GROUP_BY_KEY,
   NEST_CHILDREN_KEY,
+  PARENT_LANE_ORDER_KEY,
   nestStoredValue,
   parseNestStored,
   parseGroupStored,
+  parseParentLaneOrderStored,
+  type ParentLaneOrder,
 } from "./components/preferences";
 import { EmptyState } from "./components/empty-state";
 import { WhatsNewModal } from "./components/whats-new-modal";
@@ -339,6 +342,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   const [nestChildren, setNestChildren] = useState<boolean>(() =>
     parseNestStored(readStored(NEST_CHILDREN_KEY, ["on", "off"], "on")),
   );
+  // D5a parent-lane board lane order: recency (default) or project grouping.
+  const [parentLaneOrder, setParentLaneOrder] = useState<ParentLaneOrder>(() =>
+    parseParentLaneOrderStored(readStored(PARENT_LANE_ORDER_KEY, ["recency", "project"], "recency")),
+  );
   // The open pane lives in the panel's URL subPath (`t/<threadId>`), not in
   // component state, so bb's back arrow, a reload, and deep links all land on
   // the pane the user left. The ref mirrors the last pushed thread id; sync
@@ -407,6 +414,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   const persistNestChildren = useCallback((enabled: boolean) => {
     setNestChildren(enabled);
     writeStored(NEST_CHILDREN_KEY, nestStoredValue(enabled));
+  }, []);
+  const persistParentLaneOrder = useCallback((value: ParentLaneOrder) => {
+    setParentLaneOrder(value);
+    writeStored(PARENT_LANE_ORDER_KEY, value);
   }, []);
 
   // The sidebar view pushes fresh thread data continuously; this signal
@@ -940,6 +951,8 @@ function BoardPage({ subPath }: { subPath: string }) {
             }
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
+            parentLaneOrder={parentLaneOrder}
+            onParentLaneOrderChange={persistParentLaneOrder}
             onOpenThread={openThreadCard}
             onClosePane={closeThreadPane}
             onNewTask={openNewThread}

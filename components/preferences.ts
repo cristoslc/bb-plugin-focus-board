@@ -36,3 +36,17 @@ export function parseGroupStored(raw: string | null): GroupBy {
     ? (raw as GroupBy)
     : "status";
 }
+
+/** The parent-lane board lane-order toggle (D5a): recency (default) or project grouping. */
+export const PARENT_LANE_ORDER_KEY = "focus-board:parentLaneOrder";
+
+export type ParentLaneOrder = "recency" | "project";
+
+const ALLOWED_PARENT_LANE_ORDER: readonly ParentLaneOrder[] = ["recency", "project"];
+
+/** Validate the stored lane-order value; anything stale or unknown falls back to recency. */
+export function parseParentLaneOrderStored(raw: string | null): ParentLaneOrder {
+  return (ALLOWED_PARENT_LANE_ORDER as readonly string[]).includes(raw ?? "")
+    ? (raw as ParentLaneOrder)
+    : "recency";
+}

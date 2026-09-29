@@ -4,14 +4,17 @@ import {
   PARENT_LANE_ROW_ORDER,
   buildParentLanes,
   parentLaneRowLabel,
+  sectionParentLanes,
   type ParentLane,
+  type ParentLaneSection,
 } from "../components/parent-lanes";
 import { STATUS_COLUMN_ORDER, THREAD_STATE_LABELS } from "../components/grouping";
 import { grandchildCountFor } from "../components/nesting";
 import { parseGroupStored } from "../components/preferences";
 import { thread } from "./thread-fixture";
 
-const HOUR = 60 * 60 * 1000;
+const MINUTE = 60 * 1000;
+const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 const NOW = 10 * DAY;
 
@@ -33,6 +36,14 @@ function rowOf(lane: ParentLane, id: string): PluginSidebarThread[] | undefined 
 
 function idsOf(threads: readonly PluginSidebarThread[] | undefined): string[] {
   return (threads ?? []).map((t) => t.id);
+}
+
+function sectionIds(sections: readonly ParentLaneSection[]): string[] {
+  return sections.map((s) => s.id);
+}
+
+function sectionLaneIds(section: ParentLaneSection): string[] {
+  return section.lanes.map((lane) => lane.id);
 }
 
 describe("PARENT_LANE_ROW_ORDER and labels", () => {
@@ -155,33 +166,46 @@ describe("buildParentLanes — row placement", () => {
 });
 
 describe("buildParentLanes — lane order", () => {
-  it("orders lanes by the family's most attention-requiring live member", () => {
-    const idleParent = thread({ id: "idle_p" });
-    const idleChild = thread({ id: "idle_c", parentThreadId: "idle_p", updatedAt: NOW - HOUR });
-    const attentionParent = thread({ id: "att_p" });
-    const attentionChild = thread({ id: "att_c", parentThreadId: "att_p", hasPendingInteraction: true });
+  it("orders family lanes by the family's most recent touch, most recent at left", () => {
+    const oldParent = thread({ id: "old_p", updatedAt: NOW - 4 * HOUR });
+    const oldChild = thread({ id: "old_c", parentThreadId: "old_p", updatedAt: NOW - 5 * HOUR });
+    const recentParent = thread({ id: "recent_p", updatedAt: NOW - HOUR });
+    const recentChild = thread({ id: "recent_c", parentThreadId: "recent_p", updatedAt: NOW - 2 * HOUR });
     const lanes = buildParentLanes(
-      [idleParent, idleChild, attentionParent, attentionChild],
+      [oldParent, oldChild, recentParent, recentChild],
       new Set(),
       NOW,
     );
-    expect(laneIds(lanes).slice(0, 2)).toEqual(["att_p", "idle_p"]);
+    expect(laneIds(lanes).slice(0, 2)).toEqual(["recent_p", "old_p"]);
   });
 
-  it("ties between all-idle families break by derived order", () => {
+  it("counts a just-done child as the family's last touch", () => {
+    const quietParent = thread({ id: "quiet_p", updatedAt: NOW - 5 * HOUR });
+    const quietChild = thread({ id: "quiet_c", parentThreadId: "quiet_p", updatedAt: NOW - 6 * HOUR });
+    const activeParent = thread({ id: "active_p", updatedAt: NOW - 2 * HOUR });
+    const justDoneChild = thread({ id: "done_c", parentThreadId: "active_p", updatedAt: NOW - MINUTE });
+    const lanes = buildParentLanes(
+      [quietParent, quietChild, activeParent, justDoneChild],
+      new Set(["done_c"]),
+      NOW,
+    );
+    expect(laneIds(lanes).slice(0, 2)).toEqual(["active_p", "quiet_p"]);
+  });
+
+  it("ties between untouched families break by derived order", () => {
     const p1 = thread({ id: "p1", updatedAt: NOW - HOUR });
-    const c1 = thread({ id: "c1", parentThreadId: "p1", updatedAt: NOW - 2 * HOUR });
-    const p2 = thread({ id: "p2", updatedAt: NOW - 3 * HOUR });
-    const c2 = thread({ id: "c2", parentThreadId: "p2", updatedAt: NOW - 4 * HOUR });
+    const c1 = thread({ id: "c1", parentThreadId: "p1", updatedAt: NOW - HOUR });
+    const p2 = thread({ id: "p2", updatedAt: NOW - HOUR });
+    const c2 = thread({ id: "c2", parentThreadId: "p2", updatedAt: NOW - HOUR });
     const lanes = buildParentLanes([p1, c1, p2, c2], new Set(), NOW);
     expect(laneIds(lanes).slice(0, 2)).toEqual(["p1", "p2"]);
   });
 
-  it("a pinned parent floats its lane leftmost on a tie", () => {
+  it("a pinned parent floats its lane leftmost on a recency tie", () => {
     const pinnedParent = thread({ id: "pinned", isPinned: true, updatedAt: NOW - HOUR });
     const pinnedChild = thread({ id: "pc", parentThreadId: "pinned", updatedAt: NOW - 2 * HOUR });
-    const plainParent = thread({ id: "plain", updatedAt: NOW - 3 * HOUR });
-    const plainChild = thread({ id: "oc", parentThreadId: "plain", updatedAt: NOW - 4 * HOUR });
+    const plainParent = thread({ id: "plain", updatedAt: NOW - HOUR });
+    const plainChild = thread({ id: "oc", parentThreadId: "plain", updatedAt: NOW - 2 * HOUR });
     const lanes = buildParentLanes(
       [pinnedParent, pinnedChild, plainParent, plainChild],
       new Set(),
@@ -190,19 +214,72 @@ describe("buildParentLanes — lane order", () => {
     expect(laneIds(lanes)[0]).toBe("pinned");
   });
 
-  it("excludes archived and done members from the lane lift", () => {
-    const parent = thread({ id: "p" });
-    const archived = thread({ id: "a", parentThreadId: "p", hasPendingInteraction: true, isArchived: true });
-    const done = thread({ id: "d", parentThreadId: "p", hasPendingInteraction: true });
-    const liveIdle = thread({ id: "i", parentThreadId: "p", updatedAt: NOW - HOUR });
+  it("excludes archived members from the family's recency lift", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - 5 * HOUR });
+    const archived = thread({ id: "a", parentThreadId: "p", updatedAt: NOW - MINUTE, isArchived: true });
+    const liveIdle = thread({ id: "i", parentThreadId: "p", updatedAt: NOW - 3 * HOUR });
+    const otherParent = thread({ id: "other_p", updatedAt: NOW - 2 * HOUR });
+    const otherChild = thread({ id: "other_c", parentThreadId: "other_p", updatedAt: NOW - 4 * HOUR });
     const lanes = buildParentLanes(
-      [parent, archived, done, liveIdle],
-      new Set(["d"]),
+      [parent, archived, liveIdle, otherParent, otherChild],
+      new Set(),
       NOW,
     );
-    const lane = laneOf(lanes, "p")!;
-    expect(rowIdsOf(lane)).toContain("idle-today");
-    expect(idsOf(rowOf(lane, "idle-today"))).toEqual(["i"]);
+    expect(laneIds(lanes).slice(0, 2)).toEqual(["other_p", "p"]);
+  });
+
+  it("trails the Standalone lane after family lanes in the flat recency list", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - HOUR });
+    const child = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
+    const solo = thread({ id: "solo", updatedAt: NOW - MINUTE });
+    const lanes = buildParentLanes([parent, child, solo], new Set(), NOW);
+    expect(laneIds(lanes)).toEqual(["p", "standalone"]);
+  });
+});
+
+describe("sectionParentLanes", () => {
+  it("groups family lanes by parent projectId and keeps Standalone trailing", () => {
+    const projA = thread({ id: "projA", projectId: "a", updatedAt: NOW - HOUR });
+    const childA = thread({ id: "childA", parentThreadId: "projA", projectId: "a", updatedAt: NOW - 2 * HOUR });
+    const projB = thread({ id: "projB", projectId: "b", updatedAt: NOW - 3 * HOUR });
+    const childB = thread({ id: "childB", parentThreadId: "projB", projectId: "b", updatedAt: NOW - 4 * HOUR });
+    const solo = thread({ id: "solo", projectId: "a", updatedAt: NOW - 5 * HOUR });
+    const lanes = buildParentLanes([projA, childA, projB, childB, solo], new Set(), NOW);
+    const sections = sectionParentLanes(lanes, (id) => ({ a: "Alpha", b: "Beta" }[id] ?? "Unknown"));
+    expect(sectionIds(sections)).toEqual(["a", "b", "standalone"]);
+    expect(sectionLaneIds(sections[0])).toEqual(["projA"]);
+    expect(sectionLaneIds(sections[1])).toEqual(["projB"]);
+    expect(sectionLaneIds(sections[2])).toEqual(["standalone"]);
+  });
+
+  it("orders sections by their most recent lane", () => {
+    const aParent = thread({ id: "a_p", projectId: "a", updatedAt: NOW - 4 * HOUR });
+    const aChild = thread({ id: "a_c", parentThreadId: "a_p", projectId: "a", updatedAt: NOW - 5 * HOUR });
+    const bParent = thread({ id: "b_p", projectId: "b", updatedAt: NOW - HOUR });
+    const bChild = thread({ id: "b_c", parentThreadId: "b_p", projectId: "b", updatedAt: NOW - 2 * HOUR });
+    const lanes = buildParentLanes([aParent, aChild, bParent, bChild], new Set(), NOW);
+    const sections = sectionParentLanes(lanes, (id) => ({ a: "Alpha", b: "Beta" }[id] ?? "Unknown"));
+    expect(sectionIds(sections)).toEqual(["b", "a", "standalone"]);
+  });
+
+  it("orders lanes inside a section by the same recency rule", () => {
+    const a1 = thread({ id: "a1", projectId: "a", updatedAt: NOW - 4 * HOUR });
+    const a1c = thread({ id: "a1c", parentThreadId: "a1", projectId: "a", updatedAt: NOW - 5 * HOUR });
+    const a2 = thread({ id: "a2", projectId: "a", updatedAt: NOW - HOUR });
+    const a2c = thread({ id: "a2c", parentThreadId: "a2", projectId: "a", updatedAt: NOW - 2 * HOUR });
+    const lanes = buildParentLanes([a1, a1c, a2, a2c], new Set(), NOW);
+    const sections = sectionParentLanes(lanes, () => "Alpha");
+    expect(sectionLaneIds(sections[0])).toEqual(["a2", "a1"]);
+  });
+
+  it("labels sections by projectNameFor and Standalone explicitly", () => {
+    const parent = thread({ id: "p", projectId: "x" });
+    const child = thread({ id: "c", parentThreadId: "p", projectId: "x" });
+    const solo = thread({ id: "solo" });
+    const lanes = buildParentLanes([parent, child, solo], new Set(), NOW);
+    const sections = sectionParentLanes(lanes, (id) => (id === "x" ? "Chi" : "Other"));
+    expect(sections[0].label).toBe("Chi");
+    expect(sections[1].label).toBe("Standalone");
   });
 });
 

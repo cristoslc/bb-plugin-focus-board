@@ -6,7 +6,13 @@ import { ThreadCard } from "./thread-card";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
 import { threadState } from "./grouping";
 import { grandchildCountFor } from "./nesting";
-import type { ParentLane, ParentLaneRow } from "./parent-lanes";
+import {
+  sectionParentLanes,
+  type ParentLane,
+  type ParentLaneRow,
+  type ParentLaneSection,
+} from "./parent-lanes";
+import type { ParentLaneOrder } from "./preferences";
 
 interface ParentLaneBoardProps {
   lanes: readonly ParentLane[];
@@ -21,6 +27,8 @@ interface ParentLaneBoardProps {
   statusFor?: (repo: string | null, number: number | undefined) =>
     | { kind: string; state: string }
     | undefined;
+  parentLaneOrder: ParentLaneOrder;
+  onParentLaneOrderChange: (value: ParentLaneOrder) => void;
   onOpenThread: (threadId: string) => void;
   /** Close the open thread pane when the operator clicks empty board area. */
   onClosePane?: () => void;
@@ -155,7 +163,10 @@ function LaneRow({
   menuActionsFor,
 }: {
   row: ParentLaneRow;
-} & Omit<ParentLaneBoardProps, "lanes" | "onClosePane" | "onNewTask">) {
+} & Omit<
+  ParentLaneBoardProps,
+  "lanes" | "onClosePane" | "onNewTask" | "parentLaneOrder" | "onParentLaneOrderChange"
+>) {
   return (
     <div className="min-h-24 border-b border-border/40 p-1.5 last:border-b-0">
       {row.threads.length === 0 ? null : (
@@ -186,6 +197,144 @@ function LaneRow({
   );
 }
 
+function LaneOrderToggle({
+  value,
+  onChange,
+}: {
+  value: ParentLaneOrder;
+  onChange: (value: ParentLaneOrder) => void;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Lane order"
+      className="flex h-7 items-center rounded-md border border-border bg-background p-0.5 text-[11px] font-medium"
+    >
+      <button
+        type="button"
+        role="radio"
+        aria-checked={value === "recency"}
+        onClick={() => onChange("recency")}
+        className={cn(
+          "rounded px-2 py-0.5 transition-colors",
+          value === "recency"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        Recency
+      </button>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={value === "project"}
+        onClick={() => onChange("project")}
+        className={cn(
+          "rounded px-2 py-0.5 transition-colors",
+          value === "project"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        By project
+      </button>
+    </div>
+  );
+}
+
+function Lane({
+  lane,
+  ...props
+}: {
+  lane: ParentLane;
+} & Omit<ParentLaneBoardProps, "lanes" | "parentLaneOrder" | "onParentLaneOrderChange">) {
+  const {
+    activeThreadId,
+    doneIds,
+    dimmedIds,
+    childrenByParent,
+    projectNameFor,
+    repoBaseFor,
+    statusFor,
+    onOpenThread,
+    menuActionsFor,
+  } = props;
+  return (
+    <section
+      key={lane.id}
+      data-lane-id={lane.id}
+      aria-label={lane.label}
+      className="flex h-full min-h-0 w-64 shrink-0 flex-col rounded-lg"
+    >
+      <div data-lane-header className="h-[52px] shrink-0 px-1 pb-1.5">
+        <LaneHeader lane={lane} doneIds={doneIds} onOpenThread={onOpenThread} />
+        {lane.archivedChildren.length > 0 ? (
+          <div className="mt-1 flex flex-col gap-1">
+            {lane.archivedChildren.map((child) => (
+              <ArchivedRider
+                key={child.id}
+                child={child}
+                dimmed={dimmedIds.has(child.id)}
+                isActive={child.id === activeThreadId}
+                onOpenThread={onOpenThread}
+                menuActions={menuActionsFor(child)}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+      <div
+        data-lane-rows
+        className="min-h-0 flex-1 overflow-y-auto rounded-lg bg-muted/30 p-1"
+      >
+        {lane.rows.map((row) => (
+          <LaneRow
+            key={row.id}
+            row={row}
+            doneIds={doneIds}
+            dimmedIds={dimmedIds}
+            childrenByParent={childrenByParent}
+            projectNameFor={projectNameFor}
+            repoBaseFor={repoBaseFor}
+            statusFor={statusFor}
+            activeThreadId={activeThreadId}
+            onOpenThread={onOpenThread}
+            menuActionsFor={menuActionsFor}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SectionHeader({ label }: { label: string }) {
+  return (
+    <div className="flex h-[52px] shrink-0 items-center px-1">
+      <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function Section({
+  section,
+  ...props
+}: {
+  section: ParentLaneSection;
+} & Omit<ParentLaneBoardProps, "lanes" | "parentLaneOrder" | "onParentLaneOrderChange">) {
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <SectionHeader label={section.label} />
+      <div className="flex h-full min-h-0 items-stretch gap-4">
+        {section.lanes.map((lane) => (
+          <Lane key={lane.id} lane={lane} {...props} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ParentLaneBoard({
   lanes,
   activeThreadId,
@@ -195,23 +344,34 @@ export function ParentLaneBoard({
   projectNameFor,
   repoBaseFor,
   statusFor,
+  parentLaneOrder,
+  onParentLaneOrderChange,
   onOpenThread,
   onClosePane,
   onNewTask,
   menuActionsFor,
 }: ParentLaneBoardProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const sections = useMemo(
+    () =>
+      parentLaneOrder === "project"
+        ? sectionParentLanes(lanes, projectNameFor)
+        : [{ id: "__flat__", label: "", lanes: [...lanes] }],
+    [parentLaneOrder, lanes, projectNameFor],
+  );
   const activeLaneId = useMemo(() => {
     if (activeThreadId === null) return null;
-    for (const lane of lanes) {
-      if (lane.id === activeThreadId) return lane.id; // the parent header is the active thread
-      for (const row of lane.rows) {
-        if (row.threads.some((t) => t.id === activeThreadId)) return lane.id;
+    for (const section of sections) {
+      for (const lane of section.lanes) {
+        if (lane.id === activeThreadId) return lane.id; // the parent header is the active thread
+        for (const row of lane.rows) {
+          if (row.threads.some((t) => t.id === activeThreadId)) return lane.id;
+        }
+        if (lane.archivedChildren.some((t) => t.id === activeThreadId)) return lane.id;
       }
-      if (lane.archivedChildren.some((t) => t.id === activeThreadId)) return lane.id;
     }
     return null;
-  }, [lanes, activeThreadId]);
+  }, [sections, activeThreadId]);
 
   useEffect(() => {
     const container = scrollRef.current;
@@ -263,6 +423,19 @@ export function ParentLaneBoard({
   if (lanes.length === 0) return null;
   const rowIds = lanes[0].rows.map((row) => row.id);
   const rowLabels = lanes[0].rows.map((row) => row.label);
+  const childProps = {
+    activeThreadId,
+    doneIds,
+    dimmedIds,
+    childrenByParent,
+    projectNameFor,
+    repoBaseFor,
+    statusFor,
+    onOpenThread,
+    onClosePane,
+    onNewTask,
+    menuActionsFor,
+  };
 
   return (
     <div
@@ -273,6 +446,9 @@ export function ParentLaneBoard({
       <div className="flex h-full min-h-0 items-stretch gap-4">
         {/* Row rail: fixed left, labels aligned with each row cell. */}
         <div className="flex h-full w-28 shrink-0 flex-col">
+          <div className="flex h-[52px] shrink-0 items-center">
+            <LaneOrderToggle value={parentLaneOrder} onChange={onParentLaneOrderChange} />
+          </div>
           <div className="h-[52px] shrink-0" />
           <div data-lane-rows className="min-h-0 flex-1 overflow-hidden">
             {rowLabels.map((label, index) => (
@@ -287,55 +463,19 @@ export function ParentLaneBoard({
         </div>
         {/* Lanes: scroll horizontally. */}
         <div className="flex h-full min-h-0 items-stretch gap-4">
-          {lanes.map((lane) => (
-            <section
-              key={lane.id}
-              data-lane-id={lane.id}
-              aria-label={lane.label}
-              className="flex h-full min-h-0 w-64 shrink-0 flex-col rounded-lg"
-            >
-              <div data-lane-header className="h-[52px] shrink-0 px-1 pb-1.5">
-                <LaneHeader lane={lane} doneIds={doneIds} onOpenThread={onOpenThread} />
-                {lane.archivedChildren.length > 0 ? (
-                  <div className="mt-1 flex flex-col gap-1">
-                    {lane.archivedChildren.map((child) => (
-                      <ArchivedRider
-                        key={child.id}
-                        child={child}
-                        dimmed={dimmedIds.has(child.id)}
-                        isActive={child.id === activeThreadId}
-                        onOpenThread={onOpenThread}
-                        menuActions={menuActionsFor(child)}
-                      />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-              <div
-                data-lane-rows
-                className="min-h-0 flex-1 overflow-y-auto rounded-lg bg-muted/30 p-1"
-              >
-                {lane.rows.map((row) => (
-                  <LaneRow
-                    key={row.id}
-                    row={row}
-                    doneIds={doneIds}
-                    dimmedIds={dimmedIds}
-                    childrenByParent={childrenByParent}
-                    projectNameFor={projectNameFor}
-                    repoBaseFor={repoBaseFor}
-                    statusFor={statusFor}
-                    activeThreadId={activeThreadId}
-                    onOpenThread={onOpenThread}
-                    menuActionsFor={menuActionsFor}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
+          {parentLaneOrder === "project" ? (
+            sections.map((section) => <Section key={section.id} section={section} {...childProps} />)
+          ) : (
+            <div className="flex h-full min-h-0 items-stretch gap-4">
+              {lanes.map((lane) => (
+                <Lane key={lane.id} lane={lane} {...childProps} />
+              ))}
+            </div>
+          )}
           {/* New-task affordance mirrors the Working column's button. */}
           <div className="flex h-full w-64 shrink-0 flex-col rounded-lg">
             <div className="h-[52px] shrink-0 px-1 pb-1.5" />
+            <div className="h-[52px] shrink-0" />
             <button
               type="button"
               onClick={onNewTask}
