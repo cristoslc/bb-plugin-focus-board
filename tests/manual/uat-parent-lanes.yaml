@@ -81,6 +81,17 @@ steps:
       - locked_lane: true
       - bands_aligned: true
 
+  - id: pan-settles-to-a-quiet-board
+    title: After a pan the board settles quiet, bounded glide events then stillness
+    goto: "?groupBy=parent"
+    # The rule itself performs the pan and listens the whole way through
+    # release, debounce, glide, recut, and post-pin corrections: the glide's
+    # motion is legitimate (bounded event count), the jitter regression was
+    # events continuing indefinitely to the end of the window.
+    assert:
+      - board_quiet: { dx: 480, hold_ms: 2500, max_events: 60, max_tail_ms: 500 }
+      - locked_lane: true
+
   - id: search-matching-only-loose-threads-shows-empty-state
     title: A search that matches only loose threads drops every family and shows the empty state
     goto: "?groupBy=parent&q=Queue%20the%20UAT%20pass%20for%20the%20rank%20lane"
