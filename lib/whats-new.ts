@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.16";
+export const APP_VERSION = "0.5.17";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -22,6 +22,14 @@ export interface WhatsNewEntry {
 
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    version: "0.5.17",
+    items: [
+      "Parent lanes now size to fit their cards, and the selected family renders as a wide, readable ruler lane.",
+      "Pan the board and the nearest lane snaps in as the ruler: seams stay aligned, clicked subtasks stay on screen, and the board settles without jitter.",
+      "The lane-order toggle moved into the left rail as a vertical picker.",
+    ],
+  },
   {
     version: "0.5.16",
     items: [
