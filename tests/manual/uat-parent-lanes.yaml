@@ -37,6 +37,22 @@ steps:
       - nest_locked: true
       - text_hidden: "Standalone"
 
+  - id: a-quarter-pan-selects-the-next-lane
+    title: A short pan that mostly brings the next lane in locks that lane
+    goto: "?groupBy=parent"
+    scroll: { dx: 280 }
+    sleep: { ms: 1600 }
+    assert:
+      - locked_lane: "thr_sweep_parent"
+      - bands_aligned: true
+
+  - id: hovering-a-swimlane-shades-the-whole-row
+    title: Hovering a swimlane shades that row across every lane
+    goto: "?groupBy=parent"
+    hover: { board_y: 0.85 }
+    assert:
+      - band_hover: true
+
   - id: header-click-opens-parent-pane
     title: Clicking a lane header opens the parent thread's pane
     goto: "?groupBy=parent"

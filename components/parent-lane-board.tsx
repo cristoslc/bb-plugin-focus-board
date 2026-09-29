@@ -273,6 +273,10 @@ export function ParentLaneBoard({
   const [geoIdx, setGeoIdx] = useState(0);
   const [released, setReleased] = useState(false);
   const [viewportW, setViewportW] = useState(RAIL_W + 900);
+  /** The row id whose whole swimlane (all lanes' shared y-range) shades on
+   *  hover. Updated only when the row changes, so pans never re-render. */
+  const [bandHover, setBandHover] = useState<string | null>(null);
+  const bandHoverRef = useRef<string | null>(null);
 
   // Latest-value refs the imperative scroll manager reads without re-binding.
   const geoIdxRef = useRef(0);
@@ -402,7 +406,12 @@ export function ParentLaneBoard({
 
     const nearestLane = () => {
       const widths = layoutRef.current?.laneWidths ?? [];
-      const flush = widths.map((_, i) => predictedStart(i, widths, RAIL_W) - 1);
+      // Scroll-space flush targets: the glide path uses the same
+      // `predictedStart - (rail + gap)` form; the threshold rule is
+      // offset-sensitive, unlike the old argmin it replaced.
+      const flush = widths.map(
+        (_, i) => predictedStart(i, widths, RAIL_W) - (RAIL_W + RAIL_TO_LANE_GAP),
+      );
       // Padded grab range: a lane grabs a little before its flush point, so
       // a stop with the previous lane's right sliver at the lock point still
       // locks it (operator: "a wider grab range for the left-most column").
@@ -623,10 +632,36 @@ export function ParentLaneBoard({
   // (ensureReachable grows it only while a glide needs the reach).
   const spacerW = Math.max(0, viewportW - RAIL_W - RAIL_TO_LANE_GAP);
 
+  // Track which swimlane y-range the pointer is in; shade that whole row
+  // across every lane. Only a row CHANGE re-renders.
+  const trackBandHover = (event: MouseEvent<HTMLDivElement>) => {
+    const board = scrollRef.current;
+    if (board === null) return;
+    const y = event.clientY;
+    let rowId: string | null = null;
+    for (const band of Array.from(board.querySelectorAll("[data-band]"))) {
+      const rect = band.getBoundingClientRect();
+      if (y >= rect.top && y < rect.bottom) {
+        rowId = band.getAttribute("data-band");
+        break;
+      }
+    }
+    if (rowId === bandHoverRef.current) return;
+    bandHoverRef.current = rowId;
+    setBandHover(rowId);
+  };
+  const clearBandHover = () => {
+    if (bandHoverRef.current === null) return;
+    bandHoverRef.current = null;
+    setBandHover(null);
+  };
+
   return (
     <div
       ref={scrollRef}
       onClick={handleBackgroundClick}
+      onMouseMove={trackBandHover}
+      onMouseLeave={clearBandHover}
       data-parent-board
       className="min-h-0 flex-1 overflow-auto px-3 pb-3 pt-2"
     >
@@ -744,10 +779,16 @@ export function ParentLaneBoard({
                   <div
                     key={row.id}
                     data-band={row.id}
+                    data-band-hover={bandHover === row.id ? "true" : undefined}
                     style={{ height: layout.bandHeights[rowIndex] }}
                     className={cn(
                       "flex flex-wrap content-start gap-2 overflow-hidden p-1",
-                      "border-b border-border/40 last:border-b-0",
+                      "border-b border-dashed border-border/40 last:border-b-0",
+                      "transition-[height] duration-200",
+                      // Swimlane hover: the whole row shades together across
+                      // every lane (the shared y-range), set by the board's
+                      // mouse tracker below.
+                      "data-[band-hover=true]:bg-primary/[0.09]",
                       "transition-[height] duration-200",
                       // Ruler bands left-pack so a lone card stays pinned to
                       // the flush edge (visible even on narrow scrollports);
