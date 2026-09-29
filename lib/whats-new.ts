@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.11";
+export const APP_VERSION = "0.5.12";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    version: "0.5.12",
+    items: [
+      "The sweep now refuses a parent thread that still has live children, and the CLI sweep mirrors the board's quiet-thread rule: running turns and unseen-activity threads are never archive-eligible. Both certification findings are closed.",
+    ],
+  },
   {
     version: "0.5.11",
     items: [
