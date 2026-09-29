@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.13";
+export const APP_VERSION = "0.5.14";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    version: "0.5.14",
+    items: [
+      "Thread pane on phones: the actions menu now offers Full Screen, so opening a thread in the main view is one tap even where the full-screen button is hidden.",
+    ],
+  },
   {
     version: "0.5.13",
     items: [
