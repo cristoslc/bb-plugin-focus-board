@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-// The thread pane header shows which project (and branch) the open thread
+// The thread pane footer shows which project (and branch) the open thread
 // runs on: a project's own checkout environment is just called "Project
 // Checkout", so without a project label there is no way to tell which
 // project the chat pane is working on. Archived threads keep a minimal
-// shape and render no context line at all.
+// shape and render no footer at all.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createElement, type ReactNode } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
@@ -51,8 +51,8 @@ function renderPane(thread: Parameters<typeof ThreadPane>[0]["thread"]) {
   );
 }
 
-describe("thread pane header context line", () => {
-  it("shows the project name", () => {
+describe("thread pane footer project line", () => {
+  it("shows the project name in the pane footer", () => {
     renderPane({
       id: "thr_test",
       displayTitle: "Test thread",
@@ -61,10 +61,11 @@ describe("thread pane header context line", () => {
       projectName: "bb-plugin-focus-board",
       branchName: null,
     });
-    expect(screen.getByText("bb-plugin-focus-board")).toBeTruthy();
+    const line = screen.getByText("bb-plugin-focus-board");
+    expect(line.closest("footer")).not.toBeNull();
   });
 
-  it("shows the branch next to the project", () => {
+  it("shows the branch next to the project in the footer", () => {
     renderPane({
       id: "thr_test",
       displayTitle: "Test thread",
@@ -73,12 +74,13 @@ describe("thread pane header context line", () => {
       projectName: "bb-plugin-focus-board",
       branchName: "feat/context-line",
     });
-    expect(screen.getByText(/bb-plugin-focus-board/)).toBeTruthy();
-    const line = screen.getByText(/feat\/context-line/);
-    expect(line.textContent).toContain("·");
+    const footer = screen.getByRole("contentinfo");
+    expect(footer.textContent).toContain("bb-plugin-focus-board");
+    expect(footer.textContent).toContain("feat/context-line");
+    expect(footer.textContent).toContain("·");
   });
 
-  it("omits the context line when the pane has no project", () => {
+  it("omits the footer when the pane has no project", () => {
     renderPane({
       id: "thr_test",
       displayTitle: "Test thread",
@@ -87,7 +89,7 @@ describe("thread pane header context line", () => {
       projectName: null,
       branchName: null,
     });
-    // The header keeps only the title; no muted metadata line below it.
-    expect(screen.queryByText("Personal")).toBeNull();
+    // Archived rows keep only the title shape; the footer is gone.
+    expect(screen.queryByRole("contentinfo")).toBeNull();
   });
 });
