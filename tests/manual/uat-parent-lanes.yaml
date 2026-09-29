@@ -57,6 +57,38 @@ steps:
       - text_visible: "Standalone"
       - text_visible: "Queue the UAT pass for the rank lane"
 
+  - id: lane-order-toggle-defaults-to-recency
+    title: The lane-order toggle defaults to Recency in parent-thread mode
+    goto: "?groupBy=parent"
+    assert:
+      - text_visible: "Recency"
+      - text_visible: "Parent thread lane fixture"
+      - text_visible: "Standalone"
+
+  - id: lane-order-toggle-switches-to-project
+    title: Switching lane order to By project groups family lanes under their project
+    goto: "?groupBy=parent"
+    click_aria: { label: "By project" }
+    assert:
+      - text_visible: "By project"
+      - text_visible: "Standalone"
+
+  - id: lane-order-toggle-on-then-off
+    title: Toggling lane order to By project then back to Recency keeps the board usable
+    goto: "?groupBy=parent"
+    click_aria: { label: "By project" }
+    assert:
+      - text_visible: "By project"
+      - text_visible: "Standalone"
+
+  - id: lane-order-toggle-back-to-recency
+    title: Returning to Recency order removes project sections
+    goto: "?groupBy=parent"
+    click_aria: { label: "Recency" }
+    assert:
+      - text_visible: "Parent thread lane fixture"
+      - text_visible: "Standalone"
+
   - id: group-switch-back-to-attention
     title: Switching back to Attention grouping renders normal columns
     goto: "?groupBy=status"

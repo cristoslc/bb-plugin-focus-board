@@ -13,9 +13,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Unread, Working, idle age buckets, Done). Only children render as cards;
   the parent is a clickable lane header with a state dot and child-count
   chip. A catch-all "Standalone" lane holds threads with no family. Lane
-  order derives from the family's most attention-needing live member; the
-  Done row sorts by done-recency; archived children ride under the header.
-  Sweep arming and stored lane order are deferred.
+  order defaults to family recency (most recently touched-or-responded
+  family at left, done children included), with a persisted toggle to group
+  lanes into project sections instead; the Standalone lane always trails.
+  The Done row sorts by done-recency; archived children ride under the
+  header. Sweep arming and stored lane order are deferred.
 
 ## [0.5.5] — 2026-09-28
 

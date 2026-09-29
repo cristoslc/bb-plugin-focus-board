@@ -98,4 +98,13 @@ describe("ParentLaneBoard rendering", () => {
     renderBoard([solo]);
     expect(screen.getByText("Solo task")).toBeTruthy();
   });
+
+  it("clicking By project calls onParentLaneOrderChange", () => {
+    const parent = thread({ id: "p", displayTitle: "Parent epic" });
+    const child = thread({ id: "c", parentThreadId: "p", displayTitle: "Child task" });
+    const onChange = vi.fn();
+    renderBoard([parent, child], { parentLaneOrder: "recency", onParentLaneOrderChange: onChange });
+    fireEvent.click(screen.getByText("By project"));
+    expect(onChange).toHaveBeenCalledWith("project");
+  });
 });
