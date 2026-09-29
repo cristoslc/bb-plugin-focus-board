@@ -59,6 +59,14 @@ export interface ThreadPaneThread {
   displayTitle: string;
   status: PluginSidebarThread["status"];
   isUnread: boolean;
+  /**
+   * Header context: the project (and branch) this thread runs on. Null
+   * project suppresses the context line — archived rows keep only the
+   * title shape and render no line. `branchName` is the branch, or the
+   * host name when there is no branch (matching the board card).
+   */
+  projectName: string | null;
+  branchName: string | null;
 }
 
 interface ThreadPaneProps {
@@ -473,7 +481,21 @@ export function ThreadPane({
           className="size-3.5 shrink-0 text-muted-foreground"
           aria-hidden
         />
-        <EditableTitle title={thread.displayTitle} onRename={onRename} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <EditableTitle title={thread.displayTitle} onRename={onRename} />
+          {/* Which project (and branch) this pane works on: a project's own
+              checkout environment is just named "Project Checkout", so the
+              project label is the only way to tell panes apart. Omitted for
+              archived rows, which keep only the title shape. */}
+          {thread.projectName === null ? null : (
+            <span className="truncate text-[11px] leading-tight text-muted-foreground/70">
+              {thread.projectName}
+              {thread.branchName === null || thread.branchName === "" ? null : (
+                <span className="text-muted-foreground/40"> · {thread.branchName}</span>
+              )}
+            </span>
+          )}
+        </div>
         <Button
           variant="ghost"
           size="sm"

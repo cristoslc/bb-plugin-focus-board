@@ -657,6 +657,14 @@ function BoardPage({ subPath }: { subPath: string }) {
     const projectId = [...filter.projects][0];
     return projects.some((project) => project.id === projectId) ? projectId : undefined;
   }, [filter.projects, projects]);
+  // "Personal" is the board card's label for a thread whose project is not in
+  // the sidebar's project list (bb's default personal project); the pane
+  // header uses the same resolution so the two surfaces agree.
+  const projectNameFor = useCallback(
+    (projectId: string) =>
+      projects.find((project) => project.id === projectId)?.name ?? "Personal",
+    [projects],
+  );
   const openNewThread = useCallback(() => {
     actions.openNewThread({
       ...(newThreadProjectId === undefined ? {} : { projectId: newThreadProjectId }),
@@ -690,6 +698,10 @@ function BoardPage({ subPath }: { subPath: string }) {
           displayTitle: openThreadActive.displayTitle,
           status: openThreadActive.status,
           isUnread: openThreadActive.isUnread,
+          projectName:
+            projectNameFor(openThreadActive.projectId),
+          branchName:
+            openThreadActive.environment?.branchName ?? openThreadActive.host?.name ?? null,
         }
       : openThreadArchived !== null
         ? {
@@ -698,6 +710,8 @@ function BoardPage({ subPath }: { subPath: string }) {
               openThreadArchived.title ?? openThreadArchived.titleFallback ?? openThreadArchived.id,
             status: "idle",
             isUnread: false,
+            projectName: null,
+            branchName: null,
           }
         : null;
 
@@ -946,9 +960,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             doneIds={doneIds}
             dimmedIds={dimmedIds}
             childrenByParent={parentLaneChildrenByParent}
-            projectNameFor={(projectId) =>
-              projects.find((project) => project.id === projectId)?.name ?? "Personal"
-            }
+            projectNameFor={projectNameFor}
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
             parentLaneOrder={parentLaneOrder}
@@ -975,9 +987,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             nestedChildrenByParent={assembly?.nestedChildrenByParent ?? new Map()}
             childCountByParent={assembly?.childCountByParent ?? new Map()}
             dimmedIds={dimmedIds}
-            projectNameFor={(projectId) =>
-              projects.find((project) => project.id === projectId)?.name ?? "Personal"
-            }
+            projectNameFor={projectNameFor}
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
             onOpenThread={openThreadCard}
