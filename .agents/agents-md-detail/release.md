@@ -90,6 +90,35 @@ last build of that checkout, not the tag:
 `bb plugin dev` is the watch-mode alternative for iterating, not for
 releases.
 
+## 7a. Signing a tag without unlocking 1Password (Vault-cached key)
+
+Releases must never block on a locked 1Password. The git signing key
+(`Personal | CLC-202508 | SSH Key`, the key behind this repo's
+`user.signingkey`) is cached in cove's Vault in two fields:
+
+- `op://Private/k4nzpxfor4bok2ganvsf2wjyfa/private key` (PKCS#8 PEM)
+- `op://Private/k4nzpxfor4bok2ganvsf2wjyfa/public key`
+
+From the first cache-in, both read offline forever. 1Password exports the
+private half as PKCS#8, a format `ssh-keygen` can neither hand to git nor
+import (`-m PKCS8` rejects Ed25519), so `scripts/sign-key-from-vault.py`
+derives the OpenSSH-format file the signer needs:
+
+1. Materialize (all three files `chmod 600`, no world-readable keys):
+   - `cove creds vault-get '<private-key-ref>' > key.pem`
+   - `cove creds vault-get '<public-key-ref>' > key.pub`
+   - `python3 scripts/sign-key-from-vault.py key.pem key.pub > key_openssh`
+2. Sign with stock `ssh-keygen`, not the 1Password wrapper program —
+   otherwise git fails with "1Password: invalid ssh public key":
+   `git -c gpg.format=ssh -c gpg.ssh.program="$(which ssh-keygen)" -c user.signingkey="<abs key_openssh path>" -c tag.gpgSign=true tag -a vX.Y.Z <release-commit> -m "Release X.Y.Z: <summary>"`
+3. Delete the materialized key files after tagging; re-derive next release.
+
+The signature's key blob matches the workstation key (`…3cSa`), so these
+tags sit in the same trust chain as 1Password-signed ones. Cached-key
+tradeoff: anything able to read cove's Vault can sign as this key — scope
+it to git tag signing, and rotate from 1Password if the Vault is ever
+compromised.
+
 ## 8. Release ledger
 
 - The in-plugin changelog (`lib/whats-new.ts`) is the only changelog; there
