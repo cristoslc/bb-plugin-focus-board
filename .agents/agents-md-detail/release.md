@@ -90,34 +90,41 @@ last build of that checkout, not the tag:
 `bb plugin dev` is the watch-mode alternative for iterating, not for
 releases.
 
-## 7a. Signing a tag without unlocking 1Password (Vault-cached key)
+## 7a. Signing a tag without unlocking 1Password (Vault-only key)
 
-Releases must never block on a locked 1Password. The git signing key
-(`Personal | CLC-202508 | SSH Key`, the key behind this repo's
-`user.signingkey`) is cached in cove's Vault in two fields:
+Tag signing never touches 1Password or the workstation's personal key.
+A dedicated Ed25519 key was generated for release signing alone; its
+private half lives ONLY in cove's Vault:
 
-- `op://Private/k4nzpxfor4bok2ganvsf2wjyfa/private key` (PKCS#8 PEM)
-- `op://Private/k4nzpxfor4bok2ganvsf2wjyfa/public key`
+- `op://Private/Focus Board Release Signing/private key` (OpenSSH format)
+- Public key: `scripts/release-signing.pub` (committed)
 
-From the first cache-in, both read offline forever. 1Password exports the
-private half as PKCS#8, a format `ssh-keygen` can neither hand to git nor
-import (`-m PKCS8` rejects Ed25519), so `scripts/sign-key-from-vault.py`
-derives the OpenSSH-format file the signer needs:
+Repo wiring (already configured; point the absolute paths at the main
+checkout):
 
-1. Materialize (all three files `chmod 600`, no world-readable keys):
-   - `cove creds vault-get '<private-key-ref>' > key.pem`
-   - `cove creds vault-get '<public-key-ref>' > key.pub`
-   - `python3 scripts/sign-key-from-vault.py key.pem key.pub > key_openssh`
-2. Sign with stock `ssh-keygen`, not the 1Password wrapper program —
-   otherwise git fails with "1Password: invalid ssh public key":
-   `git -c gpg.format=ssh -c gpg.ssh.program="$(which ssh-keygen)" -c user.signingkey="<abs key_openssh path>" -c tag.gpgSign=true tag -a vX.Y.Z <release-commit> -m "Release X.Y.Z: <summary>"`
-3. Delete the materialized key files after tagging; re-derive next release.
+- `gpg.format=ssh`, `tag.gpgSign=true` (unchanged)
+- `user.signingkey=<repo>/scripts/release-signing.pub`
+- `gpg.ssh.program=<repo>/scripts/release-ssh-sign.sh`
+- `gpg.ssh.allowedSignersFile=<repo>/scripts/release-signing.allowed`
 
-The signature's key blob matches the workstation key (`…3cSa`), so these
-tags sit in the same trust chain as 1Password-signed ones. Cached-key
-tradeoff: anything able to read cove's Vault can sign as this key — scope
-it to git tag signing, and rotate from 1Password if the Vault is ever
-compromised.
+`scripts/release-ssh-sign.sh` intercepts git's `-Y sign`, materializes the
+private key from the Vault into a 0600 temp file for the duration of one
+signature, calls stock `ssh-keygen` (NOT the 1Password `op-ssh-sign`
+wrapper), and deletes it. Verification passes through with
+`check-novalidate`-style reads, so `git tag -v` works against the
+allowed-signers file. Release procedure is unchanged otherwise: the signed
+tag is just `git tag -a vX.Y.Z <commit> -m "Release X.Y.Z: <summary>"`.
+
+The key is scoped to this job: it signs Focus Board release tags, nothing
+more (keep it that way). It was generated fresh — it is not a copy of the
+1Password identity key, whose Vault cache was purged when this key was
+created. Anyone able to read cove's Vault can sign as this key; recover
+by deleting the Vault entry and re-keying (new `.pub` + new
+allowed-signers, then a new version's first signed tag re-establishes
+trust). Tags do not retroactively re-sign: each is final, and a
+compromised-era tag can be identified by its key fingerprint
+(`SHA256:Js8QZbfl64XV2rqavEP/XY5qOSOLYkUnU6ldrHXoaEQ`, starting with
+v0.5.16's first tag).
 
 ## 8. Release ledger
 
