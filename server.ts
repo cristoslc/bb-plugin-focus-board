@@ -695,9 +695,18 @@ export default async function plugin(bb: BbPluginApi) {
       const confirm = input.options.confirm === true;
       const ids = input.options.ids ?? [];
       const thresholds = await settings.get();
-      const { rows: candidates } = await listCandidateThreads();
+      const { rows: candidates, liveIds } = await listCandidateThreads();
       const byId = new Map(candidates.map((row) => [row.id, row]));
       const kept = await readKept();
+
+      // Sweep-family contract: a live (non-archived) thread row that names a
+      // parent makes that parent never sweep-eligible, in either arm.
+      const liveChildParentIds = new Set<string>();
+      for (const row of candidates) {
+        if (row.archivedAt === null && row.parentThreadId !== null && liveIds.has(row.id)) {
+          liveChildParentIds.add(row.parentThreadId);
+        }
+      }
 
       const facts: SweepFact[] = await Promise.all(
         candidates.map(async (thread) => {
@@ -712,6 +721,12 @@ export default async function plugin(bb: BbPluginApi) {
                 ? null
                 : doneAtToEpochMs(record.doneAt),
             keep: record?.keep === true || kept[thread.id] === true,
+            status: thread.status,
+            unread:
+              thread.lastReadAt === null
+                ? thread.latestAttentionAt > 0
+                : thread.latestAttentionAt > thread.lastReadAt,
+            hasLiveChildren: liveChildParentIds.has(thread.id),
           };
         }),
       );

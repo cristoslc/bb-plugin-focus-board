@@ -1,9 +1,9 @@
 ---
 title: Certification — archive safety of Focus Board sweep and archive paths
 date: 2026-09-28
-certifiedVersion: 0.5.11
-result: conditional-pass
-findings: 2
+certifiedVersion: 0.5.12
+result: full-pass
+findingsClosed: 2
 ---
 
 # Certification — archive safety
@@ -34,6 +34,13 @@ Two deviations from recorded contracts were found. Neither exposes a live thread
 
 ## Verdict
 
-**Conditional pass.** All implemented guards are verified by code reading, by 156 sweep-suite tests plus the full 1337-test run, and by a live dry-run. Nothing in the certified set can archive a running, pinned, pending-interaction, unread, kept, non-Done, or un-stamped thread. The certification becomes a full pass when findings 1 and 2 are closed: implement the family-aware eligibility rule (with its failing test first), and extend the CLI's `SweepFact` with a status guard matching the board's idle-state rule.
+**Full pass (as of release 0.5.12).** The initial certification over 0.5.11 was a conditional pass with two findings; both were closed in the same session, red tests first, and the live dry-run shows an empty eligible set against a fully guarded engine. All implemented guards are verified by code reading, by the sweep-suite tests, and by a live dry-run. Nothing in the certified set can archive a running, pinned, pending-interaction, unread, kept, non-Done, un-stamped thread, or a thread with at least one live child.
+
+## Update 2026-09-28 — findings closed in 0.5.12
+
+1. **Sweep-family contract implemented.** `lib/sweep.ts` accepts a `liveChildParents` set in both arms and a thread with at least one live (non-archived) child is never eligible, regardless of its own age or keep flag; children stay eligible independently. Board wiring (`app.tsx`) derives the set from the full live thread list, so families are covered in every grouping mode. The server-side mirror derives it from live rows in `server.ts`, and `sweep-cli.ts` excludes such threads before the Done check, satisfying the "MUST be family-aware" contract from the nesting plan.
+2. **CLI status guard implemented.** `SweepFact` gains `status`, `unread`, and `hasLiveChildren`; the CLI idle arm now mirrors the board's `threadState === "idle"` rule for everything a raw thread row can see: running statuses (`active|starting|stopping|pending`) and unread rows (never-seen latest attention) are never idle-eligible. One residual is documented: a pending interaction is not visible on a raw server row, so the CLI cannot see it — the board can, and the CLI's 30-day idle threshold plus dry-run default remain the safety margin.
+
+Test evidence: the six new tests (three board-side, three server-side) were written first and confirmed red, then the guards implemented, then the full suite green at 1357 tests across 85 files with `tsc --noEmit` clean.
 
 Follow-up: closing both findings is one release (board guard, CLI guard, red tests first, fix, `npm test` under pipefail, release commit, tag, push, reload).

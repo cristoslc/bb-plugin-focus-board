@@ -269,6 +269,53 @@ describe("sweepCandidatesForIdleColumn", () => {
   });
 });
 
+describe("sweep-family contract", () => {
+  /** `parent` has one live (non-archived) child; `parentQuiet` does not. */
+  const liveChildParents = new Set(["parent"]);
+
+  it("a parent with a live child is never eligible in the idle arm, regardless of age", () => {
+    expect(
+      sweepCandidatesForIdleColumn(
+        [thread({ id: "parent", updatedAt: NOW - 90 * DAY })],
+        new Set(),
+        { idleArchiveDays: 30 },
+        NOW,
+        liveChildParents,
+      ),
+    ).toEqual([]);
+  });
+
+  it("a parent with a live child is never eligible in the done arm, regardless of age or keep", () => {
+    const candidates = sweepCandidatesForDoneColumn(
+      [thread({ id: "parent" })],
+      new Set(["parent"]),
+      { doneMarkedAt: () => NOW - 90 * DAY, kept: () => true },
+      { doneArchiveDays: 7 },
+      NOW,
+      liveChildParents,
+    );
+    expect(candidates).toEqual([]);
+  });
+
+  it("the child is eligible independently of its parent", () => {
+    const candidates = sweepCandidatesForIdleColumn(
+      [
+        thread({ id: "parent", updatedAt: NOW - 90 * DAY }),
+        thread({
+          id: "child",
+          parentThreadId: "parent",
+          updatedAt: NOW - 90 * DAY,
+        }),
+      ],
+      new Set(),
+      { idleArchiveDays: 30 },
+      NOW,
+      liveChildParents,
+    );
+    expect(candidates).toEqual(["child"]);
+  });
+});
+
 describe("arm-then-confirm semantics", () => {
   const doneSource = {
     doneMarkedAt: (id: string) => (id === "a" ? NOW - 30 * DAY : null),

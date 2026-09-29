@@ -36,6 +36,10 @@ export interface SweepConfig {
  * Done-arm candidates: done threads whose done-marked age is >=
  * `doneArchiveDays` (default 7) and not overridden. Ordered newest-done
  * first so the gathered cards read most-recently-retired at the top.
+ *
+ * Sweep-family contract: `liveChildParents` lists thread ids that have at
+ * least one live (non-archived) child; such a thread is never eligible in
+ * either arm, regardless of its own age or keep flag.
  */
 export function sweepCandidatesForDoneColumn(
   threads: readonly PluginSidebarThread[],
@@ -43,6 +47,7 @@ export function sweepCandidatesForDoneColumn(
   doneSource: DoneAgeSource,
   config: SweepConfig,
   now: number,
+  liveChildParents: ReadonlySet<string> = new Set(),
 ): string[] {
   const threshold = (config.doneArchiveDays ?? DEFAULT_DONE_ARCHIVE_DAYS) * DAY;
   return threads
@@ -50,6 +55,8 @@ export function sweepCandidatesForDoneColumn(
     .map((thread) => ({ id: thread.id, doneAt: doneSource.doneMarkedAt(thread.id) }))
     .filter((entry): entry is { id: string; doneAt: number } => entry.doneAt !== null)
     .filter((entry) => !doneSource.kept(entry.id) && now - entry.doneAt >= threshold)
+    // Children are eligible independently of their parent; the parent is not.
+    .filter((entry) => !liveChildParents.has(entry.id))
     .sort((a, b) => b.doneAt - a.doneAt)
     .map((entry) => entry.id);
 }
@@ -58,18 +65,24 @@ export function sweepCandidatesForDoneColumn(
  * Idle-arm candidates: idle-state (quiet, not done) threads whose last
  * activity is >= `idleArchiveDays` (default 30) ago, excluding pinned and
  * overridden threads. Ordered newest-activity first.
+ *
+ * Sweep-family contract: `liveChildParents` lists thread ids that have at
+ * least one live (non-archived) child; those are never eligible here,
+ * regardless of age.
  */
 export function sweepCandidatesForIdleColumn(
   threads: readonly PluginSidebarThread[],
   doneIds: ReadonlySet<string>,
   config: SweepConfig,
   now: number,
+  liveChildParents: ReadonlySet<string> = new Set(),
 ): string[] {
   const threshold = (config.idleArchiveDays ?? DEFAULT_IDLE_ARCHIVE_DAYS) * DAY;
   return threads
     .filter((thread) => !doneIds.has(thread.id) && !thread.isPinned)
     .filter((thread) => threadState(thread) === "idle")
     .filter((thread) => !(config.kept?.(thread.id) ?? false))
+    .filter((thread) => !liveChildParents.has(thread.id))
     .filter((thread) => now - thread.updatedAt >= threshold)
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .map((thread) => thread.id);

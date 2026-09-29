@@ -473,6 +473,19 @@ function BoardPage({ subPath }: { subPath: string }) {
   // data. Arming (in armSweepFor) captures this list at arm time; while a
   // sweep is armed the FROZEN list is what Board displays and what confirm
   // archives — the live recompute is only for the next arm.
+  //
+  // Sweep-family contract: a thread with ≥1 live (non-archived) child is
+  // never sweep-eligible in either arm; children stay eligible
+  // independently. The parent set comes from the full live list, not the
+  // column, so cross-column and flat-mode families are covered alike.
+  const liveChildParentIds = useMemo(() => {
+    const parents = new Set<string>();
+    for (const thread of liveThreads) {
+      if (thread.parentThreadId !== null) parents.add(thread.parentThreadId);
+    }
+    return parents;
+  }, [liveThreads]);
+
   const sweepCandidatesFor = useCallback(
     (columnId: string): readonly string[] => {
       const column = columns.find((candidate) => candidate.id === columnId);
@@ -485,15 +498,17 @@ function BoardPage({ subPath }: { subPath: string }) {
             doneAgeSource,
             { doneArchiveDays: sweepConfig.doneArchiveDays },
             now,
+            liveChildParentIds,
           )
         : sweepCandidatesForIdleColumn(
             column.threads,
             doneIds,
             { idleArchiveDays: sweepConfig.idleArchiveDays, kept: idleKept },
             now,
+            liveChildParentIds,
           );
     },
-    [columns, doneIds, doneAgeSource, idleKept, sweepConfig],
+    [columns, doneIds, doneAgeSource, idleKept, liveChildParentIds, sweepConfig],
   );
 
   const armSweepFor = useCallback(

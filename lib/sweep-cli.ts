@@ -8,7 +8,13 @@
 // - Done arm: a thread whose done stamp is older than `doneArchiveDays`
 //   and not kept (metadata keep OR the KV keep store) is eligible.
 // - Idle arm: a thread with no Done record, not archived, not pinned, not
-//   kept, whose last activity is older than `idleArchiveDays` is eligible.
+//   kept, not running, not unread, without a live child, whose last
+//   activity is older than `idleArchiveDays` is eligible — the server-side
+//   mirror of the board's `threadState === "idle"` rule for everything a
+//   raw thread row can see.
+// - Sweep-family contract: a thread with ≥1 live (non-archived) child is
+//   never eligible in either arm, regardless of its own age or keep flag;
+//   children are eligible independently of their parent.
 // - Already-archived threads are never eligible; a Done thread below the
 //   Done threshold is not claimed by the idle arm (Done threads are only
 //   Done-arm candidates).
@@ -35,6 +41,12 @@ export interface SweepFact {
   doneAt: number | null;
   /** Merged keep override: metadata keep OR the KV keep store. */
   keep: boolean;
+  /** The thread's own status, as reported by the server row. */
+  status: string;
+  /** The operator has not seen the latest activity in the thread. */
+  unread: boolean;
+  /** True when at least one live (non-archived) child hangs off this id. */
+  hasLiveChildren: boolean;
 }
 
 export type SweepReason = "done" | "idle";
@@ -43,6 +55,9 @@ export interface SweepEligible {
   id: string;
   reason: SweepReason;
 }
+
+/** Statuses whose turn is still in flight — the idle arm never touches them. */
+const RUNNING_STATUSES = new Set(["active", "starting", "stopping", "pending"]);
 
 /**
  * The sweep-eligible subset of `facts`, in input order. A thread at
@@ -60,13 +75,14 @@ export function sweepCliEligible(
   for (const fact of facts) {
     if (fact.archived) continue;
     if (fact.keep) continue;
+    if (fact.hasLiveChildren) continue; // A live parent is never sweep-eligible.
     if (fact.doneAt !== null) {
       if (now - fact.doneAt >= doneThreshold) {
         eligible.push({ id: fact.id, reason: "done" });
       }
       continue; // Done threads are only Done-arm candidates.
     }
-    if (!fact.pinned && now - fact.updatedAt >= idleThreshold) {
+    if (!fact.pinned && !RUNNING_STATUSES.has(fact.status) && !fact.unread && now - fact.updatedAt >= idleThreshold) {
       eligible.push({ id: fact.id, reason: "idle" });
     }
   }

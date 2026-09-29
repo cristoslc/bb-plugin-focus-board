@@ -204,6 +204,74 @@ describe("bb focus-board sweep", () => {
     });
   });
 
+  describe("sweep-family contract and status guard (server side)", () => {
+    it("a parent with a live child is never eligible; the child is eligible independently", async () => {
+      await load();
+      listedThreads = [
+        makeThreadResponse({
+          id: "thr_parent",
+          updatedAt: NOW - 90 * DAY_MS,
+        }),
+        makeThreadResponse({
+          id: "thr_child",
+          parentThreadId: "thr_parent",
+          updatedAt: NOW - 90 * DAY_MS,
+        }),
+      ];
+      const result = await harness.behavior.runCli(["sweep", "--json"]);
+      expect(
+        (JSON.parse(result.stdout) as { eligible: Array<{ id: string }> })
+          .eligible.map((entry) => entry.id),
+      ).toEqual(["thr_child"]);
+    });
+
+    it("a done parent with a live child is excluded from the done arm", async () => {
+      await load();
+      listedThreads = [
+        makeThreadResponse({
+          id: "thr_parent",
+          updatedAt: NOW - 90 * DAY_MS,
+        }),
+        makeThreadResponse({
+          id: "thr_child",
+          parentThreadId: "thr_parent",
+          updatedAt: NOW - 90 * DAY_MS,
+        }),
+      ];
+      metadata.set("thr_parent", { done: { doneAt: iso(100 * DAY_MS) } });
+      const result = await harness.behavior.runCli(["sweep", "--json"]);
+      // The parent is excluded by the family contract; the child stays
+      // eligible through the idle arm, independently of its parent.
+      expect(
+        (JSON.parse(result.stdout) as { eligible: Array<{ id: string }> })
+          .eligible.map((entry) => entry.id),
+      ).toEqual(["thr_child"]);
+    });
+
+    it("running and unread threads are never idle-eligible", async () => {
+      await load();
+      listedThreads = [
+        makeThreadResponse({
+          id: "thr_active",
+          status: "active",
+          updatedAt: NOW - 90 * DAY_MS,
+        }),
+        makeThreadResponse({
+          id: "thr_unread",
+          lastReadAt: NOW - 100 * DAY_MS,
+          latestAttentionAt: NOW,
+          updatedAt: NOW - 90 * DAY_MS,
+        }),
+        idleThread("thr_quiet", 90),
+      ];
+      const result = await harness.behavior.runCli(["sweep", "--json"]);
+      expect(
+        (JSON.parse(result.stdout) as { eligible: Array<{ id: string }> })
+          .eligible.map((entry) => entry.id),
+      ).toEqual(["thr_quiet"]);
+    });
+  });
+
   describe("--confirm", () => {
     it("archives exactly the resolved eligible set", async () => {
       await load();
