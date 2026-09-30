@@ -48,9 +48,12 @@ merging into `dev`, releasing, changelog writing, or tagging.
   `[Unreleased]` bullets saying what the behavior is *now* (the parked-pin
   model revising 0.5.21's lane-exit unpin is the example to remember).
 - `lib/whats-new.ts` is NOT maintained on dev — no entries, no churn. On
-  dev, `APP_VERSION`'s `-dev` suffix means "unreleased", and the
-  prerelease-relaxed whats-new test keeps the suite green without a
-  placeholder entry; the pulse stays quiet on dev by construction.
+  dev, `APP_VERSION`'s `-dev` suffix means "unreleased": the prerelease
+  branch in the whats-new entry test keeps the suite green without a
+  placeholder entry, and the pulse guard in `app.tsx` (a prerelease running
+  version never counts as unseen) keeps dev builds from advertising
+  already-published entries to the person who wrote them. The modal stays
+  reachable from the quiet gift button.
 
 ## 2. Verify, always
 

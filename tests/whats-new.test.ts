@@ -6,6 +6,7 @@ import {
   WHATS_NEW,
   compareVersions,
   entriesSince,
+  isPrereleaseVersion,
 } from "../lib/whats-new";
 
 const packageVersion = (): string =>
@@ -24,10 +25,35 @@ describe("APP_VERSION stays in lockstep with package.json", () => {
     // A released version whose modal cannot describe itself is a silent
     // update. A -dev build is not a release — its "entry" lives in the
     // changelog's [Unreleased] group and gets its WHATS_NEW entry when the
-    // finalize commit strips the suffix, so the pulse stays quiet on dev by
-    // construction rather than by a placeholder entry.
-    if (/^[0-9]+\.[0-9]+\.[0-9]+-.+$/.test(APP_VERSION)) return;
+    // finalize commit strips the suffix, and the pulse guard keeps dev
+    // quiet rather than a placeholder entry doing it.
+    if (isPrereleaseVersion(APP_VERSION)) return;
     expect(WHATS_NEW.some((entry) => entry.version === APP_VERSION)).toBe(true);
+  });
+
+  it("recognizes prerelease suffixes", () => {
+    expect(isPrereleaseVersion("0.6.0-dev")).toBe(true);
+    expect(isPrereleaseVersion("0.6.0-beta.2")).toBe(true);
+    expect(isPrereleaseVersion("0.6.0")).toBe(false);
+  });
+});
+
+describe("the dev pulse guard", () => {
+  // Mirrors the app.tsx expression: a dev build never counts as unseen, so
+  // reloading onto an unreleased build does not advertise already-published
+  // entries to the maintainer who wrote them.
+  it("suppresses the pulse for a -dev build regardless of the stored version", () => {
+    const unseen = (lastSeen: string | null, running: string) =>
+      lastSeen !== null &&
+      !isPrereleaseVersion(running) &&
+      compareVersions(running, lastSeen) > 0;
+    // Stored 0.5.20 (stamped by the served-out release) + dev 0.6.0-dev:
+    // would pulse without the guard, since 0.6.0-dev > 0.5.20.
+    expect(unseen("0.5.20", "0.6.0-dev")).toBe(false);
+    expect(unseen(null, "0.6.0-dev")).toBe(false);
+    // Stable builds keep the ordinary behavior.
+    expect(unseen("0.5.20", "0.6.0")).toBe(true);
+    expect(unseen("0.6.0", "0.6.0")).toBe(false);
   });
 });
 
