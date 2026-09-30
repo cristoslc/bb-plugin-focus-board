@@ -168,3 +168,31 @@ would be reverted — rare, and the pill one click away.
 performs the exact gesture (wheel up, click above the composer), and captures
 the bogus scrollTop write with its calling stack. Not wired into `npm test`;
 it is an operator tool, needs a running bb server and a chrome binary.
+## Update 2026-09-30 — the symptom direction was the agent's error
+
+The operator corrected this finding's scenario: they were **already pinned
+at the newest message** when they clicked, and the transcript jumped **up**.
+"Yanked back to the newest message by whatever you had scrolled" (the
+framing above, the 0.5.19 changelog line, and the v1–v3 upstream drafts)
+misreads the event; it fits only the probe runs, where the reader was
+driven to the bottom by synthetic wheeling and the bogus write clamped to
+the reader's own position, invisibly.
+
+What stands and where the report now goes:
+
+- **Still verified evidence:** three bogus `scrollTop` writes captured live
+  on 2026-09-29 (19350 / 19387 / 19388 against a live max of ~10457–10473)
+  with stacks resolving to the host asset bundle — not the plugin's.
+- **Two candidate write paths in the same module** (`apps/app/src/components/ui/bottom-anchored-scroll-body.tsx`,
+  base `adbce963`): the pending-capture restore at L433–441 (the captured
+  one), and a row-anchor restore at L540–570 writing an absolute stored
+  position (`revealOffset + offsetWithinRow`), re-applied on anchor-store
+  commits — which can displace an at-bottom reader upward, matching the
+  operator's symptom, and has never been reproduced. Which path the
+  operator hit is not established; discriminating them is the open
+  investigation (child `thr_a3spka7tq4`, repro-first).
+- **The shipped guard (`components/chat-jump-guard.ts`) does not cover the
+  operator's scenario**: its arm requires the reader ≥96px scrolled up, an
+  at-bottom reader leaves it inert. It remains in place as a defense for
+  the captured clamp-down variant until this investigation closes or bb
+  ships the fix; this section supersedes the mechanism summary above.
