@@ -42,6 +42,17 @@ into dev, then this whole group is renamed to its release version._
 
 ### Fixed
 
+- **The pane's click-jump guard no longer cements an upward displacement.**
+  The guard arms on left clicks in the transcript while the reader is
+  scrolled up; a click landing at an already-displaced position armed it at
+  the displaced baseline, and bb's shell (self-correcting a displacement it
+  had just made by re-pinning to the bottom) was then reverted by the
+  guard, leaving the reader displaced. The guard now watches the
+  scroller's position with a passive scroll listener and does not arm for
+  3s after any single scroll move of ≥300px — displacements and their
+  self-corrections stay with the shell that made them. Shipped in 0.5.19,
+  bug and fix reproduced headlessly (10 instrumented runs).
+
 ## [0.5.21] - 2026-09-30
 
 ### Added
