@@ -3,6 +3,32 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.19] - 2026-09-29
+
+### Added
+
+- **Clicking in the pane's chat no longer yanks the transcript back to the
+  bottom.** Clicking in the transcript while it is scrolled up could jump the
+  view to the newest message ("up half a page or so"): bb's page-shell
+  `bottom-anchor` scroll manager keeps a pending scroll-anchor capture from
+  the older-rows preload, consumes it after every React commit by mixing a
+  live-applied scrollTop with a stale captured scrollHeight, overshoots the
+  real maximum, and the clamp lands at the bottom. The SDK exposes no access
+  to that pending capture, so the pane arms a defensive revert around
+  clicks: a left click while scrolled up by at least 96px snapshots the
+  position, and a clamp-to-bottom landing within ~200ms is reverted through
+  the manager's own gesture path (an untrusted wheel event opens its
+  disengage window first, so the revert survives the manager's
+  resize-driven re-pin). Clicks on the "Scroll to latest event" pill and in
+  the composer never arm the guard (they legitimately re-pin), and reader
+  gestures in the window (wheel, touch, scroll keys) disarm it, so it never
+  fights the reader's own scrolling. Findings, verified mechanism, the
+  suggested upstream fix, and the deletion condition for this workaround:
+  `docs/chat-click-jump-2026-09-29.md`. Scroller discovery also falls back
+  to the click's own scroll container if an upstream rename removes the
+  `.thread-scrollbar` marker class before the host fix lands
+  (`tests/chat-jump-guard.test.ts`, 15 cases).
+
 ## [0.5.18] - 2026-09-29
 
 ### Fixed
