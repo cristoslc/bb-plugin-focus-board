@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.20";
+export const APP_VERSION = "0.5.21";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -22,6 +22,14 @@ export interface WhatsNewEntry {
 
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    version: "0.5.21",
+    items: [
+      "Escape now stops a running thread's turn before the pane: press Escape once to interrupt, press again to close. A toggle in the plugin's settings (default on) controls it, and a gear in the sidebar footer opens the settings.",
+      "Moving a pinned card out of the Pinned column — a drop onto Unread or Done, or Mark done in its menu — unpins it in the same gesture, so it no longer snaps back into Pinned.",
+      "Columns drained to zero by nesting (every card is a nested child) now hide until a card returns.",
+    ],
+  },
   {
     version: "0.5.20",
     items: [

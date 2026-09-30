@@ -34,7 +34,14 @@ they've been quiet.
   at that spot in the same drop — state change and position in one drag.
   Alt+ArrowUp / Alt+ArrowDown does the same from the keyboard, and a lane
   with a hand-set order says so in its header.
-- **Nest** subthreads under their parent card
+- **Nest** subthreads under their parent card; a column drained to zero by
+  nesting hides until a card returns to it
+- **Escape stops a running thread first**: while a pane's thread is running,
+  Escape interrupts the turn instead of closing the pane; the pane closes
+  with Escape once nothing is running (toggle in the plugin's settings)
+- **Leaving Pinned unpins**: dropping a pinned card on Unread or Done — or
+  marking it done from its menu — takes the pin with it, so the card stays
+  where you put it instead of snapping back into Pinned
 - **Sweep** stale Done and long-idle threads to Archive in two clicks
 - **Ticket chips** with GitHub status dots, linking to the tracker
 - **Thread pane** slides in beside the board; works on phone. The open pane

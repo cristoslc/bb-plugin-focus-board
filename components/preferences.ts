@@ -50,3 +50,15 @@ export function parseParentLaneOrderStored(raw: string | null): ParentLaneOrder 
     ? (raw as ParentLaneOrder)
     : "recency";
 }
+
+/**
+ * The server-declared boolean setting backing the thread pane's Escape
+ * behavior (see server.ts `escStopsRunningThread`). Only an explicit stored
+ * `false` is off: while loading, unset (default applied host-side as true),
+ * or an unexpected type, the default ON applies.
+ */
+export function escStopsRunningFromSetting(
+  value: string | number | boolean | undefined,
+): boolean {
+  return value !== false;
+}

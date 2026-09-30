@@ -3,6 +3,33 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.21] - 2026-09-30
+
+### Added
+
+- **Escape stops a running thread before closing the pane.** Pressing Escape
+  while a pane's thread is running interrupts the turn instead of dismissing
+  it; the pane closes with Escape only once nothing is running (stopping
+  keeps it open until the stop settles). The behavior is a declarative
+  plugin setting — default on, toggle in the plugin detail page's
+  configuration panel — read reactively on the board, and a gear in the
+  sidebar footer opens that panel (bb's sidebar entry context menu is
+  host-owned with no plugin extension point).
+
+### Changed
+
+- **Pinned cards take the pin when they leave the lane.** Any gesture that
+  moves a pinned card out of the Pinned column — a drop onto Unread or Done,
+  or "Mark done" in the card's menu — unpins as part of the same gesture:
+  column placement is derived from the pin, so leaving the pin in place
+  would bounce the card straight back into Pinned on the next grouping
+  pass. "Mark not done" restores the card's column membership, not the pin.
+- **Columns drained to zero by nesting hide themselves.** When every card in
+  a column is a nested child — the parent carries its whole family into the
+  family column — the drained lane would park an empty header beside columns
+  that all earn their place; it now hides entirely and reappears when a card
+  returns, keeping the "columns exist only while they hold cards" rule.
+
 ## [0.5.20] - 2026-09-30
 
 ### Changed

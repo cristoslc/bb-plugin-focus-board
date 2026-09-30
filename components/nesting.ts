@@ -431,12 +431,24 @@ export function nestUnderParents(
   // column lists entirely. Only roots (and promoted/flat children) stay.
   const nestedKeyIds = nestedKeys(nested);
   sortNestedByColumnRank(nested, columns, groupBy, ranks);
-  const outColumns: BoardColumn[] = columns.map((column) => {
-    const kept = column.threads.filter(
-      (thread) => !nestedKeyIds.has(thread.id) && (flatIds.has(thread.id) || index.rootIds.has(thread.id)),
-    );
-    return { ...column, threads: kept };
-  });
+  const outColumns: BoardColumn[] = columns
+    .map((column) => {
+      const kept = column.threads.filter(
+        (thread) => !nestedKeyIds.has(thread.id) && (flatIds.has(thread.id) || index.rootIds.has(thread.id)),
+      );
+      return { ...column, threads: kept };
+    })
+    // Nesting drains a column when its every card is a nested child (a live
+    // parent carries its whole family into the family column — R4 — and the
+    // card itself takes a slot elsewhere). buildColumns never yields an
+    // empty bucket: “columns exist only while they hold cards” is the rule
+    // that keeps the board readable and that hides Idle·buckets that have
+    // aged out or emptied. A lane drained to zero violates it — the board
+    // would park an empty lane (header, count 0, maybe a stale drop hint)
+    // beside columns that all earn their place. Hide the drained column
+    // entirely; if a card leaves the nest it returns to its own column and
+    // the lane reappears with it.
+    .filter((column) => column.threads.length > 0);
 
   return { columns: outColumns, childrenByParent: nested };
 }

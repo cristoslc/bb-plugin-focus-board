@@ -8,6 +8,7 @@ import {
   useRealtime,
   useRpc,
   useSdk,
+  useSettings,
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { findTicketRefs, resolveRepoSlug } from "./lib/tickets";
@@ -60,6 +61,7 @@ import {
   GROUP_BY_KEY,
   NEST_CHILDREN_KEY,
   PARENT_LANE_ORDER_KEY,
+  escStopsRunningFromSetting,
   nestStoredValue,
   parseNestStored,
   parseGroupStored,
@@ -167,6 +169,13 @@ function BoardPage({ subPath }: { subPath: string }) {
   const navigate = useBbNavigate();
   const rpc = useRpc<typeof rpcContract>();
   const sdk = useSdk();
+  // Host-declared plugin settings (the detail page's config panel), reactive.
+  const { values: settingValues } = useSettings();
+  // The thread pane's Escape behavior: only a stored false turns the setting
+  // off; loading or an unavailable settings surface keeps the ON default.
+  const escStopsRunningThread = escStopsRunningFromSetting(
+    settingValues?.escStopsRunningThread,
+  );
 
   // The board's "needs you" state rides the sidebar's `hasPendingInteraction`
   // flag, but the sidebar cache can lag behind an answered question: the
@@ -939,6 +948,14 @@ function BoardPage({ subPath }: { subPath: string }) {
               return next;
             });
             rpc.call("done_set", { threadId: thread.id, done: !isThreadDone }).catch(() => {});
+            // The same lane-exit rule the drops compose: a state write that
+            // removes the card from the Pinned lane takes the pin with it.
+            // Marking Done is the only menu action that moves a card out (an
+            // unread card can sit pinned); "Mark Not Done" restores its
+            // membership, not the pin, so it writes nothing here.
+            if (thread.isPinned && !isThreadDone) {
+              void actions.setPinned(thread.id, false);
+            }
           },
         },
         {
@@ -988,6 +1005,19 @@ function BoardPage({ subPath }: { subPath: string }) {
     },
     [actions, doneAgeSource, doneIds, rpc, setDoneExtras, setDoneIds, sdk],
   );
+
+  // A drop onto any column other than the one the card sits in is, for a
+  // pinned card, also a move out of the Pinned lane: column placement is
+  // derived from the pin, so the pin must go with the gesture or the card
+  // bounces straight back into Pinned on the next grouping pass. This is
+  // the lane-exit consequence, not target-specific logic — each state-change
+  // handler composes it with its own writes (Unread adds mark-unread, Done
+  // adds done). A same-lane reorder (including within Pinned) is claimed by
+  // the card's reorder path and never reaches these handlers.
+  const dropExitsPinnedLane = (threadId: string) => {
+    const thread = threads.find((candidate) => candidate.id === threadId);
+    if (thread?.isPinned) void actions.setPinned(threadId, false);
+  };
 
   if (status === "loading" && threads.length === 0) {
     return (
@@ -1082,12 +1112,14 @@ function BoardPage({ subPath }: { subPath: string }) {
               next.add(threadId);
               setDoneIds(next);
               rpc.call("done_set", { threadId, done: true }).catch(() => {});
+              dropExitsPinnedLane(threadId);
             }}
             onDropUnread={(threadId) => {
               const thread = threads.find((candidate) => candidate.id === threadId);
               if (thread !== undefined && !thread.isUnread) {
                 void actions.setRead(threadId, false);
               }
+              dropExitsPinnedLane(threadId);
             }}
             // Drop on Pinned pins, unless the card is already pinned: a
             // pinned card's drop is a same-lane reorder (claimed by the card
@@ -1157,6 +1189,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           onRename={(title) => actions.rename(openThread.id, title)}
           onMaximize={() => navigate.toThread(openThread.id)}
           onClose={closeThreadPane}
+          escStopsRunningThread={escStopsRunningThread}
         />
       )}
       <WhatsNewModal
@@ -1178,6 +1211,18 @@ export default definePluginApp((app) => {
     // the open pane participates in browser history — bb's back arrow
     // reopens the pane state the user left, and deep links restore it.
     component: BoardPage,
+  });
+  // A gear icon in the sidebar footer (beside the built-in Settings and
+  // bug-report buttons) that jumps to this plugin's detail page in Tools,
+  // where its declarative settings — including the pane's Escape behavior —
+  // render. bb's sidebar entry context menu is host-owned with no plugin
+  // extension point, so this footer gear is the plugin's own shortcut to
+  // the configuration panel.
+  app.slots.sidebarFooterAction({
+    id: "open-settings",
+    title: "Focus Board settings",
+    icon: "Settings",
+    run: (context) => context.openSettings(),
   });
   // The host paints its own ExternalLink glyph inside linkified anchors
   // rendered in this panel's pane (ThreadChat's markdown) — an atomic
