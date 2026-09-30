@@ -5,9 +5,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-_Nothing unreleased — bullets land under a subsection below as work merges
-into dev, then this whole group is renamed to its release version._
-
 ### Added
 
 - **Developer toggle: pane chat scroll instrumentation.** A new off-by-default
@@ -33,6 +30,15 @@ into dev, then this whole group is renamed to its release version._
   It now does not arm for 3 seconds after any single scroll move of
   ≥300px, so the host shell's own corrections land undisturbed (shipped in
   0.5.19; `docs/chat-click-jump-2026-09-29.md`).
+
+- **A pinned family with a member that needs you now calls attention from
+  inside Pinned.** A pinned family cannot relocate to a Needs-you lane
+  (pinned threads split out before the family-column overrides read), so a
+  child thread's question used to sit silent inside a card that read idle.
+  Now the pinned parent card pulses — an amber border, the changelog gift's
+  pulse language — shows its question icon, and rises to the top of the
+  Pinned lane (above manual ranks, like urgent child rows do); the signal
+  vanishes when the question is answered.
 
 ## [0.5.21] - 2026-09-30
 
