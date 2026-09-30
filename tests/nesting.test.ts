@@ -16,6 +16,7 @@ import {
   filterIndividually,
   nestUnderParents,
 } from "../components/nesting";
+import { pinnedAttentionIds } from "../components/nesting";
 import { buildParentLanes } from "../components/parent-lanes";
 import { thread } from "./thread-fixture";
 
@@ -644,6 +645,146 @@ describe("assembleBoard — family columns (R4: the family moves as one unit)", 
     const result = assembleBoard([parent, child], "status", CONTEXT, new Map(), doneIds, NOW);
     expect(idsIn(result.columns, "attention")).toContain("c");
     expect(result.nestedChildrenByParent.has("p")).toBe(false);
+  });
+});
+
+describe("assembleBoard — the Pinned lane's attention lift (pinned families cannot leave Pinned)", () => {
+  it("a pinned family with a Needs-you child stays in Pinned but floats to the top of the lane", () => {
+    // The pinned parent is the OLDER card: the default order would put the
+    // other pinned family first, so the lift is what moves p to the top.
+    const parent = thread({ id: "p", isPinned: true, updatedAt: NOW - 2 * DAY });
+    const child = thread({
+      id: "c",
+      parentThreadId: "p",
+      hasPendingInteraction: true,
+      updatedAt: NOW - HOUR,
+    });
+    const bystander = thread({ id: "q", isPinned: true, updatedAt: NOW - HOUR });
+    const result = assembleBoard(
+      [parent, child, bystander],
+      "status",
+      CONTEXT,
+      new Map(),
+      new Set(),
+      NOW,
+    );
+    expect(idsIn(result.columns, "pinned")).toEqual(["p", "q"]);
+    // The attention child still nests under its pinned parent — it does not
+    // go look for a Needs-you column of its own.
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
+  });
+
+  it("the lift holds above a manual rank in the Pinned lane and disappears when the question is answered", () => {
+    const parent = thread({ id: "p", isPinned: true, updatedAt: NOW - 2 * DAY });
+    const child = thread({
+      id: "c",
+      parentThreadId: "p",
+      hasPendingInteraction: true,
+      updatedAt: NOW - HOUR,
+    });
+    const bystander = thread({ id: "q", isPinned: true, updatedAt: NOW - HOUR });
+    // The operator ranked q above p in the Pinned lane (the key is not
+    // namespaced by grouping).
+    const ranks = { pinned: ["q", "p"] };
+    const lifted = assembleBoard(
+      [parent, child, bystander],
+      "status",
+      CONTEXT,
+      new Map(),
+      new Set(),
+      NOW,
+      { ranks },
+    );
+    expect(idsIn(lifted.columns, "pinned")).toEqual(["p", "q"]);
+
+    // Same family, question answered: no attention member, no lift — the
+    // manual rank reads the lane again.
+    const answered = assembleBoard(
+      [parent, { ...child, hasPendingInteraction: false }, bystander],
+      "status",
+      CONTEXT,
+      new Map(),
+      new Set(),
+      NOW,
+      { ranks },
+    );
+    expect(idsIn(answered.columns, "pinned")).toEqual(["q", "p"]);
+  });
+
+  it("a Needs-you grandchild lifts the pinned family card too (the depth cap rides it as a child row)", () => {
+    const parent = thread({ id: "p", isPinned: true, updatedAt: NOW - 2 * DAY });
+    const child = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - HOUR });
+    const grandchild = thread({
+      id: "g",
+      parentThreadId: "c",
+      hasPendingInteraction: true,
+      updatedAt: NOW - 3 * HOUR,
+    });
+    const bystander = thread({ id: "q", isPinned: true, updatedAt: NOW - HOUR });
+    const result = assembleBoard(
+      [parent, child, grandchild, bystander],
+      "status",
+      CONTEXT,
+      new Map(),
+      new Set(),
+      NOW,
+    );
+    expect(idsIn(result.columns, "pinned")).toEqual(["p", "q"]);
+  });
+
+  it("a pinned thread whose OWN state needs you also floats to the top", () => {
+    const pinnedAttention = thread({
+      id: "a",
+      isPinned: true,
+      hasPendingInteraction: true,
+      updatedAt: NOW - 2 * DAY,
+    });
+    const bystander = thread({ id: "q", isPinned: true, updatedAt: NOW - HOUR });
+    const result = assembleBoard(
+      [pinnedAttention, bystander],
+      "status",
+      CONTEXT,
+      new Map(),
+      new Set(),
+      NOW,
+    );
+    expect(idsIn(result.columns, "pinned")).toEqual(["a", "q"]);
+  });
+
+  it("done and archived children do not lift or pulse the pinned family", () => {
+    const parent = thread({ id: "p", isPinned: true, updatedAt: NOW - 2 * DAY });
+    const archivedChild = thread({
+      id: "a",
+      parentThreadId: "p",
+      isArchived: true,
+      hasPendingInteraction: true,
+    });
+    const doneChild = thread({
+      id: "d",
+      parentThreadId: "p",
+      hasPendingInteraction: true,
+    });
+    const doneIds = new Set(["d"]);
+    const bystander = thread({ id: "q", isPinned: true, updatedAt: NOW - HOUR });
+    const result = assembleBoard(
+      [parent, archivedChild, doneChild, bystander],
+      "status",
+      CONTEXT,
+      new Map(),
+      doneIds,
+      NOW,
+    );
+    // q is newer than p, so with no lift the default order shows q first.
+    expect(idsIn(result.columns, "pinned")).toEqual(["q", "p"]);
+  });
+
+  it("pinnedAttentionIds is empty without a Pinned lane (nesting off — the child stands alone)", () => {
+    const parent = thread({ id: "p", isPinned: true });
+    const child = thread({ id: "c", parentThreadId: "p", hasPendingInteraction: true });
+    // With nesting off the columns still hold p; the lift is computed by
+    // nestUnderParents, so feed it a pinned-free column list instead.
+    const columns: BoardColumn[] = [{ id: "attention", label: "Needs you", threads: [child] }];
+    expect(pinnedAttentionIds(columns, new Map(), new Set()).size).toBe(0);
   });
 });
 

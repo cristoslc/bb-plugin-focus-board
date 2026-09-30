@@ -37,6 +37,9 @@ export function definePluginApp(setup: (app: unknown) => void): unknown {
         registeredNavPanel.path = config.path;
         registeredNavPanel.component = config.component;
       },
+      // The sidebar-footer settings gear (0.5.21): no sidebar is rendered in
+      // the harness, so the registration just has to be accepted.
+      sidebarFooterAction: (_config: { id: string }) => undefined,
     },
   });
   return { id: "screenshot-mock" };
@@ -286,6 +289,15 @@ export function useRpc(): { call: (method: string, args?: unknown) => Promise<un
 
 export function useRealtime(_channel: string, _handler: (payload: unknown) => void): void {
   // No realtime traffic in the harness.
+}
+
+/**
+ * Stub for the SDK's reactive plugin-settings hook (0.5.21): the harness has
+ * no host settings surface, so values stay null — the app treats null
+ * settings as the documented default (escape-stops-running stays ON).
+ */
+export function useSettings(): { values: Record<string, unknown> | null } {
+  return { values: null };
 }
 
 interface MockMessage {

@@ -3,6 +3,19 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- **A pinned family with a member that needs you calls attention from inside
+  Pinned.** A pinned family cannot relocate to a Needs-you lane (pinned
+  threads split out before the family-column overrides read), so a child
+  thread's question used to sit silent inside a card that read idle. Now the
+  pinned parent card pulses — an amber border, the changelog gift's pulse
+  language — shows its question icon, and rises to the top of the Pinned lane
+  (above manual ranks, like urgent child rows do); the signal vanishes when
+  the question is answered.
+
 ## [0.5.21] - 2026-09-30
 
 ### Added
