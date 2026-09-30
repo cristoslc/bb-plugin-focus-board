@@ -1,10 +1,10 @@
-_Generated 2026-09-29T18:04:26.470Z by `npm run uat`._
-
 # UAT report
+
+_Generated 2026-09-30T02:58:53.067Z by `npm run uat`._
 
 ## pane-history
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_x8wcvgqee9-1/bb-plugin-focus-board/tests/manual/uat-pane-history.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-pane-history.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
@@ -19,67 +19,3 @@ Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees
 | A restored card below the fold is scrolled into view | pass | ✓ pane shows thr_review_pr; ✓ active card is thr_review_pr; ✓ active card visible |
 | Relocating the active card (drop to Done) re-scrolls to its new lane | pass | ✓ pane shows thr_review_pr; ✓ active card is thr_review_pr; ✓ active card visible |
 | A malformed deep link degrades to the plain board | pass | ✓ pane closed; ✓ active card is (none) |
-
-## parent-lanes
-
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_x8wcvgqee9-1/bb-plugin-focus-board/tests/manual/uat-parent-lanes.yaml` · theme dark
-
-| Step | Result | Detail |
-| --- | --- | --- |
-| Parent-thread grouping shows family lanes and excludes loose threads | pass | ✓ text visible: "Parent thread lane fixture"; ✓ text visible: "Child thread lane fixture"; ✓ text hidden: "Standalone" |
-| The board opens with a family locked as the ruler lane and band tracks aligned | pass | ✓ locked lane: true; ✓ bands aligned across lanes; ✓ text hidden: "Standalone" |
-| Clicking a lane header opens the parent thread's pane | pass | ✓ pane open; ✓ text visible: "Parent thread lane fixture"; ✓ url ends with /board/t/thr_parent_lane |
-| Clicking a child card opens its thread pane | pass | ✓ pane shows thr_child_lane; ✓ active card is thr_child_lane; ✓ url ends with /board/t/thr_child_lane |
-| A deep-linked child in the rightmost lane is scrolled into view | pass | ✓ pane shows thr_child_lane; ✓ active card is thr_child_lane; ✓ active card visible |
-| Clicking a card in a context lane keeps it fully visible after the relock and recut | pass | ✓ locked lane: "thr_sweep_parent"; ✓ card visible: thr_sweep_child |
-| A horizontal pan releases the ruler lock and re-locks the nearest family at rest | pass | ✓ locked lane: true; ✓ bands aligned across lanes |
-| After a pan the board settles quiet, bounded glide events then stillness | pass | ✓ board quiet after pan: ≤60 events, still ≥500ms; ✓ locked lane: true |
-| A real wheel-event pan re-locks the nearest lane and settles quiet | pass | ✓ board quiet after pan: ≤80 events, still ≥500ms; ✓ locked lane: true; ✓ bands aligned across lanes |
-| Clicking a family header while a pan glide is in flight locks THAT lane, not the pan's target | pass | ✓ locked lane: "thr_parent_lane"; ✓ bands aligned across lanes |
-| Resizing the viewport wider while a lane is locked keeps the ruler locked and bands aligned | pass | ✓ locked lane: "thr_parent_lane"; ✓ bands aligned across lanes |
-| Resizing the viewport narrower while a lane is locked keeps the ruler locked and bands aligned | pass | ✓ locked lane: "thr_parent_lane"; ✓ bands aligned across lanes |
-| A search that matches only loose threads drops every family and shows the empty state | pass | ✓ text hidden: "Standalone"; ✓ text hidden: "Queue the UAT pass for the rank lane"; ✓ text visible: "No thread families to show yet" |
-| The lane-order toggle defaults to Recency in parent-thread mode | pass | ✓ text visible: "Recency"; ✓ text visible: "Parent thread lane fixture"; ✓ text hidden: "Standalone" |
-| Switching lane order to By project groups family lanes under their project | pass | ✓ text visible: "By project"; ✓ text visible: "Parent thread lane fixture" |
-| Toggling lane order to By project then back to Recency keeps the board usable | pass | ✓ text visible: "By project"; ✓ text visible: "Parent thread lane fixture" |
-| Returning to Recency order removes project sections | pass | ✓ text visible: "Parent thread lane fixture"; ✓ text hidden: "Standalone" |
-| Switching back to Attention grouping renders normal columns | pass | ✓ unread order |
-
-## rank-ordering
-
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_x8wcvgqee9-1/bb-plugin-focus-board/tests/manual/uat-rank.yaml` · theme dark
-
-| Step | Result | Detail |
-| --- | --- | --- |
-| A first-time user with no stored order can drag, and the drop writes one | pass | ✓ unread has 3 reorder slots; ✓ unread hand-ordered=false; ✓ drop permitted during drag; ✓ unread order; ✓ stored order {"status:unread":["thr_review_pr"]}; ✓ unread hand-ordered=true |
-| The first drop BELOW another card re-sorts, instead of leaving the card on top | pass | ✓ drop permitted during drag; ✓ unread order; ✓ stored order {"status:unread":["thr_uat_queue","thr_rpc_auth"]}; ✓ unread hand-ordered=true |
-| With every lane draggable, dropping on Done still marks done | pass | ✓ called done_set |
-| A lane with no cross-column drop handler still authorises its own reorder | pass | ✓ pinned has 2 reorder slots; ✓ drop permitted during drag; ✓ pinned order; ✓ stored order {"pinned":["thr_roadmap"]} |
-| A drop whose payload has no card id falls back to the dragstart ref | pass | ✓ pinned has 2 reorder slots; ✓ pinned order; ✓ stored order {"pinned":["thr_roadmap"]}; ✓ no refusal banner |
-| A lane with no stored order reads newest-first | pass | ✓ unread order; ✓ unread hand-ordered=false |
-| The Unread lane reads in its stored order instead of recency | pass | ✓ unread order; ✓ unread hand-ordered=true |
-| Dropping on a card's top half lands in front of it | pass | ✓ drop permitted during drag; ✓ unread order; ✓ rank_move {"columnKey":"status:unread","threadId":"thr_review_pr","beforeId":"thr_rpc_auth","toEnd":false}; ✓ stored order {"status:unread":["thr_review_pr","thr_rpc_auth","thr_uat_queue"]} |
-| Dropping on a card's bottom half lands past it, not on it | pass | ✓ drop permitted during drag; ✓ unread order; ✓ stored order {"status:unread":["thr_rpc_auth","thr_review_pr","thr_uat_queue"]} |
-| Dropping below the last card appends | pass | ✓ drop permitted during drag; ✓ unread order; ✓ rank_move {"columnKey":"status:unread","threadId":"thr_rpc_auth","beforeId":null,"toEnd":true} |
-| Dropping a card on itself writes nothing | pass | ✓ drop permitted during drag; ✓ stored order {"status:unread":["thr_rpc_auth","thr_uat_queue","thr_review_pr"]}; ✓ no rank_move call |
-| A rank drag into a plain lane's order is refused, not silently swallowed | pass | ✓ cross-lane drop refused; ✓ stored order {"status:unread":["thr_rpc_auth"]}; ✓ no rank_move call |
-| Dropping an Unread card on the Pinned lane pins it | pass | ✓ pinned order; ✓ stored order {"pinned":["thr_roadmap"]}; ✓ no rank_move call; ✓ no refusal banner |
-| The Pinned lane is ranked under every grouping | pass | ✓ pinned order; ✓ pinned hand-ordered=true |
-| Alt+ArrowDown moves a card down one slot | pass | ✓ unread order; ✓ stored order {"status:unread":["thr_uat_queue","thr_rpc_auth","thr_review_pr"]} |
-| Alt+ArrowUp on the second card lands it at the very top | pass | ✓ unread order |
-| The insertion line appears on the hovered half | pass | ✓ insertion line visible; ✓ drop permitted during hover; ✓ no insertion line |
-| A completed move is announced for screen readers | pass | ✓ move announced |
-
-## whats-new
-
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_x8wcvgqee9-1/bb-plugin-focus-board/tests/manual/uat-whats-new.yaml` · theme dark
-
-| Step | Result | Detail |
-| --- | --- | --- |
-| An upgrade (stored 0.4.4 → running 0.5.0) shows the gift, pulsing | pass | ✓ what's-new button present; ✓ what's-new unseen (pulsing); ✓ what's-new modal closed |
-| Opening the modal lists the entries since the stored version | pass | ✓ what's-new modal open; ✓ text visible: "Version 0.5.0"; ✓ text visible: "Version 0.4.4"; ✓ text visible: "The open pane is part of the panel URL" |
-| Having opened it, the pulse clears — but the button stays | pass | ✓ what's-new button present; ✓ what's-new seen (quiet); ✓ what's-new modal closed |
-| The quiet (seen) button still opens the full recent changelog | pass | ✓ what's-new modal open; ✓ text visible: "Version 0.5.0" |
-| Escape closes the modal; the button remains | pass | ✓ what's-new button present; ✓ what's-new modal closed |
-| A fresh install (nothing stored) is stamped seen — no pulse | pass | ✓ what's-new button present; ✓ what's-new seen (quiet); ✓ what's-new modal closed |
-| Revisiting at the same version stays quiet | pass | ✓ what's-new button present; ✓ what's-new seen (quiet); ✓ what's-new modal closed |

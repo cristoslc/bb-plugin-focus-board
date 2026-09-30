@@ -9,8 +9,11 @@ import {
   RULER,
   RAIL_TO_LANE_GAP,
   computeParentLaneLayout,
+  lockIndexFor,
+  pinIsInstant,
   predictedStart,
   viewportContextCols,
+  wallTrim,
 } from "../components/parent-lane-layout";
 import { thread } from "./thread-fixture";
 
@@ -45,6 +48,35 @@ function workingIndex(lanes: { rows: { id: string }[] }[]): number {
 function doneIndex(lanes: { rows: { id: string }[] }[]): number {
   return lanes[0].rows.findIndex((row) => row.id === "done");
 }
+
+describe("lockIndexFor", () => {
+  const flushes = [0, 300, 700];
+
+  it("grabs a lane once its flush point is reached", () => {
+    expect(lockIndexFor(300, flushes)).toBe(1);
+  });
+
+  it("widens each lane's grab range across the lane gap into the lane to its left", () => {
+    // Stop with the previous lane's right sliver at the lock point: the
+    // next lane still grabs (pad covers the inter-lane gap plus the sliver).
+    expect(lockIndexFor(277, flushes)).toBe(1);
+    expect(lockIndexFor(680, flushes)).toBe(2);
+  });
+
+  it("keeps the previous lane when the stop is short of the padded boundary", () => {
+    expect(lockIndexFor(275, flushes)).toBe(0);
+    expect(lockIndexFor(675, flushes)).toBe(1);
+  });
+
+  it("returns the first lane before any lock point", () => {
+    expect(lockIndexFor(-30, flushes)).toBe(0);
+  });
+
+  it("locks the last lane with no further lanes to its right", () => {
+    expect(lockIndexFor(2000, flushes)).toBe(2);
+    expect(lockIndexFor(695, flushes)).toBe(2);
+  });
+});
 
 describe("computeParentLaneLayout", () => {
   it("a locked band lays ruler rows following the lane's own column count", () => {
@@ -152,5 +184,33 @@ describe("computeParentLaneLayout", () => {
   it("a narrow viewport caps context lanes to fewer columns", () => {
     expect(viewportContextCols(640, RAIL_W)).toBe(2);
     expect(viewportContextCols(4000, RAIL_W)).toBe(CONTEXT_MAX_COLS);
+  });
+});
+
+describe("pinIsInstant", () => {
+  it("a pin whose target sits behind the scroll position snaps instantly", () => {
+    // Momentum overshoot: the settle stop is past the lane's flush point,
+    // so pinning it means moving backward.
+    expect(pinIsInstant(1467, 1597)).toBe(true);
+  });
+  it("forward pins keep the smooth glide", () => {
+    expect(pinIsInstant(1913, 1597)).toBe(false);
+  });
+  it("an exact flush target is not a backward pin", () => {
+    expect(pinIsInstant(1467, 1467)).toBe(false);
+  });
+});
+
+describe("wallTrim", () => {
+  it("trims the spacer so maxScroll reaches the last lane's flush", () => {
+    // maxSl 2400 vs wall 1913: trim the 487px of dead scroll space.
+    expect(wallTrim(2400, 1913, 1280)).toBe(793);
+  });
+  it("keeps the spacer untouched when the wall is already within reach", () => {
+    expect(wallTrim(1913, 1913, 1280)).toBe(1280);
+    expect(wallTrim(1800, 1913, 1280)).toBe(1280);
+  });
+  it("never returns a negative spacer width", () => {
+    expect(wallTrim(2500, 1913, 10)).toBe(0);
   });
 });

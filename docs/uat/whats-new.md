@@ -1,10 +1,10 @@
-_Generated 2026-09-29T01:21:04.952Z by `npm run uat`._
-
 # UAT report
+
+_Generated 2026-09-30T02:58:53.067Z by `npm run uat`._
 
 ## whats-new
 
-Source: `tests/manual/uat-whats-new.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-whats-new.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

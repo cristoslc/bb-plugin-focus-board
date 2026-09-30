@@ -11,7 +11,7 @@
  * pins them together so a version bump cannot drift past it.
  */
 
-export const APP_VERSION = "0.5.18";
+export const APP_VERSION = "0.5.20";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
@@ -22,6 +22,18 @@ export interface WhatsNewEntry {
 
 /** Newest first; condensed highlights, not the full CHANGELOG. */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    version: "0.5.20",
+    items: [
+      "Dropping a card onto a card in a new column (Pinned, Done, Unread) now places it at that spot in the same drop, instead of a state change followed by a second drag to position it.",
+    ],
+  },
+  {
+    version: "0.5.19",
+    items: [
+      "Clicking in the pane's chat while it is scrolled up no longer yanks the transcript back to the bottom. This is a workaround for bb's page-shell scroll manager; the module comes out when the host fix ships.",
+    ],
+  },
   {
     version: "0.5.18",
     items: [
