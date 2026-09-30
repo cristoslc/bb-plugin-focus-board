@@ -168,6 +168,34 @@ would be reverted — rare, and the pill one click away.
 performs the exact gesture (wheel up, click above the composer), and captures
 the bogus scrollTop write with its calling stack. Not wired into `npm test`;
 it is an operator tool, needs a running bb server and a chrome binary.
+## Update 2026-09-30, later — on-demand repro + mechanism discrimination
+
+The investigation child (`thr_a3spka7tq4`) rebuilt the trigger and
+instrumented ten runs (scroll-debug on dev, plus probe logs in the child's
+thread output):
+
+- **The operator's symptom reproduces on demand**: reader pinned at the
+  bottom, click above the composer → the view displaces upward, write and
+  stack captured (e.g. `10489 → 16` on a sh≈11523 transcript, and a
+  no-interception run where the natural older-page fetch succeeded, loaded
+  7 rows, and produced `14160 → 3687 = 0 + (15194 − 11507)`).
+- **Every reproduced yank's stack is the pending-capture path** — the
+  no-dep layout effect at L433–441, arithmetic verbatim
+  (`16 = 0 + (11523 − 11507)`). The row-anchor restore path (candidate 2)
+  never appeared, and cannot emit the 2026-09-29 writes (which exceed the
+  live scrollHeight; the row-anchor path clamps to max). One defect; the
+  direction (clamped down vs displaced up from a "frozen-low" capture) is
+  decided by when the shell's gesture refresh last touched
+  `capture.scrollTop`.
+- **The shipped guard had a cement defect**, seen live in runs d4/d5/d8/d10:
+  a click landing at an already-displaced position armed the guard at the
+  displaced baseline, and the shell's next automatic re-pin (its own
+  self-correction) got reverted as if it were the bogus clamp — the reader
+  stayed displaced. Fixed red-test-first: the guard now tracks the
+  scroller's position with a passive scroll listener and suppresses arming
+  for 3s after any single scroll move ≥300px (a displacement or its
+  correction in flight) (`tests/chat-jump-guard.test.ts`, 17 suite cases).
+
 ## Update 2026-09-30 — the symptom direction was the agent's error
 
 The operator corrected this finding's scenario: they were **already pinned
