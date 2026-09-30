@@ -79,6 +79,12 @@ interface ThreadPaneProps {
   onRename: (title: string) => Promise<void>;
   onMaximize: () => void;
   onClose: () => void;
+  /**
+   * Escape behavior (the "Esc stops running thread" toolbar toggle): when
+   * true, Escape stops a running thread and only closes the pane when the
+   * thread is not running; when false, Escape always closes the pane.
+   */
+  escStopsRunningThread: boolean;
 }
 
 interface ActionMenuItem {
@@ -217,6 +223,7 @@ export function ThreadPane({
   onRename,
   onMaximize,
   onClose,
+  escStopsRunningThread,
 }: ThreadPaneProps) {
   const [width, setWidth] = useState(readStoredPaneWidth);
   const isCompact = useIsCompactViewport();
@@ -345,13 +352,30 @@ export function ThreadPane({
         ) {
           return;
         }
+        if (escStopsRunningThread) {
+          // bb sorts "starting", "active", and "stopping" as busy threads.
+          // Escape interrupts the running turn first — closing the pane
+          // while the agent still runs would feel like the stop did
+          // nothing — and only closes once nothing is running. "stopping"
+          // means a stop is already in flight; keep the pane open until it
+          // settles so the result stays visible.
+          if (thread.status === "active" || thread.status === "starting") {
+            event.preventDefault();
+            void sdk.threads.stop({ threadId: thread.id }).catch(() => {});
+            return;
+          }
+          if (thread.status === "stopping") {
+            event.preventDefault();
+            return;
+          }
+        }
         event.preventDefault();
         onClose();
       }
     };
     document.addEventListener("keydown", onKeyDown, { capture: true });
     return () => document.removeEventListener("keydown", onKeyDown, { capture: true });
-  }, [onClose]);
+  }, [onClose, escStopsRunningThread, thread.status, thread.id, sdk]);
 
   // Existence checks for the inline-code file links (see
   // decorate-inline-code.ts): a path verdict comes from the plugin

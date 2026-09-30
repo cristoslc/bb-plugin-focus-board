@@ -8,6 +8,7 @@ import {
   useRealtime,
   useRpc,
   useSdk,
+  useSettings,
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { findTicketRefs, resolveRepoSlug } from "./lib/tickets";
@@ -59,6 +60,7 @@ import {
   GROUP_BY_KEY,
   NEST_CHILDREN_KEY,
   PARENT_LANE_ORDER_KEY,
+  escStopsRunningFromSetting,
   nestStoredValue,
   parseNestStored,
   parseGroupStored,
@@ -166,6 +168,13 @@ function BoardPage({ subPath }: { subPath: string }) {
   const navigate = useBbNavigate();
   const rpc = useRpc<typeof rpcContract>();
   const sdk = useSdk();
+  // Host-declared plugin settings (the detail page's config panel), reactive.
+  const { values: settingValues } = useSettings();
+  // The thread pane's Escape behavior: only a stored false turns the setting
+  // off; loading or an unavailable settings surface keeps the ON default.
+  const escStopsRunningThread = escStopsRunningFromSetting(
+    settingValues?.escStopsRunningThread,
+  );
 
   // The board's "needs you" state rides the sidebar's `hasPendingInteraction`
   // flag, but the sidebar cache can lag behind an answered question: the
@@ -1155,6 +1164,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           onRename={(title) => actions.rename(openThread.id, title)}
           onMaximize={() => navigate.toThread(openThread.id)}
           onClose={closeThreadPane}
+          escStopsRunningThread={escStopsRunningThread}
         />
       )}
       <WhatsNewModal
@@ -1176,5 +1186,17 @@ export default definePluginApp((app) => {
     // the open pane participates in browser history — bb's back arrow
     // reopens the pane state the user left, and deep links restore it.
     component: BoardPage,
+  });
+  // A gear icon in the sidebar footer (beside the built-in Settings and
+  // bug-report buttons) that jumps to this plugin's detail page in Tools,
+  // where its declarative settings — including the pane's Escape behavior —
+  // render. bb's sidebar entry context menu is host-owned with no plugin
+  // extension point, so this footer gear is the plugin's own shortcut to
+  // the configuration panel.
+  app.slots.sidebarFooterAction({
+    id: "open-settings",
+    title: "Focus Board settings",
+    icon: "Settings",
+    run: (context) => context.openSettings(),
   });
 });
