@@ -28,9 +28,16 @@ function makeScroller({
 	max = 3000,
 	clientHeight = 500,
 	top = 2500,
-}: { max?: number; clientHeight?: number; top?: number } = {}): ScrollerHarness {
+	withMarkerClass = true,
+}: {
+	max?: number;
+	clientHeight?: number;
+	top?: number;
+	withMarkerClass?: boolean;
+} = {}): ScrollerHarness {
 	const el = document.createElement("div");
-	el.className = "thread-scrollbar";
+	if (withMarkerClass) el.className = "thread-scrollbar";
+	el.style.overflowY = "auto";
 	const geometry = { scrollHeight: max + clientHeight, clientHeight };
 	let scrollTop = top;
 	Object.defineProperty(el, "scrollHeight", {
@@ -219,6 +226,21 @@ describe("chat click-jump guard", () => {
 		vi.advanceTimersByTime(200);
 		expect(scroller.el.scrollTop).toBe(3000);
 		expect(wheelEvents).toHaveLength(0);
+	});
+
+	it("finds a renamed-scroller through the click target's ancestors when the marker class is gone", () => {
+		guard.dispose();
+		const renamed = makeScroller({ withMarkerClass: false });
+		container.replaceChildren(renamed.el);
+		// The beforeEach wheel spy watches the original scroller; watch this one.
+		renamed.el.addEventListener("wheel", (event) => wheelEvents.push(event), true);
+		const inner = document.createElement("p");
+		renamed.el.append(inner);
+		leftClickOn(inner);
+		renamed.scrollTo(3000);
+		vi.advanceTimersByTime(50);
+		expect(renamed.el.scrollTop).toBe(2500);
+		expect(wheelEvents).toHaveLength(1);
 	});
 
 	it("ignores roots without a scrollable transcript scroller", () => {

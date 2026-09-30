@@ -71,14 +71,39 @@ interface Armed {
 	removeListeners: () => void;
 }
 
-function readScroller(root: ParentNode): { el: HTMLElement; top: number; max: number } | null {
-	if (typeof document === "undefined") return null;
-	const el = root.querySelector<HTMLElement>(`.${SCROLLER_CLASS}`);
-	if (el === null || !el.isConnected) return null;
+function readScrollState(el: HTMLElement): { el: HTMLElement; top: number; max: number } | null {
 	const max = el.scrollHeight - el.clientHeight;
 	// Not scrollable — nothing to guard (also keeps stub roots in tests out).
 	if (max <= 0) return null;
 	return { el, top: el.scrollTop, max };
+}
+
+function readScroller(
+	root: ParentNode,
+	target: EventTarget | null,
+): { el: HTMLElement; top: number; max: number } | null {
+	if (typeof document === "undefined") return null;
+	const marked = root.querySelector<HTMLElement>(`.${SCROLLER_CLASS}`);
+	if (marked !== null && marked.isConnected) return readScrollState(marked);
+	// Fallback: the marker class is upstream's, so an upstream rename before
+	// the host fix lands (this module is deletion-scheduled, not permanent)
+	// would otherwise silence the guard. Walk up from the click target inside
+	// the chat body and take the first real scroll container. Only ancestors
+	// of the click qualify: a bare root scan would risk grabbing the
+	// composer's own autoscrolling draft area instead of the transcript.
+	if (!(target instanceof Element)) return null;
+	for (
+		let node = target.parentElement;
+		node !== null && node !== root;
+		node = node.parentElement
+	) {
+		const overflowY = typeof getComputedStyle === "function" ? getComputedStyle(node).overflowY : null;
+		if (overflowY === "auto" || overflowY === "scroll") {
+			const state = readScrollState(node);
+			if (state !== null) return state;
+		}
+	}
+	return null;
 }
 
 export function createChatClickJumpGuard(
@@ -143,7 +168,7 @@ export function createChatClickJumpGuard(
 		}
 		const root = getChatRoot();
 		if (root === null) return;
-		const state = readScroller(root);
+		const state = readScroller(root, event.target);
 		if (state === null) return;
 		// No scroll-back means the bug has nothing to yank past; arm only
 		// when the reader is meaningfully scrolled up.
