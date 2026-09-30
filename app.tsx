@@ -73,11 +73,12 @@ import { EmptyState } from "./components/empty-state";
 import { WhatsNewModal } from "./components/whats-new-modal";
 import {
   APP_VERSION,
-  WHATS_NEW,
-  compareVersions,
-  entriesSince,
-  isPrereleaseVersion,
+  CURRENT_UNRELEASED_FINGERPRINT,
+  hasUnseenWhatsNew,
+  readLastSeenUnreleased,
   readLastSeenVersion,
+  whatsNewEntriesFor,
+  writeLastSeenUnreleased,
   writeLastSeenVersion,
   type WhatsNewEntry,
 } from "./lib/whats-new";
@@ -471,12 +472,19 @@ function BoardPage({ subPath }: { subPath: string }) {
   const [armedSweep, setArmedSweep] = useState<ArmedSweep | null>(null);
   const disarmSweep = useCallback(() => setArmedSweep(null), []);
   useSweepClickAway(armedSweep !== null, disarmSweep);
-  // What's new: the stored last-seen version vs the running build. A fresh
-  // install (nothing stored) is stamped silently — everything is new, so
-  // nothing counts as new. An upgrade leaves the gift button pulsing until
-  // the modal is opened; opening marks seen, the button itself never leaves.
+  // What's new: two "seen" models, picked by the running build. A stable
+  // build compares versions: a fresh install (nothing stored) is stamped
+  // silently — everything is new, so nothing counts as new — and an upgrade
+  // pulses until the modal is opened. A prerelease build (dev's
+  // "0.6.0-dev") keys "seen" to the [Unreleased] group's content instead:
+  // its fingerprint is stamped silently on first load, and the button pulses
+  // again whenever the group's bullets change (each merge to dev). Opening
+  // marks seen; the button itself never leaves.
   const [lastSeenVersion, setLastSeenVersion] = useState<string | null>(
     () => readLastSeenVersion(),
+  );
+  const [lastSeenUnreleased, setLastSeenUnreleased] = useState<string | null>(
+    () => readLastSeenUnreleased(),
   );
   useEffect(() => {
     if (lastSeenVersion === null) {
@@ -484,23 +492,29 @@ function BoardPage({ subPath }: { subPath: string }) {
       setLastSeenVersion(APP_VERSION);
     }
   }, [lastSeenVersion]);
-  // A prerelease build (dev's "0.6.0-dev") never pulses: it would only
-  // advertise published entries the stored version predates, to the very
-  // person who wrote and reviewed them. "Unreleased" means nothing to point
-  // at — the modal stays reachable from the quiet button.
-  const whatsNewUnseen =
-    lastSeenVersion !== null &&
-    !isPrereleaseVersion(APP_VERSION) &&
-    compareVersions(APP_VERSION, lastSeenVersion) > 0;
-  // The delta is captured at load (before opening marks it seen): entries
-  // since the stored version when one is pending, all recent entries when
-  // the quiet button is used.
+  useEffect(() => {
+    if (lastSeenUnreleased === null) {
+      writeLastSeenUnreleased(CURRENT_UNRELEASED_FINGERPRINT);
+      setLastSeenUnreleased(CURRENT_UNRELEASED_FINGERPRINT);
+    }
+  }, [lastSeenUnreleased]);
+  const whatsNewUnseen = hasUnseenWhatsNew({
+    runningVersion: APP_VERSION,
+    lastSeenVersion,
+    unreleasedFingerprint: CURRENT_UNRELEASED_FINGERPRINT,
+    lastSeenUnreleasedFingerprint: lastSeenUnreleased,
+  });
+  // The delta is captured at load (before opening marks it seen): a dev
+  // build leads with its unreleased group; stable builds show entries since
+  // the stored version when one is pending, all recent entries otherwise.
   const whatsNewEntries: readonly WhatsNewEntry[] = useMemo(
-    () => (whatsNewUnseen ? entriesSince(lastSeenVersion) : WHATS_NEW),
+    () => whatsNewEntriesFor(APP_VERSION, whatsNewUnseen, lastSeenVersion),
     [whatsNewUnseen, lastSeenVersion],
   );
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const openWhatsNew = useCallback(() => {
+    writeLastSeenUnreleased(CURRENT_UNRELEASED_FINGERPRINT);
+    setLastSeenUnreleased(CURRENT_UNRELEASED_FINGERPRINT);
     writeLastSeenVersion(APP_VERSION);
     setLastSeenVersion(APP_VERSION);
     setWhatsNewOpen(true);

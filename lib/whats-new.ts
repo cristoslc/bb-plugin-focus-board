@@ -9,18 +9,24 @@
  *
  * On dev, APP_VERSION carries a provisional prerelease number (the next
  * release + "-dev", e.g. "0.6.0-dev"): dev builds describe themselves as
- * unreleased, so the pulse stays quiet (entriesSince compares against
- * stored released versions, and a -dev version needs no WHATS_NEW entry).
- * The release finalize commit strips the suffix and adds the entry. A test
- * pins APP_VERSION to package.json's version so they cannot drift apart.
+ * unreleased, lead the modal with CHANGELOG.md's [Unreleased] group, and
+ * pulse whenever that group's content changes (its fingerprint, not the
+ * version, is the "seen" state). The release finalize commit strips the
+ * suffix and adds the published entry. A test pins APP_VERSION to
+ * package.json's version so they cannot drift apart.
  */
+
+import { UNRELEASED_ITEMS } from "./unreleased-changelog.generated";
 
 export const APP_VERSION = "0.6.0-dev";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
+export const LAST_SEEN_UNRELEASED_KEY = "focus-board:lastSeenUnreleased";
 
 export interface WhatsNewEntry {
   version: string;
+  /** Marks the dev build's [Unreleased] group; the modal heads it without "Version ". */
+  unreleased?: boolean;
   items: readonly string[];
 }
 
@@ -254,4 +260,97 @@ export function writeLastSeenVersion(version: string): void {
 export function entriesSince(lastSeen: string | null): readonly WhatsNewEntry[] {
   if (lastSeen === null) return [];
   return WHATS_NEW.filter((entry) => compareVersions(entry.version, lastSeen) > 0);
+}
+
+/**
+ * The stored fingerprint of the [Unreleased] group the reader last had open,
+ * or null when nothing was stored yet.
+ */
+export function readLastSeenUnreleased(): string | null {
+  try {
+    return window.localStorage.getItem(LAST_SEEN_UNRELEASED_KEY);
+  } catch {
+    // localStorage can throw in embedded contexts; a null means "fresh".
+    return null;
+  }
+}
+
+export function writeLastSeenUnreleased(fingerprint: string): void {
+  try {
+    window.localStorage.setItem(LAST_SEEN_UNRELEASED_KEY, fingerprint);
+  } catch {
+    // Best effort only; the board works without the persistence.
+  }
+}
+
+/** FNV-1a 32-bit over the joined items: cheap, stable, no dependency. */
+export function unreleasedFingerprint(items: readonly string[]): string {
+  let hash = 0x811c9dc5;
+  const source = `\n${items.join("\n")}\n`;
+  for (let i = 0; i < source.length; i += 1) {
+    hash ^= source.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, "0");
+}
+
+/** Fingerprint of the unreleased group embedded in this build. */
+export const CURRENT_UNRELEASED_FINGERPRINT = unreleasedFingerprint(UNRELEASED_ITEMS);
+
+export interface WhatsNewUnseenState {
+  runningVersion: string;
+  lastSeenVersion: string | null;
+  unreleasedFingerprint: string;
+  lastSeenUnreleasedFingerprint: string | null;
+}
+
+/**
+ * Whether the toolbar's gift button should pulse.
+ *
+ * Stable builds compare versions: running > last-seen pulses exactly once
+ * per release. A prerelease build never does that — "0.6.0-dev" outranks
+ * several stored releases at once and would pulse at the version's author.
+ * On dev, "seen" is the [Unreleased] group's CONTENT: the pulse fires again
+ * whenever that group changed since the modal was last opened, which is the
+ * changelog-update signal the reader asked for. A missing fingerprint is
+ * stamped silently at load (fresh-install rules), so adopting the guard
+ * does not retroactively pulse old content.
+ */
+export function hasUnseenWhatsNew(state: WhatsNewUnseenState): boolean {
+  if (isPrereleaseVersion(state.runningVersion)) {
+    return (
+      state.lastSeenUnreleasedFingerprint !== null &&
+      state.unreleasedFingerprint !== state.lastSeenUnreleasedFingerprint
+    );
+  }
+  return (
+    state.lastSeenVersion !== null &&
+    compareVersions(state.runningVersion, state.lastSeenVersion) > 0
+  );
+}
+
+/**
+ * The entries the modal shows.
+ *
+ * A prerelease build leads with its [Unreleased] group (the only thing that
+ * is actually new to its reader) followed by the published feed; a stable
+ * build shows the pending delta or the full recent feed as before.
+ */
+export function whatsNewEntriesFor(
+  runningVersion: string,
+  unseen: boolean,
+  lastSeenVersion: string | null,
+): readonly WhatsNewEntry[] {
+  if (isPrereleaseVersion(runningVersion)) {
+    const unreleased: WhatsNewEntry | null = UNRELEASED_ITEMS.length
+      ? { version: runningVersion, unreleased: true, items: UNRELEASED_ITEMS }
+      : null;
+    const published = unseen
+      ? entriesSince(lastSeenVersion)
+      : [...WHATS_NEW];
+    return unreleased === null
+      ? published
+      : [unreleased, ...published];
+  }
+  return unseen ? entriesSince(lastSeenVersion) : [...WHATS_NEW];
 }

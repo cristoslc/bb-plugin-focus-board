@@ -4,8 +4,8 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "build": "bb plugin build",
-    "test": "vitest run",
+    "build": "node scripts/generate-unreleased.mjs && bb plugin build",
+    "test": "node scripts/generate-unreleased.mjs && vitest run",
     "uat": "node scripts/uat/run.mjs",
     "typecheck": "tsc --noEmit"
   },

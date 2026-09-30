@@ -3,11 +3,19 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   APP_VERSION,
+  CURRENT_UNRELEASED_FINGERPRINT,
   WHATS_NEW,
   compareVersions,
+  whatsNewEntriesFor,
   entriesSince,
+  hasUnseenWhatsNew,
   isPrereleaseVersion,
+  unreleasedFingerprint,
 } from "../lib/whats-new";
+import {
+  parseUnreleasedChangelog,
+} from "../lib/unreleased-changelog";
+import { UNRELEASED_ITEMS } from "../lib/unreleased-changelog.generated";
 
 const packageVersion = (): string =>
   (JSON.parse(
@@ -38,22 +46,141 @@ describe("APP_VERSION stays in lockstep with package.json", () => {
   });
 });
 
-describe("the dev pulse guard", () => {
-  // Mirrors the app.tsx expression: a dev build never counts as unseen, so
-  // reloading onto an unreleased build does not advertise already-published
-  // entries to the maintainer who wrote them.
-  it("suppresses the pulse for a -dev build regardless of the stored version", () => {
-    const unseen = (lastSeen: string | null, running: string) =>
-      lastSeen !== null &&
-      !isPrereleaseVersion(running) &&
-      compareVersions(running, lastSeen) > 0;
-    // Stored 0.5.20 (stamped by the served-out release) + dev 0.6.0-dev:
-    // would pulse without the guard, since 0.6.0-dev > 0.5.20.
-    expect(unseen("0.5.20", "0.6.0-dev")).toBe(false);
-    expect(unseen(null, "0.6.0-dev")).toBe(false);
-    // Stable builds keep the ordinary behavior.
-    expect(unseen("0.5.20", "0.6.0")).toBe(true);
-    expect(unseen("0.6.0", "0.6.0")).toBe(false);
+const FULL_CHANGELOG_FIXTURE = `# Changelog
+
+All notable changes.
+
+## [Unreleased]
+
+### Added
+
+- **First.** Multi
+  line continuation.
+
+- **Second.** Plain.
+
+### Changed
+
+- **Third.** After a subsection.
+
+## [0.5.21] - 2026-09-30
+
+### Fixed
+
+- **Old.** Released work stays out.
+`;
+
+const EMPTY_UNRELEASED_FIXTURE = `## [Unreleased]
+
+_Nothing unreleased — bullets land here as work merges._
+
+### Added
+
+### Changed
+
+### Fixed
+
+## [0.5.21] - 2026-09-30
+`;
+
+describe("parseUnreleasedChangelog", () => {
+  it("extracts bullets from the group, unwrapped and unbolded", () => {
+    const parsed = parseUnreleasedChangelog(FULL_CHANGELOG_FIXTURE);
+    expect(parsed.items).toEqual([
+      "First. Multi line continuation.",
+      "Second. Plain.",
+      "Third. After a subsection.",
+    ]);
+  });
+
+  it("returns nothing for the current committed state if the group is empty", () => {
+    expect(parseUnreleasedChangelog(EMPTY_UNRELEASED_FIXTURE).items).toEqual([]);
+  });
+
+  it("returns nothing when there is no [Unreleased] group", () => {
+    expect(parseUnreleasedChangelog("# Changelog\npublished only\n").items).toEqual([]);
+  });
+
+  it("stops at the next release section", () => {
+    const parsed = parseUnreleasedChangelog(
+      "## [Unreleased]\n\n- **New.** Unreleased work\n\n## [0.5.21] - 2026-09-30\n\n- **Old.** Released work\n",
+    );
+    expect(parsed.items).toEqual(["New. Unreleased work"]);
+  });
+});
+
+describe("unreleasedFingerprint", () => {
+  it("is stable and order-sensitive", () => {
+    const first = ["One item."];
+    expect(unreleasedFingerprint(first)).toBe(unreleasedFingerprint([...first]));
+    expect(unreleasedFingerprint(first)).not.toBe(
+      unreleasedFingerprint(["Two items.", "Different one."]),
+    );
+  });
+
+  it("distinguishes the empty group from anything non-empty", () => {
+    expect(unreleasedFingerprint([])).not.toBe(unreleasedFingerprint(["One item."]));
+  });
+});
+
+describe("hasUnseenWhatsNew", () => {
+  // Mirrors the app.tsx wiring — this constant is the embedded group's fp.
+  it("pulses on the unreleased group for prerelease builds, keyed to content", () => {
+    const fp = unreleasedFingerprint(["An unreleased bullet."]);
+    const state = {
+      runningVersion: "0.6.0-dev",
+      lastSeenVersion: "0.6.0-dev",
+      unreleasedFingerprint: fp,
+    };
+    // Same content: seen. The version alone can never make a dev build pulse.
+    expect(hasUnseenWhatsNew({ ...state, lastSeenUnreleasedFingerprint: fp })).toBe(false);
+    // A changelog landing changes the content: pulse again, even in-session.
+    expect(
+      hasUnseenWhatsNew({ ...state, lastSeenUnreleasedFingerprint: "00000000" }),
+    ).toBe(true);
+    // Unseen before the first open — but the loader stamps silently, so this
+    // is only the pre-effect state, which the app treats as fresh.
+    expect(hasUnseenWhatsNew({ ...state, lastSeenUnreleasedFingerprint: null })).toBe(false);
+  });
+
+  it("keeps version-based pulse semantics for stable builds", () => {
+    expect(
+      hasUnseenWhatsNew({
+        runningVersion: "0.6.0",
+        lastSeenVersion: "0.5.21",
+        unreleasedFingerprint: CURRENT_UNRELEASED_FINGERPRINT,
+        lastSeenUnreleasedFingerprint: null,
+      }),
+    ).toBe(true);
+    expect(
+      hasUnseenWhatsNew({
+        runningVersion: "0.6.0",
+        lastSeenVersion: "0.6.0",
+        unreleasedFingerprint: CURRENT_UNRELEASED_FINGERPRINT,
+        lastSeenUnreleasedFingerprint: null,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("whatsNewEntriesFor", () => {
+  it("leads a prerelease build with its unreleased group, then the published feed", () => {
+    // The committed [Unreleased] group's shape is whatever the changelog
+    // holds right now — assert structure, not emptiness; lastSeen null means
+    // the fresh-install rules give no published delta.
+    if (UNRELEASED_ITEMS.length > 0) {
+      const head = { version: "0.6.0-dev", unreleased: true, items: UNRELEASED_ITEMS };
+      expect(whatsNewEntriesFor("0.6.0-dev", true, null)).toEqual([head]);
+      expect(whatsNewEntriesFor("0.6.0-dev", false, null)).toEqual([head, ...WHATS_NEW]);
+    } else {
+      expect(whatsNewEntriesFor("0.6.0-dev", true, null)).toEqual([]);
+      expect(whatsNewEntriesFor("0.6.0-dev", false, null)).toEqual([...WHATS_NEW]);
+    }
+  });
+
+  it("keeps stable-build behavior", () => {
+    expect(whatsNewEntriesFor("0.6.0", true, "0.4.2")).toEqual(entriesSince("0.4.2"));
+    expect(whatsNewEntriesFor("0.6.0", false, null)).toEqual([...WHATS_NEW]);
   });
 });
 

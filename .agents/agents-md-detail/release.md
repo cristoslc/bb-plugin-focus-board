@@ -47,13 +47,23 @@ merging into `dev`, releasing, changelog writing, or tagging.
   behavior a published version already described, it gets fresh
   `[Unreleased]` bullets saying what the behavior is *now* (the parked-pin
   model revising 0.5.21's lane-exit unpin is the example to remember).
-- `lib/whats-new.ts` is NOT maintained on dev — no entries, no churn. On
-  dev, `APP_VERSION`'s `-dev` suffix means "unreleased": the prerelease
-  branch in the whats-new entry test keeps the suite green without a
-  placeholder entry, and the pulse guard in `app.tsx` (a prerelease running
-  version never counts as unseen) keeps dev builds from advertising
-  already-published entries to the person who wrote them. The modal stays
-  reachable from the quiet gift button.
+- `lib/whats-new.ts`'s WHATS_NEW array is NOT maintained on dev — no
+  entries, no churn; the prerelease branch in the whats-new entry test
+  keeps the suite green without a placeholder. On dev the modal leads with
+  CHANGELOG.md's `[Unreleased]` group itself:
+  `scripts/generate-unreleased.mjs` (wired into `test` and `build`)
+  embeds the current group into the bundle, so CHANGLEOG.md is the single
+  source of truth and no bullet is written twice. That gives the group a
+  parse contract — bullets open with `- ` at column zero and wrap with
+  two-space continuation lines — exercised in its tests; a bullet that
+  violates it simply stops appearing in the dev What's-new modal.
+- The gift button's pulse on dev keys to the group's CONTENT, not the
+  version: the fingerprint is stamped silently on first load, and the
+  button pulses again every time a merge lands new bullets in
+  `[Unreleased]`. Stable builds keep the classic version-based pulse; a
+  prerelease running version pulses only on changelog change, so it never
+  advertises already-published entries to the person who wrote them.
+- The modal stays reachable from the quiet gift button.
 
 ## 2. Verify, always
 
@@ -169,7 +179,9 @@ fingerprint says which key era produced it).
 
 - `CHANGELOG.md` is the full Keep-a-Changelog record. The `[Unreleased]`
   group is written during merges into dev; the finalize commit renames it
-  to its version. Public sections, newest first, never back-edited.
+  to its version. Public sections, newest first, never back-edited. The
+  group also embeds into dev builds (scripts/generate-unreleased.mjs) as
+  the What's-new modal's headline entry — keep its bullets modal-readable.
 - `lib/whats-new.ts` is the user-facing What's-new modal feed: one
   condensed, behavior-first entry per release, newest first. Both surfaces
   must name the same version at the top after a finalize commit.
