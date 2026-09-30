@@ -948,6 +948,43 @@ describe("column accounting with nesting", () => {
   });
 });
 
+describe("assembleBoard — empty columns hide entirely", () => {
+  it("a column drained by nesting disappears: an Idle·Today child nested under its Idle·Recent parent leaves no empty lane", () => {
+    // buildColumns assigns both threads to their own buckets; nesting then
+    // pulls the child under the parent's card. The Idle·Today bucket held
+    // only the child, so without this rule the board parked an empty lane.
+    const parent = thread({ id: "p", updatedAt: NOW - 30 * 60 * 1000 }); // Idle · Recent
+    const child = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - 2 * HOUR }); // Idle · Today
+    const result = assembleBoard([parent, child], "status", CONTEXT, new Map(), new Set(), NOW);
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
+    expect(result.columns.find((column) => column.id === "idle-today")).toBeUndefined();
+    expect(idsIn(result.columns, "idle-recent")).toEqual(["p"]);
+  });
+
+  it("the Done column hides too when its only card is a done child of a live parent", () => {
+    // A done child of a live parent nests (the Done lane cannot relocate for
+    // a done PARENT; a done CHILD of a live parent rides its family). The
+    // Done column that held only that child drains empty and must go.
+    const parent = thread({ id: "p", status: "active", updatedAt: NOW - HOUR });
+    const child = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
+    const doneIds = new Set(["c"]);
+    const result = assembleBoard([parent, child], "status", CONTEXT, new Map(), new Set(), NOW);
+    expect(result.columns.find((column) => column.id === "done")).toBeUndefined();
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
+  });
+
+  it("a column that still holds a card is never hidden by the rule", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - 30 * 60 * 1000 }); // Idle · Recent
+    const nestedChild = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - 2 * HOUR }); // Idle · Today
+    const sibling = thread({ id: "f", parentThreadId: "p", updatedAt: NOW - 20 * 60 * 1000 }); // nests with c
+    const result = assembleBoard([parent, nestedChild, sibling], "status", CONTEXT, new Map(), new Set(), NOW);
+    // The parent keeps the lane populated, so it stays — the rule hides only
+    // lanes that nesting drained to zero.
+    expect(result.columns.find((column) => column.id === "idle-today")).toBeUndefined();
+    expect(result.columns.find((column) => column.id === "idle-recent")?.threads.map((t) => t.id)).toEqual(["p"]);
+  });
+});
+
 describe("threadState sanity for promotion tests", () => {
   it("fixture states line up with what the promotion tests assume", () => {
     expect(threadState(thread({ status: "active" }))).toBe("working");

@@ -43,7 +43,6 @@ import {
   paneThreadIdFromSubPath,
 } from "./lib/pane-route";
 import { applyMoveVisible, orderForColumn, type RankStore } from "./lib/rank";
-import { unreadDropWrites } from "./lib/state-drops";
 import {
   DEFAULT_DONE_ARCHIVE_DAYS,
   DEFAULT_IDLE_ARCHIVE_DAYS,
@@ -989,6 +988,19 @@ function BoardPage({ subPath }: { subPath: string }) {
     [actions, doneAgeSource, doneIds, rpc, setDoneExtras, setDoneIds, sdk],
   );
 
+  // A drop onto any column other than the one the card sits in is, for a
+  // pinned card, also a move out of the Pinned lane: column placement is
+  // derived from the pin, so the pin must go with the gesture or the card
+  // bounces straight back into Pinned on the next grouping pass. This is
+  // the lane-exit consequence, not target-specific logic — each state-change
+  // handler composes it with its own writes (Unread adds mark-unread, Done
+  // adds done). A same-lane reorder (including within Pinned) is claimed by
+  // the card's reorder path and never reaches these handlers.
+  const dropExitsPinnedLane = (threadId: string) => {
+    const thread = threads.find((candidate) => candidate.id === threadId);
+    if (thread?.isPinned) void actions.setPinned(threadId, false);
+  };
+
   if (status === "loading" && threads.length === 0) {
     return (
       <div className="p-4">
@@ -1081,21 +1093,14 @@ function BoardPage({ subPath }: { subPath: string }) {
               next.add(threadId);
               setDoneIds(next);
               rpc.call("done_set", { threadId, done: true }).catch(() => {});
+              dropExitsPinnedLane(threadId);
             }}
             onDropUnread={(threadId) => {
               const thread = threads.find((candidate) => candidate.id === threadId);
-              if (thread === undefined) return;
-              const writes = unreadDropWrites(thread);
-              if (writes.markUnread) {
+              if (thread !== undefined && !thread.isUnread) {
                 void actions.setRead(threadId, false);
               }
-              if (writes.unpin) {
-                // One gesture, both writes: leaving the pin in place would
-                // derive the card straight back into the Pinned column on
-                // the next grouping pass, undoing the move the operator
-                // just made.
-                void actions.setPinned(threadId, false);
-              }
+              dropExitsPinnedLane(threadId);
             }}
             // Drop on Pinned pins, unless the card is already pinned: a
             // pinned card's drop is a same-lane reorder (claimed by the card
