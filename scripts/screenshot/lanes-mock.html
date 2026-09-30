@@ -654,7 +654,7 @@ if (vh) document.querySelector(".board").style.height = vh + "px";
 // selectable textarea; clipboard best-effort on top (some browsers refuse it)
 document.getElementById("btn-copy").addEventListener("click", () => {
   document.querySelectorAll("[data-trace-pane]").forEach(e => e.remove());
-  const starts = laneEls.map(e => Math.round(parseFloat(e.style.width) || 0));
+  const starts = laneEls.map(e => Math.round(parseFloat(e.col.style.width) || 0));
   const payload = JSON.stringify({
     v: 8,
     sl: Math.round(scroller.scrollLeft),
