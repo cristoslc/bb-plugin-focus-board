@@ -77,3 +77,28 @@ export function pinStateChangeFromEvent(event: unknown): string | null {
   if (!event.changes.includes("pin-state-changed")) return null;
   return event.id;
 }
+
+/**
+ * The thread id of a native `thread:changed` event that touches the read
+ * state, or null otherwise.
+ *
+ * The event alone does not say WHICH direction: bb publishes
+ * `read-state-changed` for both mark-read and mark-unread. The direction is
+ * decided by a fresh read of the row, and bb's own writer map makes that
+ * reliable: `lastReadAt = null` comes from exactly one place — the deliberate
+ * mark-unread route (`POST /threads/:id/unread`, the one the native thread
+ * menu calls) — while every ambient "reading by composing" path
+ * (`applyUserTurnReadForEvent` on a user-initiated turn) writes `Date.now()`
+ * through a noop notifier and publishes nothing, and a new thread starts
+ * with `lastReadAt = now`. Unread-ness as a PREDICATE (attention after last
+ * read) is ambient and unsafe to trigger on; unread-ness as `lastReadAt
+ * === null` is deliberate and single-authored.
+ */
+export function readStateChangeFromEvent(event: unknown): string | null {
+  if (!isRecord(event)) return null;
+  if (event.entity !== "thread") return null;
+  if (typeof event.id !== "string" || event.id.length === 0) return null;
+  if (!Array.isArray(event.changes)) return null;
+  if (!event.changes.includes("read-state-changed")) return null;
+  return event.id;
+}

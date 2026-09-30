@@ -1,7 +1,12 @@
 // Pin-park record contract: parse is fail-loud, stamp is refresh-provenance.
 import { describe, expect, it } from "vitest";
 import type { JsonValue } from "@get-bb/plugin-sdk";
-import { parsePinParkRecord, pinStateChangeFromEvent, stampPinPark } from "../lib/pin-park";
+import {
+  parsePinParkRecord,
+  pinStateChangeFromEvent,
+  readStateChangeFromEvent,
+  stampPinPark,
+} from "../lib/pin-park";
 
 describe("parsePinParkRecord", () => {
   it("absent and null mean nothing parked", () => {
@@ -58,6 +63,27 @@ describe("pinStateChangeFromEvent — the cross-surface pin feed", () => {
     expect(pinStateChangeFromEvent(null)).toBeNull();
     expect(pinStateChangeFromEvent("nope")).toBeNull();
     expect(pinStateChangeFromEvent({ entity: "thread", id: "thr_a", changes: "pin-state-changed" })).toBeNull();
+  });
+});
+
+describe("readStateChangeFromEvent — the surfaced read-state feed", () => {
+  const readEvent = (id: string | null = "thr_a") => ({
+    type: "changed",
+    entity: "thread",
+    id,
+    changes: ["read-state-changed"],
+  });
+
+  it("extracts the thread id from a read-state-changed event", () => {
+    expect(readStateChangeFromEvent(readEvent())).toBe("thr_a");
+  });
+
+  it("ignored kinds, entities, missing ids, and junk return null", () => {
+    expect(readStateChangeFromEvent({ ...readEvent(), changes: ["pin-state-changed"] })).toBeNull();
+    expect(readStateChangeFromEvent({ ...readEvent(), entity: "project" })).toBeNull();
+    expect(readStateChangeFromEvent(readEvent(null))).toBeNull();
+    expect(readStateChangeFromEvent(null)).toBeNull();
+    expect(readStateChangeFromEvent({ entity: "thread", id: "thr_a", changes: "read-state-changed" })).toBeNull();
   });
 });
 
