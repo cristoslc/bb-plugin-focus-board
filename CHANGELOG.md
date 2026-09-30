@@ -22,6 +22,18 @@ into dev, then this whole group is renamed to its release version._
 
 ### Changed
 
+- **Marking a card unread now restores it up the attention ladder from any
+  surface.** With the parked-pin model, a pinned card marked unread (or
+  done) parks its pin as it leaves the Pinned lane. The state writes that
+  bring the card back now react to the card's state, not to who wrote them:
+  a mark-unread landing through the native thread menu (bb's own surface),
+  the board's menu, the pane toggle, or a drag onto the Unread lane restores
+  the parked pin — the card returns to Pinned wearing the mark — and un-does
+  a Done card, since unread and done contradict on one card. Driven by
+  bb's own cross-surface realtime feed (`thread:changed` events); safe
+  because only the deliberate mark-unread write clears
+  `lastReadAt`, so ambient thread noise never pulls cards back.
+
 ### Fixed
 
 ## [0.5.21] - 2026-09-30
