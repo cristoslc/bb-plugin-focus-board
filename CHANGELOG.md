@@ -3,6 +3,26 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.18] - 2026-09-29
+
+### Fixed
+
+- **Answering a question now clears the card from Needs you right away.** The
+  board read its needs-you state from bb's sidebar thread cache, which could
+  keep a stale flag after the server had already settled the interaction: the
+  answered card stayed in the Needs-you column until something unrelated
+  refreshed the list. The board now verifies every interaction change against
+  the interaction records and corrects the card's state the moment a question
+  is answered (or asked).
+
+## [0.5.17] - 2026-09-29
+
+### Changed
+
+- Parent-thread view: family lanes size to their content; the locked ruler lane renders large readable cards while context lanes wrap compact cards capped by the viewport width.
+- Panning horizontally releases the ruler lock; at rest the nearest family pins flush into position before a single re-cut, clicked subtasks stay visible through the motion, and the board settles quiet (regression-tested with a real wheel-event pan in the UAT suite).
+- The lane-order toggle is a vertical picker in the status rail; viewport resizes while a lane is locked keep the ruler and band alignment; clicking a lane header during an in-flight glide wins the lock over the pan's target.
+
 ## [0.5.16] - 2026-09-29
 
 ### Changed
