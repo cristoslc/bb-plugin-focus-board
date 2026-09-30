@@ -25,6 +25,8 @@ import {
   computeParentLaneLayout,
   predictedStart,
   lockIndexFor,
+  pinIsInstant,
+  wallTrim,
 } from "./parent-lane-layout";
 import type { ParentLaneOrder } from "./preferences";
 
@@ -52,7 +54,7 @@ interface ParentLaneBoardProps {
 
 /** Ruler+wrap board chrome measurements (shared with parent-lane-layout.ts). */
 const RAIL_W = 140;
-const HEADER_H = 76;
+const HEADER_H = 88;
 
 const DOT_CLASS: Record<string, string> = {
   working: "bg-blue-500",
@@ -172,30 +174,32 @@ function LaneHeader({
       }}
       aria-label={`Open ${lane.label}`}
       className={cn(
-        "flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left",
+        "flex w-full flex-col items-start gap-0.5 rounded-md px-2 py-1 text-left",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         isDone && "opacity-50 saturate-50",
       )}
     >
-      {sectionLabel !== null ? (
-        <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {sectionLabel} ·
-        </span>
-      ) : null}
-      <LaneStateDot thread={parent} />
+      <span className="flex w-full items-center gap-1.5">
+        {sectionLabel !== null ? (
+          <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {sectionLabel} ·
+          </span>
+        ) : null}
+        <LaneStateDot thread={parent} />
+        {lane.childCount > 0 ? (
+          <span className="ml-auto shrink-0 rounded-full bg-muted px-1.5 text-[10px] tabular-nums text-muted-foreground">
+            {lane.childCount}
+          </span>
+        ) : null}
+      </span>
       <span
         className={cn(
-          "truncate text-[13px] font-medium leading-snug",
+          "line-clamp-2 w-full text-[13px] font-medium leading-snug [overflow-wrap:anywhere]",
           locked && "text-foreground",
         )}
       >
         {lane.label}
       </span>
-      {lane.childCount > 0 ? (
-        <span className="ml-auto shrink-0 rounded-full bg-muted px-1.5 text-[10px] tabular-nums text-muted-foreground">
-          {lane.childCount}
-        </span>
-      ) : null}
     </button>
   );
 }
@@ -367,9 +371,11 @@ export function ParentLaneBoard({
     const runCorrections = () => {
       const locked = el.querySelector("section[data-locked]");
       if (locked instanceof HTMLElement) {
-        const drift =
-          locked.getBoundingClientRect().left -
-          (el.getBoundingClientRect().left + RAIL_W + RAIL_TO_LANE_GAP);
+        const rail = el.querySelector("[data-rail]");
+        const flushLeft = rail
+          ? rail.getBoundingClientRect().right + RAIL_TO_LANE_GAP
+          : el.getBoundingClientRect().left + RAIL_W + RAIL_TO_LANE_GAP;
+        const drift = locked.getBoundingClientRect().left - flushLeft;
         if (Math.abs(drift) > 2) el.scrollLeft += drift;
       }
       const id = activeThreadIdRef.current;
@@ -378,6 +384,30 @@ export function ParentLaneBoard({
         if (card instanceof HTMLElement) {
           const delta = verticalCardCorrection(el, card, HEADER_H);
           if (delta !== 0) el.scrollTop += delta;
+        }
+      }
+      // Cap the scroll wall at the last lane's flush point: without this
+      // the trailing spacer leaves maxScroll far past every pin target, so
+      // a hard fling right overshoots and settle snaps back a long way.
+      // Chrome clamps scrollLeft during the user's own fling movement, so
+      // the residual backward move stays bounded by the lane-width delta.
+      const laneList = flatRef.current.map((entry) => entry.lane);
+      if (laneList.length > 0) {
+        const layout = computeParentLaneLayout(
+          laneList,
+          geoIdxRef.current,
+          viewportRef.current,
+          RAIL_W,
+        );
+        const wallSl = Math.max(
+          0,
+          toScrollSpace(predictedStart(laneList.length - 1, layout.laneWidths, RAIL_W)),
+        );
+        const maxSl = el.scrollWidth - el.clientWidth;
+        const spacer = spacerRef.current;
+        if (spacer && maxSl > wallSl) {
+          const width = parseFloat(spacer.style.width || "0");
+          spacer.style.width = `${wallTrim(maxSl, wallSl, width)}px`;
         }
       }
     };
@@ -404,13 +434,23 @@ export function ParentLaneBoard({
       }, 300);
     };
 
+    /** The scroller's own horizontal padding (px-3) is not part of the
+     *  layout model's content space: every content→scroll conversion must
+     *  subtract it or the pin lands 12px off the true flush. */
+    const scrollPadLeft = () => {
+      const pad = window.getComputedStyle(el).paddingLeft;
+      const parsed = Number.parseFloat(pad);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    const toScrollSpace = (contentX: number) => contentX - (RAIL_W + RAIL_TO_LANE_GAP) - scrollPadLeft();
+
     const nearestLane = () => {
       const widths = layoutRef.current?.laneWidths ?? [];
       // Scroll-space flush targets: the glide path uses the same
       // `predictedStart - (rail + gap)` form; the threshold rule is
       // offset-sensitive, unlike the old argmin it replaced.
       const flush = widths.map(
-        (_, i) => predictedStart(i, widths, RAIL_W) - (RAIL_W + RAIL_TO_LANE_GAP),
+        (_, i) => toScrollSpace(predictedStart(i, widths, RAIL_W)),
       );
       // Padded grab range: a lane grabs a little before its flush point, so
       // a stop with the previous lane's right sliver at the lock point still
@@ -478,13 +518,20 @@ export function ParentLaneBoard({
       );
       const target = Math.max(
         0,
-        predictedStart(laneIndex, predicted.laneWidths, RAIL_W) - (RAIL_W + RAIL_TO_LANE_GAP),
+        toScrollSpace(predictedStart(laneIndex, predicted.laneWidths, RAIL_W)),
       );
       ensureReachable(target);
       glidingRef.current = true;
       glideLaneRef.current = laneIndex;
       glideTargetRef.current = target;
       glideDeadline = performance.now() + 2500;
+      if (pinIsInstant(target, el.scrollLeft)) {
+        // Backward pin: momentum overshoot sits past the target; snap hard
+        // instead of sweeping visibly backwards across the lane gap.
+        el.scrollLeft = target;
+        glideTimer = window.setTimeout(glideCheck, 50);
+        return;
+      }
       el.scrollTo({ left: target, behavior: "smooth" });
       glideTimer = window.setTimeout(glideCheck, 400);
     };
@@ -494,8 +541,13 @@ export function ParentLaneBoard({
       const laneIndex = pending !== null ? pending : nearestLane();
       pendingLockRef.current = null;
       if (laneIndex === geoIdxRef.current) {
+        // Same lane, still locked: re-pin instead of gliding (momentum
+        // overshoot within this lane's grab window snaps back hard — the
+        // mock's instant-snap-back rule). Corrections run under the post-pin
+        // guard so the re-pin's own scroll event is not misread as a pan.
         releasedRef.current = false;
         setReleased(false);
+        schedulePostPin();
         return;
       }
       beginGlide(laneIndex);

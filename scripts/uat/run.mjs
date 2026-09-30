@@ -459,9 +459,10 @@ const wheelPan = async (page, dx) => {
 
 /**
  * Is the given thread card fully visible inside the board's scroll viewport?
- * The sticky rail (140px) and the sticky lane headers (76px) overlay the
+ * The sticky rail (left) and the sticky lane headers (top) overlay the
  * viewport edges, so a card under either is treated as hidden — that is the
- * regression the clicked-card-off-screen bug report described.
+ * regression the clicked-card-off-screen bug report described. Both occluders
+ * are measured from the live DOM so header/rail size changes stay honest.
  */
 const pageCardVisible = (threadId) => {
   const board = document.querySelector("[data-parent-board]");
@@ -470,8 +471,10 @@ const pageCardVisible = (threadId) => {
   if (!host) return { ok: false, reason: `no card ${threadId}` };
   const b = board.getBoundingClientRect();
   const c = host.getBoundingClientRect();
-  const minTop = b.top + 76;
-  const minLeft = b.left + 140 + 16;
+  const hdr = board.querySelector("[data-lane-header]");
+  const minTop = hdr ? hdr.getBoundingClientRect().bottom : b.top + 88;
+  const rail = board.querySelector("[data-rail]");
+  const minLeft = rail ? rail.getBoundingClientRect().right + 16 : b.left + 140 + 16;
   if (c.top < minTop) return { ok: false, reason: `top ${Math.round(c.top)} hides behind the header` };
   if (c.bottom > b.bottom) return { ok: false, reason: `bottom ${Math.round(c.bottom)} falls below the fold` };
   if (c.left < minLeft) return { ok: false, reason: `left ${Math.round(c.left)} hides behind the rail` };
@@ -491,6 +494,28 @@ const pageBandHover = () => {
   if (ids.size !== 1) return { ok: false, reason: `hover spans ${ids.size} different rows` };
   if (tops.size !== 1) return { ok: false, reason: `hovered bands sit at ${tops.size} different tops` };
   return { ok: true, count: bands.length, reason: `${bands.length} bands share the shaded row` };
+};
+
+/**
+ * Is the locked lane pinned flush against the rail? A wheel overshoot inside
+ * the locked lane's own grab window must snap the board BACK to the flush
+ * position (runCorrections drift re-pin) rather than leave the ruler sitting
+ * visibly off-flush with its rail attribution still showing.
+ */
+const pageLockedFlush = () => {
+  const board = document.querySelector("[data-parent-board]");
+  if (!board) return { ok: false, reason: "no board" };
+  const locked = board.querySelector("section[data-locked]");
+  if (!locked) return { ok: false, reason: "no lane is locked" };
+  const rail = board.querySelector("[data-rail]");
+  if (!rail) return { ok: false, reason: "no rail" };
+  const want = rail.getBoundingClientRect().right + 16;
+  const left = locked.getBoundingClientRect().left;
+  const drift = Math.abs(left - want);
+  if (drift > 4) {
+    return { ok: false, reason: `locked lane sits ${Math.round(drift)}px off flush` };
+  }
+  return { ok: true, reason: `locked lane flush (drift ${Math.round(drift)}px)` };
 };
 
 /**
@@ -733,6 +758,14 @@ async function check(step, page, gestureResults = []) {
         ok ? `locked=${got}` : `locked=${got}`,
       );
     }
+    if (rule.locked_flush !== undefined) {
+      const got = await page.evaluate(pageLockedFlush);
+      expect(
+        "locked lane pinned flush against the rail",
+        got.ok === rule.locked_flush,
+        got.reason,
+      );
+    }
     if (rule.bands_aligned !== undefined) {
       const got = await page.evaluate(pageBandsAligned);
       expect(
@@ -874,7 +907,7 @@ async function runSuite(file, { port, browser }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "scroll", "resize", "sleep", "press_escape", "push_url"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "scroll", "wheel_pan", "resize", "sleep", "press_escape", "push_url"];
       let gestureFailed = false;
       for (const gesture of Object.keys(step).filter((key) => GESTURE_ORDER.includes(key))) {
         if (gesture === "drag") {
@@ -940,6 +973,11 @@ async function runSuite(file, { port, browser }) {
           // settle_ms: 0 skips the wait so a following click lands while the
           // glide is in flight (the click-during-glide adversarial step).
           await sleep(Math.max(0, Number(step.scroll.settle_ms ?? 1200)));
+        } else if (gesture === "wheel_pan") {
+          // A real wheel pan through the input pipeline (the same path the
+          // operator's trackpad uses), then a settle wait.
+          await wheelPan(page, step.wheel_pan.dx ?? 130);
+          await sleep(Math.max(0, Number(step.wheel_pan.settle_ms ?? 2500)));
         } else if (gesture === "resize") {
           // A viewport change while the lock is held re-runs the layout; let
           // the resize observer commit before assertions sample the DOM.
