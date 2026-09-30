@@ -36,7 +36,19 @@ export function decoratedCodePath(code: Element): string | null {
 
 const PATH_FLAG_ICON_ATTR = "data-focus-board-path-link-icon";
 
-/** Attach the path flag, link styling, and trailing icon to one code element. */
+const PATH_FLAG_GLUE_ATTR = "data-focus-board-path-link-glue";
+
+/** Attach the path flag, link styling, and trailing icon to one code element.
+ * The icon is an atomic inline after the path text, and a line break in front
+ * of an atomic inline is always legal — Chromium ignores U+2060 word joiners
+ * there, and the host's `break-words` copy leaves no other wrap opportunity,
+ * so on a narrow pane the glyph could wrap onto its own line (measured: a
+ * band of pane widths splits it 8–9 ways per path). The fix is structural:
+ * the icon joins the code's final character inside one white-space-nowrap
+ * unit, so a break can never land between them. Fusing only the last
+ * character (not the basename) keeps the unit tiny, so a basename longer
+ * than a min-width pane can still wrap inside via overflow-wrap instead of
+ * overflowing it. */
 export function decorateCode(code: Element, path: string): void {
 	code.setAttribute(PATH_FLAG, path);
 	code.classList.add("cursor-pointer", "underline", "underline-offset-2");
@@ -48,7 +60,37 @@ export function decorateCode(code: Element, path: string): void {
 	icon.setAttribute("aria-hidden", "true");
 	icon.className = "ml-1 inline size-3 align-[-0.125em] text-muted-foreground";
 	icon.innerHTML = EXTERNAL_LINK_ICON;
-	code.appendChild(icon);
+
+	// Move the code's final character into the glue unit with the icon. The
+	// visible text is unchanged (same characters, same order); React can
+	// drop the whole decoration on a re-render and a re-scan repaints.
+	const glue = doc.createElement("span");
+	glue.setAttribute(PATH_FLAG_GLUE_ATTR, "");
+	glue.setAttribute("aria-hidden", "true");
+	glue.style.whiteSpace = "nowrap";
+	glue.appendChild(icon);
+	const terminal = lastTerminalText(doc, code);
+	if (terminal !== null && terminal.text.length > 1) {
+		terminal.node.data = terminal.text.slice(0, -1);
+		glue.insertBefore(doc.createTextNode(terminal.text.slice(-1)), icon);
+	}
+	code.appendChild(glue);
+}
+
+/** The element's LAST text node that still carries visible text, with that
+ * text: {node, text}, or null when none exists. */
+function lastTerminalText(
+	owner: Document,
+	code: Element,
+): { node: Text; text: string } | null {
+	let found: Text | null = null;
+	const walker = owner.createTreeWalker(code, 4 /* Text */);
+	let node: Node | null;
+	while ((node = walker.nextNode()) !== null) {
+		if ((node as Text).data.length > 0) found = node as Text;
+	}
+	if (found === null) return null;
+	return { node: found, text: found.data };
 }
 
 export interface InlineCodeCandidate {
