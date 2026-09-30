@@ -112,6 +112,18 @@ function MultiSelectDropdown({
                   <Input
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      // Enter with exactly one filtered match acts like
+                      // clicking that row: apply it as the single selection
+                      // and close. With 2+ matches Enter stays inert (the
+                      // user hasn't narrowed far enough); with none there
+                      // is nothing to accept.
+                      if (event.key !== "Enter") return;
+                      if (visibleOptions.length !== 1) return;
+                      event.preventDefault();
+                      onSingleSelect(visibleOptions[0].value);
+                      close();
+                    }}
                     placeholder={`Search ${label.toLowerCase()}…`}
                     aria-label={`Search ${label.toLowerCase()} options`}
                     aria-controls={listboxId}

@@ -70,6 +70,9 @@ function leftClickOn(el: Element) {
 
 describe("chat click-jump guard", () => {
 	let container: HTMLDivElement;
+	// Realistic scroll move: the stub sets the state, and the native scroll
+	// event fires alongside (the position tracker observes it).
+	let moveTo: (top: number) => void;
   	let scroller: ScrollerHarness;
 	let guard: Guard;
 	const wheelEvents: WheelEvent[] = [];
@@ -91,6 +94,10 @@ describe("chat click-jump guard", () => {
 			true,
 		);
 		wheelEvents.length = 0;
+		moveTo = (top: number) => {
+			scroller.scrollTo(top);
+			scroller.el.dispatchEvent(new Event("scroll"));
+		};
 		guard = createChatClickJumpGuard(() => container);
 		document.addEventListener("click", forwardClick, true);
 	});
@@ -226,6 +233,42 @@ describe("chat click-jump guard", () => {
 		vi.advanceTimersByTime(200);
 		expect(scroller.el.scrollTop).toBe(3000);
 		expect(wheelEvents).toHaveLength(0);
+	});
+
+	it("stops cementing an upward yank: a click at the displaced position does not arm, so the shell's self-re-pin sticks", async () => {
+		vi.useFakeTimers();
+		// Epoch 0: reader pinned at the bottom; a click attaches the position
+		// tracker (no arm possible at the bottom).
+		leftClickOn(scroller.el);
+		// The shell's no-dep effect yanks the view UP to ~16 px: not a
+		// clamp-down, so the guard never acts directly.
+		moveTo(16);
+		vi.advanceTimersByTime(50);
+		// The reader clicks at the DISPLACED position: the gap is huge, but
+		// the position moved hugely since the tracker last saw the scroller
+		// at rest; arming here would revert the shell's imminent
+		// self-correction and cement the displacement.
+		leftClickOn(scroller.el);
+		// The shell automatically re-pins ~30 ms later.
+		moveTo(3000);
+		vi.advanceTimersByTime(1000);
+		expect(scroller.el.scrollTop).toBe(3000);
+		expect(wheelEvents).toHaveLength(0);
+	});
+
+	it("normal protection still works after an upward yank's suppression lapses", async () => {
+		vi.useFakeTimers();
+		leftClickOn(scroller.el);
+		moveTo(16);
+		vi.advanceTimersByTime(3100); // suppression window = 3s
+		// Reader clicks (arms; the gap is huge and the tracker is settled).
+		leftClickOn(scroller.el);
+		// A bogus clamp lands inside the window: the guard reverts to the
+		// click-time position.
+		moveTo(3000);
+		vi.advanceTimersByTime(50);
+		expect(scroller.el.scrollTop).toBe(16);
+		expect(wheelEvents).toHaveLength(1);
 	});
 
 	it("finds a renamed-scroller through the click target's ancestors when the marker class is gone", () => {

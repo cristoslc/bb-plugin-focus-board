@@ -5,16 +5,59 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Developer toggle: pane chat scroll instrumentation.** A new Focus Board
+  setting ("Developer: instrument pane chat scrolling (debug)"), shipped
+  off for every build, attaches a bounded instrumentation session to the
+  thread pane's chat transcript while enabled: every programmatic
+  `scrollTop` write with its calling stack (flagged when it overshoots the
+  scroller's live range, the click-jump capture shape), the scroll/wheel/
+  touch/pointer-intent stream, 1 Hz geometry samples, and a copyable log
+  from the pane header. Developer investigation tooling for the pane
+  chat's click-jump displacement — `docs/chat-click-jump-2026-09-29.md`.
+
 ### Changed
 
-- **A pinned family with a member that needs you calls attention from inside
-  Pinned.** A pinned family cannot relocate to a Needs-you lane (pinned
-  threads split out before the family-column overrides read), so a child
-  thread's question used to sit silent inside a card that read idle. Now the
-  pinned parent card pulses — an amber border, the changelog gift's pulse
-  language — shows its question icon, and rises to the top of the Pinned lane
-  (above manual ranks, like urgent child rows do); the signal vanishes when
-  the question is answered.
+- **Narrow a dropdown search to one match and Enter applies it.** When a filter
+  dropdown's search field (Project, Provider, Group, State) has filtered the
+  list down to a single remaining row, pressing Enter in the field now does
+  what clicking that row does: applies it as the selection and closes the
+  menu. With two or more matches, or none, Enter stays inert.
+
+- **Marking a card unread now restores it up the attention ladder from any
+  surface.** With the parked-pin model, a pinned card marked unread (or
+  done) parks its pin as it leaves the Pinned lane. The state writes that
+  bring the card back now react to the card's state, not to who wrote them:
+  a mark-unread landing through the native thread menu (bb's own surface),
+  the board's menu, the pane toggle, or a drag onto the Unread lane restores
+  the parked pin — the card returns to Pinned wearing the mark — and un-does
+  a Done card, since unread and done contradict on one card. Driven by
+  bb's own cross-surface realtime feed (`thread:changed` events); safe
+  because only the deliberate mark-unread write clears
+  `lastReadAt`, so ambient thread noise never pulls cards back.
+
+### Fixed
+
+- **The pane's click-jump guard no longer cements an upward displacement.**
+  The guard arms on left clicks in the transcript while the reader is
+  scrolled up; a click landing at an already-displaced position armed it at
+  the displaced baseline, and bb's shell (self-correcting a displacement it
+  had just made by re-pinning to the bottom) was then reverted by the
+  guard, leaving the reader displaced. The guard now watches the
+  scroller's position with a passive scroll listener and does not arm for
+  3s after any single scroll move of ≥300px — displacements and their
+  self-corrections stay with the shell that made them. Shipped in 0.5.19,
+  bug and fix reproduced headlessly (10 instrumented runs).
+
+- **A pinned family with a member that needs you now calls attention from
+  inside Pinned.** A pinned family cannot relocate to a Needs-you lane
+  (pinned threads split out before the family-column overrides read), so a
+  child thread's question used to sit silent inside a card that read idle.
+  Now the pinned parent card pulses — an amber border, the changelog gift's
+  pulse language — shows its question icon, and rises to the top of the
+  Pinned lane (above manual ranks, like urgent child rows do); the signal
+  vanishes when the question is answered.
 
 ## [0.5.21] - 2026-09-30
 

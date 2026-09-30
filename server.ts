@@ -26,6 +26,12 @@ import {
 } from "./lib/done-metadata";
 import { DEFAULT_DONE_ARCHIVE_DAYS, DEFAULT_IDLE_ARCHIVE_DAYS } from "./lib/sweep";
 import {
+  PIN_PARK_METADATA_KEY,
+  parsePinParkRecord,
+  stampPinPark,
+  type PinParkRecord,
+} from "./lib/pin-park";
+import {
   RANK_KV_KEY,
   applyMoveVisible,
   orderForColumn,
@@ -72,6 +78,21 @@ export const rpcContract = defineRpcContract({
   done_set: {
     input: z.object({ threadId: z.string().min(1), done: z.boolean() }),
     output: z.object({ done: z.boolean() }),
+  },
+  // Parked-pin record store: the lane-exit unpin writes a park marker here
+  // (see lib/pin-park.ts), and the state writes that bring the card back to
+  // the operator — Mark Not Done, Mark Unread — read it to restore the pin.
+  // A dumb record store on purpose: the composition (who unpins, who
+  // restores) lives with the sidebar-action caller, where the writes stream.
+  pin_parks_list: {
+    input: z.null(),
+    output: z.object({
+      parks: z.record(z.string(), z.object({ parkedAt: z.string() })),
+    }),
+  },
+  pin_park_set: {
+    input: z.object({ threadId: z.string().min(1), parked: z.boolean() }),
+    output: z.object({ threadId: z.string(), parked: z.boolean() }),
   },
   tracker_status: {
     input: z.object({
@@ -223,6 +244,20 @@ export default async function plugin(bb: BbPluginApi) {
         "While a thread is running, Escape interrupts its turn instead of closing the pane; the pane closes with Escape once nothing is running.",
       default: true,
     },
+    // Debug-mode scroll instrumentation for the pane's embedded chat
+    // (docs/chat-click-jump-2026-09-29.md investigation). Ships OFF: the
+    // committed default is off everywhere, so stable builds never
+    // instrument; it is turned on in a developer environment through this
+    // setting alone. While on, the pane wraps the transcript scroller's
+    // scrollTop setter and logging session with a copyable export
+    // (see components/scroll-debug.ts).
+    scrollDebugInstrumentation: {
+      type: "boolean",
+      label: "Developer: instrument pane chat scrolling (debug)",
+      description:
+        "Logs the pane chat transcript's scroll writes with calling stacks, plus scroll/wheel/touch events, and adds a copyable debug log to the pane header. Debug use only; keep off otherwise.",
+      default: false,
+    },
   });
 
   async function readDoneRecord(
@@ -257,8 +292,7 @@ export default async function plugin(bb: BbPluginApi) {
     );
   }
 
-  async function writeDoneRecord(threadId: string, done: boolean) {
-    const now = new Date();
+  async function writeDoneRecord(threadId: string, done: boolean) {    const now = new Date();
     if (done) {
       const existing = await readDoneRecord(threadId);
       const record = stampDone(existing, now);
@@ -273,6 +307,36 @@ export default async function plugin(bb: BbPluginApi) {
         remove: [DONE_METADATA_KEY],
       });
       await removeFromDoneIndex(threadId);
+    }
+  }
+
+  async function readPinParkRecord(
+    threadId: string,
+  ): Promise<PinParkRecord | null> {
+    // Same cast contract as readDoneRecord above: getPluginMetadata returns
+    // an untyped namespace record; parsePinParkRecord validates the shape.
+    const namespace = await bb.sdk.threads.getPluginMetadata({ threadId });
+    const value = (namespace as Record<string, JsonValue>)[PIN_PARK_METADATA_KEY];
+    return parsePinParkRecord(value);
+  }
+
+  /**
+   * Park or clear the lane-exit pin marker. Parking refreshes the stamp —
+   * a prior park never survives a newer gesture; clearing deletes the key.
+   */
+  async function writePinPark(threadId: string, parked: boolean): Promise<void> {
+    if (parked) {
+      const existing = await readPinParkRecord(threadId);
+      const record = stampPinPark(existing, new Date());
+      await bb.sdk.threads.updatePluginMetadata({
+        threadId,
+        set: { [PIN_PARK_METADATA_KEY]: record },
+      });
+    } else {
+      await bb.sdk.threads.updatePluginMetadata({
+        threadId,
+        remove: [PIN_PARK_METADATA_KEY],
+      });
     }
   }
 
@@ -423,6 +487,22 @@ export default async function plugin(bb: BbPluginApi) {
       await writeDoneRecord(threadId, done);
       bb.realtime.publish(DONE_CHANGED, { threadId, done });
       return { done };
+    },
+    pin_parks_list: async () => {
+      // The live list only: a park on an archived thread has no consumer —
+      // un-archiving returns the thread through done state, not a pin — and
+      // the SDK scan the done CLI lacks is not needed here.
+      const rows = await bb.sdk.threads.list({});
+      const parks: Record<string, PinParkRecord> = {};
+      for (const row of rows) {
+        const record = await readPinParkRecord(row.id);
+        if (record !== null) parks[row.id] = record;
+      }
+      return { parks };
+    },
+    pin_park_set: async ({ threadId, parked }) => {
+      await writePinPark(threadId, parked);
+      return { threadId, parked };
     },
     tracker_status: async ({ repo, numbers }) => {
       const home = process.env.HOME ?? "";
