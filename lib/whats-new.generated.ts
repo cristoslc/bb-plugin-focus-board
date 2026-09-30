@@ -29,15 +29,15 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly stri
   {
     "version": "0.5.17",
     "items": [
-      "Parent-thread view: family lanes size to their content; the locked ruler lane renders large readable cards while context lanes wrap compact cards capped by the viewport width.",
-      "Panning horizontally releases the ruler lock; at rest the nearest family pins flush into position before a single re-cut, clicked subtasks stay visible through the motion, and the board settles quiet (regression-tested with a real wheel-event pan in the UAT suite).",
-      "The lane-order toggle is a vertical picker in the status rail; viewport resizes while a lane is locked keep the ruler and band alignment; clicking a lane header during an in-flight glide wins the lock over the pan's target."
+      "Parent lanes now size to fit their cards, and the selected family renders as a wide, readable ruler lane.",
+      "Panning releases the lane lock, and at rest the nearest family pins flush into position.",
+      "The lane-order toggle moves into the status rail as a vertical picker."
     ]
   },
   {
     "version": "0.5.16",
     "items": [
-      "No user-visible board changes; the What's-new modal restates the 0.5.15 notes."
+      "No user-visible board changes."
     ]
   },
   {
@@ -129,67 +129,67 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly stri
   {
     "version": "0.4.1",
     "items": [
-      "Selected option indicators in the pane question form were invisible: the check rendered in `primary-foreground` on a transparent border, and this theme's `primary` is not a strong fill, so picking an answer looked like nothing happened."
+      "Selected option indicators were invisible in the pane question form."
     ]
   },
   {
     "version": "0.4.0",
     "items": [
       "Per-column card rank ordering.",
-      "Pane question form: parity with the host's QuestionForm: the pending question card now mirrors the host's shipped form rather than a stacked long form.",
-      "The board marks each lane and each card with `data-column-id`, `data-column-ordered`, and `data-rank-slot` attributes, which the UAT harness reads to drive real drag gestures.",
-      "The simulated board in the screenshot harness gained a third unread thread and an in-memory rank store, and the screenshots are regenerated to match.",
-      "`scripts/screenshot/shoot.mjs` failed roughly two runs in three with `TargetCloseError` on `Emulation.setTouchEmulationEnabled`."
+      "The pane question form reaches parity with the host's shipped QuestionForm.",
+      "The board's cards and lanes carry drag-testability attributes.",
+      "The screenshot harness simulates a third unread thread.",
+      "Screenshot runs stop failing two runs in three."
     ]
   },
   {
     "version": "0.3.5",
     "items": [
-      "Keep the selected card in view when the thread pane opens: the pane squeezes the board, which could leave the open thread's card clipped off to the right."
+      "The selected card stays in view when the thread pane opens."
     ]
   },
   {
     "version": "0.3.4",
     "items": [
-      "Answer agent questions from the thread pane: the pane now renders a pending question as a real form and submits the answer from the board — the host's embedded chat only shows these in the main thread view, so the question tool used to block until timeout while the pane showed nothing."
+      "Agent questions are answerable from the thread pane."
     ]
   },
   {
     "version": "0.3.3",
     "items": [
-      "New threads inherit a single-project filter: when exactly one project is selected in the filter, the toolbar's new thread button and the board's new task affordance create the thread in that project."
+      "New threads inherit the single selected project filter."
     ]
   },
   {
     "version": "0.3.2",
     "items": [
-      "Search bar in long filter dropdowns: the toolbar's Project and Provider dropdowns (and any other option list past five rows) now open with a search field, matching the model picker's affordance."
+      "Long filter dropdowns gain a search bar."
     ]
   },
   {
     "version": "0.3.1",
     "items": [
-      "Renamed to Focus Board: package `bb-plugin-focus-board`, plugin ID `focus-board`, CLI `bb focus-board`, and `focus-board:` preference keys."
+      "The plugin is renamed to Focus Board."
     ]
   },
   {
     "version": "0.3.0",
     "items": [
-      "`bb thread-board` CLI: one subcommand managing the plugin's own state — a third surface over the same Done/metadata store, never a re-spelling of `bb thread`: - `bb thread-board done list|mark|clear` — list done threads (with `doneAt`, `keep`, and a `not in the live thread list` flag; orphaned marks on deleted threads survive via a `done-index` KV), stamp Done (idempotent, refreshes `doneAt`), clear it."
+      "The new `bb thread-board` CLI manages the plugin's own state."
     ]
   },
   {
     "version": "0.2.0",
     "items": [
-      "Done state moves to plugin metadata: Done is per-thread bb-native plugin metadata in the board's own namespace (`done` → `{ doneAt, keep?",
-      "Sweep: two-click arm-then-confirm buttons per column — Done and Awhile-ago.",
-      "Ticket chips: `PROJ-123`, `#1284`, and GitHub issue/PR URLs in titles and branches render as chips that link out; inert when the project has no GitHub remote.",
-      "GitHub status dots: the server reads the official GitHub plugin's local cache read-only and puts open/closed/merged dots on matching chips; a missing cache degrades to chip-only rendering — the board never breaks.",
-      "Parent-child nesting: threads spawned as children render as collapsible rows under their parent card (Jira-subissue style), with a needs-you child promoted to its own column so it is never buried, a 2-level depth cap with `+N more` chip, family-aware filtering, and a defensive family index (orphans → roots, cycles unlinked).",
-      "Nesting refinements: child rows carry the full title (up to two lines); archived children stay nested under their live parent, dimmed with an archived mark; a \"Nest child threads\" toolbar toggle flattens the board to independent cards (nesting off = fully flat, filters per-thread).",
-      "`done_list` returns `{ doneIds, records }` where records carry the ISO-8601 `doneAt` stamp and `keep` flag the sweep and (future) CLI consume.",
-      "`done-changed` realtime payload is `{ threadId, done }` (was `{ count }`); keep-flag writes publish the same signal.",
-      "README's \"makes no server-side writes\" wording corrected to describe what the board actually owns (pin state, read state, Done — never thread content)."
+      "Done state moves to per-thread plugin metadata, server-side and surviving across devices and reloads.",
+      "The sweep arms with a first click and performs with a second: arm-then-confirm buttons sit on the Done and Awhile-ago columns.",
+      "Ticket chips render and link out from titles and branches.",
+      "GitHub status dots appear on matching chips.",
+      "Threads spawned as children nest under their parent card as collapsible rows, Jira-subissue style.",
+      "Child rows gain full titles, and archived children stay nested.",
+      "`done_list` returns richer Done records.",
+      "The `done-changed` realtime payload narrows to the thread.",
+      "The README's \"makes no server-side writes\" wording is corrected."
     ]
   }
 ];

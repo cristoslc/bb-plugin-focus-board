@@ -120,16 +120,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Parent-thread view: family lanes size to their content; the locked ruler lane renders large readable cards while context lanes wrap compact cards capped by the viewport width.
-- Panning horizontally releases the ruler lock; at rest the nearest family pins flush into position before a single re-cut, clicked subtasks stay visible through the motion, and the board settles quiet (regression-tested with a real wheel-event pan in the UAT suite).
-- The lane-order toggle is a vertical picker in the status rail; viewport resizes while a lane is locked keep the ruler and band alignment; clicking a lane header during an in-flight glide wins the lock over the pan's target.
+- **Parent lanes now size to fit their cards, and the selected family renders as a wide, readable ruler lane.** The locked ruler lane holds large readable cards while context lanes wrap compact cards capped by the viewport width.
+- **Panning releases the lane lock, and at rest the nearest family pins flush into position.** One re-cut: clicked subtasks stay visible through the motion, seams stay aligned, and the board settles quiet (regression-tested with a real wheel-event pan in the UAT suite).
+- **The lane-order toggle moves into the status rail as a vertical picker.** Viewport resizes while a lane is locked keep the ruler and band alignment, and clicking a lane header during an in-flight glide wins the lock over the pan's target.
 
 ## [0.5.16] - 2026-09-29
 
 ### Changed
 
-- No user-visible board changes; the What's-new modal restates the 0.5.15
-  notes. Release documentation updates only.
+- **No user-visible board changes.** The What's-new modal restates the
+  0.5.15 notes; release documentation updates only.
 
 ## [0.5.15] - 2026-09-28
 
@@ -316,8 +316,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
-- **Selected option indicators in the pane question form were invisible**:
-  the check rendered in `primary-foreground` on a transparent border, and
+- **Selected option indicators were invisible in the pane question form.**
+  The check rendered in `primary-foreground` on a transparent border, and
   this theme's `primary` is not a strong fill, so picking an answer looked
   like nothing happened. Selected options now fill foreground-on-background,
   matching the plugin's own checkbox (radio-shaped for single-select, square
@@ -347,8 +347,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Drop on a card's top half to land in front of it, bottom half to land past
     it, or below the last card to append. Dropping a card on itself, or
     dragging into a different lane's order, writes nothing.
-- **Pane question form: parity with the host's QuestionForm**: the pending
-  question card now mirrors the host's shipped form rather than a stacked
+- **The pane question form reaches parity with the host's shipped
+  QuestionForm.** The pending question card no longer renders as a stacked
   long form. Sequential questions sit behind a scrollable tab strip with a
   N-of-M counter and Back/Next; the banner collapses (Escape collapses it
   before the pane closes); the form body is height-capped and scrolls
@@ -361,26 +361,28 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- The board marks each lane and each card with `data-column-id`,
+- **The board's cards and lanes carry drag-testability attributes.** The
+  board marks each lane and each card with `data-column-id`,
   `data-column-ordered`, and `data-rank-slot` attributes, which the UAT
   harness reads to drive real drag gestures.
-- The simulated board in the screenshot harness gained a third unread thread
-  and an in-memory rank store, and the screenshots are regenerated to match.
+- **The screenshot harness simulates a third unread thread.** The simulated
+  board gained an in-memory rank store, and the screenshots are regenerated
+  to match.
 
 ### Fixed
 
-- `scripts/screenshot/shoot.mjs` failed roughly two runs in three with
-  `TargetCloseError` on `Emulation.setTouchEmulationEnabled`. It flipped one
-  shared page's viewport between shots; each shot now gets its own page with
-  the viewport set once.
+- **Screenshot runs stop failing two runs in three.** The script flipped
+  one shared page's viewport between shots (`TargetCloseError` on
+  `Emulation.setTouchEmulationEnabled`); each shot now gets its own page
+  with the viewport set once.
 
 ## [0.3.5] — 2026-09-26
 
 ### Fixed
 
-- **Keep the selected card in view when the thread pane opens**: the pane
+- **The selected card stays in view when the thread pane opens.** The pane
   squeezes the board, which could leave the open thread's card clipped off
-  to the right. The board's horizontal scroller now keeps the active card
+  to the right; the board's horizontal scroller now keeps the active card
   (parent card or nested child row) in the visible range when the pane
   opens or is drag-resized.
 
@@ -388,10 +390,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
-- **Answer agent questions from the thread pane**: the pane now renders a
-  pending question as a real form and submits the answer from the board —
-  the host's embedded chat only shows these in the main thread view, so the
-  question tool used to block until timeout while the pane showed nothing.
+- **Agent questions are answerable from the thread pane.** The pane now
+  renders a pending question as a real form and submits the answer from the
+  board — the host's embedded chat only shows these in the main thread
+  view, so the question tool used to block until timeout while the pane
+  showed nothing.
   Both payload shapes are handled: provider `user_question` interactions
   (answered through `interactions.resolve`; dismissing one stops the turn,
   like the main view) and plugin forms with the ask-user-question shape
@@ -403,9 +406,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **New threads inherit a single-project filter**: when exactly one
-  project is selected in the filter, the toolbar's new thread button and
-  the board's new task affordance create the thread in that project.
+- **New threads inherit the single selected project filter.** When exactly
+  one project is selected in the filter, the toolbar's new thread button
+  and the board's new task affordance create the thread in that project.
   With no or multiple projects selected, bb's default project pick
   applies, and a stale filter id (project deleted since) falls back to
   the default as well.
@@ -414,9 +417,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **Search bar in long filter dropdowns** (#8): the toolbar's Project and
-  Provider dropdowns (and any other option list past five rows) now open
-  with a search field, matching the model picker's affordance. Matching is
+- **Long filter dropdowns gain a search bar** (#8). Project and Provider
+  dropdowns (and any other option list past five rows) now open with a
+  search field, matching the model picker's affordance. Matching is
   a case-insensitive substring on the label, the field takes focus on open,
   Escape clears the query then closes, and reopening starts blank. Short
   lists (State) keep their plain rows.
@@ -425,9 +428,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **Renamed to Focus Board** (#8): package `bb-plugin-focus-board`, plugin
-  ID `focus-board`, CLI `bb focus-board`, and `focus-board:` preference
-  keys. Saved grouping/filter/search preferences reset once on update.
+- **The plugin is renamed to Focus Board** (#8). The package is
+  `bb-plugin-focus-board`, the plugin ID `focus-board`, the CLI
+  `bb focus-board`, and the `focus-board:` preference keys. Saved
+  grouping/filter/search preferences reset once on update.
   Repository moved to
   [github.com/cristoslc/bb-plugin-focus-board](https://github.com/cristoslc/bb-plugin-focus-board)
   (the old URL redirects).
@@ -436,8 +440,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **`bb thread-board` CLI** (#6): one subcommand managing the plugin's own
-  state — a third surface over the same Done/metadata store, never a
+- **The new `bb thread-board` CLI manages the plugin's own state** (#6).
+  It is a third surface over the same Done/metadata store, never a
   re-spelling of `bb thread`:
   - `bb thread-board done list|mark|clear` — list done threads (with
     `doneAt`, `keep`, and a `not in the live thread list` flag; orphaned
@@ -459,40 +463,43 @@ done-metadata foundation → sweep → tracker mirroring → nesting refinements
 
 ### Added
 
-- **Done state moves to plugin metadata** (#4): Done is per-thread bb-native
-  plugin metadata in the board's own namespace (`done` → `{ doneAt, keep? }`)
-  — server-side, surviving across devices and reloads. A legacy-KV migration
-  shim imports both earlier shapes (bare ids, epoch-ms record maps) on first
+- **Done state moves to per-thread plugin metadata** (#4), server-side and
+  surviving across devices and reloads. It lives in the board's own
+  namespace (`done` → `{ doneAt, keep? }`); a legacy-KV migration shim
+  imports both earlier shapes (bare ids, epoch-ms record maps) on first
   read, idempotently, fail-loud on malformed data.
-- **Sweep** (#1): two-click arm-then-confirm buttons per column — Done and
-  Awhile-ago. First click arms (button shows `?`, eligible cards gather and
-  highlight, count frozen at arm time); second click performs; click-away or
-  Escape disarms. Thresholds `doneArchiveDays` (7) and `idleArchiveDays`
+- **The sweep arms with a first click and performs with a second** (#1):
+  arm-then-confirm buttons sit on the Done and Awhile-ago columns. First
+  click arms (button shows `?`, eligible cards gather and highlight, count
+  frozen at arm time); second click performs; click-away or Escape disarms. Thresholds `doneArchiveDays` (7) and `idleArchiveDays`
   (30) via plugin settings; per-thread "Keep from sweep" override honored
   by both arms, stored independently so never-Done threads can be kept.
-- **Ticket chips** (#2): `PROJ-123`, `#1284`, and GitHub issue/PR URLs in
-  titles and branches render as chips that link out; inert when the project
-  has no GitHub remote.
-- **GitHub status dots** (#2, optional): the server reads the official
-  GitHub plugin's local cache read-only and puts open/closed/merged dots on
-  matching chips; a missing cache degrades to chip-only rendering — the
-  board never breaks.
-- **Parent-child nesting** (#3): threads spawned as children render as
-  collapsible rows under their parent card (Jira-subissue style), with a
-  needs-you child promoted to its own column so it is never buried, a
-  2-level depth cap with `+N more` chip, family-aware filtering, and a
-  defensive family index (orphans → roots, cycles unlinked).
-- **Nesting refinements** (#5): child rows carry the full title (up to two
-  lines); archived children stay nested under their live parent, dimmed
-  with an archived mark; a "Nest child threads" toolbar toggle flattens the
-  board to independent cards (nesting off = fully flat, filters per-thread).
+- **Ticket chips render and link out from titles and branches** (#2).
+  `PROJ-123`, `#1284`, and GitHub issue/PR URLs show as chips; inert when
+  the project has no GitHub remote.
+- **GitHub status dots appear on matching chips** (#2, optional). The
+  server reads the official GitHub plugin's local cache read-only and puts
+  open/closed/merged dots on matching chips; a missing cache degrades to
+  chip-only rendering — the board never breaks.
+- **Threads spawned as children nest under their parent card** (#3) as
+  collapsible rows, Jira-subissue style. A needs-you child is promoted to
+  its own column so it is never buried; a 2-level depth cap surfaces a
+  `+N more` chip; filtering is family-aware; a defensive family index
+  orphans to roots and unlinks cycles.
+- **Child rows gain full titles, and archived children stay nested** (#5).
+  Child rows carry the full title (up to two lines); archived children stay
+  nested under their live parent, dimmed with an archived mark; a "Nest
+  child threads" toolbar toggle flattens the board to independent cards
+  (nesting off = fully flat, filters per-thread).
 
 ### Changed
 
-- `done_list` returns `{ doneIds, records }` where records carry the
-  ISO-8601 `doneAt` stamp and `keep` flag the sweep and (future) CLI consume.
-- `done-changed` realtime payload is `{ threadId, done }` (was `{ count }`);
-  keep-flag writes publish the same signal.
-- README's "makes no server-side writes" wording corrected to describe what
-  the board actually owns (pin state, read state, Done — never thread
-  content).
+- **`done_list` returns richer Done records.** The payload is
+  `{ doneIds, records }`, where records carry the ISO-8601 `doneAt` stamp
+  and `keep` flag the sweep and (future) CLI consume.
+- **The `done-changed` realtime payload narrows to the thread.** It is
+  `{ threadId, done }` (was `{ count }`); keep-flag writes publish the same
+  signal.
+- **The README's "makes no server-side writes" wording is corrected.** It
+  now describes what the board actually owns (pin state, read state, Done —
+  never thread content).
