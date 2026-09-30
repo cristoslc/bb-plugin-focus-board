@@ -244,6 +244,20 @@ export default async function plugin(bb: BbPluginApi) {
         "While a thread is running, Escape interrupts its turn instead of closing the pane; the pane closes with Escape once nothing is running.",
       default: true,
     },
+    // Debug-mode scroll instrumentation for the pane's embedded chat
+    // (docs/chat-click-jump-2026-09-29.md investigation). Ships OFF: the
+    // committed default is off everywhere, so stable builds never
+    // instrument; it is turned on in a developer environment through this
+    // setting alone. While on, the pane wraps the transcript scroller's
+    // scrollTop setter and logging session with a copyable export
+    // (see components/scroll-debug.ts).
+    scrollDebugInstrumentation: {
+      type: "boolean",
+      label: "Developer: instrument pane chat scrolling (debug)",
+      description:
+        "Logs the pane chat transcript's scroll writes with calling stacks, plus scroll/wheel/touch events, and adds a copyable debug log to the pane header. Debug use only; keep off otherwise.",
+      default: false,
+    },
   });
 
   async function readDoneRecord(

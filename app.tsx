@@ -177,6 +177,11 @@ function BoardPage({ subPath }: { subPath: string }) {
   const escStopsRunningThread = escStopsRunningFromSetting(
     settingValues?.escStopsRunningThread,
   );
+  // Strictly opt-in: only a stored true instruments (debug ships off).
+  // Off for every stable build's default; enabled from the config panel
+  // in a developer environment for the click-jump investigation
+  // (docs/chat-click-jump-2026-09-29.md).
+  const scrollDebug = settingValues?.scrollDebugInstrumentation === true;
 
   // The board's "needs you" state rides the sidebar's `hasPendingInteraction`
   // flag, but the sidebar cache can lag behind an answered question: the
@@ -1353,6 +1358,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           onMaximize={() => navigate.toThread(openThread.id)}
           onClose={closeThreadPane}
           escStopsRunningThread={escStopsRunningThread}
+          scrollDebug={scrollDebug}
         />
       )}
       <WhatsNewModal

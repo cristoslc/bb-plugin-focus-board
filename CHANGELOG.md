@@ -10,6 +10,16 @@ into dev, then this whole group is renamed to its release version._
 
 ### Added
 
+- **Developer toggle: pane chat scroll instrumentation.** A new Focus Board
+  setting ("Developer: instrument pane chat scrolling (debug)"), shipped
+  off for every build, attaches a bounded instrumentation session to the
+  thread pane's chat transcript while enabled: every programmatic
+  `scrollTop` write with its calling stack (flagged when it overshoots the
+  scroller's live range, the click-jump capture shape), the scroll/wheel/
+  touch/pointer-intent stream, 1 Hz geometry samples, and a copyable log
+  from the pane header. Developer investigation tooling for the pane
+  chat's click-jump displacement — `docs/chat-click-jump-2026-09-29.md`.
+
 ### Changed
 
 ### Fixed
