@@ -217,3 +217,29 @@ export function lockIndexFor(
   }
   return grabbed;
 }
+
+/** Whether a pin to `target` should reposition instantly instead of gliding.
+ *  Trackpad momentum often overshoots INTO a lane's grab range before resting,
+ *  so the settled position sits PAST the target and a smooth glide would sweep
+ *  visibly backwards ("scrolls all the way right past Chore, then snaps back").
+ *  A backward reposition is repainted as one hard snap (operator ruling:
+ *  "keep grab window + snap harder"); forward pins keep the smooth glide. */
+export function pinIsInstant(target: number, currentScrollLeft: number): boolean {
+  return target < currentScrollLeft;
+}
+
+/** New trailing-spacer width that caps the scroll wall at the last lane's
+ *  flush point. Without the cap, maxScroll (`maxScrollLeft`) sits far past
+ *  every pin target, so a hard fling right overshoots the board and settle
+ *  snaps back a long way (operator: "the second-to-last lane behaves
+ *  oddly"). Chrome clamps scrollLeft during the user's own fling movement,
+ *  so the residual backward move stays bounded by the lane-width delta
+ *  between the frozen and post-recut geometries. */
+export function wallTrim(
+  maxScrollLeft: number,
+  wallScrollLeft: number,
+  spacerWidth: number,
+): number {
+  if (maxScrollLeft <= wallScrollLeft) return spacerWidth;
+  return Math.max(0, spacerWidth - (maxScrollLeft - wallScrollLeft));
+}
