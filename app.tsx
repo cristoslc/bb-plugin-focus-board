@@ -76,6 +76,7 @@ import {
   WHATS_NEW,
   compareVersions,
   entriesSince,
+  isPrereleaseVersion,
   readLastSeenVersion,
   writeLastSeenVersion,
   type WhatsNewEntry,
@@ -483,8 +484,14 @@ function BoardPage({ subPath }: { subPath: string }) {
       setLastSeenVersion(APP_VERSION);
     }
   }, [lastSeenVersion]);
+  // A prerelease build (dev's "0.6.0-dev") never pulses: it would only
+  // advertise published entries the stored version predates, to the very
+  // person who wrote and reviewed them. "Unreleased" means nothing to point
+  // at — the modal stays reachable from the quiet button.
   const whatsNewUnseen =
-    lastSeenVersion !== null && compareVersions(APP_VERSION, lastSeenVersion) > 0;
+    lastSeenVersion !== null &&
+    !isPrereleaseVersion(APP_VERSION) &&
+    compareVersions(APP_VERSION, lastSeenVersion) > 0;
   // The delta is captured at load (before opening marks it seen): entries
   // since the stored version when one is pending, all recent entries when
   // the quiet button is used.
