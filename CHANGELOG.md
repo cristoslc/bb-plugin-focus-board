@@ -3,6 +3,18 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.20] - 2026-09-30
+
+### Changed
+
+- **Dropping a card into a new column can place it there in the same drag.**
+  Moving a card across lanes — Unread → Pinned, anything → Done — used to be a
+  bare state change: the card landed wherever the lane's default order put it,
+  and placing it meant a second drag inside the new column. Now the insertion
+  line shows while the drag hovers over a card there, and the drop pins, marks
+  done, or marks unread **and** writes the rank in one gesture. Dropping over
+  the column's empty space is unchanged (state change only, no rank write).
+
 ## [0.5.19] - 2026-09-29
 
 ### Added
@@ -30,7 +42,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (`tests/chat-jump-guard.test.ts`, 15 cases).
 
 ## [0.5.18] - 2026-09-29
-
 ### Fixed
 
 - **Answering a question now clears the card from Needs you right away.** The
