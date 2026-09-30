@@ -17,8 +17,18 @@ export const registeredNavPanel: {
   component?: ComponentType<{ subPath: string }>;
 } = {};
 
+export const registeredContentScripts: Array<{
+  id: string;
+  mount: (context: { signal: AbortSignal; pluginId: string; generation: number }) => unknown;
+}> = [];
+
 export function definePluginApp(setup: (app: unknown) => void): unknown {
   setup({
+    contentScripts: {
+      register: (registration: { id: string; mount: unknown }) => {
+        registeredContentScripts.push(registration as never);
+      },
+    },
     slots: {
       navPanel: (config: {
         path: string;
@@ -42,7 +52,26 @@ function mockRender(): void {
   if (!Component || !rootElement) return;
   if (mockRoot === null) mockRoot = createRoot(rootElement);
   mockRoot.render(<Component subPath={mockSubPath} />);
+  // Mount the plugin's content scripts once, like the real host does per
+  // frontend generation; the board's glue sweep runs against the mock DOM.
+  if (!mount.contentScripts) {
+    mount.contentScripts = true;
+    for (const script of registeredContentScripts) {
+      const disposer = script.mount({
+        pluginId: MOCK_PLUGIN_ID,
+        generation: 1,
+        signal: new AbortController().signal,
+      });
+      mount.dispose.push(typeof disposer === "function" ? disposer : null);
+    }
+  }
 }
+
+/** Mount bookkeeping for the mock generation above. */
+const mount: { contentScripts: boolean; dispose: Array<(() => void) | null> } = {
+  contentScripts: false,
+  dispose: [],
+};
 
 /**
  * A minimal real-history router for the panel route, so UAT steps can drive

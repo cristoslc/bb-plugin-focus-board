@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-09-29T22:12:22.430Z by `npm run uat`._
+_Generated 2026-09-30T02:58:53.067Z by `npm run uat`._
 
 ## parent-lanes
 
@@ -20,6 +20,7 @@ Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-pa
 | After a pan the board settles quiet, bounded glide events then stillness | pass | ✓ board quiet after pan: ≤60 events, still ≥500ms; ✓ locked lane: true |
 | A real wheel-event pan re-locks the nearest lane and settles quiet | pass | ✓ board quiet after pan: ≤80 events, still ≥500ms; ✓ locked lane: true; ✓ bands aligned across lanes |
 | Clicking a family header while a pan glide is in flight locks THAT lane, not the pan's target | pass | ✓ locked lane: "thr_parent_lane"; ✓ bands aligned across lanes |
+| A small wheel overshoot inside the locked lane's grab window snaps back flush and keeps the lock | pass | ✓ locked lane: "thr_parent_lane"; ✓ locked lane pinned flush against the rail; ✓ bands aligned across lanes |
 | Resizing the viewport wider while a lane is locked keeps the ruler locked and bands aligned | pass | ✓ locked lane: "thr_parent_lane"; ✓ bands aligned across lanes |
 | Resizing the viewport narrower while a lane is locked keeps the ruler locked and bands aligned | pass | ✓ locked lane: "thr_parent_lane"; ✓ bands aligned across lanes |
 | A search that matches only loose threads drops every family and shows the empty state | pass | ✓ text hidden: "Standalone"; ✓ text hidden: "Queue the UAT pass for the rank lane"; ✓ text visible: "No thread families to show yet" |

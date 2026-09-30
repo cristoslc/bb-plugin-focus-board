@@ -11,6 +11,7 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { findTicketRefs, resolveRepoSlug } from "./lib/tickets";
+import { installHostLinkGlue } from "./components/host-link-glue";
 import type { rpcContract } from "./server";
 import { Board } from "./components/board";
 import { BoardToolbar } from "./components/board-toolbar";
@@ -1004,7 +1005,7 @@ function BoardPage({ subPath }: { subPath: string }) {
   }
 
   return (
-    <div className="flex h-full min-h-0">
+    <div className="flex h-full min-h-0" data-focus-board-panel="">
       <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
         <BoardToolbar
           groupBy={groupBy}
@@ -1177,5 +1178,15 @@ export default definePluginApp((app) => {
     // the open pane participates in browser history — bb's back arrow
     // reopens the pane state the user left, and deep links restore it.
     component: BoardPage,
+  });
+  // The host paints its own ExternalLink glyph inside linkified anchors
+  // rendered in this panel's pane (ThreadChat's markdown) — an atomic
+  // inline that can wrap onto its own line at wrap widths. Fix it where
+  // it is ours, in the app shell, by fusing glyph and last character
+  // (components/host-link-glue.ts). The host's own main-thread windows
+  // stay untouched here; that is filed upstream.
+  app.contentScripts.register({
+    id: "host-link-glue",
+    mount: (context) => installHostLinkGlue(context),
   });
 });
