@@ -106,10 +106,46 @@ function readScroller(
 	return null;
 }
 
+/** Real scroll moves that big in one event mean a displacement or its
+ * correction is in flight — not settled reading state. */
+const JUMP_SUPPRESS_THRESHOLD = 300;
+/** How long a detected jump keeps arming suppressed. */
+const SUPPRESS_MS = 3000;
+
 export function createChatClickJumpGuard(
 	getChatRoot: () => ParentNode | null,
 ): ChatClickJumpGuard {
 	let armed: Armed | null = null;
+	/** Settled-position observer: an always-on passive scroll listener (per
+	 * scroller, re-attached when the pane remounts) that records the last
+	 * seen position and, when the position moves >=300px in one event,
+	 * suppresses arming for a window (a yank, or the shell's own
+	 * self-correction, is in flight; reverting through either would fight
+	 * the shell or cement a displacement — bug seen live in run d10). */
+	let tracker: { scroller: HTMLElement; top: number | null; suppressUntil: number; remove: () => void } | null = null;
+
+	const ensureTracker = (scroller: HTMLElement) => {
+		if (tracker !== null && tracker.scroller === scroller && tracker.scroller.isConnected) return;
+		tracker?.remove();
+		const listener = () => {
+			const now = performance.now();
+			const top = scroller.scrollTop;
+			const settled = tracker?.top ?? null;
+			if (settled !== null && Math.abs(top - settled) >= JUMP_SUPPRESS_THRESHOLD) {
+				if (tracker) tracker.suppressUntil = now + SUPPRESS_MS;
+			}
+			if (tracker) tracker.top = top;
+		};
+		scroller.addEventListener("scroll", listener, { passive: true });
+		tracker = {
+			scroller,
+			top: scroller.scrollTop,
+			suppressUntil: 0,
+			remove: () => {
+				scroller.removeEventListener("scroll", listener);
+			},
+		};
+	};
 
 	const disarm = () => {
 		if (armed === null) return;
@@ -173,6 +209,12 @@ export function createChatClickJumpGuard(
 		// No scroll-back means the bug has nothing to yank past; arm only
 		// when the reader is meaningfully scrolled up.
 		if (state.max - state.top < MIN_PROTECTED_OFFSET) return;
+		// And only when the view is SETTLED: a jump (displacement yank, or
+		// the shell correcting one) inside the suppression window means the
+		// imminent automatic re-pin is the reader's place coming back —
+		// reverting it would cement a displacement.
+		ensureTracker(state.el);
+		if (tracker !== null && performance.now() < tracker.suppressUntil) return;
 		disarm();
 		const { el, top: baseline } = state;
 		const removeListeners: Array<() => void> = [];
