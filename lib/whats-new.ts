@@ -297,6 +297,9 @@ export function unreleasedFingerprint(items: readonly string[]): string {
 /** Fingerprint of the unreleased group embedded in this build. */
 export const CURRENT_UNRELEASED_FINGERPRINT = unreleasedFingerprint(UNRELEASED_ITEMS);
 
+/** Fingerprint of a group with no bullets: dev builds holding one never pulse. */
+export const EMPTY_UNRELEASED_FINGERPRINT = unreleasedFingerprint([]);
+
 export interface WhatsNewUnseenState {
   runningVersion: string;
   lastSeenVersion: string | null;
@@ -308,18 +311,20 @@ export interface WhatsNewUnseenState {
  * Whether the toolbar's gift button should pulse.
  *
  * Stable builds compare versions: running > last-seen pulses exactly once
- * per release. A prerelease build never does that — "0.6.0-dev" outranks
- * several stored releases at once and would pulse at the version's author.
- * On dev, "seen" is the [Unreleased] group's CONTENT: the pulse fires again
- * whenever that group changed since the modal was last opened, which is the
- * changelog-update signal the reader asked for. A missing fingerprint is
- * stamped silently at load (fresh-install rules), so adopting the guard
- * does not retroactively pulse old content.
+ * per release. A prerelease build keys "seen" to the [Unreleased] group's
+ * CONTENT instead: the pulse fires whenever the group is non-empty and its
+ * fingerprint differs from the last-open snapshot — a null snapshot is
+ * "never opened", not "seen empty", so the group standing in the build
+ * always advertises itself until the reader opens the modal. Empty groups
+ * never pulse: no bullets is nothing to read, whatever the snapshot says.
  */
 export function hasUnseenWhatsNew(state: WhatsNewUnseenState): boolean {
   if (isPrereleaseVersion(state.runningVersion)) {
+    // Null snapshot = "never opened" — the standing group advertises itself,
+    // so its pulse survives until the reader opens the modal once. An empty
+    // group never pulses: no bullets is nothing to read.
     return (
-      state.lastSeenUnreleasedFingerprint !== null &&
+      state.unreleasedFingerprint !== EMPTY_UNRELEASED_FINGERPRINT &&
       state.unreleasedFingerprint !== state.lastSeenUnreleasedFingerprint
     );
   }

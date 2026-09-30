@@ -58,11 +58,12 @@ merging into `dev`, releasing, changelog writing, or tagging.
   two-space continuation lines — exercised in its tests; a bullet that
   violates it simply stops appearing in the dev What's-new modal.
 - The gift button's pulse on dev keys to the group's CONTENT, not the
-  version: the fingerprint is stamped silently on first load, and the
-  button pulses again every time a merge lands new bullets in
-  `[Unreleased]`. Stable builds keep the classic version-based pulse; a
-  prerelease running version pulses only on changelog change, so it never
-  advertises already-published entries to the person who wrote them.
+  version: the fingerprint is written only when the modal opens, so an
+  unopened dev build pulses its standing group (if it has bullets) and
+  pulses again every time a merge lands new ones. Empty groups never
+  pulse. Stable builds keep the classic version-based pulse; a prerelease
+  running version pulses only on changelog change, so it never advertises
+  already-published entries to the person who wrote them.
 - The modal stays reachable from the quiet gift button.
 
 ## 2. Verify, always

@@ -492,12 +492,9 @@ function BoardPage({ subPath }: { subPath: string }) {
       setLastSeenVersion(APP_VERSION);
     }
   }, [lastSeenVersion]);
-  useEffect(() => {
-    if (lastSeenUnreleased === null) {
-      writeLastSeenUnreleased(CURRENT_UNRELEASED_FINGERPRINT);
-      setLastSeenUnreleased(CURRENT_UNRELEASED_FINGERPRINT);
-    }
-  }, [lastSeenUnreleased]);
+  // The unreleased fingerprint is NOT stamped at load: a fresh dev build
+  // pulses its standing group until opened (see hasUnseenWhatsNew); only
+  // opening the modal records it as seen (openWhatsNew).
   const whatsNewUnseen = hasUnseenWhatsNew({
     runningVersion: APP_VERSION,
     lastSeenVersion,

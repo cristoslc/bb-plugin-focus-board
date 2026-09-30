@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import {
   APP_VERSION,
   CURRENT_UNRELEASED_FINGERPRINT,
+  EMPTY_UNRELEASED_FINGERPRINT,
   WHATS_NEW,
   compareVersions,
   whatsNewEntriesFor,
@@ -132,15 +133,28 @@ describe("hasUnseenWhatsNew", () => {
       lastSeenVersion: "0.6.0-dev",
       unreleasedFingerprint: fp,
     };
-    // Same content: seen. The version alone can never make a dev build pulse.
+    // Same content and opened: seen. The version alone can never make a dev
+    // build pulse.
     expect(hasUnseenWhatsNew({ ...state, lastSeenUnreleasedFingerprint: fp })).toBe(false);
     // A changelog landing changes the content: pulse again, even in-session.
     expect(
       hasUnseenWhatsNew({ ...state, lastSeenUnreleasedFingerprint: "00000000" }),
     ).toBe(true);
-    // Unseen before the first open — but the loader stamps silently, so this
-    // is only the pre-effect state, which the app treats as fresh.
+    // Never opened (null snapshot) with standing bullets: pulse — the group
+    // standing in the build advertises itself until the reader opens once.
+    expect(hasUnseenWhatsNew({ ...state, lastSeenUnreleasedFingerprint: null })).toBe(true);
+  });
+
+  it("never pulses an empty unreleased group", () => {
+    const empty = unreleasedFingerprint([]);
+    expect(empty).toBe(EMPTY_UNRELEASED_FINGERPRINT);
+    const state = {
+      runningVersion: "0.6.0-dev",
+      lastSeenVersion: "0.6.0-dev",
+      unreleasedFingerprint: empty,
+    };
     expect(hasUnseenWhatsNew({ ...state, lastSeenUnreleasedFingerprint: null })).toBe(false);
+    expect(hasUnseenWhatsNew({ ...state, lastSeenUnreleasedFingerprint: empty })).toBe(false);
   });
 
   it("keeps version-based pulse semantics for stable builds", () => {
