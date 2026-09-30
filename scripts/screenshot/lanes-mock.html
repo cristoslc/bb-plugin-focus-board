@@ -650,11 +650,13 @@ window.addEventListener("resize", () => { if (variant === "locked") render(); })
 const vh = new URLSearchParams(location.search).get("vh");
 if (vh) document.querySelector(".board").style.height = vh + "px";
 
-// gesture-trace export: clipboard first, then a selectable overlay as fallback
+// gesture-trace export: always shows a visible overlay with the payload in a
+// selectable textarea; clipboard best-effort on top (some browsers refuse it)
 document.getElementById("btn-copy").addEventListener("click", () => {
+  document.querySelectorAll("[data-trace-pane]").forEach(e => e.remove());
   const starts = laneEls.map(e => Math.round(parseFloat(e.style.width) || 0));
   const payload = JSON.stringify({
-    v: 7,
+    v: 8,
     sl: Math.round(scroller.scrollLeft),
     lock: lockIdx,
     vw: innerWidth,
@@ -662,19 +664,26 @@ document.getElementById("btn-copy").addEventListener("click", () => {
     trace: window.__trace ?? [],
     scrollLog: window.__scrollLog ?? [],
   });
-  const show = () => {
-    const pre = document.createElement("pre");
-    pre.contentEditable = "true";
-    pre.style.cssText = "position:fixed;inset:auto 16px 16px 16px;max-height:220px;overflow:auto;z-index:999;padding:8px;background:#111;color:#9fe;border-radius:6px;font-size:10px";
-    pre.textContent = payload;
-    document.body.append(pre);
-    getSelection().setBaseAndExtent(pre, 0, pre, 0);
-  };
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(payload).catch(show);
-  } else {
-    show();
-  }
+  const pane = document.createElement("div");
+  pane.setAttribute("data-trace-pane", "");
+  pane.style.cssText = "position:fixed;left:16px;right:16px;bottom:16px;z-index:999;display:flex;gap:8px;align-items:flex-start;padding:10px;background:#0b1220;border:1px solid #2b9fd46e;border-radius:8px";
+  const ta = document.createElement("textarea");
+  ta.value = payload;
+  ta.style.cssText = "flex:1;height:190px;font:10px/1.3 monospace;color:#9fe;background:#0b1220;border:0;outline:0;resize:none";
+  const copy = document.createElement("button");
+  copy.textContent = "Copy";
+  copy.addEventListener("click", () => {
+    ta.focus(); ta.select();
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(ta.value).catch(() => {});
+    try { document.execCommand("copy"); } catch (e) { /* selection copy in textarea */ }
+  });
+  const close = document.createElement("button");
+  close.textContent = "Dismiss";
+  close.addEventListener("click", () => pane.remove());
+  pane.append(ta, copy, close);
+  document.body.append(pane);
+  ta.focus();
+  ta.select();
 });
 
 render();
