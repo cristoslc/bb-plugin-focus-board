@@ -192,3 +192,54 @@ export function predictedStart(
     laneWidths.slice(0, index).reduce((a, b) => a + b + RAIL_TO_LANE_GAP, 0)
   );
 }
+
+/** How far past its flush point a lane must sit before it can grab the lock —
+ *  actually: how wide the grab range reads in the other direction. Each lane's
+ *  grab range extends left of its flush point across the inter-lane gap and a
+ *  few pixels of the lane to its left, so stopping with the previous lane's
+ *  right sliver at the position-one marker still lands the incoming lane
+ *  (operator: "the right 5-10 pixels of a column jump the selector to its
+ *  right, unless there are no more columns to its right"). */
+export const GRAB_PAD = 24;
+
+/** The lane that grabs the lock for a given resting scroll position. `flush`
+ *  holds each lane's flush scrollLeft (ascending). A lane grabs once the
+ *  scroll position reaches its flush point minus GRAB_PAD; the previous lane
+ *  keeps the lock until then. */
+export function lockIndexFor(
+  scrollLeft: number,
+  flush: readonly number[],
+  grabPad: number = GRAB_PAD,
+): number {
+  let grabbed = 0;
+  for (let i = 0; i < flush.length; i += 1) {
+    if (scrollLeft >= flush[i]! - grabPad) grabbed = i;
+  }
+  return grabbed;
+}
+
+/** Whether a pin to `target` should reposition instantly instead of gliding.
+ *  Trackpad momentum often overshoots INTO a lane's grab range before resting,
+ *  so the settled position sits PAST the target and a smooth glide would sweep
+ *  visibly backwards ("scrolls all the way right past Chore, then snaps back").
+ *  A backward reposition is repainted as one hard snap (operator ruling:
+ *  "keep grab window + snap harder"); forward pins keep the smooth glide. */
+export function pinIsInstant(target: number, currentScrollLeft: number): boolean {
+  return target < currentScrollLeft;
+}
+
+/** New trailing-spacer width that caps the scroll wall at the last lane's
+ *  flush point. Without the cap, maxScroll (`maxScrollLeft`) sits far past
+ *  every pin target, so a hard fling right overshoots the board and settle
+ *  snaps back a long way (operator: "the second-to-last lane behaves
+ *  oddly"). Chrome clamps scrollLeft during the user's own fling movement,
+ *  so the residual backward move stays bounded by the lane-width delta
+ *  between the frozen and post-recut geometries. */
+export function wallTrim(
+  maxScrollLeft: number,
+  wallScrollLeft: number,
+  spacerWidth: number,
+): number {
+  if (maxScrollLeft <= wallScrollLeft) return spacerWidth;
+  return Math.max(0, spacerWidth - (maxScrollLeft - wallScrollLeft));
+}

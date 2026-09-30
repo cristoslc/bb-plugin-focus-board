@@ -33,6 +33,12 @@ import { buildParentLanes } from "./components/parent-lanes";
 import { ParentLaneBoard } from "./components/parent-lane-board";
 import { doneAtToEpochMs } from "./lib/done-metadata";
 import {
+  applyInteractionFlags,
+  interactionFlagChangeFromEvent,
+  pendingFromInteractionRows,
+  type InteractionFlagStore,
+} from "./lib/interaction-sync";
+import {
   paneSubPathFor,
   paneThreadIdFromSubPath,
 } from "./lib/pane-route";
@@ -154,12 +160,74 @@ function readStoredList(key: string): string[] {
 }
 
 function BoardPage({ subPath }: { subPath: string }) {
-  const { status, threads, projects } = experimental_useSidebarThreads();
+  const { status, threads: sidebarThreads, projects } = experimental_useSidebarThreads();
   const actions = experimental_useSidebarThreadActions();
   const { providers } = experimental_useProviders();
   const navigate = useBbNavigate();
   const rpc = useRpc<typeof rpcContract>();
   const sdk = useSdk();
+
+  // The board's "needs you" state rides the sidebar's `hasPendingInteraction`
+  // flag, but the sidebar cache can lag behind an answered question: the
+  // server clears its flag the moment the interaction settles, while the
+  // cached board row keeps the stale one until some unrelated change
+  // refetches the list (observed 2026-09-29, thr_6fzk5sjz79). Guard: verify
+  // every `interactions-changed` event below and overlay the verified flag
+  // on the sidebar rows until the sidebar row agrees again
+  // (lib/interaction-sync).
+  const [interactionFlags, setInteractionFlags] = useState<InteractionFlagStore>(
+    () => new Map(),
+  );
+  useEffect(() => {
+    let disposed = false;
+    const record = (threadId: string, hasPendingInteraction: boolean) => {
+      setInteractionFlags((current) => {
+        const next = new Map(current);
+        next.set(threadId, hasPendingInteraction);
+        return next;
+      });
+    };
+    try {
+      const unsubscribe = sdk.subscribe({
+        event: "thread:changed",
+        callback: (event) => {
+          const change = interactionFlagChangeFromEvent(event);
+          if (change === null) return;
+          if (change.hasPendingInteraction !== null) {
+            // The host attached the new flag on the event; it is the server
+            // truth for this change.
+            record(change.threadId, change.hasPendingInteraction);
+            return;
+          }
+          // A host that omits the flag on the event must be verified
+          // against the interaction rows instead.
+          void sdk.threads.interactions
+            .list({ threadId: change.threadId })
+            .then(
+              (rows) => {
+                if (disposed) return;
+                record(change.threadId, pendingFromInteractionRows(rows));
+              },
+              () => {}, // A lost verify keeps the sidebar value; the next event corrects it.
+            );
+        },
+      });
+      return () => {
+        disposed = true;
+        unsubscribe();
+      };
+    } catch {
+      // Embedded contexts (screenshot harness) have no subscribe; the board
+      // falls back to the sidebar's flags with no overlay.
+      return undefined;
+    }
+  }, [sdk]);
+  // Sidebar rows with the verified flags overlaid; everything downstream —
+  // grouping, nesting, lanes, cards, the pane lookup — renders from this.
+  const threads = useMemo(
+    () => applyInteractionFlags(sidebarThreads, interactionFlags),
+    [sidebarThreads, interactionFlags],
+  );
 
   const [doneIds, setDoneIds] = useState<ReadonlySet<string>>(new Set());
   // Done ages + sweep overrides come from the per-thread plugin-metadata
@@ -961,6 +1029,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           onOpenWhatsNew={openWhatsNew}
           nestChildren={nestChildren}
           onNestChildrenChange={persistNestChildren}
+          nestingLocked={isParentGroupBy}
         />
         {groupBy === "parent" ? (
           <ParentLaneBoard
