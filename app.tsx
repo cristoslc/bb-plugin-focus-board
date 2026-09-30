@@ -45,6 +45,7 @@ import {
   paneThreadIdFromSubPath,
 } from "./lib/pane-route";
 import { applyMoveVisible, orderForColumn, type RankStore } from "./lib/rank";
+import { pinStateChangeFromEvent } from "./lib/pin-park";
 import {
   DEFAULT_DONE_ARCHIVE_DAYS,
   DEFAULT_IDLE_ARCHIVE_DAYS,
@@ -991,6 +992,55 @@ function BoardPage({ subPath }: { subPath: string }) {
     },
     [actions, parkPin, threads],
   );
+
+  // Park reconciliation over the same native cross-surface feed
+  // (`sdk.subscribe`, "thread:changed"): EVERY pin write — bb's sidebar,
+  // another panel instance, the CLI — publishes `pin-state-changed`, which
+  // closes the one gap a park marker alone cannot see. A pin that some other
+  // writer takes back supersedes the parked value; without this, a later
+  // Mark Not Done / Mark Unread would resurrect a pin against that intent.
+  // Attribution is not needed, because the rule keys on the RESULTING pin
+  // state read fresh at reconcile time: pinned → supersede (clear the park;
+  // this board's own restore echo lands here too, but its park is consumed
+  // synchronously with its own pin write, so the clear is the same
+  // idempotent no-op either way); unpinned → the lane exit's own unpin
+  // echo — the write that CAUSED the park — leaves the park alone. Threads
+  // without a park are never fetched. A foreign pin+unpin cycle landing
+  // entirely inside one reconcile's fresh-read latency is the residual
+  // race: milliseconds, versus the previous gap's "until whenever".
+  const parkIdsRef = useRef(parkIds);
+  parkIdsRef.current = parkIds;
+  const clearParkPinRef = useRef(clearParkPin);
+  clearParkPinRef.current = clearParkPin;
+  useEffect(() => {
+    let disposed = false;
+    try {
+      const unsubscribe = sdk.subscribe({
+        event: "thread:changed",
+        callback: (event) => {
+          const threadId = pinStateChangeFromEvent(event);
+          if (threadId === null || !parkIdsRef.current.has(threadId)) return;
+          void sdk.threads
+            .get({ threadId })
+            .then(
+              (row) => {
+                if (disposed) return;
+                if (row.pinnedAt !== null) clearParkPinRef.current(threadId);
+              },
+              () => {}, // A thread deleted while parked is a dead park; parks refetch prunes it.
+            );
+        },
+      });
+      return () => {
+        disposed = true;
+        unsubscribe();
+      };
+    } catch {
+      // Embedded contexts (screenshot harness) have no subscribe; parks live
+      // until their own gesture consumes them.
+      return undefined;
+    }
+  }, [sdk]);
 
   const menuActionsFor = useCallback(
     (thread: PluginSidebarThread): CardMenuAction[] => {

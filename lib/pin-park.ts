@@ -54,3 +54,26 @@ export function stampPinPark(existing: PinParkRecord | null, now: Date): PinPark
   void existing;
   return { parkedAt: now.toISOString() };
 }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The thread id of a native `thread:changed` realtime event that carries the
+ * `pin-state-changed` kind, or null when the event is not one.
+ *
+ * These events publish for every pin write from EVERY surface — bb's own
+ * sidebar, another panel instance, the CLI — which is what lets the board
+ * reconcile a parked pin without actor attribution: a foreign surface taking
+ * the pin back supersedes the park, while the lane exit's own unpin echo
+ * (an unpinned result) leaves it alone.
+ */
+export function pinStateChangeFromEvent(event: unknown): string | null {
+  if (!isRecord(event)) return null;
+  if (event.entity !== "thread") return null;
+  if (typeof event.id !== "string" || event.id.length === 0) return null;
+  if (!Array.isArray(event.changes)) return null;
+  if (!event.changes.includes("pin-state-changed")) return null;
+  return event.id;
+}
