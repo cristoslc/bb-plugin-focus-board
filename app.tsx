@@ -948,6 +948,14 @@ function BoardPage({ subPath }: { subPath: string }) {
               return next;
             });
             rpc.call("done_set", { threadId: thread.id, done: !isThreadDone }).catch(() => {});
+            // The same lane-exit rule the drops compose: a state write that
+            // removes the card from the Pinned lane takes the pin with it.
+            // Marking Done is the only menu action that moves a card out (an
+            // unread card can sit pinned); "Mark Not Done" restores its
+            // membership, not the pin, so it writes nothing here.
+            if (thread.isPinned && !isThreadDone) {
+              void actions.setPinned(thread.id, false);
+            }
           },
         },
         {
