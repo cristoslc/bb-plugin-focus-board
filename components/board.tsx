@@ -546,12 +546,33 @@ export function Board({
                         // insertion line lands on.
                         onDragOver={
                           (event) => {
-                            // Same lane only. A drag from another lane would
-                            // write an order for a card that is not in this
-                            // one — invisible on drop — so it falls through
-                            // to the column's state-change handler instead.
                             if (!ranking) return;
-                            if (!isLaneDrag(event.dataTransfer.types, rankKey)) return;
+                            if (!isLaneDrag(event.dataTransfer.types, rankKey)) {
+                              // A drag from ANOTHER lane. A lane that takes
+                              // state-change drops accepts it positioned:
+                              // the same insertion line a same-lane drag
+                              // gets, and the drop both moves the card into
+                              // this lane and ranks it at that edge in one
+                              // gesture. Lanes without a state-change drop
+                              // (derived columns such as Attention or the
+                              // idle buckets) keep refusing: membership
+                              // there is the thread's own data — state, age,
+                              // project — not a slot the board can honour.
+                              if (draggingIdRef.current === null || !isDropTarget) return;
+                              event.preventDefault();
+                              event.dataTransfer.dropEffect = "move";
+                              const rect = event.currentTarget.getBoundingClientRect();
+                              const edge: Half =
+                                event.clientY - rect.top < rect.height / 2 ? "before" : "after";
+                              setRankDrop((current) =>
+                                current?.columnId === column.id &&
+                                current?.threadId === thread.id &&
+                                current?.edge === edge
+                                  ? current
+                                  : { columnId: column.id, threadId: thread.id, edge },
+                              );
+                              return;
+                            }
                             event.preventDefault();
                             event.dataTransfer.dropEffect = "move";
                             const rect = event.currentTarget.getBoundingClientRect();
@@ -572,8 +593,49 @@ export function Board({
                         }
                         onDrop={
                           (event) => {
-                            if (!isLaneDrag(event.dataTransfer.types, rankKey)) return;
                             if (!ranking) return;
+                            if (!isLaneDrag(event.dataTransfer.types, rankKey)) {
+                              // A cross-lane drop ON a card: the state change
+                              // and the ranked position the line showed happen
+                              // in the one drop — no second drag to place the
+                              // card after it lands. Guards mirror dragover
+                              // above: only state-change lanes, only lane
+                              // drags, or a foreign drag could write an order
+                              // for a card the lane never held.
+                              if (draggingIdRef.current === null || !isDropTarget) return;
+                              const droppedId = draggedIdFor(event, draggingIdRef.current);
+                              event.preventDefault();
+                              // Claim the event so the column's own handler —
+                              // the unpositioned state-change path — does not
+                              // also fire for this drop.
+                              event.stopPropagation();
+                              // Live position, not React state, per the
+                              // same-lane case below.
+                              const rect = event.currentTarget.getBoundingClientRect();
+                              const edge: Half =
+                                event.clientY - rect.top < rect.height / 2 ? "before" : "after";
+                              clearRankDrop();
+                              if (droppedId === "") return;
+                              // The state change first — the card joins the
+                              // lane — then the ranked slot the line showed.
+                              if (dropHandler !== null) dropHandler(droppedId);
+                              const target = moveTargetFor(
+                                shownThreads.map((candidate) => candidate.id),
+                                thread.id,
+                                edge,
+                                droppedId,
+                              );
+                              if (target !== null) {
+                                commitMove(
+                                  column,
+                                  droppedId,
+                                  target.beforeId,
+                                  target.toEnd,
+                                  shownThreads.map((candidate) => candidate.id),
+                                );
+                              }
+                              return;
+                            }
                             event.preventDefault();
                             const threadId = draggedIdFor(event, draggingIdRef.current);
                             // The drop bubbles to the column's own handler,
@@ -664,6 +726,10 @@ export function Board({
                           rankKey={ranking ? rankKey : undefined}
                           onRankDragStart={(id) => {
                             draggingIdRef.current = id;
+                            // A drag that ends anywhere but a successful drop
+                            // (Escape, a refused target) must not leave its
+                            // insertion line on screen.
+                            if (id === null) clearRankDrop();
                           }}
                         />
                       </li>
