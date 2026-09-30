@@ -30,6 +30,8 @@ they've been quiet.
 - **Reorder a column** by dragging cards into your own order instead of the
   board's recency order. The order belongs to the column, not the thread, so
   a card that leaves a column and comes back returns to the slot it left.
+  Dropping a card on a card in a new column (Pinned, Done, Unread) places it
+  at that spot in the same drop — state change and position in one drag.
   Alt+ArrowUp / Alt+ArrowDown does the same from the keyboard, and a lane
   with a hand-set order says so in its header.
 - **Nest** subthreads under their parent card
