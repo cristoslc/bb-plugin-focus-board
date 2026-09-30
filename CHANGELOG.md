@@ -3,6 +3,17 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+_Nothing unreleased — bullets land under a subsection below as work merges
+into dev, then this whole group is renamed to its release version._
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## [0.5.21] - 2026-09-30
 
 ### Added

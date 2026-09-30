@@ -20,8 +20,13 @@ describe("APP_VERSION stays in lockstep with package.json", () => {
     expect(APP_VERSION).toBe(packageVersion());
   });
 
-  it("has a WHATS_NEW entry for the current version", () => {
-    // An update whose modal cannot describe itself is a silent update.
+  it("has a WHATS_NEW entry for the current released version", () => {
+    // A released version whose modal cannot describe itself is a silent
+    // update. A -dev build is not a release — its "entry" lives in the
+    // changelog's [Unreleased] group and gets its WHATS_NEW entry when the
+    // finalize commit strips the suffix, so the pulse stays quiet on dev by
+    // construction rather than by a placeholder entry.
+    if (/^[0-9]+\.[0-9]+\.[0-9]+-.+$/.test(APP_VERSION)) return;
     expect(WHATS_NEW.some((entry) => entry.version === APP_VERSION)).toBe(true);
   });
 });

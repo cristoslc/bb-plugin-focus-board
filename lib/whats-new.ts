@@ -7,11 +7,15 @@
  * changed. The button itself never disappears — dismissing only stops the
  * pulse, and the changelog stays reachable afterwards.
  *
- * APP_VERSION is maintained by hand next to package.json's version; a test
- * pins them together so a version bump cannot drift past it.
+ * On dev, APP_VERSION carries a provisional prerelease number (the next
+ * release + "-dev", e.g. "0.6.0-dev"): dev builds describe themselves as
+ * unreleased, so the pulse stays quiet (entriesSince compares against
+ * stored released versions, and a -dev version needs no WHATS_NEW entry).
+ * The release finalize commit strips the suffix and adds the entry. A test
+ * pins APP_VERSION to package.json's version so they cannot drift apart.
  */
 
-export const APP_VERSION = "0.5.21";
+export const APP_VERSION = "0.6.0-dev";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 
