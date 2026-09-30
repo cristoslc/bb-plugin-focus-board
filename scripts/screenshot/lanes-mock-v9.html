@@ -443,6 +443,8 @@ function ensureReachable(target) {
 let lastLeft = 0;
 let hActive = false;      // horizontal scroll in progress
 let gliding = false;      // programmatic pin-glide in progress (not a user pan)
+let glideTarget = 0;      // phase-1 destination, for the overshoot watchdog
+let lastWheelAt = 0;      // last horizontal wheel input timestamp (0 = none seen)
 let settleTimer = null;
 
 function unassign() {
@@ -482,16 +484,63 @@ scroller.addEventListener("scroll", () => {
   if (dx === 0) return;                    // vertical-only scroll: lock stays
   if (correction) { correction = null; return; }  // our own post-recut pin: ignore one burst
   if (gliding) {            // programmatic pin-glide: releases nothing, still settles
-    if (settleTimer) clearTimeout(settleTimer);
-    settleTimer = setTimeout(onSettle, 200);
+    // watchdog: foreign motion (real momentum) pushing scrollLeft PAST the
+    // glide target means our animation and the input are fighting (the
+    // smooth glide would reverse to its target = the mid-gesture fall).
+    // Abort the glide and let the input finish; the next quiet re-pins once.
+    const past = glideTarget < lastLeft
+      ? scroller.scrollLeft < glideTarget - 2
+      : scroller.scrollLeft > glideTarget + 2;
+    if (past) { cancelGlideFromInput("overshoot"); return; }
+    armSettle(200);
     return;
   }
   hActive = true;
   if (lockIdx !== null) unassign();
-  if (settleTimer) clearTimeout(settleTimer);
-  settleTimer = setTimeout(onSettle, 200);  // rest = event quiet period; scrollend
-                                            // is per-assignment in headless, unusable
+  armSettle(200);  // rest = event quiet period; scrollend
+                   // is per-assignment in headless, unusable
 });
+
+// settle only after the input stream is truly quiet: scroll events plus,
+// when wheels have been seen, a 400ms wheel-free tail. Real trackpad
+// gestures pause between pushes for >200ms, so the plain scroll debounce
+// fired the pin mid-gesture (operator's "it happened while I was still
+// scrolling" — the board then fought the resuming momentum).
+function armSettle(delay) {
+  if (settleTimer) clearTimeout(settleTimer);
+  settleTimer = setTimeout(function check() {
+    if (lastWheelAt && performance.now() - lastWheelAt < 400) {
+      settleTimer = setTimeout(check, 120);
+      return;
+    }
+    onSettle();
+  }, delay);
+}
+
+// real input arrived while the board was pin-gliding: abort our animation,
+// release the pick, and let pure input carry on. The board never moves
+// itself mid-gesture; it picks again once the input ends.
+function cancelGlideFromInput(reason) {
+  if (!gliding) return;
+  const cur = scroller.scrollLeft;
+  scroller.scrollLeft = cur;   // a scrollLeft write aborts a running smooth scroll
+  gliding = false;
+  settleLane = null;
+  pendingLock = null;
+  lastLeft = scroller.scrollLeft;
+  (window.__trace ??= []).push({ fn: "glide-cancel", why: reason, sl: Math.round(scroller.scrollLeft) });
+  armSettle(200);
+}
+
+scroller.addEventListener("wheel", e => {
+  if (Math.abs(e.deltaX) < 1) return;        // vertical wheel: not a pan
+  (window.__wheelLog ??= []);
+  if (window.__wheelLog.length < 2000) {
+    window.__wheelLog.push({ t: Math.round(performance.now() / 10), dx: Math.round(e.deltaX) });
+  }
+  lastWheelAt = performance.now();
+  cancelGlideFromInput("wheel");
+}, { passive: true });
 
 let correction = null;   // one-shot suppression while the board pins the locked lane
 function assign(bi) {
@@ -568,6 +617,7 @@ function onSettle() {
   settleLane = null;
   pendingLock = null;
   const target = predictedStart(bi, bi) - 1;
+  glideTarget = target;
   if (Math.abs(scroller.scrollLeft - target) > 2) {
     // phase 1 — the PIN: move to the predicted FINAL post-recut flush point
     // while geometry stays frozen (lock unassigned). Snap is muted so its
@@ -580,12 +630,12 @@ function onSettle() {
       // momentum overshot PAST the pin: jump straight back, never glide
       // backward (operator choice: keep the grab window, snap harder)
       scroller.scrollLeft = target;
-      settleTimer = setTimeout(onSettle, 250); // the snap's own scroll
-                                               // event re-arms first
+      armSettle(250); // the snap's own scroll
+                      // event re-arms first
       return;
     }
     scroller.scrollTo({ left: target, behavior: "smooth" });
-    settleTimer = setTimeout(onSettle, 400);
+    armSettle(400);
     return;
   }
   // phase 2 — the RECUT: pinned at the final position, now resize (FLIP)
@@ -600,6 +650,7 @@ function lockTo(i) {
   (window.__trace ??= []).push({ fn: "lockTo", i, sl: Math.round(scroller.scrollLeft) });
   pendingLock = i;
   const target = predictedStart(i, i) - 1;
+  glideTarget = target;
   const dx = scroller.scrollLeft - target;
   if (Math.abs(dx) < 3) {
     scroller.style.scrollSnapType = "";
@@ -656,13 +707,14 @@ document.getElementById("btn-copy").addEventListener("click", () => {
   document.querySelectorAll("[data-trace-pane]").forEach(e => e.remove());
   const starts = laneEls.map(e => Math.round(parseFloat(e.col.style.width) || 0));
   const payload = JSON.stringify({
-    v: 8,
+    v: 9,
     sl: Math.round(scroller.scrollLeft),
     lock: lockIdx,
     vw: innerWidth,
     laneWidthsAtDump: starts,
     trace: window.__trace ?? [],
     scrollLog: window.__scrollLog ?? [],
+    wheelLog: window.__wheelLog ?? [],
   });
   const pane = document.createElement("div");
   pane.setAttribute("data-trace-pane", "");
