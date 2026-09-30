@@ -185,6 +185,11 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   },
 ];
 
+/** True when the version carries a prerelease suffix — e.g. dev's "0.6.0-dev". */
+export function isPrereleaseVersion(version: string): boolean {
+  return /^[0-9]+\.[0-9]+\.[0-9]+-.+$/.test(version);
+}
+
 /** Negative when a < b, positive when a > b, 0 when equal. */
 export function compareVersions(a: string, b: string): number {
   const pa = a.split(".");
