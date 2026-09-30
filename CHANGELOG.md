@@ -22,6 +22,12 @@ into dev, then this whole group is renamed to its release version._
 
 ### Changed
 
+- **Narrow a dropdown search to one match and Enter applies it.** When a filter
+  dropdown's search field (Project, Provider, Group, State) has filtered the
+  list down to a single remaining row, pressing Enter in the field now does
+  what clicking that row does: applies it as the selection and closes the
+  menu. With two or more matches, or none, Enter stays inert.
+
 - **Marking a card unread now restores it up the attention ladder from any
   surface.** With the parked-pin model, a pinned card marked unread (or
   done) parks its pin as it leaves the Pinned lane. The state writes that
