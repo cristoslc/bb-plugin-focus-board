@@ -43,6 +43,7 @@ import {
   paneThreadIdFromSubPath,
 } from "./lib/pane-route";
 import { applyMoveVisible, orderForColumn, type RankStore } from "./lib/rank";
+import { unreadDropWrites } from "./lib/state-drops";
 import {
   DEFAULT_DONE_ARCHIVE_DAYS,
   DEFAULT_IDLE_ARCHIVE_DAYS,
@@ -1083,8 +1084,17 @@ function BoardPage({ subPath }: { subPath: string }) {
             }}
             onDropUnread={(threadId) => {
               const thread = threads.find((candidate) => candidate.id === threadId);
-              if (thread !== undefined && !thread.isUnread) {
+              if (thread === undefined) return;
+              const writes = unreadDropWrites(thread);
+              if (writes.markUnread) {
                 void actions.setRead(threadId, false);
+              }
+              if (writes.unpin) {
+                // One gesture, both writes: leaving the pin in place would
+                // derive the card straight back into the Pinned column on
+                // the next grouping pass, undoing the move the operator
+                // just made.
+                void actions.setPinned(threadId, false);
               }
             }}
             // Drop on Pinned pins, unless the card is already pinned: a
