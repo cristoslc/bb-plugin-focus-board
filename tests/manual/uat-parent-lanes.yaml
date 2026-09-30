@@ -34,7 +34,24 @@ steps:
     assert:
       - locked_lane: true
       - bands_aligned: true
+      - nest_locked: true
       - text_hidden: "Standalone"
+
+  - id: a-quarter-pan-selects-the-next-lane
+    title: A short pan that mostly brings the next lane in locks that lane
+    goto: "?groupBy=parent"
+    scroll: { dx: 280 }
+    sleep: { ms: 1600 }
+    assert:
+      - locked_lane: "thr_sweep_parent"
+      - bands_aligned: true
+
+  - id: hovering-a-swimlane-shades-the-whole-row
+    title: Hovering a swimlane shades that row across every lane
+    goto: "?groupBy=parent"
+    hover: { board_y: 0.85 }
+    assert:
+      - band_hover: true
 
   - id: header-click-opens-parent-pane
     title: Clicking a lane header opens the parent thread's pane
@@ -114,6 +131,19 @@ steps:
     sleep: 3000
     assert:
       - locked_lane: thr_parent_lane
+      - bands_aligned: true
+
+  - id: wheel-overshoot-snaps-back-to-the-locked-lane
+    title: A small wheel overshoot inside the locked lane's grab window snaps back flush and keeps the lock
+    goto: "?groupBy=parent"
+    # One real wheel tick from the locked position overshoots ~130px into
+    # the lane's own grab window; at rest the board must snap BACK to the
+    # flush pin (no backward glide sweep, no off-flush resting position)
+    # and keep the same lane locked.
+    wheel_pan: { dx: 130, settle_ms: 2600 }
+    assert:
+      - locked_lane: "thr_parent_lane"
+      - locked_flush: true
       - bands_aligned: true
 
   - id: viewport-resize-while-locked-stays-aligned

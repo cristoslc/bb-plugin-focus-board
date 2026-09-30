@@ -57,6 +57,7 @@ function renderPane({ compact }: { compact: boolean }) {
         onRename: async () => {},
         onMaximize,
         onClose: noop,
+        escStopsRunningThread: false,
       }),
     ),
   );

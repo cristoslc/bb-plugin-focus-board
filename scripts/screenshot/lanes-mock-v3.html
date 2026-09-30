@@ -44,11 +44,6 @@
     position: absolute; inset: 0;
     overflow: auto;
     scroll-snap-type: x mandatory;
-    /* Chrome scroll anchoring would pull scrollLeft while the recut's width
-       transitions shrink content left of the viewport — the board drifts
-       backward and a late settle glides it forward again. Our pin + drift
-       corrections own the scroll position exclusively. */
-    overflow-anchor: none;
   }
   .content { position: relative; display: flex; width: max-content; min-width: 100%; }
   /* rail */
@@ -505,10 +500,7 @@ function assign(bi) {
     lastLeft = scroller.scrollLeft;
   }
   flip(prevRects);
-  // snap STAYS muted through the recut: restoring mandatory snap here makes
-  // Chrome re-snap against the width transition's intermediate geometry
-  // (animated backward drift, then a late settle glides forward again —
-  // the "fling past Chore scrolls to the end then snaps back" churn)
+  scroller.style.scrollSnapType = "";  // snap holds the new flush position
   gliding = false;
   // render reset the spacer to its default; during the width transition the
   // board must stay wide enough that the pinned position can't clamp mid-glide
@@ -519,33 +511,6 @@ function assign(bi) {
       - Math.min(frozenTotal, finalTotal)
   );
   spacer.style.width = spacerMin + "px";
-  // Defer the hard-fling wall trim to the restore block below: trimming NOW,
-  // while lane widths are still frozen-wide mid-transition, undercuts the
-  // spacerMin guarantee above and the scroll wall recedes under the parked
-  // scrollLeft — Chrome rides it down (the eased fall past Chore's lane).
-  // Restore snap only after the width transition has settled, and re-pin any
-  // drift the transition introduced first (Chrome keeps scrollLeft fixed while
-  // content left of the viewport resizes, so the pinned lane can slide).
-  setTimeout(() => {
-    if (lockIdx !== bi || gliding) return; // supseded by a newer gesture
-    // Deferred hard-fling wall trim: lane width transitions are done, so the
-    // trim no longer undercuts spacerMin mid-transition.
-    const wallSl = Math.max(0, predictedStart(laneEls.length - 1, bi) - 1);
-    const maxSl = scroller.scrollWidth - scroller.clientWidth;
-    if (maxSl > wallSl) {
-      spacer.style.width =
-        Math.max(0, parseFloat(spacer.style.width) - (maxSl - wallSl)) + "px";
-    }
-    const t = laneStart(bi) - 1;
-    const d = t - scroller.scrollLeft;
-    if (Math.abs(d) > 2) {
-      correction = 1;
-      setTimeout(() => { correction = null; }, 600);
-      scroller.scrollLeft += d;
-      lastLeft = scroller.scrollLeft;
-    }
-    scroller.style.scrollSnapType = "";
-  }, 300);
 }
 
 function onSettle() {

@@ -212,6 +212,17 @@ export default async function plugin(bb: BbPluginApi) {
       experimental_schema: z.number().int().min(1).max(3650),
       default: DEFAULT_IDLE_ARCHIVE_DAYS,
     },
+    // The thread pane's Escape behavior. Rendered as a toggle in the
+    // plugin detail page's configuration panel; the board reads it
+    // reactively through the frontend `useSettings()` hook (explicit
+    // stored false is off — loading/unavailable keeps the default).
+    escStopsRunningThread: {
+      type: "boolean",
+      label: "Thread pane: Escape stops a running thread first",
+      description:
+        "While a thread is running, Escape interrupts its turn instead of closing the pane; the pane closes with Escape once nothing is running.",
+      default: true,
+    },
   });
 
   async function readDoneRecord(
@@ -442,13 +453,13 @@ export default async function plugin(bb: BbPluginApi) {
       if (absolute.length === 0) return { existence: {} };
       // The check runs on the environment's own host, so workspaces on
       // other machines verify correctly too.
-      const { existence } = await bb.sdk.hosts.pathsExist({
+      const result = await bb.sdk.hosts.pathsExist({
         hostId: environment.hostId,
         paths: absolute,
       });
       const out: Record<string, boolean> = {};
       for (const [index, path] of relative.entries()) {
-        const verdict = existence[absolute[index]];
+        const verdict = result.existence[absolute[index]];
         if (typeof verdict === "boolean") out[path] = verdict;
       }
       return { existence: out };

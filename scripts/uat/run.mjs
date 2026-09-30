@@ -459,9 +459,10 @@ const wheelPan = async (page, dx) => {
 
 /**
  * Is the given thread card fully visible inside the board's scroll viewport?
- * The sticky rail (140px) and the sticky lane headers (76px) overlay the
+ * The sticky rail (left) and the sticky lane headers (top) overlay the
  * viewport edges, so a card under either is treated as hidden — that is the
- * regression the clicked-card-off-screen bug report described.
+ * regression the clicked-card-off-screen bug report described. Both occluders
+ * are measured from the live DOM so header/rail size changes stay honest.
  */
 const pageCardVisible = (threadId) => {
   const board = document.querySelector("[data-parent-board]");
@@ -470,13 +471,67 @@ const pageCardVisible = (threadId) => {
   if (!host) return { ok: false, reason: `no card ${threadId}` };
   const b = board.getBoundingClientRect();
   const c = host.getBoundingClientRect();
-  const minTop = b.top + 76;
-  const minLeft = b.left + 140 + 16;
+  const hdr = board.querySelector("[data-lane-header]");
+  const minTop = hdr ? hdr.getBoundingClientRect().bottom : b.top + 88;
+  const rail = board.querySelector("[data-rail]");
+  const minLeft = rail ? rail.getBoundingClientRect().right + 16 : b.left + 140 + 16;
   if (c.top < minTop) return { ok: false, reason: `top ${Math.round(c.top)} hides behind the header` };
   if (c.bottom > b.bottom) return { ok: false, reason: `bottom ${Math.round(c.bottom)} falls below the fold` };
   if (c.left < minLeft) return { ok: false, reason: `left ${Math.round(c.left)} hides behind the rail` };
   if (c.right > b.right) return { ok: false, reason: `right ${Math.round(c.right)} runs past the viewport` };
   return { ok: true, reason: `card ${threadId} fully visible` };
+};
+
+/**
+ * The swimlane hover: which band row (if any) carries the shared shading
+ * attribute, and whether it extends across more than one lane at one seam.
+ */
+const pageBandHover = () => {
+  const bands = [...document.querySelectorAll('[data-band-hover="true"]')];
+  if (bands.length === 0) return { ok: false, reason: "no band carries the hover shading" };
+  const ids = new Set(bands.map((band) => band.getAttribute("data-band")));
+  const tops = new Set(bands.map((band) => Math.round(band.getBoundingClientRect().top)));
+  if (ids.size !== 1) return { ok: false, reason: `hover spans ${ids.size} different rows` };
+  if (tops.size !== 1) return { ok: false, reason: `hovered bands sit at ${tops.size} different tops` };
+  return { ok: true, count: bands.length, reason: `${bands.length} bands share the shaded row` };
+};
+
+/**
+ * Is the locked lane pinned flush against the rail? A wheel overshoot inside
+ * the locked lane's own grab window must snap the board BACK to the flush
+ * position (runCorrections drift re-pin) rather than leave the ruler sitting
+ * visibly off-flush with its rail attribution still showing.
+ */
+const pageLockedFlush = () => {
+  const board = document.querySelector("[data-parent-board]");
+  if (!board) return { ok: false, reason: "no board" };
+  const locked = board.querySelector("section[data-locked]");
+  if (!locked) return { ok: false, reason: "no lane is locked" };
+  const rail = board.querySelector("[data-rail]");
+  if (!rail) return { ok: false, reason: "no rail" };
+  const want = rail.getBoundingClientRect().right + 16;
+  const left = locked.getBoundingClientRect().left;
+  const drift = Math.abs(left - want);
+  if (drift > 4) {
+    return { ok: false, reason: `locked lane sits ${Math.round(drift)}px off flush` };
+  }
+  return { ok: true, reason: `locked lane flush (drift ${Math.round(drift)}px)` };
+};
+
+/**
+ * The "Nest child threads" toolbar checkbox, read as the operator sees it:
+ * role=checkbox, checked = aria-checked, disabled = aria-disabled present.
+ */
+const pageNestToggle = () => {
+  const button = [...document.querySelectorAll('button[role="checkbox"]')].find(
+    (el) => el.textContent?.includes("Nest child threads"),
+  );
+  if (!button) return { present: false, checked: null, disabled: null };
+  return {
+    present: true,
+    checked: button.getAttribute("aria-checked") === "true",
+    disabled: button.hasAttribute("aria-disabled"),
+  };
 };
 
 /**
@@ -489,6 +544,83 @@ const pagePaneState = () => {
   if (!aside) return { open: false, threadId: null };
   const label = aside.getAttribute("aria-label") ?? "";
   return { open: true, threadId: label.startsWith("Thread: ") ? label.slice(8) : null };
+};
+
+/**
+ * The inline-code open glyph, measured in a real line breaker. jsdom cannot
+ * wrap text, so this probe is the automated counterpart of staring at a
+ * narrow pane: wait for the decoration (its verdict flow is async — environment
+ * resolution plus an existence RPC — so poll rather than sample once), then
+ * measure. The regression this pins: the glyph appended after a long code
+ * text is an atomic inline, a legal break position, so the glyph dropped to
+ * its own line when the path filled the pane. Chromium ignores U+2060 word
+ * joiners at that boundary, so decorateCode fuses the icon with the code's
+ * final character inside one white-space-nowrap unit: the glyph may move
+ * with the text but never alone — the icon and the code's last path
+ * character must share a visual line.
+ */
+const pageGlyphGlue = async () => {
+  const deadline = window.performance.now() + 4000;
+  let code = null;
+  while (window.performance.now() < deadline) {
+    code = document.querySelector(
+      'aside[aria-label^="Thread: "] code[data-focus-board-path-link]',
+    );
+    if (code !== null) break;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  if (code === null) {
+    return { ok: false, reason: "no decorated code span appeared in the pane (decoration never fired?)" };
+  }
+  const icon = code.querySelector("[data-focus-board-path-link-icon]");
+  if (icon === null) {
+    return { ok: false, reason: "decorated code carries no icon span" };
+  }
+  const glue = icon.closest("[data-focus-board-path-link-glue]");
+  if (
+    glue === null ||
+    glue.style.whiteSpace !== "nowrap" ||
+    icon.parentElement !== glue
+  ) {
+    return {
+      ok: false,
+      reason: "icon is not fused into a nowrap glue unit — it can wrap onto its own line",
+    };
+  }
+  // Sanity: the path must actually wrap at this pane width, or the same-line
+  // assertion below passes vacuously.
+  if (code.getClientRects().length < 2) {
+    return { ok: false, reason: "the code span did not wrap; this check would be vacuous" };
+  }
+  // Same-line check: a Range over the code's final visible text character —
+  // the one the glue unit carries next to the icon — shares a baseline with
+  // the icon.
+  const textNodes = [];
+  const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT);
+  let node;
+  while ((node = walker.nextNode()) !== null) {
+    if (node.textContent.replace(/\u2060/gu, "").length > 0) textNodes.push(node);
+  }
+  const lastText = textNodes[textNodes.length - 1];
+  if (lastText === undefined) {
+    return { ok: false, reason: "the decorated code carries no visible text" };
+  }
+  const range = document.createRange();
+  range.setStart(lastText, lastText.textContent.length - 1);
+  range.setEnd(lastText, lastText.textContent.length);
+  const charRect = range.getClientRects();
+  const iconRect = icon.getBoundingClientRect();
+  if (charRect.length === 0) {
+    return { ok: false, reason: "the last path character produced no line box" };
+  }
+  const top = charRect[0].top;
+  const sameLine = Math.abs(top - iconRect.top) < 4;
+  return {
+    ok: sameLine,
+    reason: sameLine
+      ? `glyph shares the line with the path's last character (tops ${top.toFixed(1)} / ${iconRect.top.toFixed(1)}), path wraps across ${code.getClientRects().length} line boxes`
+      : `glyph dropped off the path's last line (char top ${top.toFixed(1)} vs icon top ${iconRect.top.toFixed(1)})`,
+  };
 };
 
 /** Does this step declare a top-level assertion of that name? */
@@ -703,6 +835,14 @@ async function check(step, page, gestureResults = []) {
         ok ? `locked=${got}` : `locked=${got}`,
       );
     }
+    if (rule.locked_flush !== undefined) {
+      const got = await page.evaluate(pageLockedFlush);
+      expect(
+        "locked lane pinned flush against the rail",
+        got.ok === rule.locked_flush,
+        got.reason,
+      );
+    }
     if (rule.bands_aligned !== undefined) {
       const got = await page.evaluate(pageBandsAligned);
       expect(
@@ -714,6 +854,25 @@ async function check(step, page, gestureResults = []) {
     if (rule.card_visible !== undefined) {
       const got = await page.evaluate(pageCardVisible, rule.card_visible);
       expect(`card visible: ${rule.card_visible}`, got.ok === true, got.reason);
+    }
+    if (rule.band_hover !== undefined) {
+      const got = await page.evaluate(pageBandHover);
+      expect(`swimlane hover shades one row across lanes`, got.ok === rule.band_hover, got.reason ?? "");
+    }
+    if (rule.nest_locked !== undefined) {
+      const toggle = await page.evaluate(pageNestToggle);
+      if (!toggle.present) {
+        expect(`nest toggle locked: ${rule.nest_locked}`, false, "Nest child threads checkbox not found");
+      } else {
+        const ok = rule.nest_locked
+          ? toggle.checked === true && toggle.disabled === true
+          : toggle.checked === true && toggle.disabled !== true;
+        expect(
+          `nest toggle: aria-checked=${String(toggle.checked)} aria-disabled=${String(toggle.disabled)}`,
+          ok,
+          `locked=${String(rule.nest_locked)}`,
+        );
+      }
     }
     if (rule.board_quiet !== undefined) {
       const want = rule.board_quiet;
@@ -778,6 +937,10 @@ async function check(step, page, gestureResults = []) {
         }
       }
     }
+    if (rule.glyph_glue !== undefined) {
+      const got = await page.evaluate(pageGlyphGlue);
+      expect("open glyph glued to the code text", got.ok === true, got.reason);
+    }
     if (rule.live_region !== undefined) {
       const text = await page.evaluate(pageLiveRegion);
       const re = rule.live_region instanceof RegExp ? rule.live_region : new RegExp(rule.live_region);
@@ -825,7 +988,7 @@ async function runSuite(file, { port, browser }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "scroll", "resize", "sleep", "press_escape", "push_url"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "scroll", "wheel_pan", "resize", "sleep", "press_escape", "push_url"];
       let gestureFailed = false;
       for (const gesture of Object.keys(step).filter((key) => GESTURE_ORDER.includes(key))) {
         if (gesture === "drag") {
@@ -855,7 +1018,21 @@ async function runSuite(file, { port, browser }) {
           await page.evaluate(pageDragToColumn, step.drag_to_column);
           await sleep(200);
         } else if (gesture === "hover") {
-          // The insertion_line assertion re-runs the hover; nothing to do here.
+          // A hover with a board y-fraction moves the real mouse into that
+          // swimlane band (used by the band_hover assertion); other hovers
+          // carry their own assertion-side evaluation already.
+          if (step.hover && step.hover.board_y !== undefined) {
+            const rect = await page.evaluate(() => {
+              const board = document.querySelector("[data-parent-board]");
+              if (!board) return null;
+              const box = board.getBoundingClientRect();
+              return { top: box.top, height: box.height, left: box.left + box.width / 2 };
+            });
+            if (rect === null) throw new Error("no [data-parent-board] to hover");
+            const y = rect.top + rect.height * Number(step.hover.board_y);
+            await page.mouse.move(rect.left, y);
+            await sleep(120);
+          }
         } else if (gesture === "key") {
           await page.evaluate(pageKey, step.key);
           await sleep(200);
@@ -877,6 +1054,11 @@ async function runSuite(file, { port, browser }) {
           // settle_ms: 0 skips the wait so a following click lands while the
           // glide is in flight (the click-during-glide adversarial step).
           await sleep(Math.max(0, Number(step.scroll.settle_ms ?? 1200)));
+        } else if (gesture === "wheel_pan") {
+          // A real wheel pan through the input pipeline (the same path the
+          // operator's trackpad uses), then a settle wait.
+          await wheelPan(page, step.wheel_pan.dx ?? 130);
+          await sleep(Math.max(0, Number(step.wheel_pan.settle_ms ?? 2500)));
         } else if (gesture === "resize") {
           // A viewport change while the lock is held re-runs the layout; let
           // the resize observer commit before assertions sample the DOM.
@@ -950,21 +1132,27 @@ for (const file of suiteFiles) {
 await browser.close();
 
 const failed = reports.flatMap((r) => r.steps).filter((s) => !s.ok).length;
-const lines = ["# UAT report", ""];
+const stamp = new Date().toISOString();
+// One report per suite, named after it: a combined run that wrote a single
+// file (the first suite's name) left every other suite's report stale — an
+// old pass sitting in docs/uat while the run that just failed wrote nothing
+// to the file someone actually opens.
+if (reports.length === 0) throw new Error("no suites ran");
+const outFiles = [];
 for (const report of reports) {
-  lines.push(`## ${report.suite}`, "", `Source: \`${report.file}\` · theme ${report.theme}`, "");
-  lines.push("| Step | Result | Detail |", "| --- | --- | --- |");
+  const suiteLines = ["# UAT report", "", `_Generated ${stamp} by \`npm run uat\`._`, ""];
+  suiteLines.push(`## ${report.suite}`, "", `Source: \`${report.file}\` · theme ${report.theme}`, "");
+  suiteLines.push("| Step | Result | Detail |", "| --- | --- | --- |");
   for (const step of report.steps) {
     const detail = step.results.map((r) => `${r.ok ? "✓" : "×"} ${r.name}${r.ok || !r.detail ? "" : ` (${r.detail})`}`).join("; ");
-    lines.push(`| ${step.title} | ${step.ok ? "pass" : "FAIL"} | ${detail} |`);
+    suiteLines.push(`| ${step.title} | ${step.ok ? "pass" : "FAIL"} | ${detail} |`);
   }
-  lines.push("");
+  suiteLines.push("");
+  const outFile = `${REPORT_DIR}${report.suite}.md`;
+  await writeFile(outFile, suiteLines.join("\n"));
+  outFiles.push(outFile);
 }
-const stamp = new Date().toISOString();
-lines.unshift(`_Generated ${stamp} by \`npm run uat\`._`, "");
-const outFile = `${REPORT_DIR}${reports[0].suite}.md`;
-await writeFile(outFile, lines.join("\n"));
 
 console.log(`\n${failed === 0 ? "all steps passed" : `${failed} step(s) failed`}`);
-console.log(`report: ${outFile}`);
+console.log(`reports:\n${outFiles.map((f) => `  ${f}`).join("\n")}`);
 process.exit(failed === 0 ? 0 : 1);

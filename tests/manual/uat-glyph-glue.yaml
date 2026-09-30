@@ -1,0 +1,38 @@
+# Automated wrap check for the inline-code open glyph, measured in Chrome's
+# real line breaker (jsdom cannot wrap, so this is the counterpart of staring
+# at a narrow pane).
+#
+# The regression: the pane's inline-code decoration appends the open glyph
+# after a long code text, an atomic inline — a legal break position — so when
+# the workspace path filled the pane, the glyph dropped to its own line and
+# the trailing `)` wrapped apart with it. decorateCode glues the icon with
+# U+2060 word joiners on each side, so the glyph may move together with the
+# code's last fragment but never alone.
+#
+# The fixture (scripts/screenshot/data.ts) threads a ~70-character,
+# hyphenated path inside prose, guaranteeing the code span wraps at the
+# pane's 480px column; the probe also refuses to pass vacuously when the
+# span did not wrap.
+#
+# Run: npm run uat -- tests/manual/uat-glyph-glue.yaml
+suite: glyph-glue
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5175
+defaults:
+  groupBy: status
+  theme: dark
+
+steps:
+  - id: deep-link-opens-pane-with-markdown-code
+    title: A long path wraps in the pane and the glyph stays glued to the text
+    goto: "?groupBy=status#/plugins/focus-board/board/t/thr_glyph_glue"
+    assert:
+      - text_visible: "Sync design is settled. ADR-0004"
+      - glyph_glue: {}
+
+  - id: glyph-glue-survives-a-narrower-pane
+    title: The glue holds when the viewport shrinks and the path re-wraps
+    resize: { width: 1120, height: 800 }
+    assert:
+      - glyph_glue: {}

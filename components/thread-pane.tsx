@@ -28,6 +28,10 @@ import {
 } from "@/components/decorate-inline-code";
 import type { rpcContract } from "@/server";
 import { useIsCompactViewport } from "@/components/ui/hooks/use-compact-viewport";
+import {
+  createChatClickJumpGuard,
+  type ChatClickJumpGuard,
+} from "@/components/chat-jump-guard";
 
 // Shared header-button classes: a 28px ghost icon button that grows to a
 // 36px touch target on coarse pointers (phones), matching bb's own headers.
@@ -79,6 +83,12 @@ interface ThreadPaneProps {
   onRename: (title: string) => Promise<void>;
   onMaximize: () => void;
   onClose: () => void;
+  /**
+   * Escape behavior (the "Esc stops running thread" toolbar toggle): when
+   * true, Escape stops a running thread and only closes the pane when the
+   * thread is not running; when false, Escape always closes the pane.
+   */
+  escStopsRunningThread: boolean;
 }
 
 interface ActionMenuItem {
@@ -217,6 +227,7 @@ export function ThreadPane({
   onRename,
   onMaximize,
   onClose,
+  escStopsRunningThread,
 }: ThreadPaneProps) {
   const [width, setWidth] = useState(readStoredPaneWidth);
   const isCompact = useIsCompactViewport();
@@ -345,13 +356,30 @@ export function ThreadPane({
         ) {
           return;
         }
+        if (escStopsRunningThread) {
+          // bb sorts "starting", "active", and "stopping" as busy threads.
+          // Escape interrupts the running turn first — closing the pane
+          // while the agent still runs would feel like the stop did
+          // nothing — and only closes once nothing is running. "stopping"
+          // means a stop is already in flight; keep the pane open until it
+          // settles so the result stays visible.
+          if (thread.status === "active" || thread.status === "starting") {
+            event.preventDefault();
+            void sdk.threads.stop({ threadId: thread.id }).catch(() => {});
+            return;
+          }
+          if (thread.status === "stopping") {
+            event.preventDefault();
+            return;
+          }
+        }
         event.preventDefault();
         onClose();
       }
     };
     document.addEventListener("keydown", onKeyDown, { capture: true });
     return () => document.removeEventListener("keydown", onKeyDown, { capture: true });
-  }, [onClose]);
+  }, [onClose, escStopsRunningThread, thread.status, thread.id, sdk]);
 
   // Existence checks for the inline-code file links (see
   // decorate-inline-code.ts): a path verdict comes from the plugin
@@ -373,7 +401,29 @@ export function ThreadPane({
   // coalesced to one scan per frame. The environment id scopes the
   // verdict cache (the same relative path exists in one workspace but
   // not another) and is resolved once per thread.
+  // bb's page-shell scroll manager behind the embedded ThreadChat has a
+  // pending-capture bug that can clamp the transcript to the bottom right
+  // after a click while it is scrolled up ("chat jumps up a half-page").
+  // The SDK offers no access to that manager's state, so the pane arms a
+  // defensive revert guard on chat clicks until bb ships the fix (see
+  // docs/chat-click-jump-2026-09-29.md, where this module is covered too).
   const chatBodyRef = useRef<HTMLDivElement>(null);
+  const chatJumpGuardRef = useRef<ChatClickJumpGuard | null>(null);
+  const onChatBodyClickCapture = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      chatJumpGuardRef.current?.onChatClickCapture(event);
+      onChatClickCapture(event);
+    },
+    [onChatClickCapture],
+  );
+  useEffect(() => {
+    const guard = createChatClickJumpGuard(() => chatBodyRef.current);
+    chatJumpGuardRef.current = guard;
+    return () => {
+      guard.dispose();
+      if (chatJumpGuardRef.current === guard) chatJumpGuardRef.current = null;
+    };
+  }, []);
   useEffect(() => {
     const root = chatBodyRef.current;
     if (root === null) return;
@@ -553,7 +603,7 @@ export function ThreadPane({
       <div
         ref={chatBodyRef}
         className="min-h-0 flex-1"
-        onClickCapture={onChatClickCapture}
+        onClickCapture={onChatBodyClickCapture}
       >
         <ThreadChat threadId={thread.id} variant="compact" layout="contained" />
       </div>

@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
-// Board-level cross-column drops: the Pinned lane must accept a card dropped
+// Board-level cross-column drops. The Pinned lane must accept a card dropped
 // onto it and report the dropped id, the same contract the Done and Unread
-// lanes already honour — that is the whole unread → pinned drag gesture. The
-// rank store must stay untouched: a pin drop is a state change, not a
-// reorder, and must not write an order for a card the lane does not hold.
+// lanes already honour — that is the whole unread → pinned drag gesture.
+//
+// A cross-lane drop ON a CARD is positioned: the state change and the rank
+// write happen in the same drop (the insertion line shows while hovering),
+// so the operator places the card in the new column without a second drag.
+// A drop on the COLUMN's empty space stays a bare state change: no rank is
+// written, and the lane keeps whatever default order it had.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, createEvent, fireEvent, render } from "@testing-library/react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
@@ -117,27 +121,106 @@ describe("Board cross-column drops to Pinned", () => {
     expect(props.onDropPinned).toHaveBeenCalledWith("thr_bug");
   });
 
-  it("dropping on the Pinned column writes no rank order", () => {
+  it("dropping on the Pinned column's empty space writes no rank order", () => {
     const { props } = renderBoard(boardFixture());
     dragFromCardToColumn("thr_bug", "pinned");
     expect(props.onRankMove).not.toHaveBeenCalled();
   });
 
-  it("dropping on a Pinned card pins too, without touching its lane order", () => {
+  it("dropping ON a Pinned card pins AND ranks at that edge, one gesture", () => {
     const { props } = renderBoard(
       boardFixture().concat([thread({ id: "thr_pinned_in2", isPinned: true, updatedAt: NOW - 2000 })]),
     );
     const slot = document.querySelector('[data-thread-card="thr_pinned_in2"]');
-    if (slot === null) throw new Error("missing pinned card");
+    if (!(slot instanceof HTMLElement)) throw new Error("missing pinned card");
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(cardAnchor("thr_bug"), { dataTransfer: dt });
+    const over = createEvent.dragOver(slot, { dataTransfer: dt });
+    fireEvent(slot, over);
+    // The insertion line shows during the hover (jsdom's clientY lands in
+    // the bottom half, so the line renders on the "after" edge). The line
+    // lives on the list-item slot around the card.
+    const slotLi = slot.closest("li");
+    if (!(slotLi instanceof HTMLElement)) throw new Error("missing slot");
+    expect(over.defaultPrevented).toBe(true);
+    expect(slotLi.className).toContain("after:bg-ring");
+    const drop = createEvent.drop(slot, { dataTransfer: dt });
+    fireEvent(slot, drop);
+    expect(props.onDropPinned).toHaveBeenCalledWith("thr_bug");
+    // The pinned lane ranks are grouping-independent (key "pinned"); the
+    // dragged card lands below the hovered one, anchored on the card after
+    // it, and the move is reported against the lane's displayed order
+    // (thr_pinned_in2 is newer, so the display order puts it first).
+    expect(props.onRankMove).toHaveBeenCalledWith(
+      "pinned",
+      "thr_bug",
+      "thr_pinned_in",
+      false,
+      ["thr_pinned_in2", "thr_pinned_in"],
+    );
+  });
+
+  it("the cross-lane drop claims its event: the column handler fires once", () => {
+    const { props } = renderBoard(boardFixture());
+    const slot = document.querySelector('[data-thread-card="thr_pinned_in"]');
+    if (!(slot instanceof HTMLElement)) throw new Error("missing pinned card");
     const dt = makeDataTransfer();
     fireEvent.dragStart(cardAnchor("thr_bug"), { dataTransfer: dt });
     const over = createEvent.dragOver(slot, { dataTransfer: dt });
     fireEvent(slot, over);
     const drop = createEvent.drop(slot, { dataTransfer: dt });
     fireEvent(slot, drop);
+    expect(props.onDropPinned).toHaveBeenCalledTimes(1);
     expect(over.defaultPrevented).toBe(true);
-    expect(props.onDropPinned).toHaveBeenCalledWith("thr_bug");
+  });
+
+  it("a positioned drop on a Done card marks done AND ranks there too", () => {
+    const { props } = renderBoard(
+      [
+        thread({ id: "thr_old_done", updatedAt: NOW - 9000 }),
+        thread({ id: "thr_bug", isUnread: true, updatedAt: NOW - 1000 }),
+      ],
+      { doneIds: new Set<string>(["thr_old_done"]) },
+    );
+    const slot = document.querySelector('[data-thread-card="thr_old_done"]');
+    if (!(slot instanceof HTMLElement)) throw new Error("missing done card");
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(cardAnchor("thr_bug"), { dataTransfer: dt });
+    const over = createEvent.dragOver(slot, { dataTransfer: dt });
+    fireEvent(slot, over);
+    const drop = createEvent.drop(slot, { dataTransfer: dt });
+    fireEvent(slot, drop);
+    expect(props.onDropDone).toHaveBeenCalledWith("thr_bug");
+    // Last card in the lane, bottom half: nothing below to anchor on, so the
+    // drop appends below it.
+    expect(props.onRankMove).toHaveBeenCalledWith(
+      "done",
+      "thr_bug",
+      null,
+      true,
+      ["thr_old_done"],
+    );
+  });
+
+  it("a cross-lane drop on a derived column's card is still refused", () => {
+    const { props } = renderBoard([
+      thread({ id: "thr_work", status: "active", runtimeStatus: "active", updatedAt: NOW - 3000 }),
+      thread({ id: "thr_bug", isUnread: true, updatedAt: NOW - 1000 }),
+    ]);
+    const slot = document.querySelector('[data-thread-card="thr_work"]');
+    if (!(slot instanceof HTMLElement)) throw new Error("missing working card");
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(cardAnchor("thr_bug"), { dataTransfer: dt });
+    const over = createEvent.dragOver(slot, { dataTransfer: dt });
+    fireEvent(slot, over);
+    const drop = createEvent.drop(slot, { dataTransfer: dt });
+    fireEvent(slot, drop);
+    // Membership in a derived column is the thread's data, not a slot the
+    // board can honour — no drop, no rank write, no state change.
+    expect(over.defaultPrevented).toBe(false);
     expect(props.onRankMove).not.toHaveBeenCalled();
+    expect(props.onDropDone).not.toHaveBeenCalled();
+    expect(props.onDropPinned).not.toHaveBeenCalled();
   });
 
   it("dragging a Pinned card onto the Unread column reaches the unread handler, not a reorder", () => {

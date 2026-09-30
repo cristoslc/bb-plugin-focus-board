@@ -46,6 +46,7 @@ function renderPane(thread: Parameters<typeof ThreadPane>[0]["thread"]) {
         onRename: async () => {},
         onMaximize: noop,
         onClose: noop,
+        escStopsRunningThread: false,
       }),
     ),
   );
