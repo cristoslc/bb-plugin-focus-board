@@ -16,6 +16,7 @@ import {
 import {
   parseUnreleasedChangelog,
 } from "../lib/unreleased-changelog";
+import { leadFromBullet, parsePublishedChangelog } from "../lib/changelog-markdown";
 import { UNRELEASED_ITEMS } from "../lib/unreleased-changelog.generated";
 
 const packageVersion = (): string =>
@@ -181,9 +182,15 @@ describe("whatsNewEntriesFor", () => {
   it("leads a prerelease build with its unreleased group, then the published feed", () => {
     // The committed [Unreleased] group's shape is whatever the changelog
     // holds right now — assert structure, not emptiness; lastSeen null means
-    // the fresh-install rules give no published delta.
+    // the fresh-install rules give no published delta. The group's bullets
+    // reach the modal as their lead sentences (leadFromBullet), the same
+    // seam the published feed derives through.
     if (UNRELEASED_ITEMS.length > 0) {
-      const head = { version: "0.6.0-dev", unreleased: true, items: UNRELEASED_ITEMS };
+      const head = {
+        version: "0.6.0-dev",
+        unreleased: true,
+        items: UNRELEASED_ITEMS.map(leadFromBullet),
+      };
       expect(whatsNewEntriesFor("0.6.0-dev", true, null)).toEqual([head]);
       expect(whatsNewEntriesFor("0.6.0-dev", false, null)).toEqual([head, ...WHATS_NEW]);
     } else {
@@ -195,6 +202,52 @@ describe("whatsNewEntriesFor", () => {
   it("keeps stable-build behavior", () => {
     expect(whatsNewEntriesFor("0.6.0", true, "0.4.2")).toEqual(entriesSince("0.4.2"));
     expect(whatsNewEntriesFor("0.6.0", false, null)).toEqual([...WHATS_NEW]);
+  });
+});
+
+const CHANGELOG = readFileSync(
+  fileURLToPath(new URL("../CHANGELOG.md", import.meta.url)),
+  "utf8",
+);
+
+describe("WHATS_NEW derives from CHANGELOG.md's published sections", () => {
+  const sections = parsePublishedChangelog(CHANGELOG);
+
+  it("covers every published section, versions sorted newest first", () => {
+    // Subset, not equality: WHATS_NEW may also hold legacy hand-written
+    // entries for versions (0.5.6–0.5.12) the changelog has no section for.
+    const covered = new Set(WHATS_NEW.map((entry) => entry.version));
+    for (const section of sections) {
+      expect(covered.has(section.version)).toBe(true);
+    }
+    for (let i = 1; i < WHATS_NEW.length; i += 1) {
+      // Strictly descending: the feed must never order two entries alike.
+      expect(compareVersions(WHATS_NEW[i].version, WHATS_NEW[i - 1].version)).toBeLessThan(0);
+    }
+  });
+
+  it("gives every entry a sentence-lead item set", () => {
+    for (const entry of WHATS_NEW) {
+      expect(entry.items.length).toBeGreaterThan(0);
+      for (const item of entry.items) {
+        // Every item is the bullet's first sentence: terminal punctuation,
+        // no stray bold markup, and — unlike a bullet — no doc links.
+        expect(item).toMatch(/[.!?]$/);
+        expect(item).not.toMatch(/\*\*/);
+      }
+    }
+  });
+
+  it("scrapes the lead through the bold span, then the first sentence", () => {
+    // Lead closes its own sentence: the lead is the item.
+    expect(leadFromBullet("**Surface ready.** Full mechanics live here.")).toBe("Surface ready.");
+    // Lead runs on: the item is the first full sentence from the lead.
+    expect(leadFromBullet("**Sorts by done date, newest**, instead of by activity."))
+      .toBe("Sorts by done date, newest, instead of by activity.");
+    // Ticket refs never reach the modal.
+    expect(leadFromBullet("**Renamed to Focus Board** (#8): package renamed.")).toBe("Renamed to Focus Board: package renamed.");
+    // No bold and unbroken sentence: first sentence.
+    expect(leadFromBullet("One plain sentence. Then elaboration.")).toBe("One plain sentence.");
   });
 });
 
@@ -247,6 +300,8 @@ describe("entriesSince", () => {
       "0.5.2",
       "0.5.1",
       "0.5.0",
+      "0.4.6",
+      "0.4.5",
       "0.4.4",
       "0.4.3",
     ]);

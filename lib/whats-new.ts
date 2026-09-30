@@ -12,11 +12,17 @@
  * unreleased, lead the modal with CHANGELOG.md's [Unreleased] group, and
  * pulse whenever that group's content changes (its fingerprint, not the
  * version, is the "seen" state). The release finalize commit strips the
- * suffix and adds the published entry. A test pins APP_VERSION to
- * package.json's version so they cannot drift apart.
+ * suffix; the published entry then exists already, derived from the renamed
+ * section. No feed entry is hand-written anymore: WHATS_NEW is scraped from
+ * CHANGELOG.md (each bullet's opening sentence at test/build time) merged
+ * with the frozen LEGACY_WHATS_NEW hand-written records for versions the
+ * changelog predates. A test pins APP_VERSION to package.json's version so
+ * they cannot drift apart.
  */
 
 import { UNRELEASED_ITEMS } from "./unreleased-changelog.generated";
+import { DERIVED_WHATS_NEW } from "./whats-new.generated";
+import { leadFromBullet } from "./changelog-markdown";
 
 export const APP_VERSION = "0.6.0-dev";
 
@@ -31,65 +37,7 @@ export interface WhatsNewEntry {
 }
 
 /** Newest first; condensed highlights, not the full CHANGELOG. */
-export const WHATS_NEW: readonly WhatsNewEntry[] = [
-  {
-    version: "0.5.21",
-    items: [
-      "Escape now stops a running thread's turn before the pane: press Escape once to interrupt, press again to close. A toggle in the plugin's settings (default on) controls it, and a gear in the sidebar footer opens the settings.",
-      "Moving a pinned card out of the Pinned column — a drop onto Unread or Done, or Mark done in its menu — unpins it in the same gesture, so it no longer snaps back into Pinned.",
-      "Columns drained to zero by nesting (every card is a nested child) now hide until a card returns.",
-    ],
-  },
-  {
-    version: "0.5.20",
-    items: [
-      "Dropping a card onto a card in a new column (Pinned, Done, Unread) now places it at that spot in the same drop, instead of a state change followed by a second drag to position it.",
-    ],
-  },
-  {
-    version: "0.5.19",
-    items: [
-      "Clicking in the pane's chat while it is scrolled up no longer yanks the transcript back to the bottom. This is a workaround for bb's page-shell scroll manager; the module comes out when the host fix ships.",
-    ],
-  },
-  {
-    version: "0.5.18",
-    items: [
-      "Answered questions now drop their card out of Needs you right away, instead of holding it there until the next unrelated board refresh.",
-    ],
-  },
-  {
-    version: "0.5.17",
-    items: [
-      "Parent lanes now size to fit their cards, and the selected family renders as a wide, readable ruler lane.",
-      "Pan the board and the nearest lane snaps in as the ruler: seams stay aligned, clicked subtasks stay on screen, and the board settles without jitter.",
-      "The lane-order toggle moved into the left rail as a vertical picker.",
-    ],
-  },
-  {
-    version: "0.5.16",
-    items: [
-      "No board behavior changes in this version — 0.5.16 ships the same build as 0.5.15: drop a card on the Pinned lane to pin it.",
-    ],
-  },
-  {
-    version: "0.5.15",
-    items: [
-      "The board's Pinned column now accepts a dragged card: dropping one there pins it, so pinning no longer needs the card's right-click menu.",
-    ],
-  },
-  {
-    version: "0.5.14",
-    items: [
-      "Thread pane on phones: the actions menu now offers Full Screen, so opening a thread in the main view is one tap even where the full-screen button is hidden.",
-    ],
-  },
-  {
-    version: "0.5.13",
-    items: [
-      "Parent thread lanes: the Group-by dropdown offers \"Parent thread\" — one vertical lane per parent thread with the Attention ladder pivoted into rows, only children as cards, a catch-all Standalone lane, lane order by family recency with a toggle to section lanes by project.",
-    ],
-  },
+const LEGACY_WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     version: "0.5.12",
     items: [
@@ -133,63 +81,18 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
       "A pinned parent keeps its whole family in the Pinned column — an active child no longer detaches into its own column.",
     ],
   },
-  {
-    version: "0.5.5",
-    items: [
-      "Backticked workspace paths now only show as clickable links when the file actually exists: a path the model merely planned (or a bare `.md`) stays plain text instead of opening a dead preview.",
-    ],
-  },
-  {
-    version: "0.5.4",
-    items: [
-      "The thread pane now keeps a record of recent AskUserQuestion decisions — bb's transcript drops the answers once a question card is submitted, so the pane rebuilds them from the event log in a collapsed 'Recent decisions' card.",
-    ],
-  },
-  {
-    version: "0.5.3",
-    items: [
-      "Backticked workspace paths in thread messages are now clickable in the board's thread pane: clicking a `.md` path opens the file preview, with the same underline and icon the main thread pane shows.",
-    ],
-  },
-  {
-    version: "0.5.2",
-    items: [
-      "Right-clicking a nested child thread now opens the child's own menu instead of the parent card's, and every card menu names the thread it acts on.",
-    ],
-  },
-  {
-    version: "0.5.1",
-    items: [
-      "The Done column now sorts by when each thread was marked done, newest first; dragging still applies a manual order on top.",
-    ],
-  },
-  {
-    version: "0.5.0",
-    items: [
-      "The open pane is part of the panel URL: bb's back arrow returns you to the pane you left after following a link out to a full thread, and walks back through cards you lost track of.",
-      "The board keeps the active card in view — when a pane is restored from history, and when the card relocates (pin, done, grouping change).",
-      "A What's-new button now lives in the toolbar (this one).",
-    ],
-  },
-  {
-    version: "0.4.4",
-    items: [
-      "Thread mention links in pane messages navigate again — the 0.4.3 link interceptor had swallowed them.",
-    ],
-  },
-  {
-    version: "0.4.3",
-    items: [
-      "Relative file links in pane messages (like [ERD](docs/erd.mmd)) open as live files in bb's preview panel instead of dead browser URLs.",
-    ],
-  },
-  {
-    version: "0.4.2",
-    items: [
-      "Rank refusal banners can be dismissed, and auto-dismiss after 10 seconds.",
-    ],
-  },
 ];
+
+/**
+ * The published feed: derived from CHANGELOG.md (H2 = version, H3 = change
+ * kind, each bullet's opening sentence is the item) at test/build time by
+ * scripts/generate-whats-new.mjs, merged with the hand-written legacy
+ * entries for the versions (0.5.6–0.5.12) the published record predates.
+ */
+export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  ...DERIVED_WHATS_NEW,
+  ...LEGACY_WHATS_NEW.filter((entry) => !DERIVED_WHATS_NEW.some((derived) => derived.version === entry.version)),
+].sort((a, b) => compareVersions(b.version, a.version));
 
 /** True when the version carries a prerelease suffix — e.g. dev's "0.6.0-dev". */
 export function isPrereleaseVersion(version: string): boolean {
@@ -348,7 +251,7 @@ export function whatsNewEntriesFor(
 ): readonly WhatsNewEntry[] {
   if (isPrereleaseVersion(runningVersion)) {
     const unreleased: WhatsNewEntry | null = UNRELEASED_ITEMS.length
-      ? { version: runningVersion, unreleased: true, items: UNRELEASED_ITEMS }
+      ? { version: runningVersion, unreleased: true, items: UNRELEASED_ITEMS.map(leadFromBullet) }
       : null;
     const published = unseen
       ? entriesSince(lastSeenVersion)

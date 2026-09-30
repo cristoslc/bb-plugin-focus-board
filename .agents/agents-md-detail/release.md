@@ -39,21 +39,29 @@ merging into `dev`, releasing, changelog writing, or tagging.
   the `[Unreleased]` group at the top of `CHANGELOG.md`, under the matching
   Keep-a-Changelog subsection: **Added** = new capability, **Changed** =
   behavior change to an existing surface, **Fixed** = bug fix.
-- One bullet per *behavior*, not per merge or branch. Bold the lead
-  sentence, then elaborate — 0.5.19 and 0.5.21's entries are the reference
-  voice.
+- One bullet per *behavior*, not per merge or branch. The bullet's OPENING
+  SENTENCE is its What's-new item (section 5), so start the bullet with a
+  bold lead that reads standalone: surface first, then behavior, what a
+  user can now do or see — all the modal ever shows of the bullet. A bare
+  noun phrase ("Parent thread lanes.") is the failure to avoid; the elaboration after the lead is free to run full-record length. Mechanism,
+  root-cause forensics, a workaround's removal condition, and test counts
+  belong there or in `docs/*.md` (linked), never in the lead sentence.
 - Tests-only, refactor, and docs-only landings add nothing.
 - Published sections are never back-edited. If a later merge revises
   behavior a published version already described, it gets fresh
   `[Unreleased]` bullets saying what the behavior is *now* (the parked-pin
   model revising 0.5.21's lane-exit unpin is the example to remember).
-- `lib/whats-new.ts`'s WHATS_NEW array is NOT maintained on dev — no
-  entries, no churn; the prerelease branch in the whats-new entry test
+- `lib/whats-new.ts`'s WHATS_NEW array is not maintained by hand anywhere —
+  no entries, no churn; the prerelease branch in the whats-new entry test
   keeps the suite green without a placeholder. On dev the modal leads with
-  CHANGELOG.md's `[Unreleased]` group itself:
+  CHANGELOG.md's `[Unreleased]` group's lead sentences:
   `scripts/generate-unreleased.mjs` (wired into `test` and `build`)
-  embeds the current group into the bundle, so CHANGLEOG.md is the single
-  source of truth and no bullet is written twice. That gives the group a
+  embeds the current group into the bundle, so CHANGELOG.md is the single
+  source of truth and no sentence is written twice. Published entries
+  derive the same way at finalize time (section 5). The group also carries
+  a parse contract — bullets open with `- ` at column zero and wrap with
+  two-space continuation lines — exercised in its tests; a bullet that
+  violates it simply stops appearing in the dev What's-new modal. That gives the group a
   parse contract — bullets open with `- ` at column zero and wrap with
   two-space continuation lines — exercised in its tests; a bullet that
   violates it simply stops appearing in the dev What's-new modal.
@@ -85,12 +93,15 @@ entry below):
    the suffix guessed (per semver: user-visible additions may take a minor;
    the historic cadence is per-release judgment).
 2. `CHANGELOG.md`: rename `[Unreleased]` → `[X.Y.Z] - <date>`, and add a
-   fresh empty `[Unreleased]` group above it in the same commit.
+   fresh empty `[Unreleased]` group above it in the same commit. The
+   renamed section may be elaborated to full record prose freely — its
+   bullets' opening sentences become the version's What's-new items
+   automatically at the next test/build (section 5).
 3. `package.json` (and the root `version` in `package-lock.json`): strip
    the suffix.
 4. `APP_VERSION` in `lib/whats-new.ts`: strip the suffix.
-5. `WHATS_NEW` in `lib/whats-new.ts`: insert the `X.Y.Z` entry (newest
-   first), condensed per section 5.
+5. Nothing more: the version's What's-new entry already exists, derived
+   from the section renamed in step 2 (section 5).
 
 This commit is what gets tagged and fast-forwarded onto main — nothing
 else should ride in it.
@@ -110,22 +121,31 @@ else should ride in it.
   distribution surface (users install semver ranges like `git:...@^X.Y`).
 - Remove the temp worktree.
 
-## 5. What's-new entry standards (`WHATS_NEW` in `lib/whats-new.ts`)
+## 5. What's-new derivation (`WHATS_NEW` in `lib/whats-new.ts`)
 
-- One entry per release, inserted at the top of the array. The array holds
-  condensed highlights, not a full changelog; older entries are never
-  back-edited.
-- Each item is one user-facing sentence (at most two), written in the style
-  "surface first, then the behavior": name the board surface the change is
-  on, then state what the user can now do or see.
-- Describe behavior, never implementation. "Child threads now nest as one
-  family" is right; "childNests now consults familyColumnOverrides" is not.
-- No jargon, no internal ticket numbers, no code identifiers in items unless
-  the identifier is itself the user-visible surface (a command name, a key).
-- One to three items per release. A release with nothing user-visible still
-  gets an entry — an update whose modal cannot describe itself is a silent
-  update (the prerelease relaxation in `tests/whats-new.test.ts` covers
-  `-dev` builds only).
+- The published feed is scraped from CHANGELOG.md by
+  `scripts/generate-whats-new.mjs` (wired into `test` and `build`): every
+  `## [version]` heading yields one entry and every bullet one item — the
+  bullet's opening sentence (`lib/changelog-markdown.ts`,
+  `leadFromBullet`: the bold lead when it closes a sentence, else the
+  first full sentence running through it; "(#N)" references stripped,
+  terminal punctuation ensured). Nothing about a new release is
+  hand-written: the finalize commit's changelog section IS the entry.
+- The item rules are therefore just the rules for writing a section's
+  first sentences: one user-facing sentence (at most two), "surface first,
+  then the behavior"; behavior, never implementation — "Child threads now
+  nest as one family" is right, "childNests now consults
+  familyColumnOverrides" is not; no jargon or code identifiers unless the
+  identifier is the user-visible surface; don't rely on the mechanical
+  "(#N)" strip as permission to write ticket numbers in.
+- One to three bullets per release. A release with nothing user-visible
+  still gets a section (0.5.16's restatement is the standing example) —
+  an update whose modal cannot describe itself is a silent update.
+- `LEGACY_WHATS_NEW` in `lib/whats-new.ts` holds the hand-written entries
+  for 0.5.6–0.5.12, versions the published record predates; frozen — it
+  only shrinks if those versions ever gain real changelog sections.
+- Old entries are never back-edited — the published-sections rule in
+  section 1 covers them, since the feed derives from those sections.
 
 ## 6. Post-release prep commit (dev-only)
 
@@ -182,10 +202,13 @@ fingerprint says which key era produced it).
   group is written during merges into dev; the finalize commit renames it
   to its version. Public sections, newest first, never back-edited. The
   group also embeds into dev builds (scripts/generate-unreleased.mjs) as
-  the What's-new modal's headline entry — keep its bullets modal-readable.
-- `lib/whats-new.ts` is the user-facing What's-new modal feed: one
-  condensed, behavior-first entry per release, newest first. Both surfaces
-  must name the same version at the top after a finalize commit.
+  the What's-new modal's headline entry — keep its bullets' opening
+  sentences modal-readable.
+- `lib/whats-new.ts` is the user-facing What's-new modal feed, derived
+  from CHANGELOG.md at build time (each version's items are its bullets'
+  opening sentences), newest first. Both surfaces must name the same
+  version at the top after a finalize commit — the feed's entry exists
+  the moment the section does.
 - Git tags (`git tag -v vX.Y.Z`) plus finalize commits serve as the
   distribution history; release notes for a version are recoverable from
   `git log vX.Y-prev..vX.Y`, the `WHATS_NEW` entry, and the CHANGELOG
