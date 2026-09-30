@@ -39,7 +39,7 @@ export function WhatsNewModal({
           {entries.map((entry) => (
             <section key={entry.version} className="mb-3 last:mb-0">
               <h3 className="mb-1 text-xs font-semibold text-foreground">
-                Version {entry.version}
+                {entry.unreleased ? `Unreleased ${entry.version}` : `Version ${entry.version}`}
               </h3>
               <ul className="list-disc space-y-1 pl-4 text-xs leading-relaxed text-muted-foreground">
                 {entry.items.map((item) => (

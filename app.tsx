@@ -45,6 +45,7 @@ import {
   paneThreadIdFromSubPath,
 } from "./lib/pane-route";
 import { applyMoveVisible, orderForColumn, type RankStore } from "./lib/rank";
+import { pinStateChangeFromEvent, readStateChangeFromEvent } from "./lib/pin-park";
 import {
   DEFAULT_DONE_ARCHIVE_DAYS,
   DEFAULT_IDLE_ARCHIVE_DAYS,
@@ -72,10 +73,12 @@ import { EmptyState } from "./components/empty-state";
 import { WhatsNewModal } from "./components/whats-new-modal";
 import {
   APP_VERSION,
-  WHATS_NEW,
-  compareVersions,
-  entriesSince,
+  CURRENT_UNRELEASED_FINGERPRINT,
+  hasUnseenWhatsNew,
+  readLastSeenUnreleased,
   readLastSeenVersion,
+  whatsNewEntriesFor,
+  writeLastSeenUnreleased,
   writeLastSeenVersion,
   type WhatsNewEntry,
 } from "./lib/whats-new";
@@ -176,6 +179,11 @@ function BoardPage({ subPath }: { subPath: string }) {
   const escStopsRunningThread = escStopsRunningFromSetting(
     settingValues?.escStopsRunningThread,
   );
+  // Strictly opt-in: only a stored true instruments (debug ships off).
+  // Off for every stable build's default; enabled from the config panel
+  // in a developer environment for the click-jump investigation
+  // (docs/chat-click-jump-2026-09-29.md).
+  const scrollDebug = settingValues?.scrollDebugInstrumentation === true;
 
   // The board's "needs you" state rides the sidebar's `hasPendingInteraction`
   // flag, but the sidebar cache can lag behind an answered question: the
@@ -240,6 +248,11 @@ function BoardPage({ subPath }: { subPath: string }) {
   );
 
   const [doneIds, setDoneIds] = useState<ReadonlySet<string>>(new Set());
+  // Pinned-pin parks: a lane-exit unpin parks the pin (thread metadata via
+  // RPC) so the writes that bring the card back to the operator — Mark Not
+  // Done, Mark Unread — can restore it. Local optimistic state drives the
+  // restore decisions; the server record is the cross-reload truth.
+  const [parkIds, setParkIds] = useState<ReadonlySet<string>>(new Set());
   // Done ages + sweep overrides come from the per-thread plugin-metadata
   // records: doneAt is the ISO stamp, keep the sweep override. The epoch
   // adapter (lib/done-metadata) feeds the sweep's injected `now` contract.
@@ -256,6 +269,10 @@ function BoardPage({ subPath }: { subPath: string }) {
       },
       () => {}, // Done marking is optional state; the board works without it.
     );
+    rpc.call("pin_parks_list").then(
+      (result) => setParkIds(new Set(Object.keys(result.parks))),
+      () => {}, // Parks gate nothing; an unloadable park list loses no pin.
+    );
     rpc.call("sweep_config_get").then(
       (result) =>
         setSweepConfig({
@@ -271,6 +288,12 @@ function BoardPage({ subPath }: { subPath: string }) {
         setDoneIds(new Set(result.doneIds));
         setDoneExtras(recordsAsExtras(result.records));
       },
+      () => {},
+    );
+    // Parks refetch on the same signal: another panel (or the CLI path)
+    // may have parked or consumed a pin this panel has not mirrored.
+    rpc.call("pin_parks_list").then(
+      (result) => setParkIds(new Set(Object.keys(result.parks))),
       () => {},
     );
     rpc.call("sweep_config_get").then(
@@ -449,12 +472,19 @@ function BoardPage({ subPath }: { subPath: string }) {
   const [armedSweep, setArmedSweep] = useState<ArmedSweep | null>(null);
   const disarmSweep = useCallback(() => setArmedSweep(null), []);
   useSweepClickAway(armedSweep !== null, disarmSweep);
-  // What's new: the stored last-seen version vs the running build. A fresh
-  // install (nothing stored) is stamped silently — everything is new, so
-  // nothing counts as new. An upgrade leaves the gift button pulsing until
-  // the modal is opened; opening marks seen, the button itself never leaves.
+  // What's new: two "seen" models, picked by the running build. A stable
+  // build compares versions: a fresh install (nothing stored) is stamped
+  // silently — everything is new, so nothing counts as new — and an upgrade
+  // pulses until the modal is opened. A prerelease build (dev's
+  // "0.6.0-dev") keys "seen" to the [Unreleased] group's content instead:
+  // its fingerprint is stamped silently on first load, and the button pulses
+  // again whenever the group's bullets change (each merge to dev). Opening
+  // marks seen; the button itself never leaves.
   const [lastSeenVersion, setLastSeenVersion] = useState<string | null>(
     () => readLastSeenVersion(),
+  );
+  const [lastSeenUnreleased, setLastSeenUnreleased] = useState<string | null>(
+    () => readLastSeenUnreleased(),
   );
   useEffect(() => {
     if (lastSeenVersion === null) {
@@ -462,17 +492,26 @@ function BoardPage({ subPath }: { subPath: string }) {
       setLastSeenVersion(APP_VERSION);
     }
   }, [lastSeenVersion]);
-  const whatsNewUnseen =
-    lastSeenVersion !== null && compareVersions(APP_VERSION, lastSeenVersion) > 0;
-  // The delta is captured at load (before opening marks it seen): entries
-  // since the stored version when one is pending, all recent entries when
-  // the quiet button is used.
+  // The unreleased fingerprint is NOT stamped at load: a fresh dev build
+  // pulses its standing group until opened (see hasUnseenWhatsNew); only
+  // opening the modal records it as seen (openWhatsNew).
+  const whatsNewUnseen = hasUnseenWhatsNew({
+    runningVersion: APP_VERSION,
+    lastSeenVersion,
+    unreleasedFingerprint: CURRENT_UNRELEASED_FINGERPRINT,
+    lastSeenUnreleasedFingerprint: lastSeenUnreleased,
+  });
+  // The delta is captured at load (before opening marks it seen): a dev
+  // build leads with its unreleased group; stable builds show entries since
+  // the stored version when one is pending, all recent entries otherwise.
   const whatsNewEntries: readonly WhatsNewEntry[] = useMemo(
-    () => (whatsNewUnseen ? entriesSince(lastSeenVersion) : WHATS_NEW),
+    () => whatsNewEntriesFor(APP_VERSION, whatsNewUnseen, lastSeenVersion),
     [whatsNewUnseen, lastSeenVersion],
   );
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const openWhatsNew = useCallback(() => {
+    writeLastSeenUnreleased(CURRENT_UNRELEASED_FINGERPRINT);
+    setLastSeenUnreleased(CURRENT_UNRELEASED_FINGERPRINT);
     writeLastSeenVersion(APP_VERSION);
     setLastSeenVersion(APP_VERSION);
     setWhatsNewOpen(true);
@@ -906,6 +945,216 @@ function BoardPage({ subPath }: { subPath: string }) {
     [sdk],
   );
 
+  // The Pinned lane-exit rule. A pinned card leaving the Pinned lane (a
+  // cross-column drop or the menu's Mark Done) un-pins as part of the
+  // gesture — column placement derives from the pin, so the pin must go
+  // with it or the card bounces straight back into Pinned on the next
+  // grouping pass. But the un-pinned pin is PARKED, not destroyed: the park
+  // marker rides board-owned thread metadata (lib/pin-park), and the state
+  // writes that bring the card back to the operator — Mark Not Done, Mark
+  // Unread — restore the pin exactly as it stood before the gesture. A
+  // same-lane reorder (including within Pinned) is claimed by the card's
+  // reorder path and never reaches any of these helpers.
+  const parkPin = useCallback(
+    (threadId: string) => {
+      setParkIds((current) => new Set(current).add(threadId));
+      rpc
+        .call("pin_park_set", { threadId, parked: true })
+        .catch(() => {
+          // Roll the optimistic park back when the server rejects: a pin
+          // the server never parked must not be restorable.
+          setParkIds((current) => {
+            const next = new Set(current);
+            next.delete(threadId);
+            return next;
+          });
+        });
+    },
+    [rpc, setParkIds],
+  );
+  const clearParkPin = useCallback(
+    (threadId: string) => {
+      // An explicit board pin write expresses current intent and beats any
+      // parked value, so every Pin/Unpin wipe clears it. No park, no write.
+      if (!parkIds.has(threadId)) return;
+      setParkIds((current) => {
+        const next = new Set(current);
+        next.delete(threadId);
+        return next;
+      });
+      void rpc.call("pin_park_set", { threadId, parked: false }).catch(() => {});
+    },
+    [parkIds, rpc],
+  );
+  const restoreParkedPin = useCallback(
+    (threadId: string) => {
+      if (!parkIds.has(threadId)) return;
+      const thread = threads.find((candidate) => candidate.id === threadId);
+      if (thread === undefined) return;
+      // Already pinned (the operator re-pinned before the restore ran, or a
+      // foreign surface did): the park is stale — consume quietly, never
+      // double-pin.
+      if (thread.isPinned) {
+        clearParkPin(threadId);
+        return;
+      }
+      // The restore itself, then the park dies — one gesture, once.
+      void actions.setPinned(threadId, true);
+      clearParkPin(threadId);
+    },
+    [actions, clearParkPin, parkIds, threads],
+  );
+  const exitPinnedLane = useCallback(
+    (threadId: string) => {
+      const thread = threads.find((candidate) => candidate.id === threadId);
+      if (thread === undefined || !thread.isPinned) return;
+      // The unpin is the gesture; the park is a side record, never a
+      // substitute for removing the pin itself.
+      void actions.setPinned(threadId, false);
+      parkPin(threadId);
+    },
+    [actions, parkPin, threads],
+  );
+
+  // The state-truth reaction to a thread BECOMING unread — fired by our own
+  // gesture paths (card menu, pane toggle, the non-exit drag onto Unread)
+  // and, with the suppression token below, by the native feed when a
+  // foreign surface marks the thread unread. The card's state, not the
+  // actor, decides what happens beside the mark itself:
+  //  - a parked pin returns — the operator is calling the card back up the
+  //    attention ladder, and the pin it had before the exit comes with it;
+  //  - done is undone — unread and done contradict on the card (the same
+  //    ladder rule that lets attention outrank working placement), so a
+  //    Done card the operator marks unread comes back un-done.
+  // Every check is on CURRENT state, so the reaction is idempotent: our
+  // gestures compose it directly for an immediate response, and the feed
+  // echo of the same write re-runs it as a no-op. The one non-idempotent
+  // case is the drag exit itself — marking unread there must not restore
+  // the park the very gesture just wrote — which is what the suppression
+  // token (consumed by the write's own echo) is for.
+  const applyUnreadStateEffects = useCallback(
+    (threadId: string, options: { suppressParkRestore?: boolean } = {}) => {
+      if (options.suppressParkRestore !== true) restoreParkedPin(threadId);
+      if (doneIds.has(threadId)) {
+        setDoneIds((current) => {
+          const next = new Set(current);
+          next.delete(threadId);
+          return next;
+        });
+        rpc.call("done_set", { threadId, done: false }).catch(() => {});
+      }
+    },
+    [doneIds, restoreParkedPin, rpc, setDoneIds],
+  );
+  /**
+   * Suppression token for the drag exit's own read echo: consumed by the
+   * feed's first read-state-changed event for the thread, so the gesture
+   * that parks does not immediately restore its own park. It guards only
+   * the restore — the un-done path cannot fire for a card the exit never
+   * marked done — and any foreign surfaced write racing into the same echo
+   * slot would be consumed with it; the residual races are milliseconds
+   * in scale, bounded by the echo latency rather than a timer.
+   */
+  const unreadEchoSuppressRef = useRef<ReadonlySet<string>>(new Set());
+
+  // Park reconciliation over the same native cross-surface feed
+  // (`sdk.subscribe`, "thread:changed"): EVERY pin write — bb's sidebar,
+  // another panel instance, the CLI — publishes `pin-state-changed`, which
+  // closes the one gap a park marker alone cannot see. A pin that some other
+  // writer takes back supersedes the parked value; without this, a later
+  // Mark Not Done / Mark Unread would resurrect a pin against that intent.
+  // Attribution is not needed, because the rule keys on the RESULTING pin
+  // state read fresh at reconcile time: pinned → supersede (clear the park;
+  // this board's own restore echo lands here too, but its park is consumed
+  // synchronously with its own pin write, so the clear is the same
+  // idempotent no-op either way); unpinned → the lane exit's own unpin
+  // echo — the write that CAUSED the park — leaves the park alone. Threads
+  // without a park are never fetched. A foreign pin+unpin cycle landing
+  // entirely inside one reconcile's fresh-read latency is the residual
+  // race: milliseconds, versus the previous gap's "until whenever".
+  const parkIdsRef = useRef(parkIds);
+  parkIdsRef.current = parkIds;
+  const clearParkPinRef = useRef(clearParkPin);
+  clearParkPinRef.current = clearParkPin;
+  useEffect(() => {
+    let disposed = false;
+    try {
+      const unsubscribe = sdk.subscribe({
+        event: "thread:changed",
+        callback: (event) => {
+          const threadId = pinStateChangeFromEvent(event);
+          if (threadId === null || !parkIdsRef.current.has(threadId)) return;
+          void sdk.threads
+            .get({ threadId })
+            .then(
+              (row) => {
+                if (disposed) return;
+                if (row.pinnedAt !== null) clearParkPinRef.current(threadId);
+              },
+              () => {}, // A thread deleted while parked is a dead park; parks refetch prunes it.
+            );
+        },
+      });
+      return () => {
+        disposed = true;
+        unsubscribe();
+      };
+    } catch {
+      // Embedded contexts (screenshot harness) have no subscribe; parks live
+      // until their own gesture consumes them.
+      return undefined;
+    }
+  }, [sdk]);
+
+  // The surfaced read-write listener: `read-state-changed` reaches here for
+  // a mark-unread landing from any surface — the native thread menu is the
+  // case this exists for, and our own pane/menu gestures' echoes converge
+  // idempotently. The drag exit's own echo is what the suppression token
+  // is for: consumed, never decided-on. The direction is decided by a
+  // fresh read, keyed on the single-writer fact (lib/pin-park): only the
+  // deliberate mark-unread route writes `lastReadAt = null`; ambient
+  // attention-after-last-read unread never publishes and never nulls, so
+  // a park never fires on ordinary thread noise.
+  useEffect(() => {
+    let disposed = false;
+    try {
+      const unsubscribe = sdk.subscribe({
+        event: "thread:changed",
+        callback: (event) => {
+          const threadId = readStateChangeFromEvent(event);
+          if (threadId === null) return;
+          if (unreadEchoSuppressRef.current.has(threadId)) {
+            unreadEchoSuppressRef.current = new Set([
+              ...unreadEchoSuppressRef.current,
+            ].filter((id) => id !== threadId));
+            return;
+          }
+          void sdk.threads
+            .get({ threadId })
+            .then(
+              (row) => {
+                if (disposed) return;
+                // Deliberately marked unread, from any surface: the state
+                // truth applies, whatever the actor.
+                if (row.lastReadAt === null) {
+                  applyUnreadStateEffects(threadId);
+                }
+              },
+              () => {}, // Deleted while processing: nothing to react to.
+            );
+        },
+      });
+      return () => {
+        disposed = true;
+        unsubscribe();
+      };
+    } catch {
+      // Embedded contexts (screenshot harness) have no subscribe; the
+      // gestures carry the effects alone.
+      return undefined;
+    }
+  }, [applyUnreadStateEffects, sdk]);
+
   const menuActionsFor = useCallback(
     (thread: PluginSidebarThread): CardMenuAction[] => {
       const isThreadDone = doneIds.has(thread.id);
@@ -928,13 +1177,30 @@ function BoardPage({ subPath }: { subPath: string }) {
           id: "pin",
           label: thread.isPinned ? "Unpin" : "Pin",
           icon: thread.isPinned ? "PinOff" : "Pin",
-          run: () => void actions.setPinned(thread.id, !thread.isPinned),
+          run: () => {
+            // Live intent beats the parked value: a park this gesture's
+            // write supersedes must not resurrect on a later Mark Not Done
+            // or Mark Unread.
+            clearParkPin(thread.id);
+            void actions.setPinned(thread.id, !thread.isPinned);
+          },
         },
         {
           id: "read",
           label: thread.isUnread ? "Mark Read" : "Mark Unread",
           icon: thread.isUnread ? "MailOpen" : "Mail",
-          run: () => void actions.setRead(thread.id, thread.isUnread),
+          run: () => {
+            // Marking unread carries the state-truth effects (a parked pin
+            // returns; a Done card un-does); marking read leaves the park in
+            // place — a card read now that the operator marks unread later
+            // still finds its pin.
+            if (thread.isUnread) {
+              void actions.setRead(thread.id, true);
+            } else {
+              applyUnreadStateEffects(thread.id);
+              void actions.setRead(thread.id, false);
+            }
+          },
         },
         {
           id: "done",
@@ -948,13 +1214,19 @@ function BoardPage({ subPath }: { subPath: string }) {
               return next;
             });
             rpc.call("done_set", { threadId: thread.id, done: !isThreadDone }).catch(() => {});
-            // The same lane-exit rule the drops compose: a state write that
-            // removes the card from the Pinned lane takes the pin with it.
-            // Marking Done is the only menu action that moves a card out (an
-            // unread card can sit pinned); "Mark Not Done" restores its
-            // membership, not the pin, so it writes nothing here.
-            if (thread.isPinned && !isThreadDone) {
-              void actions.setPinned(thread.id, false);
+            if (!isThreadDone) {
+              // Done implies read: a Done card must not still claim unread
+              // (and a later Mark Not Done hands the card back read).
+              if (thread.isUnread) {
+                void actions.setRead(thread.id, true);
+              }
+              // The same lane-exit rule the drops compose: marking a pinned
+              // card done parks its pin as it leaves the Pinned lane.
+              exitPinnedLane(thread.id);
+            } else {
+              // Mark Not Done is the undo; a parked pin comes back with the
+              // card.
+              restoreParkedPin(thread.id);
             }
           },
         },
@@ -1003,21 +1275,8 @@ function BoardPage({ subPath }: { subPath: string }) {
         },
       ];
     },
-    [actions, doneAgeSource, doneIds, rpc, setDoneExtras, setDoneIds, sdk],
+    [actions, applyUnreadStateEffects, clearParkPin, doneAgeSource, doneIds, exitPinnedLane, restoreParkedPin, rpc, setDoneExtras, setDoneIds, sdk],
   );
-
-  // A drop onto any column other than the one the card sits in is, for a
-  // pinned card, also a move out of the Pinned lane: column placement is
-  // derived from the pin, so the pin must go with the gesture or the card
-  // bounces straight back into Pinned on the next grouping pass. This is
-  // the lane-exit consequence, not target-specific logic — each state-change
-  // handler composes it with its own writes (Unread adds mark-unread, Done
-  // adds done). A same-lane reorder (including within Pinned) is claimed by
-  // the card's reorder path and never reaches these handlers.
-  const dropExitsPinnedLane = (threadId: string) => {
-    const thread = threads.find((candidate) => candidate.id === threadId);
-    if (thread?.isPinned) void actions.setPinned(threadId, false);
-  };
 
   if (status === "loading" && threads.length === 0) {
     return (
@@ -1108,18 +1367,38 @@ function BoardPage({ subPath }: { subPath: string }) {
             onSweepDisarm={disarmSweep}
             onSweepConfirm={confirmSweepFor}
             onDropDone={(threadId) => {
+              const thread = threads.find((candidate) => candidate.id === threadId);
               const next = new Set(doneIds);
               next.add(threadId);
               setDoneIds(next);
               rpc.call("done_set", { threadId, done: true }).catch(() => {});
-              dropExitsPinnedLane(threadId);
+              // Done implies read: the card must not land in Done still
+              // claiming unread (or come back from Mark Not Done unread).
+              if (thread !== undefined && thread.isUnread) {
+                void actions.setRead(threadId, true);
+              }
+              exitPinnedLane(threadId);
             }}
             onDropUnread={(threadId) => {
               const thread = threads.find((candidate) => candidate.id === threadId);
-              if (thread !== undefined && !thread.isUnread) {
+              if (thread === undefined) return;
+              if (thread.isPinned) {
+                // The exit: unpin + park, and register the echo suppression
+                // BEFORE the gesture's own read write lands — the fresh park
+                // must not be restored by the very gesture that parked it.
+                unreadEchoSuppressRef.current = new Set(
+                  unreadEchoSuppressRef.current,
+                ).add(threadId);
+                exitPinnedLane(threadId);
+              } else {
+                // Marking unread on an unpinned card is the attention
+                // signal: state-truth effects apply — a parked pin rides
+                // the mark back into Pinned, and a Done card un-does.
+                applyUnreadStateEffects(threadId);
+              }
+              if (!thread.isUnread) {
                 void actions.setRead(threadId, false);
               }
-              dropExitsPinnedLane(threadId);
             }}
             // Drop on Pinned pins, unless the card is already pinned: a
             // pinned card's drop is a same-lane reorder (claimed by the card
@@ -1184,12 +1463,20 @@ function BoardPage({ subPath }: { subPath: string }) {
           }}
           onToggleUnread={() => {
             if (openThreadId === null || openThreadActive === null) return;
-            void actions.setRead(openThreadId, openThreadActive.isUnread);
+            if (openThreadActive.isUnread) {
+              void actions.setRead(openThreadId, true);
+            } else {
+              // Same state-truth effects as every other mark-unread path:
+              // a parked pin returns, a Done card un-does.
+              applyUnreadStateEffects(openThreadId);
+              void actions.setRead(openThreadId, false);
+            }
           }}
           onRename={(title) => actions.rename(openThread.id, title)}
           onMaximize={() => navigate.toThread(openThread.id)}
           onClose={closeThreadPane}
           escStopsRunningThread={escStopsRunningThread}
+          scrollDebug={scrollDebug}
         />
       )}
       <WhatsNewModal

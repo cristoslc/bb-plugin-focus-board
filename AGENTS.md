@@ -16,16 +16,19 @@ if it is not in the default place. Run a single suite with
 
 ## Release
 
-Releasing a new plugin version: work flows into `dev` (the integration
-branch; the main checkout sits on it and that is what bb serves), while
-`main` is stable and moves only by release merges from `dev`. Coordinate
-with dev before bumping (concurrent threads release independently), bump
-`package.json` + `APP_VERSION` + `WHATS_NEW` in one release commit,
-verify with `npm test` and `npm run build`, merge dev to main (via a
-temporary worktree), tag annotated `vX.Y.Z` on the release commit, push,
-then rebuild in the main checkout and `bb plugin reload focus-board`.
-Includes changelog formatting standards and the never-retag rule.
-Full reference: `.agents/agents-md-detail/release.md`
+Releasing a new plugin version: work merges into `dev` (the integration
+branch; the main checkout sits on it and that is what bb serves) and
+each such merge appends bullets to `CHANGELOG.md`'s `[Unreleased]` group.
+`dev` carries a provisional prerelease version (`next + "-dev"`, e.g.
+`0.6.0-dev`) in package.json/APP_VERSION; `main` is stable and moves only
+by fast-forward. Releasing = one finalize commit on the dev lineage (name
+the version, strip `-dev`, rename `[Unreleased]` to `[X.Y.Z]`, add the
+condensed WHATS_NEW entry), then fast-forward main in a temporary
+worktree, tag annotated (SSH-signed) `vX.Y.Z` on that commit, push, then a
+dev-only prep commit bumps to the next `-dev`. Never commit to main
+main-side; never back-edit published changelog sections; never move a
+tag. Full reference:
+`.agents/agents-md-detail/release.md`
 
 ## Test coverage matrix
 
