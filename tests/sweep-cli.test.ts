@@ -8,8 +8,14 @@ import type { FakePluginHarness } from "@get-bb/plugin-sdk/testing";
 import server from "../server";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const NOW = Date.parse("2026-09-25T12:00:00.000Z");
-
+// The server CLI sweeps with the real clock (the pure eligibility core takes
+// an injected `now`; the CLI entry feeds it Date.now() and offers no seam).
+// Fixtures must therefore be relative to the real clock: a pinned NOW made
+// "done 2 days ago" cross the 7-day threshold five days after this file was
+// written, time-bombing the below-threshold test (observed 2026-10-01).
+// The 2-day defaults keep day-scale margins around every below-threshold
+// fixture, so load-time drift (milliseconds) never flips a verdict.
+const NOW = Date.now();
 function iso(msAgo: number): string {
   return new Date(NOW - msAgo).toISOString();
 }
@@ -95,9 +101,9 @@ describe("bb focus-board sweep", () => {
       const result = await harness.behavior.runCli(["sweep"]);
       expect(result.exitCode).toBe(1);
       expect(result.stdout).toContain("thr_old");
-      expect(result.stdout).toContain("idle longer than 30d");
+      expect(result.stdout).toContain("idle longer than 2 days");
       expect(result.stdout).toContain("thr_done");
-      expect(result.stdout).toContain("done longer than 7d");
+      expect(result.stdout).toContain("done longer than 2 days");
       expect(result.stdout).toContain("--confirm");
       expect(archived).toEqual([]);
       expect(harness.inspection.sdk.callsTo("threads.archive")).toHaveLength(0);
@@ -114,7 +120,8 @@ describe("bb focus-board sweep", () => {
 
     it("counts a thread at exactly the threshold as eligible", async () => {
       await load();
-      listedThreads = [idleThread("thr_edge", 30)];
+      // Exactly the 2-day default idle threshold; boundary counts.
+      listedThreads = [idleThread("thr_edge", 2)];
       const result = await harness.behavior.runCli(["sweep", "--json"]);
       const body = JSON.parse(result.stdout) as {
         eligible: Array<{ id: string; reason: string }>;
@@ -167,7 +174,9 @@ describe("bb focus-board sweep", () => {
       listedThreads = [
         makeThreadResponse({ id: "thr_recent", updatedAt: 0 }),
       ];
-      metadata.set("thr_recent", { done: { doneAt: iso(2 * DAY_MS) } });
+      // Done one day ago: below the 2-day done threshold, so not
+      // done-eligible — and the idle arm never claims a done thread.
+      metadata.set("thr_recent", { done: { doneAt: iso(DAY_MS) } });
 
       const result = await harness.behavior.runCli(["sweep", "--json"]);
       expect(JSON.parse(result.stdout)).toEqual({ eligible: [], count: 0 });
@@ -273,30 +282,58 @@ describe("bb focus-board sweep", () => {
   });
 
   describe("--confirm", () => {
-    it("archives exactly the resolved eligible set", async () => {
+    it("archives Done-age threads and marks long-idle threads Done", async () => {
       await load();
       listedThreads = [
-        idleThread("thr_a", 40),
-        idleThread("thr_b", 40),
-        idleThread("thr_fresh", 2),
+        makeThreadResponse({ id: "thr_d1" }),
+        idleThread("thr_i1", 40),
+        // One day idle: under the 2-day default, so not eligible.
+        idleThread("thr_fresh", 1),
       ];
-      const result = await harness.behavior.runCli(["sweep", "--confirm"]);
+      metadata.set("thr_d1", { done: { doneAt: iso(10 * DAY_MS) } });
+      const result = await harness.behavior.runCli(["sweep", "--confirm", "--json"]);
       expect(result.exitCode).toBe(0);
-      expect(archiveArgs().sort()).toEqual(["thr_a", "thr_b"]);
-      expect(result.stdout).toContain("archived thr_a");
-      expect(result.stdout).toContain("archived thr_b");
+      expect(archiveArgs()).toEqual(["thr_d1"]);
+      // The long-idle thread gains a fresh done stamp and is NOT archived.
+      const record = metadata.get("thr_i1")?.done as { doneAt: string };
+      expect(typeof record?.doneAt).toBe("string");
+      expect(Number.isNaN(Date.parse(record.doneAt))).toBe(false);
+      const body = JSON.parse(result.stdout) as {
+        archived: Array<{ id: string }>;
+        markedDone: Array<{ id: string }>;
+        count: number;
+      };
+      expect(body.archived.map((entry) => entry.id)).toEqual(["thr_d1"]);
+      expect(body.markedDone.map((entry) => entry.id)).toEqual(["thr_i1"]);
+      expect(body.count).toBe(2);
     });
 
-    it("archives nothing when nothing is eligible", async () => {
+    it("names each action in the human output", async () => {
+      await load();
+      listedThreads = [
+        makeThreadResponse({ id: "thr_d1" }),
+        idleThread("thr_i1", 40),
+      ];
+      metadata.set("thr_d1", { done: { doneAt: iso(10 * DAY_MS) } });
+      const result = await harness.behavior.runCli(["sweep", "--confirm"]);
+      expect(result.stdout).toContain("archived thr_d1");
+      expect(result.stdout).toContain("marked Done thr_i1");
+    });
+
+    it("does nothing when nothing is eligible", async () => {
       await load();
       listedThreads = [idleThread("thr_fresh", 1)];
       const result = await harness.behavior.runCli(["sweep", "--confirm", "--json"]);
       expect(result.exitCode).toBe(0);
-      expect(JSON.parse(result.stdout)).toEqual({ archived: [], count: 0 });
+      expect(JSON.parse(result.stdout)).toEqual({
+        archived: [],
+        markedDone: [],
+        count: 0,
+      });
       expect(harness.inspection.sdk.callsTo("threads.archive")).toHaveLength(0);
     });
 
-    it("with --ids, archives exactly those ids even if others also qualify", async () => {
+    it("with --ids, sweeps exactly those ids even if others also qualify", async () => {
       await load();
       listedThreads = [
         idleThread("thr_a", 40),
@@ -308,9 +345,14 @@ describe("bb focus-board sweep", () => {
         "--confirm",
         "--ids",
         "thr_b",
+        "--json",
       ]);
       expect(result.exitCode).toBe(0);
-      expect(archiveArgs()).toEqual(["thr_b"]);
+      expect(archiveArgs()).toEqual([]);
+      const body = JSON.parse(result.stdout) as {
+        markedDone: Array<{ id: string }>;
+      };
+      expect(body.markedDone.map((entry) => entry.id)).toEqual(["thr_b"]);
     });
 
     it("with --ids, skips named ids that are already archived", async () => {
@@ -331,14 +373,14 @@ describe("bb focus-board sweep", () => {
         "--json",
       ]);
       expect(result.exitCode).toBe(0);
-      expect(archiveArgs()).toEqual(["thr_a"]);
+      expect(archiveArgs()).toEqual([]);
       const body = JSON.parse(result.stdout) as {
-        archived: Array<{ id: string }>;
+        markedDone: Array<{ id: string }>;
       };
-      expect(body.archived.map((result2) => result2.id)).toEqual(["thr_a"]);
+      expect(body.markedDone.map((entry) => entry.id)).toEqual(["thr_a"]);
     });
 
-    it("never archives keep threads (metadata keep)", async () => {
+    it("never sweeps keep threads (metadata keep)", async () => {
       await load();
       listedThreads = [makeThreadResponse({ id: "thr_keep" })];
       metadata.set("thr_keep", {
@@ -346,11 +388,15 @@ describe("bb focus-board sweep", () => {
       });
       const result = await harness.behavior.runCli(["sweep", "--confirm", "--json"]);
       expect(result.exitCode).toBe(0);
-      expect(JSON.parse(result.stdout)).toEqual({ archived: [], count: 0 });
+      expect(JSON.parse(result.stdout)).toEqual({
+        archived: [],
+        markedDone: [],
+        count: 0,
+      });
       expect(harness.inspection.sdk.callsTo("threads.archive")).toHaveLength(0);
     });
 
-    it("never archives keep threads (KV keep store)", async () => {
+    it("never sweeps keep threads (KV keep store)", async () => {
       await load();
       listedThreads = [idleThread("thr_kvkeep", 90)];
       await harness.behavior.callRpc("sweep_keep_set", {
@@ -359,7 +405,11 @@ describe("bb focus-board sweep", () => {
       });
       const result = await harness.behavior.runCli(["sweep", "--confirm", "--json"]);
       expect(result.exitCode).toBe(0);
-      expect(JSON.parse(result.stdout)).toEqual({ archived: [], count: 0 });
+      expect(JSON.parse(result.stdout)).toEqual({
+        archived: [],
+        markedDone: [],
+        count: 0,
+      });
       expect(harness.inspection.sdk.callsTo("threads.archive")).toHaveLength(0);
     });
 
@@ -375,17 +425,20 @@ describe("bb focus-board sweep", () => {
   });
 
   describe("settings integration", () => {
-    it("respects a config-set threshold change", async () => {
+    it("respects a config-set threshold change, including the unit", async () => {
       await load();
-      listedThreads = [idleThread("thr_mid", 14)];
-      // Below the default 30d idle threshold.
+      // One day idle: under the 2-day default threshold, so not eligible.
+      listedThreads = [idleThread("thr_mid", 1)];
       expect(
         JSON.parse(
           (await harness.behavior.runCli(["sweep", "--json"])).stdout,
         ),
       ).toEqual({ eligible: [], count: 0 });
 
-      await harness.behavior.runCli(["config", "set", "idleArchiveDays", "14"]);
+      // Switching the unit and count moves the threshold to 12 hours:
+      // the one-day-old thread is now eligible.
+      await harness.behavior.runCli(["config", "set", "idleArchiveUnit", "hours"]);
+      await harness.behavior.runCli(["config", "set", "idleArchiveValue", "12"]);
       const after = await harness.behavior.runCli(["sweep", "--json"]);
       const body = JSON.parse(after.stdout) as {
         eligible: Array<{ id: string }>;

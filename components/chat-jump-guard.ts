@@ -106,10 +106,79 @@ function readScroller(
 	return null;
 }
 
+/** Real scroll moves that big in one event mean a displacement or its
+ * correction is in flight — not settled reading state. */
+const JUMP_SUPPRESS_THRESHOLD = 300;
+/** How long a detected jump keeps arming suppressed. */
+const SUPPRESS_MS = 3000;
+
 export function createChatClickJumpGuard(
 	getChatRoot: () => ParentNode | null,
 ): ChatClickJumpGuard {
 	let armed: Armed | null = null;
+	/** The scroller's position recorded when the CURRENT input sequence
+	 * started: a window-level pointerdown capture runs before any commit
+	 * can write, so this value is the race-proof pre-displacement point
+	 * (the shell's jump fires in this sequence's commit, and its scroll
+	 * event is delivered after the arming handler — see the probe runs
+	 * d11/d12/d14/d15). */
+	let startedAt: { el: HTMLElement; top: number } | null = null;
+	const pointerDownListener = (event: Event) => {
+		const root = getChatRoot();
+		if (root === null) {
+			startedAt = null;
+			return;
+		}
+		const target = event.target;
+		if (!(target instanceof Element)) return;
+		const state = readScroller(root, target);
+		if (state === null) {
+			startedAt = null;
+			return;
+		}
+		startedAt = { el: state.el, top: state.top };
+	};
+	if (typeof window !== "undefined" && typeof document !== "undefined") {
+		window.addEventListener("pointerdown", pointerDownListener, { capture: true, passive: true });
+	}
+	/** Settled-position observer: an always-on passive scroll listener (per
+	 * scroller, re-attached when the pane remounts) that records the last
+	 * seen position and, when the position moves >=300px in one event,
+	 * suppresses arming for a window (a yank, or the shell's own
+	 * self-correction, is in flight; reverting through either would fight
+	 * the shell or cement a displacement — bug seen live in run d10). */
+	let tracker: { scroller: HTMLElement; top: number | null; suppressUntil: number; remove: () => void } | null = null;
+
+	const ensureTracker = (scroller: HTMLElement) => {
+		if (tracker !== null && tracker.scroller === scroller && tracker.scroller.isConnected) return;
+		tracker?.remove();
+		const listener = () => {
+			const now = performance.now();
+			const top = scroller.scrollTop;
+			const settled = tracker?.top ?? null;
+			if (settled !== null && Math.abs(top - settled) >= JUMP_SUPPRESS_THRESHOLD) {
+				if (tracker) tracker.suppressUntil = now + SUPPRESS_MS;
+			}
+			if (tracker) tracker.top = top;
+		};
+		scroller.addEventListener("scroll", listener, { passive: true });
+		tracker = {
+			scroller,
+			top: scroller.scrollTop,
+			suppressUntil: 0,
+			remove: () => {
+				scroller.removeEventListener("scroll", listener);
+			},
+		};
+	};
+
+	const disposeListenerCleanup = () => {
+		tracker?.remove();
+		tracker = null;
+		if (typeof window !== "undefined") {
+			window.removeEventListener("pointerdown", pointerDownListener, { capture: true } as EventListenerOptions);
+		}
+	};
 
 	const disarm = () => {
 		if (armed === null) return;
@@ -173,6 +242,20 @@ export function createChatClickJumpGuard(
 		// No scroll-back means the bug has nothing to yank past; arm only
 		// when the reader is meaningfully scrolled up.
 		if (state.max - state.top < MIN_PROTECTED_OFFSET) return;
+		// And only when the view is SETTLED: a jump (displacement yank, or
+		// the shell correcting one) inside the suppression window means the
+		// imminent automatic re-pin is the reader's place coming back —
+		// reverting it would cement a displacement.
+		ensureTracker(state.el);
+		if (tracker !== null && performance.now() < tracker.suppressUntil) return;
+		// Settled-start gate: if this input sequence's own pointerdown saw a
+		// different position than the fresh read, the view moved under the
+		// sequence (the shell's jump, or its correction) — arming here would
+		// revert the shell's imminent self-correction and cement a
+		// displacement.
+		if (startedAt !== null && startedAt.el === state.el && Math.abs(state.top - startedAt.top) >= JUMP_SUPPRESS_THRESHOLD) {
+			return;
+		}
 		disarm();
 		const { el, top: baseline } = state;
 		const removeListeners: Array<() => void> = [];
@@ -203,5 +286,5 @@ export function createChatClickJumpGuard(
 		}
 	};
 
-	return { onChatClickCapture, dispose: disarm };
+	return { onChatClickCapture, dispose: () => { disarm(); disposeListenerCleanup(); } };
 }

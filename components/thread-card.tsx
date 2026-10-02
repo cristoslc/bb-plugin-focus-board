@@ -43,6 +43,24 @@ interface ThreadCardProps {
   doneIds?: ReadonlySet<string>;
   /** Highlighted because a sweep armed in this column captured the card. */
   isSweepHighlighted?: boolean;
+  /**
+   * A confirmed sweep is archiving THIS card right now: a throbber on the
+   * card while the highlight stays on, so a slow loop reads as progress,
+   * not a frozen board.
+   */
+  isSweeping?: boolean;
+  /**
+   * Sweep mode is active in this card's column: clicks toggle the card in
+   * or out of the sweep selection instead of opening the pane.
+   */
+  isSweepSelecting?: boolean;
+  /**
+   * In sweep mode but not selected: a quieter ring marks the card as
+   * toggleable, distinct from the selected highlight.
+   */
+  isSweepSelectable?: boolean;
+  /** Flips the card's sweep-selection membership. Sweep mode only. */
+  onSweepToggle?: (threadId: string) => void;
   projectName: string;
   menuActions?: readonly CardMenuAction[];
   /** Children that render as nested rows beneath this card, in display order. */
@@ -202,6 +220,10 @@ export function ThreadCard({
   isDone,
   doneIds,
   isSweepHighlighted = false,
+  isSweeping = false,
+  isSweepSelecting = false,
+  isSweepSelectable = false,
+  onSweepToggle,
   projectName,
   repoHrefBase,
   statusFor,
@@ -234,11 +256,29 @@ export function ThreadCard({
   // counts children that render standalone (promoted / cross-axis).
   const hasRows = children.length > 0;
 
+  // Pinned-lane attention: a pinned family cannot move to a Needs-you lane —
+  // the state column overrides apply to unpinned roots only — so when a nested
+  // child (or the card's own state) needs the operator, the card says so
+  // itself: a pulsing amber border, the same pulse language the changelog gift
+  // uses. Done and archived members never count: completed or stale state
+  // must not demand attention. The pinned lane also lifts these cards to the
+  // top (nesting.ts, `pinnedAttentionIds`); the two signals must agree.
+  const familyNeedsAttention =
+    threadState(thread) === "attention" ||
+    children.some(
+      (child) =>
+        threadState(child) === "attention" &&
+        !child.isArchived &&
+        !(doneIds?.has(child.id) ?? false),
+    );
+
   // The card is a container; the anchor (title/body) and the collapse toggle
   // are siblings inside it — a button inside an anchor would be invalid HTML.
   const card = (
     <div
       data-thread-card={thread.id}
+      data-sweep-highlighted={isSweepHighlighted ? "" : undefined}
+      data-sweep-active={isSweeping ? "" : undefined}
       className={cn(
         "relative overflow-hidden rounded-md bg-card transition-colors",
         "hover:bg-accent/50",
@@ -249,6 +289,7 @@ export function ThreadCard({
         dimmed && "opacity-50",
         isSweepHighlighted &&
           "ring-2 ring-amber-500 bg-amber-500/10 saturate-100 opacity-100",
+        isSweepSelectable && "ring-1 ring-amber-500/40",
       )}
     >
       <span
@@ -258,6 +299,17 @@ export function ThreadCard({
         )}
         aria-hidden
       />
+      {familyNeedsAttention ? (
+        // A border, not a ring: the ring paints outside the box and this
+        // overlay sits inside the card's overflow-hidden — only the border
+        // lands on visible pixels. The pulse moves the overlay's opacity, not
+        // the card's, so the title never blinks with it.
+        <span
+          data-attention-pulse=""
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-md border-2 border-amber-500 bg-amber-500/5 motion-safe:animate-pulse"
+        />
+      ) : null}
       <div className="flex items-stretch">
         <a
           href={thread.href}
@@ -276,6 +328,14 @@ export function ThreadCard({
           }}
           onDragEnd={() => onRankDragStart?.(null)}
           onClick={(event) => {
+            // Sweep mode is modal: the click curates the selection, it never
+            // navigates. Even modifier-clicks toggle — the mode owns the
+            // gesture until click-away or Escape ends it.
+            if (isSweepSelecting) {
+              event.preventDefault();
+              onSweepToggle?.(thread.id);
+              return;
+            }
             // Let modified clicks (middle-click handled natively, cmd/ctrl new
             // window) pass through; the host also routes plain clicks on href.
             if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -292,12 +352,30 @@ export function ThreadCard({
             {thread.isPinned ? (
               <Icon name="Pin" className="size-3 text-muted-foreground/70" aria-hidden />
             ) : null}
-            {thread.hasPendingInteraction ? (
+            {thread.hasPendingInteraction || familyNeedsAttention ? (
               <Icon
                 name="MessageQuestion"
                 className="size-3 text-amber-500"
-                aria-label={thread.indicatorLabel ?? "Needs your input"}
+                aria-label={
+                  thread.hasPendingInteraction
+                    ? (thread.indicatorLabel ?? "Needs your input")
+                    : "A subthread needs your input"
+                }
               />
+            ) : null}
+            {isSweeping ? (
+              <span
+                data-sweep-spinner
+                title="Archiving…"
+                aria-label="Archiving"
+                className="inline-flex shrink-0"
+              >
+                <Icon
+                  name="Spinner"
+                  className="size-3 animate-spin text-amber-600"
+                  aria-hidden
+                />
+              </span>
             ) : null}
             <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground/60">
               {relativeTime(thread.updatedAt, now)}

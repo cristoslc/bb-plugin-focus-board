@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Focus Board — brand icon, gen 4 (catalog idiom)</title>
+<style>
+  :root {
+    --bg: #0a0d12;
+    --panel: #10161d;
+    --card: #141b24;
+    --line: #1e2833;
+    --text: #dbe4ee;
+    --muted: #7b8a99;
+    --amber: #f5b544;
+    --light-panel: #ffffff;
+    --light-line: #e2e2e8;
+    --light-text: #23222a;
+    --light-muted: #6f6e7a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 13px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif;
+    padding: 24px 28px 80px;
+  }
+  h1 { font-size: 15px; font-weight: 650; margin: 8px 0 4px; }
+  h2 { font-size: 13px; font-weight: 650; color: var(--muted); margin: 36px 0 10px;
+       text-transform: uppercase; letter-spacing: .06em; }
+  p.note { color: var(--muted); margin: 4px 0 18px; max-width: 82ch; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 4px;
+         padding: 1px 5px; font-size: 11px; }
+
+  .ladder { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap;
+            border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
+            padding: 18px 16px 14px; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 7px;
+          color: var(--text); min-width: 76px; }
+  .cell svg { display: block; }
+  .cell small { color: var(--muted); font-size: 10px; }
+
+  .light .ladder { background: var(--light-panel); border-color: var(--light-line); }
+  .light .cell { color: var(--light-text); }
+  .light .cell small { color: var(--light-muted); }
+  .duo { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; }
+
+  .minibar { display: inline-flex; align-items: center; gap: 9px; min-width: 200px;
+    padding: 6px 9px; border-radius: 6px; background: #161d26; color: #aab7c4; font-size: 13px; }
+  .minibar .tag { margin-left: auto; color: #4a5665; font-size: 10px; }
+  .miniwall { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 14px; }
+  .light .miniwall .minibar { background: #ecebf2; color: #6f6e7a; }
+
+  .sidebar {
+    width: 300px; border: 1px solid var(--line); border-radius: 10px;
+    background: #0d1117; padding: 10px 8px;
+  }
+  .sidebar .row {
+    display: flex; align-items: center; gap: 10px; padding: 7px 9px;
+    border-radius: 6px; color: #aab7c4; font-size: 13px;
+  }
+  .sidebar .row.on { background: #1a2330; color: #e8eef5; }
+
+  .trigger { display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 9px 5px 6px; border-radius: 7px; font-size: 12.5px; font-weight: 600;
+    background: var(--card); border: 1px solid var(--line); }
+  .trigger .chev { color: var(--muted); font-size: 10px; }
+  .trigger-strip { display: flex; gap: 18px; flex-wrap: wrap;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 14px 16px; }
+
+  /* Catalog icons are alpha-mask marks; render candidates tinted per surface */
+  .tint-d { color: #dbe4ee; } .tint-l { color: #54525e; }
+</style>
+</head>
+<body>
+
+<h1>Focus Board — brand icon, gen 4 (catalog idiom)</h1>
+<p class="note">Start-over. Idioms from bb's plugin catalog (see survey below): <strong>bold 2.0-class
+strokes on a 24 grid, 2–3 forms, no containers, opacity only at large sizes</strong> — bb masks plugin
+icons off alpha coverage, so marks are monochrome <code>currentColor</code>-safe shapes; one asset works
+for dark and light. Mark the thesis ("the card that needs you"), not the screen. Every candidate
+lives or dies at <strong>16px</strong>.</p>
+
+<h2>The catalog's idiom (surveyed)</h2>
+<p class="note">Real marks from bb's plugin cache, at 16px: compact-nav (window+dots), pokemon
+(pokeball, 2.0 stroke — the most small-legible mark in the cache), quick-compose (pencil-in-box),
+quick-chat (bubble+bolt), cascade (the other kanban plugin: artboards of unequal width),
+clean-my-context (solid eraser hybrid). Note how bold-form + few-elements wins.</p>
+<div class="miniwall">
+  <div>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="7" cy="7.5" r="1.25" fill="currentColor"/><circle cx="12" cy="7.5" r="1.25" fill="currentColor"/><circle cx="17" cy="7.5" r="1.25" fill="currentColor"/><path d="M7 13h10M7 17h7" stroke-linecap="round"/></svg>compact-nav</span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h6M15 12h6"/><circle cx="12" cy="12" r="3"/></svg>pokemon<span class="tag">2.0 stroke</span></span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><path d="M17.5 3.5a2.1 2.1 0 0 1 3 3L13 14l-4 1 1-4Z"/></svg>quick-compose</span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12.5a7.5 7.5 0 0 1-11.1 6.6L4 20l1-4.3A7.5 7.5 0 1 1 20 12.5Z"/><path d="M13 8.5 10.5 13h3L11 16.5"/></svg>quick-chat</span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.75" y="3.75" width="8.25" height="7" rx="1.5"/><rect x="13.5" y="3.75" width="7.75" height="7" rx="1.5"/><rect x="2.75" y="13.25" width="6" height="7" rx="1.5"/><rect x="10.75" y="13.25" width="10.5" height="7" rx="1.5"/></svg>cascade<span class="tag">the kanban one</span></span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15.5 3.5 20 8l-9.5 9.5H6L3.5 15 15.5 3.5Z" fill="currentColor"/><path d="M5.5 20h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m12.5 6.5 4.5 4.5" stroke="currentColor" stroke-opacity=".55" stroke-width="1.5"/></svg>clean-my-context</span>
+  </div>
+</div>
+
+<h2>S1 — Bullseye card (recommended)</h2>
+<p class="note">A focus ring around one solid landscape card. Two forms; the thesis mark —
+"this card needs you" — deliberately not a board, because drawing boards is the losing game
+(see cascade: it does board-composition better, and every board silhouette mushes at 16px).
+The amber/gift moment is free: the card turns amber, the ring stays neutral.</p>
+<div class="duo">
+  <div class="ladder">
+    <span class="cell"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg><small>40px</small></span>
+    <span class="cell"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg><small>32px</small></span>
+    <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg><small>24px</small></span>
+    <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg><small>16px</small></span>
+    <span class="cell"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg><small>14px</small></span>
+  </div>
+  <div class="light">
+    <div class="ladder">
+      <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg><small>24px</small></span>
+      <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg><small>16px</small></span>
+      <span class="cell"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg><small>14px</small></span>
+    </div>
+  </div>
+</div>
+
+<h2>S2 — Eye over a card-pupil</h2>
+<p class="note">The board that watches. Distinct silhouette from every kanban mark in the
+catalog; honest risks: the eye is software's preview/have-seen glyph, and it leans
+"surveillance" over "focus."</p>
+<div class="duo">
+  <div class="ladder">
+    <span class="cell"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M2.75 12C5.1 7 8.9 4.9 12 4.9s6.9 2.1 9.25 7.1c-2.35 5-6.15 7.1-9.25 7.1S5.1 17 2.75 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="9.1" y="9.1" width="5.8" height="5.8" rx="1.8" fill="currentColor"/></svg><small>32px</small></span>
+    <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M2.75 12C5.1 7 8.9 4.9 12 4.9s6.9 2.1 9.25 7.1c-2.35 5-6.15 7.1-9.25 7.1S5.1 17 2.75 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="9.1" y="9.1" width="5.8" height="5.8" rx="1.8" fill="currentColor"/></svg><small>24px</small></span>
+    <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M2.75 12C5.1 7 8.9 4.9 12 4.9s6.9 2.1 9.25 7.1c-2.35 5-6.15 7.1-9.25 7.1S5.1 17 2.75 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="9.1" y="9.1" width="5.8" height="5.8" rx="1.8" fill="currentColor"/></svg><small>16px</small></span>
+    <span class="cell"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M2.75 12C5.1 7 8.9 4.9 12 4.9s6.9 2.1 9.25 7.1c-2.35 5-6.15 7.1-9.25 7.1S5.1 17 2.75 12Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><rect x="9.1" y="9.1" width="5.8" height="5.8" rx="1.8" fill="currentColor"/></svg><small>14px</small></span>
+  </div>
+  <div class="light">
+    <div class="ladder">
+      <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M2.75 12C5.1 7 8.9 4.9 12 4.9s6.9 2.1 9.25 7.1c-2.35 5-6.15 7.1-9.25 7.1S5.1 17 2.75 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="9.1" y="9.1" width="5.8" height="5.8" rx="1.8" fill="currentColor"/></svg><small>24px</small></span>
+      <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M2.75 12C5.1 7 8.9 4.9 12 4.9s6.9 2.1 9.25 7.1c-2.35 5-6.15 7.1-9.25 7.1S5.1 17 2.75 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="9.1" y="9.1" width="5.8" height="5.8" rx="1.8" fill="currentColor"/></svg><small>16px</small></span>
+      <span class="cell"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M2.75 12C5.1 7 8.9 4.9 12 4.9s6.9 2.1 9.25 7.1c-2.35 5-6.15 7.1-9.25 7.1S5.1 17 2.75 12Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><rect x="9.1" y="9.1" width="5.8" height="5.8" rx="1.8" fill="currentColor"/></svg><small>14px</small></span>
+    </div>
+  </div>
+</div>
+
+<h2>S3 — Focus brackets around a card</h2>
+<p class="note">Camera-focus idiom: corner brackets framing a solid landscape card —
+"framing what needs you." Universal viewfinder form; thinnest forms of the three.</p>
+<div class="duo">
+  <div class="ladder">
+    <span class="cell"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="7.6" y="9.9" width="8.8" height="4.2" rx="1.5" fill="currentColor" stroke="none"/></svg><small>32px</small></span>
+    <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="7.6" y="9.9" width="8.8" height="4.2" rx="1.5" fill="currentColor" stroke="none"/></svg><small>24px</small></span>
+    <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="7.6" y="9.9" width="8.8" height="4.2" rx="1.5" fill="currentColor" stroke="none"/></svg><small>16px</small></span>
+    <span class="cell"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="7.6" y="9.9" width="8.8" height="4.2" rx="1.5" fill="currentColor" stroke="none"/></svg><small>14px</small></span>
+  </div>
+  <div class="light">
+    <div class="ladder">
+      <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="7.6" y="9.9" width="8.8" height="4.2" rx="1.5" fill="currentColor" stroke="none"/></svg><small>24px</small></span>
+      <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="7.6" y="9.9" width="8.8" height="4.2" rx="1.5" fill="currentColor" stroke="none"/></svg><small>16px</small></span>
+      <span class="cell"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="7.6" y="9.9" width="8.8" height="4.2" rx="1.5" fill="currentColor" stroke="none"/></svg><small>14px</small></span>
+    </div>
+  </div>
+</div>
+
+<h2>Wall — 16px on sidebar surfaces</h2>
+<p class="note">Baselines (plain kanban, Columns2 = today, G3·C container) vs the fresh candidates.
+The baselines' murk — two stroke triptychs — is the failing idiom this generation leaves behind.</p>
+<div class="miniwall">
+  <div>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3.25" y="4.5" width="5" height="15" rx="1.5"/><rect x="9.5" y="4.5" width="5" height="15" rx="1.5"/><rect x="15.75" y="4.5" width="5" height="11" rx="1.5"/></svg>Plain kanban<span class="tag">baseline</span></span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5.5 4.5v15"/><path d="M12 4.5v15"/><path d="M18.5 4.5v15"/></svg>Columns2<span class="tag">today</span></span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path fill="#dbe4ee" fill-rule="evenodd" d="M7.25 2.75H16.75A4.5 4.5 0 0 1 21.25 7.25V16.75A4.5 4.5 0 0 1 16.75 21.25H7.25A4.5 4.5 0 0 1 2.75 16.75V7.25A4.5 4.5 0 0 1 7.25 2.75ZM7.65 7.25H8.65A0.9 0.9 0 0 1 9.55 8.15V13.35A0.9 0.9 0 0 1 8.65 14.25H7.65A0.9 0.9 0 0 1 6.75 13.35V8.15A0.9 0.9 0 0 1 7.65 7.25ZM11.5 5.75H12.5A1 1 0 0 1 13.5 6.75V16.25A1 1 0 0 1 12.5 17.25H11.5A1 1 0 0 1 10.5 16.25V6.75A1 1 0 0 1 11.5 5.75ZM15.35 7.75H16.35A0.9 0.9 0 0 1 17.25 8.65V12.25A0.9 0.9 0 0 1 16.35 13.15H15.35A0.9 0.9 0 0 1 14.45 12.25V8.65A0.9 0.9 0 0 1 15.35 7.75Z"/></svg>G3·C container</span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg>S1 bullseye card</span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M2.75 12C5.1 7 8.9 4.9 12 4.9s6.9 2.1 9.25 7.1c-2.35 5-6.15 7.1-9.25 7.1S5.1 17 2.75 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="9.1" y="9.1" width="5.8" height="5.8" rx="1.8" fill="currentColor"/></svg>S2 eye</span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="7.6" y="9.9" width="8.8" height="4.2" rx="1.5" fill="currentColor" stroke="none"/></svg>S3 brackets</span>
+  </div>
+  <div>
+    <span class="minibar" style="background:#f7f6f3;color:#8a8695;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3.25" y="4.5" width="5" height="15" rx="1.5"/><rect x="9.5" y="4.5" width="5" height="15" rx="1.5"/><rect x="15.75" y="4.5" width="5" height="11" rx="1.5"/></svg>Plain kanban<span class="tag" style="color:#c2bfca;">baseline</span></span>
+    <span class="minibar" style="background:#f7f6f3;color:#8a8695;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5.5 4.5v15"/><path d="M12 4.5v15"/><path d="M18.5 4.5v15"/></svg>Columns2<span class="tag" style="color:#c2bfca;">today</span></span>
+    <span class="minibar" style="background:#f7f6f3;color:#8a8695;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path fill="#2e2d38" fill-rule="evenodd" d="M7.25 2.75H16.75A4.5 4.5 0 0 1 21.25 7.25V16.75A4.5 4.5 0 0 1 16.75 21.25H7.25A4.5 4.5 0 0 1 2.75 16.75V7.25A4.5 4.5 0 0 1 7.25 2.75ZM7.65 7.25H8.65A0.9 0.9 0 0 1 9.55 8.15V13.35A0.9 0.9 0 0 1 8.65 14.25H7.65A0.9 0.9 0 0 1 6.75 13.35V8.15A0.9 0.9 0 0 1 7.65 7.25ZM11.5 5.75H12.5A1 1 0 0 1 13.5 6.75V16.25A1 1 0 0 1 12.5 17.25H11.5A1 1 0 0 1 10.5 16.25V6.75A1 1 0 0 1 11.5 5.75ZM15.35 7.75H16.35A0.9 0.9 0 0 1 17.25 8.65V12.25A0.9 0.9 0 0 1 16.35 13.15H15.35A0.9 0.9 0 0 1 14.45 12.25V8.65A0.9 0.9 0 0 1 15.35 7.75Z"/></svg>G3·C container</span>
+    <span class="minibar" style="background:#f7f6f3;color:#8a8695;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg>S1 bullseye card</span>
+    <span class="minibar" style="background:#f7f6f3;color:#8a8695;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M2.75 12C5.1 7 8.9 4.9 12 4.9s6.9 2.1 9.25 7.1c-2.35 5-6.15 7.1-9.25 7.1S5.1 17 2.75 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="9.1" y="9.1" width="5.8" height="5.8" rx="1.8" fill="currentColor"/></svg>S2 eye</span>
+    <span class="minibar" style="background:#f7f6f3;color:#8a8695;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="7.6" y="9.9" width="8.8" height="4.2" rx="1.5" fill="currentColor" stroke="none"/></svg>S3 brackets</span>
+  </div>
+</div>
+
+<h2>In situ — sidebar rows (dark + light)</h2>
+<p class="note">The plugin entry in a real-looking sidebar at true 16px, next to bb's own
+Zap (host default) and gear (Settings).</p>
+<div class="duo">
+  <div class="sidebar">
+    <div class="row"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3.5 13.9 9 19.5 11 13.9 13 12 18.5 10.1 13 4.5 11 10.1 9z"/></svg><span>Bb Guide</span></div>
+    <div class="row on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg><span><b>Focus Board — S1</b></span></div>
+    <div class="row"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5.5 4.5v15"/><path d="M12 4.5v15"/><path d="M18.5 4.5v15"/></svg><span>Focus Board — Columns2 (today)</span></div>
+    <div class="row"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M2.75 12C5.1 7 8.9 4.9 12 4.9s6.9 2.1 9.25 7.1c-2.35 5-6.15 7.1-9.25 7.1S5.1 17 2.75 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="9.1" y="9.1" width="5.8" height="5.8" rx="1.8" fill="currentColor"/></svg><span>Focus Board — S2 eye</span></div>
+    <div class="row"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="7.6" y="9.9" width="8.8" height="4.2" rx="1.5" fill="currentColor" stroke="none"/></svg><span>Focus Board — S3 brackets</span></div>
+    <div class="row"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M4.9 4.9 6.8 6.8M17.2 17.2 19.1 19.1M19.1 4.9 17.2 6.8M6.8 17.2 4.9 19.1"/></svg><span>Settings</span></div>
+    <div class="row"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20.5 20.5-4-4"/></svg><span>Search threads</span></div>
+  </div>
+  <div class="sidebar" style="background:#f6f7f9;border-color:#e2e2e8;color:#54525e;">
+    <div class="row" style="color:#54525e;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3.5 13.9 9 19.5 11 13.9 13 12 18.5 10.1 13 4.5 11 10.1 9z"/></svg><span>Bb Guide</span></div>
+    <div class="row on" style="background:#e9e2c8;color:#42391c;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg><span><b>Focus Board — S1</b></span></div>
+    <div class="row" style="color:#54525e;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5.5 4.5v15"/><path d="M12 4.5v15"/><path d="M18.5 4.5v15"/></svg><span>Focus Board — Columns2 (today)</span></div>
+    <div class="row" style="color:#54525e;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M2.75 12C5.1 7 8.9 4.9 12 4.9s6.9 2.1 9.25 7.1c-2.35 5-6.15 7.1-9.25 7.1S5.1 17 2.75 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="9.1" y="9.1" width="5.8" height="5.8" rx="1.8" fill="currentColor"/></svg><span>Focus Board — S2 eye</span></div>
+    <div class="row" style="color:#54525e;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="7.6" y="9.9" width="8.8" height="4.2" rx="1.5" fill="currentColor" stroke="none"/></svg><span>Focus Board — S3 brackets</span></div>
+    <div class="row" style="color:#54525e;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M4.9 4.9 6.8 6.8M17.2 17.2 19.1 19.1M19.1 4.9 17.2 6.8M6.8 17.2 4.9 19.1"/></svg><span>Settings</span></div>
+    <div class="row" style="color:#54525e;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20.5 20.5-4-4"/></svg><span>Search threads</span></div>
+  </div>
+</div>
+
+<h2>Amber moment — gear/gift double duty</h2>
+<p class="note">One icon does settings and what's-new: normally the gear (S1 mark at rest);
+when the changelog is unread (or a card needs you) the fill element goes amber and pulses.
+Dark + light, 24/32px.</p>
+<div class="duo">
+  <div class="ladder">
+    <span class="cell"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f5b544" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="#f5b544" stroke="none"/></svg><small>S1 amber 32</small></span>
+    <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5b544" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="#f5b544" stroke="none"/></svg><small>S1 amber 24</small></span>
+    <span class="cell"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f5b544" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="7.6" y="9.9" width="8.8" height="4.2" rx="1.5" fill="#f5b544" stroke="none"/></svg><small>S3 amber 32</small></span>
+  </div>
+  <div class="light">
+    <div class="ladder">
+      <span class="cell"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="#d97706" stroke="none"/></svg><small>S1 amber·light 32</small></span>
+      <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="#d97706" stroke="none"/></svg><small>S1 amber·light 24</small></span>
+    </div>
+  </div>
+</div>
+
+<h2>Toolbar trigger — compact View control, S1 as the mark</h2>
+<p class="note">S1 doubles as the View trigger's icon (icon + current value, no fixed prefix).
+The same artwork as the nav entry, per the earlier one-icon-everywhere decision.</p>
+<div class="trigger-strip">
+  <span class="trigger">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg>
+    Attention <span class="chev">▾</span>
+  </span>
+  <span class="trigger">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg>
+    Status <span class="chev">▾</span>
+  </span>
+  <span class="trigger">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M5.5 4.5v15"/><path d="M12 4.5v15"/><path d="M18.5 4.5v15"/></svg>
+    Attention <span class="chev">▾</span>
+  </span>
+</div>
+
+<h2>S4 — Brackets around the plain kanban</h2>
+<p class="note">Your suggestion, two ways: <strong>B1</strong> keeps the triptych in outline lanes
+(the cascade/pokemon catalog idiom, 2.0); <strong>B2</strong> swaps the lanes for a bold
+<strong>solid skyline</strong> (unequal heights, fill idiom) inside the same brackets — bracket frame
++ skyline at 16px is the edge-budget test. Same corner brackets as S3, lanes full-height center.</p>
+<div class="duo">
+  <div class="ladder">
+    <span class="cell"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.7" y="5" width="1.9" height="14" rx=".95"/><rect x="11.05" y="5" width="1.9" height="14" rx=".95"/><rect x="13.4" y="8.2" width="1.9" height="10.8" rx=".95"/></svg><small>B1 40px</small></span>
+    <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.7" y="5" width="1.9" height="14" rx=".95"/><rect x="11.05" y="5" width="1.9" height="14" rx=".95"/><rect x="13.4" y="8.2" width="1.9" height="10.8" rx=".95"/></svg><small>B1 24px</small></span>
+    <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.7" y="5" width="1.9" height="14" rx=".95"/><rect x="11.05" y="5" width="1.9" height="14" rx=".95"/><rect x="13.4" y="8.2" width="1.9" height="10.8" rx=".95"/></svg><small>B1 16px</small></span>
+    <span class="cell"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.7" y="5" width="1.9" height="14" rx=".95"/><rect x="11.05" y="5" width="1.9" height="14" rx=".95"/><rect x="13.4" y="8.2" width="1.9" height="10.8" rx=".95"/></svg><small>B1 14px</small></span>
+  </div>
+  <div class="light">
+    <div class="ladder">
+      <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.7" y="5" width="1.9" height="14" rx=".95"/><rect x="11.05" y="5" width="1.9" height="14" rx=".95"/><rect x="13.4" y="8.2" width="1.9" height="10.8" rx=".95"/></svg><small>Light 24</small></span>
+      <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.7" y="5" width="1.9" height="14" rx=".95"/><rect x="11.05" y="5" width="1.9" height="14" rx=".95"/><rect x="13.4" y="8.2" width="1.9" height="10.8" rx=".95"/></svg><small>Light 16</small></span>
+    </div>
+  </div>
+</div>
+<div class="duo">
+  <div class="ladder">
+    <span class="cell"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.55" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/><rect x="11.3" y="8.4" width="2.3" height="10.6" rx="1.15" fill="currentColor" stroke="none"/><rect x="14.05" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/></svg><small>B2 40px</small></span>
+    <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.55" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/><rect x="11.3" y="8.4" width="2.3" height="10.6" rx="1.15" fill="currentColor" stroke="none"/><rect x="14.05" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/></svg><small>B2 24px</small></span>
+    <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.55" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/><rect x="11.3" y="8.4" width="2.3" height="10.6" rx="1.15" fill="currentColor" stroke="none"/><rect x="14.05" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/></svg><small>B2 16px</small></span>
+    <span class="cell"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.55" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/><rect x="11.3" y="8.4" width="2.3" height="10.6" rx="1.15" fill="currentColor" stroke="none"/><rect x="14.05" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/></svg><small>B2 14px</small></span>
+  </div>
+  <div class="light">
+    <div class="ladder">
+      <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.55" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/><rect x="11.3" y="8.4" width="2.3" height="10.6" rx="1.15" fill="currentColor" stroke="none"/><rect x="14.05" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/></svg><small>Light 24</small></span>
+      <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.55" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/><rect x="11.3" y="8.4" width="2.3" height="10.6" rx="1.15" fill="currentColor" stroke="none"/><rect x="14.05" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/></svg><small>Light 16</small></span>
+    </div>
+  </div>
+</div>
+
+<h2>Wall 2 — brackets-around-kanban vs the leaders, 16px</h2>
+<div class="miniwall">
+  <div>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg>S1 bullseye<span class="tag">leader</span></span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.7" y="5" width="1.9" height="14" rx=".95"/><rect x="11.05" y="5" width="1.9" height="14" rx=".95"/><rect x="13.4" y="8.2" width="1.9" height="10.8" rx=".95"/></svg>S4·B1 outline triptych</span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.55" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/><rect x="11.3" y="8.4" width="2.3" height="10.6" rx="1.15" fill="currentColor" stroke="none"/><rect x="14.05" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/></svg>S4·B2 skyline</span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="7.6" y="9.9" width="8.8" height="4.2" rx="1.5" fill="currentColor" stroke="none"/></svg>S3 brackets+card</span>
+  </div>
+  <div>
+    <span class="minibar" style="background:#f7f6f3;color:#8a8695;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg>S1 bullseye<span class="tag" style="color:#c2bfca;">leader</span></span>
+    <span class="minibar" style="background:#f7f6f3;color:#8a8695;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.7" y="5" width="1.9" height="14" rx=".95"/><rect x="11.05" y="5" width="1.9" height="14" rx=".95"/><rect x="13.4" y="8.2" width="1.9" height="10.8" rx=".95"/></svg>S4·B1 outline triptych</span>
+    <span class="minibar" style="background:#f7f6f3;color:#8a8695;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="8.55" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/><rect x="11.3" y="8.4" width="2.3" height="10.6" rx="1.15" fill="currentColor" stroke="none"/><rect x="14.05" y="5" width="2.3" height="14" rx="1.15" fill="currentColor" stroke="none"/></svg>S4·B2 skyline</span>
+    <span class="minibar" style="background:#f7f6f3;color:#8a8695;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.5A2 2 0 0 1 5.5 3.5H7"/><path d="M17 3.5h1.5a2 2 0 0 1 2 2V7"/><path d="M20.5 17v1.5a2 2 0 0 1-2 2H17"/><path d="M7 20.5H5.5a2 2 0 0 1-2-2V17"/><rect x="7.6" y="9.9" width="8.8" height="4.2" rx="1.5" fill="currentColor" stroke="none"/></svg>S3 brackets+card</span>
+  </div>
+</div>
+
+<h2>S5 — Eye overlaid on the plain kanban</h2>
+<p class="note">The direct combination: kanban (bold lanes, 2.5 stroke, three lanes) with an eye
+composed from the middle lane — <strong>E1</strong>: the middle lane IS the eye (round pupil on the
+lane, lids suggested by brackets? no—simple: lane + circle pupil overlaid);
+<strong>E2</strong>: full eye outline over a lighter kanban (lids stroke 2, lanes 1.9, pupil solid);
+<strong>E3</strong>: only the pupil + lanes (no eye outline — the middle lane's pupil does the watching).</p>
+<div class="duo">
+  <div class="ladder">
+    <span class="cell"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><path d="M9.25 4.5H14.75V19.5H9.25Z"/><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/></svg><small>E1 40px</small></span>
+    <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><path d="M9.25 4.5H14.75V19.5H9.25Z"/><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/></svg><small>E1 24px</small></span>
+    <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><path d="M9.25 4.5H14.75V19.5H9.25Z"/><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/></svg><small>E1 16px</small></span>
+    <span class="cell"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><path d="M9.25 4.5H14.75V19.5H9.25Z"/><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/></svg><small>E1 14px</small></span>
+  </div>
+  <div class="light">
+    <div class="ladder">
+      <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><path d="M9.25 4.5H14.75V19.5H9.25Z"/><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/></svg><small>Light 24</small></span>
+      <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><path d="M9.25 4.5H14.75V19.5H9.25Z"/><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/></svg><small>Light 16</small></span>
+    </div>
+  </div>
+</div>
+<div class="duo">
+  <div class="ladder">
+    <span class="cell"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".38"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".38"/><path d="M2.9 12C5 7.2 8.7 5.2 12 5.2s7 2 9.1 6.8c-2.1 4.8-5.8 6.8-9.1 6.8s-7-2-9.1-6.8Z"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/></svg><small>E2 40px</small></span>
+    <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".38"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".38"/><path d="M2.9 12C5 7.2 8.7 5.2 12 5.2s7 2 9.1 6.8c-2.1 4.8-5.8 6.8-9.1 6.8s-7-2-9.1-6.8Z"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/></svg><small>E2 24px</small></span>
+    <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".38"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".38"/><path d="M2.9 12C5 7.2 8.7 5.2 12 5.2s7 2 9.1 6.8c-2.1 4.8-5.8 6.8-9.1 6.8s-7-2-9.1-6.8Z"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/></svg><small>E2 16px</small></span>
+    <span class="cell"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".38"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".38"/><path d="M2.9 12C5 7.2 8.7 5.2 12 5.2s7 2 9.1 6.8c-2.1 4.8-5.8 6.8-9.1 6.8s-7-2-9.1-6.8Z"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/></svg><small>E2 14px</small></span>
+  </div>
+  <div class="light">
+    <div class="ladder">
+      <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".38"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".38"/><path d="M2.9 12C5 7.2 8.7 5.2 12 5.2s7 2 9.1 6.8c-2.1 4.8-5.8 6.8-9.1 6.8s-7-2-9.1-6.8Z"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/></svg><small>Light 24</small></span>
+      <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".38"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".38"/><path d="M2.9 12C5 7.2 8.7 5.2 12 5.2s7 2 9.1 6.8c-2.1 4.8-5.8 6.8-9.1 6.8s-7-2-9.1-6.8Z"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/></svg><small>Light 16</small></span>
+    </div>
+  </div>
+</div>
+<div class="duo">
+  <div class="ladder">
+    <span class="cell"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><rect x="9.25" y="4.5" width="5.5" height="15" rx="1.2"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg><small>E3 40px</small></span>
+    <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><rect x="9.25" y="4.5" width="5.5" height="15" rx="1.2"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg><small>E3 24px</small></span>
+    <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><rect x="9.25" y="4.5" width="5.5" height="15" rx="1.2"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg><small>E3 16px</small></span>
+    <span class="cell"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><rect x="9.25" y="4.5" width="5.5" height="15" rx="1.2"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg><small>E3 14px</small></span>
+  </div>
+  <div class="light">
+    <div class="ladder">
+      <span class="cell"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><rect x="9.25" y="4.5" width="5.5" height="15" rx="1.2"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg><small>Light 24</small></span>
+      <span class="cell"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><rect x="9.25" y="4.5" width="5.5" height="15" rx="1.2"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg><small>Light 16</small></span>
+    </div>
+  </div>
+</div>
+
+<h2>Wall 3 — eye overlays vs leaders, 16px</h2>
+<div class="miniwall">
+  <div>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg>S1 bullseye<span class="tag">leader</span></span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><path d="M9.25 4.5H14.75V19.5H9.25Z"/><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/></svg>E1 lane+pupil</span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".38"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".38"/><path d="M2.9 12C5 7.2 8.7 5.2 12 5.2s7 2 9.1 6.8c-2.1 4.8-5.8 6.8-9.1 6.8s-7-2-9.1-6.8Z"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/></svg>E2 eye+kanban</span>
+    <span class="minibar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><rect x="9.25" y="4.5" width="5.5" height="15" rx="1.2"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>E3 lane pupil</span>
+  </div>
+  <div>
+    <span class="minibar" style="background:#f7f6f3;color:#8a8695;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.25"/><rect x="8.9" y="9.95" width="6.2" height="4.1" rx="1.4" fill="currentColor" stroke="none"/></svg>S1 bullseye<span class="tag" style="color:#c2bfca;">leader</span></span>
+    <span class="minibar" style="background:#f7f6f3;color:#8a8695;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><path d="M9.25 4.5H14.75V19.5H9.25Z"/><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/></svg>E1 lane+pupil</span>
+    <span class="minibar" style="background:#f7f6f3;color:#8a8695;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".38"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".38"/><path d="M2.9 12C5 7.2 8.7 5.2 12 5.2s7 2 9.1 6.8c-2.1 4.8-5.8 6.8-9.1 6.8s-7-2-9.1-6.8Z"/><circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/></svg>E2 eye+kanban</span>
+    <span class="minibar" style="background:#f7f6f3;color:#8a8695;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/><path d="M16.75 7.5H20.75V19.5H16.75Z" opacity=".55"/><rect x="9.25" y="4.5" width="5.5" height="15" rx="1.2"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg>E3 lane pupil</span>
+  </div>
+</div>
+
+</body>
+</html>

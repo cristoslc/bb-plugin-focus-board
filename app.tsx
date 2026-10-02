@@ -45,16 +45,23 @@ import {
   paneThreadIdFromSubPath,
 } from "./lib/pane-route";
 import { applyMoveVisible, orderForColumn, type RankStore } from "./lib/rank";
+import { pinStateChangeFromEvent, readStateChangeFromEvent } from "./lib/pin-park";
 import {
-  DEFAULT_DONE_ARCHIVE_DAYS,
-  DEFAULT_IDLE_ARCHIVE_DAYS,
+  DEFAULT_DONE_ARCHIVE_MS,
+  DEFAULT_IDLE_ARCHIVE_MS,
   armSweep,
   confirmSweep,
+  runSweepArchive,
   sweepCandidatesForDoneColumn,
   sweepCandidatesForIdleColumn,
   sweepColumnKind,
+  sweepDestination,
+  toggleSweepSelection,
   type ArmedSweep,
   type DoneAgeSource,
+  type SweepDestination,
+  type SweepNotice,
+  type SweepRunView,
 } from "./lib/sweep";
 import { useSweepClickAway } from "./components/board";
 import {
@@ -72,10 +79,12 @@ import { EmptyState } from "./components/empty-state";
 import { WhatsNewModal } from "./components/whats-new-modal";
 import {
   APP_VERSION,
-  WHATS_NEW,
-  compareVersions,
-  entriesSince,
+  CURRENT_UNRELEASED_FINGERPRINT,
+  hasUnseenWhatsNew,
+  readLastSeenUnreleased,
   readLastSeenVersion,
+  whatsNewEntriesFor,
+  writeLastSeenUnreleased,
   writeLastSeenVersion,
   type WhatsNewEntry,
 } from "./lib/whats-new";
@@ -176,6 +185,11 @@ function BoardPage({ subPath }: { subPath: string }) {
   const escStopsRunningThread = escStopsRunningFromSetting(
     settingValues?.escStopsRunningThread,
   );
+  // Strictly opt-in: only a stored true instruments (debug ships off).
+  // Off for every stable build's default; enabled from the config panel
+  // in a developer environment for the click-jump investigation
+  // (docs/chat-click-jump-2026-09-29.md).
+  const scrollDebug = settingValues?.scrollDebugInstrumentation === true;
 
   // The board's "needs you" state rides the sidebar's `hasPendingInteraction`
   // flag, but the sidebar cache can lag behind an answered question: the
@@ -240,13 +254,18 @@ function BoardPage({ subPath }: { subPath: string }) {
   );
 
   const [doneIds, setDoneIds] = useState<ReadonlySet<string>>(new Set());
+  // Pinned-pin parks: a lane-exit unpin parks the pin (thread metadata via
+  // RPC) so the writes that bring the card back to the operator — Mark Not
+  // Done, Mark Unread — can restore it. Local optimistic state drives the
+  // restore decisions; the server record is the cross-reload truth.
+  const [parkIds, setParkIds] = useState<ReadonlySet<string>>(new Set());
   // Done ages + sweep overrides come from the per-thread plugin-metadata
   // records: doneAt is the ISO stamp, keep the sweep override. The epoch
   // adapter (lib/done-metadata) feeds the sweep's injected `now` contract.
   const [doneExtras, setDoneExtras] = useState<Record<string, { doneAt?: number; keep?: boolean }>>({});
   const [sweepConfig, setSweepConfig] = useState({
-    doneArchiveDays: DEFAULT_DONE_ARCHIVE_DAYS,
-    idleArchiveDays: DEFAULT_IDLE_ARCHIVE_DAYS,
+    doneArchiveMs: DEFAULT_DONE_ARCHIVE_MS,
+    idleArchiveMs: DEFAULT_IDLE_ARCHIVE_MS,
   });
   useEffect(() => {
     rpc.call("done_list").then(
@@ -256,11 +275,15 @@ function BoardPage({ subPath }: { subPath: string }) {
       },
       () => {}, // Done marking is optional state; the board works without it.
     );
+    rpc.call("pin_parks_list").then(
+      (result) => setParkIds(new Set(Object.keys(result.parks))),
+      () => {}, // Parks gate nothing; an unloadable park list loses no pin.
+    );
     rpc.call("sweep_config_get").then(
       (result) =>
         setSweepConfig({
-          doneArchiveDays: result.doneArchiveDays,
-          idleArchiveDays: result.idleArchiveDays,
+          doneArchiveMs: result.doneArchiveMs,
+          idleArchiveMs: result.idleArchiveMs,
         }),
       () => {}, // Settings are optional; defaults apply when unreachable.
     );
@@ -273,11 +296,17 @@ function BoardPage({ subPath }: { subPath: string }) {
       },
       () => {},
     );
+    // Parks refetch on the same signal: another panel (or the CLI path)
+    // may have parked or consumed a pin this panel has not mirrored.
+    rpc.call("pin_parks_list").then(
+      (result) => setParkIds(new Set(Object.keys(result.parks))),
+      () => {},
+    );
     rpc.call("sweep_config_get").then(
       (result) =>
         setSweepConfig({
-          doneArchiveDays: result.doneArchiveDays,
-          idleArchiveDays: result.idleArchiveDays,
+          doneArchiveMs: result.doneArchiveMs,
+          idleArchiveMs: result.idleArchiveMs,
         }),
       () => {},
     );
@@ -447,14 +476,97 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Sweep arm state: at most one armed column at a time. The candidate id
   // list is captured at arm time and frozen — late arrivals never join.
   const [armedSweep, setArmedSweep] = useState<ArmedSweep | null>(null);
+  // A confirmed sweep in flight: sequential archives with per-card progress
+  // (throbber on the active card, highlight kept on the rest). Null when idle.
+  const [sweepRun, setSweepRun] = useState<SweepRunView | null>(null);
+  // Cancel flag for the live run: read by the runner between archives.
+  // A ref, not state — cancelling must not re-render the loop's inputs.
+  const sweepCancelRef = useRef(false);
+  // A finished sweep's summary ("3 failed: ...", or a cancelled run's undo
+  // offer). Null when nothing needs saying.
+  const [sweepNotice, setSweepNotice] = useState<SweepNotice | null>(null);
+  // Stable dismiss: the Board's auto-dismiss timer effect keys on it.
+  const clearSweepNotice = useCallback(() => setSweepNotice(null), []);
   const disarmSweep = useCallback(() => setArmedSweep(null), []);
-  useSweepClickAway(armedSweep !== null, disarmSweep);
-  // What's new: the stored last-seen version vs the running build. A fresh
-  // install (nothing stored) is stamped silently — everything is new, so
-  // nothing counts as new. An upgrade leaves the gift button pulsing until
-  // the modal is opened; opening marks seen, the button itself never leaves.
+  // Click-away and Escape disarm only an idle arm — and only from outside
+  // the armed column: its cards' clicks toggle the sweep selection, so the
+  // hook needs the column id to spare them. A running sweep is not armed
+  // for this hook at all; it cannot be dismissed out from under itself.
+  useSweepClickAway(
+    armedSweep !== null && sweepRun === null ? armedSweep.columnId : null,
+    disarmSweep,
+  );
+  // Sweep mode is manual from here: arming pre-selects the past-threshold
+  // candidates (armSweepFor), then every card click in the column flips its
+  // membership. Live-child parents are refused by the Board itself and
+  // never reach this toggle.
+  const toggleSweepSelectionFor = useCallback((threadId: string) => {
+    setArmedSweep((current) =>
+      current === null ? current : toggleSweepSelection(current, threadId),
+    );
+  }, []);
+  // The sweep's way out: during a run, stop before the next archive; in an
+  // idle armed mode, exit. One X button serves both, labeled per state.
+  const cancelSweepFor = useCallback(() => {
+    if (sweepRun !== null) {
+      sweepCancelRef.current = true;
+      return;
+    }
+    setArmedSweep(null);
+  }, [sweepRun]);
+  // Undo a cancelled run, reversing exactly what it settled: unarchive the
+  // Done arm's ids, unmark Done the idle arm's ids (the thread was never
+  // archived; a done_set(false) returns it to its column). Top-level
+  // selections only, never the server's whole archivedThreadIds subtree,
+  // because a child already archived before the sweep must stay archived.
+  // Sequential like the run itself; failures surface in the banner, the
+  // successes quietly return to their columns.
+  const undoSweepFor = useCallback(
+    (threadIds: readonly string[], destination: SweepDestination) => {
+      void (async () => {
+        const failed: string[] = [];
+        for (const threadId of threadIds) {
+          try {
+            if (destination === "done") {
+              await rpc.call("done_set", { threadId, done: false });
+              setDoneIds((current) => {
+                const next = new Set(current);
+                next.delete(threadId);
+                return next;
+              });
+            } else {
+              await sdk.threads.unarchive({ threadId });
+            }
+          } catch (error) {
+            failed.push(
+              error instanceof Error ? `${threadId} (${error.message})` : threadId,
+            );
+          }
+        }
+        if (failed.length === 0) {
+          setSweepNotice(null);
+          return;
+        }
+        setSweepNotice({
+          message: `Undo restored ${threadIds.length - failed.length} of ${threadIds.length}; ${failed.length} could not be restored: ${failed.join(", ")}.`,
+        });
+      })();
+    },
+    [rpc, sdk],
+  );
+  // What's new: two "seen" models, picked by the running build. A stable
+  // build compares versions: a fresh install (nothing stored) is stamped
+  // silently — everything is new, so nothing counts as new — and an upgrade
+  // pulses until the modal is opened. A prerelease build (dev's
+  // "0.6.0-dev") keys "seen" to the [Unreleased] group's content instead:
+  // its fingerprint is stamped silently on first load, and the button pulses
+  // again whenever the group's bullets change (each merge to dev). Opening
+  // marks seen; the button itself never leaves.
   const [lastSeenVersion, setLastSeenVersion] = useState<string | null>(
     () => readLastSeenVersion(),
+  );
+  const [lastSeenUnreleased, setLastSeenUnreleased] = useState<string | null>(
+    () => readLastSeenUnreleased(),
   );
   useEffect(() => {
     if (lastSeenVersion === null) {
@@ -462,17 +574,26 @@ function BoardPage({ subPath }: { subPath: string }) {
       setLastSeenVersion(APP_VERSION);
     }
   }, [lastSeenVersion]);
-  const whatsNewUnseen =
-    lastSeenVersion !== null && compareVersions(APP_VERSION, lastSeenVersion) > 0;
-  // The delta is captured at load (before opening marks it seen): entries
-  // since the stored version when one is pending, all recent entries when
-  // the quiet button is used.
+  // The unreleased fingerprint is NOT stamped at load: a fresh dev build
+  // pulses its standing group until opened (see hasUnseenWhatsNew); only
+  // opening the modal records it as seen (openWhatsNew).
+  const whatsNewUnseen = hasUnseenWhatsNew({
+    runningVersion: APP_VERSION,
+    lastSeenVersion,
+    unreleasedFingerprint: CURRENT_UNRELEASED_FINGERPRINT,
+    lastSeenUnreleasedFingerprint: lastSeenUnreleased,
+  });
+  // The delta is captured at load (before opening marks it seen): a dev
+  // build leads with its unreleased group; stable builds show entries since
+  // the stored version when one is pending, all recent entries otherwise.
   const whatsNewEntries: readonly WhatsNewEntry[] = useMemo(
-    () => (whatsNewUnseen ? entriesSince(lastSeenVersion) : WHATS_NEW),
+    () => whatsNewEntriesFor(APP_VERSION, whatsNewUnseen, lastSeenVersion),
     [whatsNewUnseen, lastSeenVersion],
   );
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const openWhatsNew = useCallback(() => {
+    writeLastSeenUnreleased(CURRENT_UNRELEASED_FINGERPRINT);
+    setLastSeenUnreleased(CURRENT_UNRELEASED_FINGERPRINT);
     writeLastSeenVersion(APP_VERSION);
     setLastSeenVersion(APP_VERSION);
     setWhatsNewOpen(true);
@@ -618,14 +739,14 @@ function BoardPage({ subPath }: { subPath: string }) {
             column.threads,
             doneIds,
             doneAgeSource,
-            { doneArchiveDays: sweepConfig.doneArchiveDays },
+            { doneArchiveMs: sweepConfig.doneArchiveMs },
             now,
             liveChildParentIds,
           )
         : sweepCandidatesForIdleColumn(
             column.threads,
             doneIds,
-            { idleArchiveDays: sweepConfig.idleArchiveDays, kept: idleKept },
+            { idleArchiveMs: sweepConfig.idleArchiveMs, kept: idleKept },
             now,
             liveChildParentIds,
           );
@@ -635,22 +756,108 @@ function BoardPage({ subPath }: { subPath: string }) {
 
   const armSweepFor = useCallback(
     (columnId: string) => {
+      // A running sweep owns the gesture: no re-arming mid-run.
+      if (sweepRun !== null) return;
       setArmedSweep(armSweep(columnId, sweepCandidatesFor(columnId)));
     },
-    [sweepCandidatesFor],
+    [sweepCandidatesFor, sweepRun],
   );
 
   const confirmSweepFor = useCallback(
     (columnId: string) => {
       // Side effects stay out of the state updater: read the armed snapshot,
-      // clear it, then archive. React may re-invoke updaters; an archive call
+      // clear it, then sweep. React may re-invoke updaters; an action call
       // must never run twice.
       const current = armedSweep;
       if (current === null || current.columnId !== columnId) return;
-      setArmedSweep(null);
-      for (const threadId of confirmSweep(current, true)) actions.archive(threadId);
+      if (sweepRun !== null) return; // one run at a time
+      const threadIds = confirmSweep(current, true);
+      const destination = sweepDestination(columnId) ?? "archive";
+      if (threadIds.length === 0) {
+        setArmedSweep(null);
+        return;
+      }
+      // The idle arm's exit is staged: mark Done (the same recipe as a drop
+      // on the Done column), never archive a quiet-but-not-done thread. The
+      // fresh doneAt stamp starts the Done arm's archive clock, so swept
+      // threads resurface there in doneArchiveDays instead of vanishing.
+      const markDone = async (threadId: string): Promise<void> => {
+        await rpc.call("done_set", { threadId, done: true });
+        setDoneIds((currentDone) => {
+          const next = new Set(currentDone);
+          next.add(threadId);
+          return next;
+        });
+        // Done implies read: the card must not land in Done still claiming
+        // unread (the same rule the drop-on-Done path applies).
+        const thread = threads.find((candidate) => candidate.id === threadId);
+        if (thread !== undefined && thread.isUnread) {
+          void actions.setRead(threadId, true);
+        }
+      };
+      const sweepOne =
+        destination === "done"
+          ? markDone
+          : (threadId: string) => sdk.threads.archive({ threadId });
+      const settledWord =
+        destination === "done" ? "marked Done" : "archived";
+      setSweepNotice(null);
+      setSweepRun({ columnId, total: threadIds.length, done: 0, activeId: null });
+      sweepCancelRef.current = false;
+      void runSweepArchive(threadIds, {
+        // One action at a time, awaited (the runner's contract): the host's
+        // sidebar archive aborts the previous in-flight archive when a new
+        // one starts, so an unawaited loop archives only the last candidate
+        // (observed 2026-10-01: a 4-thread sweep archived one).
+        archive: sweepOne,
+        onActive: (activeId) =>
+          setSweepRun((run) => (run === null ? run : { ...run, activeId })),
+        onSettled: () =>
+          setSweepRun((run) =>
+            run === null ? run : { ...run, done: run.done + 1, activeId: null },
+          ),
+        // Cancel between actions; the one in flight always finishes.
+        shouldContinue: () => !sweepCancelRef.current,
+      }).then((result) => {
+        setSweepRun(null);
+        const failedIds = result.failures.map((failure) => failure.threadId);
+        // A cancelled run keeps whatever was never swept armed (plus any
+        // failures) so it can be inspected, retried, or explicitly exited;
+        // the pill flipping back to "Sweep N" is the cancellation feedback.
+        // Undo is OFFERED, never automatic: cancel means "stop", undo is a
+        // deliberate second click.
+        const stayArmed = result.cancelled
+          ? [...failedIds, ...result.remaining]
+          : failedIds;
+        setArmedSweep(stayArmed.length > 0 ? { columnId, threadIds: stayArmed } : null);
+        if (result.cancelled) {
+          if (result.swept.length === 0 && result.failures.length === 0) return;
+          const failedCopy =
+            result.failures.length > 0
+              ? ` ${result.failures.length} failed: ${result.failures
+                  .map((failure) => failure.message)
+                  .join(", ")}.`
+              : "";
+          setSweepNotice({
+            message: `Sweep stopped. ${result.swept.length} ${settledWord}, ${result.remaining.length} not attempted.${failedCopy}`,
+            undo: { ids: result.swept, destination },
+          });
+          return;
+        }
+        if (result.failures.length === 0) return;
+        // Fail loud: the failed candidates stay armed (highlight) for a
+        // one-click retry, and a banner says what happened.
+        const failedTitles = result.failures.map((failure) => {
+          const match = threads.find((candidate) => candidate.id === failure.threadId);
+          return `"${match?.displayTitle ?? match?.titleFallback ?? failure.threadId}" (${failure.message})`;
+        });
+        const attempted = threadIds.length - result.remaining.length;
+        setSweepNotice({
+          message: `Sweep ${settledWord} ${attempted - result.failures.length} of ${threadIds.length}; ${result.failures.length} failed: ${failedTitles.join(", ")}. The failed cards stay highlighted. Click Sweep to retry.`,
+        });
+      });
     },
-    [actions, armedSweep],
+    [actions, armedSweep, rpc, sdk, sweepRun, threads],
   );
 
   // Live GitHub status for ticket chips. Batched: one RPC per visible-ref
@@ -906,6 +1113,216 @@ function BoardPage({ subPath }: { subPath: string }) {
     [sdk],
   );
 
+  // The Pinned lane-exit rule. A pinned card leaving the Pinned lane (a
+  // cross-column drop or the menu's Mark Done) un-pins as part of the
+  // gesture — column placement derives from the pin, so the pin must go
+  // with it or the card bounces straight back into Pinned on the next
+  // grouping pass. But the un-pinned pin is PARKED, not destroyed: the park
+  // marker rides board-owned thread metadata (lib/pin-park), and the state
+  // writes that bring the card back to the operator — Mark Not Done, Mark
+  // Unread — restore the pin exactly as it stood before the gesture. A
+  // same-lane reorder (including within Pinned) is claimed by the card's
+  // reorder path and never reaches any of these helpers.
+  const parkPin = useCallback(
+    (threadId: string) => {
+      setParkIds((current) => new Set(current).add(threadId));
+      rpc
+        .call("pin_park_set", { threadId, parked: true })
+        .catch(() => {
+          // Roll the optimistic park back when the server rejects: a pin
+          // the server never parked must not be restorable.
+          setParkIds((current) => {
+            const next = new Set(current);
+            next.delete(threadId);
+            return next;
+          });
+        });
+    },
+    [rpc, setParkIds],
+  );
+  const clearParkPin = useCallback(
+    (threadId: string) => {
+      // An explicit board pin write expresses current intent and beats any
+      // parked value, so every Pin/Unpin wipe clears it. No park, no write.
+      if (!parkIds.has(threadId)) return;
+      setParkIds((current) => {
+        const next = new Set(current);
+        next.delete(threadId);
+        return next;
+      });
+      void rpc.call("pin_park_set", { threadId, parked: false }).catch(() => {});
+    },
+    [parkIds, rpc],
+  );
+  const restoreParkedPin = useCallback(
+    (threadId: string) => {
+      if (!parkIds.has(threadId)) return;
+      const thread = threads.find((candidate) => candidate.id === threadId);
+      if (thread === undefined) return;
+      // Already pinned (the operator re-pinned before the restore ran, or a
+      // foreign surface did): the park is stale — consume quietly, never
+      // double-pin.
+      if (thread.isPinned) {
+        clearParkPin(threadId);
+        return;
+      }
+      // The restore itself, then the park dies — one gesture, once.
+      void actions.setPinned(threadId, true);
+      clearParkPin(threadId);
+    },
+    [actions, clearParkPin, parkIds, threads],
+  );
+  const exitPinnedLane = useCallback(
+    (threadId: string) => {
+      const thread = threads.find((candidate) => candidate.id === threadId);
+      if (thread === undefined || !thread.isPinned) return;
+      // The unpin is the gesture; the park is a side record, never a
+      // substitute for removing the pin itself.
+      void actions.setPinned(threadId, false);
+      parkPin(threadId);
+    },
+    [actions, parkPin, threads],
+  );
+
+  // The state-truth reaction to a thread BECOMING unread — fired by our own
+  // gesture paths (card menu, pane toggle, the non-exit drag onto Unread)
+  // and, with the suppression token below, by the native feed when a
+  // foreign surface marks the thread unread. The card's state, not the
+  // actor, decides what happens beside the mark itself:
+  //  - a parked pin returns — the operator is calling the card back up the
+  //    attention ladder, and the pin it had before the exit comes with it;
+  //  - done is undone — unread and done contradict on the card (the same
+  //    ladder rule that lets attention outrank working placement), so a
+  //    Done card the operator marks unread comes back un-done.
+  // Every check is on CURRENT state, so the reaction is idempotent: our
+  // gestures compose it directly for an immediate response, and the feed
+  // echo of the same write re-runs it as a no-op. The one non-idempotent
+  // case is the drag exit itself — marking unread there must not restore
+  // the park the very gesture just wrote — which is what the suppression
+  // token (consumed by the write's own echo) is for.
+  const applyUnreadStateEffects = useCallback(
+    (threadId: string, options: { suppressParkRestore?: boolean } = {}) => {
+      if (options.suppressParkRestore !== true) restoreParkedPin(threadId);
+      if (doneIds.has(threadId)) {
+        setDoneIds((current) => {
+          const next = new Set(current);
+          next.delete(threadId);
+          return next;
+        });
+        rpc.call("done_set", { threadId, done: false }).catch(() => {});
+      }
+    },
+    [doneIds, restoreParkedPin, rpc, setDoneIds],
+  );
+  /**
+   * Suppression token for the drag exit's own read echo: consumed by the
+   * feed's first read-state-changed event for the thread, so the gesture
+   * that parks does not immediately restore its own park. It guards only
+   * the restore — the un-done path cannot fire for a card the exit never
+   * marked done — and any foreign surfaced write racing into the same echo
+   * slot would be consumed with it; the residual races are milliseconds
+   * in scale, bounded by the echo latency rather than a timer.
+   */
+  const unreadEchoSuppressRef = useRef<ReadonlySet<string>>(new Set());
+
+  // Park reconciliation over the same native cross-surface feed
+  // (`sdk.subscribe`, "thread:changed"): EVERY pin write — bb's sidebar,
+  // another panel instance, the CLI — publishes `pin-state-changed`, which
+  // closes the one gap a park marker alone cannot see. A pin that some other
+  // writer takes back supersedes the parked value; without this, a later
+  // Mark Not Done / Mark Unread would resurrect a pin against that intent.
+  // Attribution is not needed, because the rule keys on the RESULTING pin
+  // state read fresh at reconcile time: pinned → supersede (clear the park;
+  // this board's own restore echo lands here too, but its park is consumed
+  // synchronously with its own pin write, so the clear is the same
+  // idempotent no-op either way); unpinned → the lane exit's own unpin
+  // echo — the write that CAUSED the park — leaves the park alone. Threads
+  // without a park are never fetched. A foreign pin+unpin cycle landing
+  // entirely inside one reconcile's fresh-read latency is the residual
+  // race: milliseconds, versus the previous gap's "until whenever".
+  const parkIdsRef = useRef(parkIds);
+  parkIdsRef.current = parkIds;
+  const clearParkPinRef = useRef(clearParkPin);
+  clearParkPinRef.current = clearParkPin;
+  useEffect(() => {
+    let disposed = false;
+    try {
+      const unsubscribe = sdk.subscribe({
+        event: "thread:changed",
+        callback: (event) => {
+          const threadId = pinStateChangeFromEvent(event);
+          if (threadId === null || !parkIdsRef.current.has(threadId)) return;
+          void sdk.threads
+            .get({ threadId })
+            .then(
+              (row) => {
+                if (disposed) return;
+                if (row.pinnedAt !== null) clearParkPinRef.current(threadId);
+              },
+              () => {}, // A thread deleted while parked is a dead park; parks refetch prunes it.
+            );
+        },
+      });
+      return () => {
+        disposed = true;
+        unsubscribe();
+      };
+    } catch {
+      // Embedded contexts (screenshot harness) have no subscribe; parks live
+      // until their own gesture consumes them.
+      return undefined;
+    }
+  }, [sdk]);
+
+  // The surfaced read-write listener: `read-state-changed` reaches here for
+  // a mark-unread landing from any surface — the native thread menu is the
+  // case this exists for, and our own pane/menu gestures' echoes converge
+  // idempotently. The drag exit's own echo is what the suppression token
+  // is for: consumed, never decided-on. The direction is decided by a
+  // fresh read, keyed on the single-writer fact (lib/pin-park): only the
+  // deliberate mark-unread route writes `lastReadAt = null`; ambient
+  // attention-after-last-read unread never publishes and never nulls, so
+  // a park never fires on ordinary thread noise.
+  useEffect(() => {
+    let disposed = false;
+    try {
+      const unsubscribe = sdk.subscribe({
+        event: "thread:changed",
+        callback: (event) => {
+          const threadId = readStateChangeFromEvent(event);
+          if (threadId === null) return;
+          if (unreadEchoSuppressRef.current.has(threadId)) {
+            unreadEchoSuppressRef.current = new Set([
+              ...unreadEchoSuppressRef.current,
+            ].filter((id) => id !== threadId));
+            return;
+          }
+          void sdk.threads
+            .get({ threadId })
+            .then(
+              (row) => {
+                if (disposed) return;
+                // Deliberately marked unread, from any surface: the state
+                // truth applies, whatever the actor.
+                if (row.lastReadAt === null) {
+                  applyUnreadStateEffects(threadId);
+                }
+              },
+              () => {}, // Deleted while processing: nothing to react to.
+            );
+        },
+      });
+      return () => {
+        disposed = true;
+        unsubscribe();
+      };
+    } catch {
+      // Embedded contexts (screenshot harness) have no subscribe; the
+      // gestures carry the effects alone.
+      return undefined;
+    }
+  }, [applyUnreadStateEffects, sdk]);
+
   const menuActionsFor = useCallback(
     (thread: PluginSidebarThread): CardMenuAction[] => {
       const isThreadDone = doneIds.has(thread.id);
@@ -928,13 +1345,30 @@ function BoardPage({ subPath }: { subPath: string }) {
           id: "pin",
           label: thread.isPinned ? "Unpin" : "Pin",
           icon: thread.isPinned ? "PinOff" : "Pin",
-          run: () => void actions.setPinned(thread.id, !thread.isPinned),
+          run: () => {
+            // Live intent beats the parked value: a park this gesture's
+            // write supersedes must not resurrect on a later Mark Not Done
+            // or Mark Unread.
+            clearParkPin(thread.id);
+            void actions.setPinned(thread.id, !thread.isPinned);
+          },
         },
         {
           id: "read",
           label: thread.isUnread ? "Mark Read" : "Mark Unread",
           icon: thread.isUnread ? "MailOpen" : "Mail",
-          run: () => void actions.setRead(thread.id, thread.isUnread),
+          run: () => {
+            // Marking unread carries the state-truth effects (a parked pin
+            // returns; a Done card un-does); marking read leaves the park in
+            // place — a card read now that the operator marks unread later
+            // still finds its pin.
+            if (thread.isUnread) {
+              void actions.setRead(thread.id, true);
+            } else {
+              applyUnreadStateEffects(thread.id);
+              void actions.setRead(thread.id, false);
+            }
+          },
         },
         {
           id: "done",
@@ -948,13 +1382,19 @@ function BoardPage({ subPath }: { subPath: string }) {
               return next;
             });
             rpc.call("done_set", { threadId: thread.id, done: !isThreadDone }).catch(() => {});
-            // The same lane-exit rule the drops compose: a state write that
-            // removes the card from the Pinned lane takes the pin with it.
-            // Marking Done is the only menu action that moves a card out (an
-            // unread card can sit pinned); "Mark Not Done" restores its
-            // membership, not the pin, so it writes nothing here.
-            if (thread.isPinned && !isThreadDone) {
-              void actions.setPinned(thread.id, false);
+            if (!isThreadDone) {
+              // Done implies read: a Done card must not still claim unread
+              // (and a later Mark Not Done hands the card back read).
+              if (thread.isUnread) {
+                void actions.setRead(thread.id, true);
+              }
+              // The same lane-exit rule the drops compose: marking a pinned
+              // card done parks its pin as it leaves the Pinned lane.
+              exitPinnedLane(thread.id);
+            } else {
+              // Mark Not Done is the undo; a parked pin comes back with the
+              // card.
+              restoreParkedPin(thread.id);
             }
           },
         },
@@ -1003,21 +1443,8 @@ function BoardPage({ subPath }: { subPath: string }) {
         },
       ];
     },
-    [actions, doneAgeSource, doneIds, rpc, setDoneExtras, setDoneIds, sdk],
+    [actions, applyUnreadStateEffects, clearParkPin, doneAgeSource, doneIds, exitPinnedLane, restoreParkedPin, rpc, setDoneExtras, setDoneIds, sdk],
   );
-
-  // A drop onto any column other than the one the card sits in is, for a
-  // pinned card, also a move out of the Pinned lane: column placement is
-  // derived from the pin, so the pin must go with the gesture or the card
-  // bounces straight back into Pinned on the next grouping pass. This is
-  // the lane-exit consequence, not target-specific logic — each state-change
-  // handler composes it with its own writes (Unread adds mark-unread, Done
-  // adds done). A same-lane reorder (including within Pinned) is claimed by
-  // the card's reorder path and never reaches these handlers.
-  const dropExitsPinnedLane = (threadId: string) => {
-    const thread = threads.find((candidate) => candidate.id === threadId);
-    if (thread?.isPinned) void actions.setPinned(threadId, false);
-  };
 
   if (status === "loading" && threads.length === 0) {
     return (
@@ -1104,22 +1531,49 @@ function BoardPage({ subPath }: { subPath: string }) {
             onNewTask={openNewThread}
             sweepCandidatesFor={sweepCandidatesFor}
             armedSweep={armedSweep}
+            sweepRun={sweepRun}
+            sweepNotice={sweepNotice}
+            onDismissSweepNotice={clearSweepNotice}
+            onSweepUndo={undoSweepFor}
+            onSweepToggle={toggleSweepSelectionFor}
+            sweepBlockedIds={liveChildParentIds}
             onSweepArm={armSweepFor}
             onSweepDisarm={disarmSweep}
             onSweepConfirm={confirmSweepFor}
+            onSweepCancel={cancelSweepFor}
             onDropDone={(threadId) => {
+              const thread = threads.find((candidate) => candidate.id === threadId);
               const next = new Set(doneIds);
               next.add(threadId);
               setDoneIds(next);
               rpc.call("done_set", { threadId, done: true }).catch(() => {});
-              dropExitsPinnedLane(threadId);
+              // Done implies read: the card must not land in Done still
+              // claiming unread (or come back from Mark Not Done unread).
+              if (thread !== undefined && thread.isUnread) {
+                void actions.setRead(threadId, true);
+              }
+              exitPinnedLane(threadId);
             }}
             onDropUnread={(threadId) => {
               const thread = threads.find((candidate) => candidate.id === threadId);
-              if (thread !== undefined && !thread.isUnread) {
+              if (thread === undefined) return;
+              if (thread.isPinned) {
+                // The exit: unpin + park, and register the echo suppression
+                // BEFORE the gesture's own read write lands — the fresh park
+                // must not be restored by the very gesture that parked it.
+                unreadEchoSuppressRef.current = new Set(
+                  unreadEchoSuppressRef.current,
+                ).add(threadId);
+                exitPinnedLane(threadId);
+              } else {
+                // Marking unread on an unpinned card is the attention
+                // signal: state-truth effects apply — a parked pin rides
+                // the mark back into Pinned, and a Done card un-does.
+                applyUnreadStateEffects(threadId);
+              }
+              if (!thread.isUnread) {
                 void actions.setRead(threadId, false);
               }
-              dropExitsPinnedLane(threadId);
             }}
             // Drop on Pinned pins, unless the card is already pinned: a
             // pinned card's drop is a same-lane reorder (claimed by the card
@@ -1184,12 +1638,20 @@ function BoardPage({ subPath }: { subPath: string }) {
           }}
           onToggleUnread={() => {
             if (openThreadId === null || openThreadActive === null) return;
-            void actions.setRead(openThreadId, openThreadActive.isUnread);
+            if (openThreadActive.isUnread) {
+              void actions.setRead(openThreadId, true);
+            } else {
+              // Same state-truth effects as every other mark-unread path:
+              // a parked pin returns, a Done card un-does.
+              applyUnreadStateEffects(openThreadId);
+              void actions.setRead(openThreadId, false);
+            }
           }}
           onRename={(title) => actions.rename(openThread.id, title)}
           onMaximize={() => navigate.toThread(openThread.id)}
           onClose={closeThreadPane}
           escStopsRunningThread={escStopsRunningThread}
+          scrollDebug={scrollDebug}
         />
       )}
       <WhatsNewModal

@@ -327,19 +327,9 @@ export function buildColumns(
   return columns;
 }
 
-/**
- * While a column's sweep is armed, its captured cards gather at the top so
- * the blast radius reads at a glance. Armed order (newest-first from the
- * eligibility functions) leads; the rest keep their relative order. Unknown
- * ids are ignored and duplicates collapse — every card stays present once.
- */
-export function withSweepGather(
-  threads: readonly PluginSidebarThread[],
-  armedThreadIds: readonly string[],
-): PluginSidebarThread[] {
-  if (armedThreadIds.length === 0) return [...threads];
-  const armedSet = new Set(armedThreadIds);
-  const gathered = threads.filter((thread) => armedSet.has(thread.id));
-  const rest = threads.filter((thread) => !armedSet.has(thread.id));
-  return [...gathered, ...rest];
-}
+// RETIRED 2026-10-01: `withSweepGather` (selected cards sorted to the top
+// while a sweep is armed) is gone. With manual click-to-toggle selection,
+// re-sorting on every toggle made cards jump around the column — deselecting
+// sent a card back down the list mid-gesture, which read as disorienting
+// shuffling. Sweep state never reorders the column now; the highlight and
+// the selected count carry the blast radius.
