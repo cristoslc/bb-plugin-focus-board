@@ -67,6 +67,60 @@ import {
   subscribeExtendedIcons,
 } from "./icon-registry";
 
+/**
+ * The plugin's own brand mark (assets/icon.svg — the "lane + pupil"):
+ * two dim side lanes, the bold middle lane, and the pupil watching what
+ * needs you. Mirrored here as an inline IconSvgElement so in-app
+ * `Icon name="FocusBoard"` renders the exact artwork the manifest's
+ * branding.icon shows (HugeiconsIcon passes opacity through as-is — these
+ * are alpha-mask friendly), independent of the asset pipeline.
+ */
+const FocusBoardLaneEyeIcon: IconSvgElement = [
+  [
+    "path",
+    {
+      d: "M3.25 4.5H7.25V19.5H3.25Z",
+      opacity: "0.55",
+      stroke: "currentColor",
+      strokeWidth: "2.5",
+      strokeLinecap: "round",
+      key: "0",
+    },
+  ],
+  [
+    "path",
+    {
+      d: "M16.75 4.5H20.75V19.5H16.75Z",
+      opacity: "0.55",
+      stroke: "currentColor",
+      strokeWidth: "2.5",
+      strokeLinecap: "round",
+      key: "1",
+    },
+  ],
+  [
+    "path",
+    {
+      d: "M9.25 4.5H14.75V19.5H9.25Z",
+      stroke: "currentColor",
+      strokeWidth: "2.5",
+      strokeLinecap: "round",
+      key: "2",
+    },
+  ],
+  [
+    "circle",
+    {
+      cx: "12",
+      cy: "12",
+      r: "3.4",
+      fill: "currentColor",
+      stroke: "none",
+      key: "3",
+    },
+  ],
+];
+
 const SectionAddStrokeRoundedIcon: IconSvgElement = [
   [
     "path",
@@ -176,6 +230,7 @@ const CORE_ICON_MAP = {
   Download: Download01Icon,
   Edit: Edit02Icon,
   FilterHorizontal: FilterHorizontalIcon,
+  FocusBoard: FocusBoardLaneEyeIcon,
   Gift: GiftIcon,
   Folder: FolderIcon,
   FolderExport: FolderExportIcon,
