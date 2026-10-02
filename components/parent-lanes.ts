@@ -30,11 +30,9 @@ export interface ParentLane {
   /** The lane's parent thread. */
   parent: PluginSidebarThread;
   label: string;
-  /** Total children of the parent (archived included). */
+  /** Visible children of the parent (archived are hidden outright). */
   childCount: number;
   rows: ParentLaneRow[];
-  /** Archived children render under the family lane header (R2/D7). */
-  archivedChildren: PluginSidebarThread[];
 }
 
 /** A project section of family lanes, with the Standalone lane always trailing. */
@@ -143,9 +141,10 @@ function buildRows(
  * Build the parent-lane model: vertical lanes are parent threads, horizontal
  * rows are the pivoted Attention ladder. Only level-1 children render as
  * cards; the parent is a lane header. Done children sit in the bottom Done
- * row; archived children ride as dimmed riders under the family header
- * (R2/D7). Loose (unparented) threads render no lane at all — they stay in
- * the Attention view.
+ * row; archived children are hidden outright — they render nowhere, and a
+ * family whose every child is archived renders no lane at all. Loose
+ * (unparented) threads render no lane either — they stay in the Attention
+ * view.
  *
  * Lane order defaults to family recency: the most recent touch or response
  * across the family (max `updatedAt` over the parent and its non-archived
@@ -166,21 +165,20 @@ export function buildParentLanes(
   const lanes: ParentLane[] = [];
 
   for (const rootId of familyIndex.rootIds) {
+    // The index drops archived members, so an archived child is not a child
+    // here (it renders nowhere) and an archived parent leaves its children
+    // rootless (they stay loose, in the Attention view).
     const allChildren = familyIndex.childrenByParent.get(rootId) ?? [];
     if (allChildren.length === 0) continue;
     const parent = threadById.get(rootId);
-    if (parent === undefined) continue;
-
-    const archivedChildren = allChildren.filter((child) => child.isArchived);
-    const rowCards = allChildren.filter((child) => !child.isArchived);
+    if (parent === undefined || parent.isArchived) continue;
 
     lanes.push({
       id: rootId,
       parent,
       label: parent.displayTitle,
       childCount: allChildren.length,
-      rows: buildRows(rowCards, doneIds, now, doneTimes),
-      archivedChildren: [...archivedChildren].sort(derivedCompare),
+      rows: buildRows(allChildren, doneIds, now, doneTimes),
     });
   }
 

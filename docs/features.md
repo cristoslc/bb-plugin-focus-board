@@ -15,6 +15,9 @@ Fine-grained notes that don't belong in the README's feature list.
 
 ## Nesting
 
+- A family can live in two spaces at once: the active card keeps the live children nested, and the done children render in a second card — the family's projection — in the Done column, dimmed, with the done children nested beneath it. A done parent keeps its single Done card. Each card's child-count chip counts its own space.
+- Archived children are hidden outright: they render nowhere on either board view, child chips count only visible children, and the children of an archived parent render standalone instead of vanishing.
+- A family card that nests more than five child rows caps the list and scrolls inside the card; the collapse chevron still hides the whole list.
 - A column drained to zero by nesting hides until a card returns to it.
 
 ## Escape
