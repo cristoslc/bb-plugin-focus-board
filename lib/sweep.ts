@@ -161,6 +161,8 @@ export interface SweepRunResult {
   cancelled: boolean;
   /** Ids never attempted (all processed when `cancelled` is false). */
   remaining: string[];
+  /** Ids whose archive resolved — the set an undo can restore. */
+  archived: string[];
 }
 
 export interface SweepArchiveCallbacks {
@@ -193,6 +195,7 @@ export async function runSweepArchive(
   callbacks: SweepArchiveCallbacks,
 ): Promise<SweepRunResult> {
   const failures: SweepRunFailure[] = [];
+  const archived: string[] = [];
   for (const [index, threadId] of threadIds.entries()) {
     if (
       index > 0 &&
@@ -203,11 +206,13 @@ export async function runSweepArchive(
         failures,
         cancelled: true,
         remaining: threadIds.slice(index),
+        archived,
       };
     }
     callbacks.onActive?.(threadId);
     try {
       await callbacks.archive(threadId);
+      archived.push(threadId);
     } catch (error) {
       failures.push({
         threadId,
@@ -216,7 +221,7 @@ export async function runSweepArchive(
     }
     callbacks.onSettled?.(threadId);
   }
-  return { failures, cancelled: false, remaining: [] };
+  return { failures, cancelled: false, remaining: [], archived };
 }
 
 /** What the Board renders while a confirmed sweep is running. */
@@ -227,4 +232,16 @@ export interface SweepRunView {
   done: number;
   /** The card being archived right now; the throbber target. */
   activeId: string | null;
+}
+
+/** A finished sweep's on-screen summary. */
+export interface SweepNotice {
+  message: string;
+  /**
+   * Ids the run archived that the operator can restore. Present only after
+   * a cancelled run that actually archived something: undo is offered,
+   * never automatic — cancel means "stop", undo is a deliberate second
+   * click.
+   */
+  undoIds?: readonly string[];
 }

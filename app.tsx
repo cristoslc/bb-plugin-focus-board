@@ -58,6 +58,7 @@ import {
   toggleSweepSelection,
   type ArmedSweep,
   type DoneAgeSource,
+  type SweepNotice,
   type SweepRunView,
 } from "./lib/sweep";
 import { useSweepClickAway } from "./components/board";
@@ -479,9 +480,9 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Cancel flag for the live run: read by the runner between archives.
   // A ref, not state — cancelling must not re-render the loop's inputs.
   const sweepCancelRef = useRef(false);
-  // A finished sweep's failure summary ("archived 2 of 5; 3 failed ...").
-  // Null when the last sweep fully succeeded (or none has run).
-  const [sweepNotice, setSweepNotice] = useState<string | null>(null);
+  // A finished sweep's summary ("3 failed: ...", or a cancelled run's undo
+  // offer). Null when nothing needs saying.
+  const [sweepNotice, setSweepNotice] = useState<SweepNotice | null>(null);
   // Stable dismiss: the Board's auto-dismiss timer effect keys on it.
   const clearSweepNotice = useCallback(() => setSweepNotice(null), []);
   const disarmSweep = useCallback(() => setArmedSweep(null), []);
@@ -511,6 +512,35 @@ function BoardPage({ subPath }: { subPath: string }) {
     }
     setArmedSweep(null);
   }, [sweepRun]);
+  // Undo a cancelled run: unarchive exactly the ids the run archived — the
+  // top-level selections only, never the server's whole archivedThreadIds
+  // subtree, because a child already archived before the sweep must stay
+  // archived. Sequential like the run itself; failures surface in the
+  // banner, the successes quietly return to their columns.
+  const undoSweepFor = useCallback(
+    (threadIds: readonly string[]) => {
+      void (async () => {
+        const failed: string[] = [];
+        for (const threadId of threadIds) {
+          try {
+            await sdk.threads.unarchive({ threadId });
+          } catch (error) {
+            failed.push(
+              error instanceof Error ? `${threadId} (${error.message})` : threadId,
+            );
+          }
+        }
+        if (failed.length === 0) {
+          setSweepNotice(null);
+          return;
+        }
+        setSweepNotice({
+          message: `Undo restored ${threadIds.length - failed.length} of ${threadIds.length}; ${failed.length} could not be restored: ${failed.join(", ")}.`,
+        });
+      })();
+    },
+    [sdk],
+  );
   // What's new: two "seen" models, picked by the running build. A stable
   // build compares versions: a fresh install (nothing stored) is stamped
   // silently — everything is new, so nothing counts as new — and an upgrade
@@ -756,27 +786,37 @@ function BoardPage({ subPath }: { subPath: string }) {
         // A cancelled run keeps whatever was never swept armed (plus any
         // failures) so it can be inspected, retried, or explicitly exited;
         // the pill flipping back to "Sweep N" is the cancellation feedback.
+        // Undo is OFFERED, never automatic: cancel means "stop", undo is a
+        // deliberate second click.
         const stayArmed = result.cancelled
           ? [...failedIds, ...result.remaining]
           : failedIds;
-        if (stayArmed.length === 0) {
-          setArmedSweep(null);
+        setArmedSweep(stayArmed.length > 0 ? { columnId, threadIds: stayArmed } : null);
+        if (result.cancelled) {
+          if (result.archived.length === 0 && result.failures.length === 0) return;
+          const failedCopy =
+            result.failures.length > 0
+              ? ` ${result.failures.length} failed: ${result.failures
+                  .map((failure) => failure.message)
+                  .join(", ")}.`
+              : "";
+          setSweepNotice({
+            message: `Sweep stopped. ${result.archived.length} archived, ${result.remaining.length} not attempted.${failedCopy}`,
+            undoIds: result.archived,
+          });
           return;
         }
+        if (result.failures.length === 0) return;
         // Fail loud: the failed candidates stay armed (highlight) for a
         // one-click retry, and a banner says what happened.
-        setArmedSweep({ columnId, threadIds: stayArmed });
-        if (result.failures.length === 0) return;
         const failedTitles = result.failures.map((failure) => {
           const match = threads.find((candidate) => candidate.id === failure.threadId);
           return `"${match?.displayTitle ?? match?.titleFallback ?? failure.threadId}" (${failure.message})`;
         });
         const attempted = threadIds.length - result.remaining.length;
-        setSweepNotice(
-          result.cancelled
-            ? `Sweep cancelled. ${attempted - result.failures.length} archived, ${result.remaining.length} not attempted; ${result.failures.length} failed: ${failedTitles.join(", ")}.`
-            : `Sweep archived ${attempted - result.failures.length} of ${threadIds.length}; ${result.failures.length} failed: ${failedTitles.join(", ")}. The failed cards stay highlighted. Click Sweep to retry.`,
-        );
+        setSweepNotice({
+          message: `Sweep archived ${attempted - result.failures.length} of ${threadIds.length}; ${result.failures.length} failed: ${failedTitles.join(", ")}. The failed cards stay highlighted. Click Sweep to retry.`,
+        });
       });
     },
     [armedSweep, sdk, sweepRun, threads],
@@ -1456,6 +1496,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             sweepRun={sweepRun}
             sweepNotice={sweepNotice}
             onDismissSweepNotice={clearSweepNotice}
+            onSweepUndo={undoSweepFor}
             onSweepToggle={toggleSweepSelectionFor}
             sweepBlockedIds={liveChildParentIds}
             onSweepArm={armSweepFor}
