@@ -9,7 +9,7 @@
  */
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
-import { SIM_DONE_IDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES } from "./data";
+import { SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES } from "./data";
 import { applyMoveVisible } from "../../lib/rank";
 
 export const registeredNavPanel: {
@@ -37,6 +37,9 @@ export function definePluginApp(setup: (app: unknown) => void): unknown {
         registeredNavPanel.path = config.path;
         registeredNavPanel.component = config.component;
       },
+      // The sidebar-footer gear jumps to the plugin's detail page in the
+      // host; the harness has no host chrome, so it is a no-op stub.
+      sidebarFooterAction: (_config: { id: string; title: string; icon: string; run: (context: unknown) => void }) => {},
     },
   });
   return { id: "screenshot-mock" };
@@ -240,7 +243,9 @@ const uatCalls: { method: string; args?: unknown }[] = [];
 
 const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   uatCalls.push({ method, args });
-  if (method === "done_list") return { doneIds: SIM_DONE_IDS, records: {} };
+  if (method === "done_list") {
+    return { doneIds: SIM_DONE_IDS, records: structuredClone(SIM_DONE_RECORDS) };
+  }
   if (method === "sweep_config_get") {
     return { doneArchiveDays: 7, idleArchiveDays: 30 };
   }
@@ -286,6 +291,15 @@ export function useRpc(): { call: (method: string, args?: unknown) => Promise<un
 
 export function useRealtime(_channel: string, _handler: (payload: unknown) => void): void {
   // No realtime traffic in the harness.
+}
+
+export function useSettings(): {
+  values: Record<string, string | number | boolean> | undefined;
+  isLoading: boolean;
+} {
+  // The harness declares no host settings; consumers keep their unset
+  // defaults (e.g. the thread pane's Escape behavior stays ON).
+  return { values: undefined, isLoading: false };
 }
 
 interface MockMessage {
