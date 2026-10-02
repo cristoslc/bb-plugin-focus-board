@@ -71,6 +71,32 @@ function cardAnchor(fromId: string): HTMLElement {
   return anchor;
 }
 
+describe("the sweep notice can offer an undo", () => {
+  const undoCandidates = ["thr_d1", "thr_d2"].map(doneThread);
+
+  it("a notice with undo ids renders an Undo button that reports them", () => {
+    const onSweepUndo = vi.fn();
+    renderBoard(undoCandidates, {
+      sweepNotice: {
+        message: "Sweep stopped. 2 archived before the cancel.",
+        undoIds: ["thr_d1", "thr_d2"],
+      },
+      onSweepUndo,
+    });
+    const undo = document.querySelector<HTMLButtonElement>("[data-sweep-undo]");
+    expect(undo).not.toBeNull();
+    fireEvent.click(undo!);
+    expect(onSweepUndo).toHaveBeenCalledWith(["thr_d1", "thr_d2"]);
+  });
+
+  it("a notice without undo ids has no Undo button", () => {
+    renderBoard(undoCandidates, {
+      sweepNotice: { message: "Sweep stopped. Nothing archived." },
+    });
+    expect(document.querySelector("[data-sweep-undo]")).toBeNull();
+  });
+});
+
 afterEach(cleanup);
 
 describe("cancelling a sweep", () => {

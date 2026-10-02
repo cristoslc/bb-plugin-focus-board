@@ -39,7 +39,12 @@ describe("runSweepArchive archives every candidate, one at a time", () => {
     releaseFirst();
     const result = await run;
     expect(calls).toEqual(["thr_a", "thr_b", "thr_c"]);
-    expect(result).toEqual({ failures: [], cancelled: false, remaining: [] });
+    expect(result).toEqual({
+      failures: [],
+      cancelled: false,
+      remaining: [],
+      archived: ["thr_a", "thr_b", "thr_c"],
+    });
   });
 
   it("collects a failed archive and still archives the rest", async () => {
@@ -55,6 +60,25 @@ describe("runSweepArchive archives every candidate, one at a time", () => {
     expect(archive).toHaveBeenCalledTimes(3);
     expect(result.failures).toEqual([{ threadId: "thr_bad", message: "host refused" }]);
     expect(result.cancelled).toBe(false);
+  });
+
+  it("reports exactly the ids whose archives resolved", async () => {
+    const result = await runSweepArchive(["thr_ok1", "thr_bad", "thr_ok2"], {
+      archive: (threadId: string) =>
+        threadId === "thr_bad"
+          ? Promise.reject(new Error("host refused"))
+          : Promise.resolve({ ok: true }),
+    });
+    expect(result.archived).toEqual(["thr_ok1", "thr_ok2"]);
+  });
+
+  it("a cancelled run still names the ids it did archive", async () => {
+    const result = await runSweepArchive(["thr_a", "thr_b", "thr_c"], {
+      archive: () => Promise.resolve({ ok: true }),
+      shouldContinue: () => false,
+    });
+    expect(result.archived).toEqual(["thr_a"]);
+    expect(result.remaining).toEqual(["thr_b", "thr_c"]);
   });
 
   it("names non-Error rejections in the failure list", async () => {

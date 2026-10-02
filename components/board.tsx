@@ -2,7 +2,12 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { BoardColumn, GroupBy } from "./grouping";
 import { threadState } from "./grouping";
-import { sweepColumnKind, type ArmedSweep, type SweepRunView } from "../lib/sweep";
+import {
+  sweepColumnKind,
+  type ArmedSweep,
+  type SweepNotice,
+  type SweepRunView,
+} from "../lib/sweep";
 import { ThreadCard } from "./thread-card";
 import type { CardMenuAction } from "./thread-card-menu";
 import { Icon } from "@/components/ui/icon";
@@ -131,8 +136,10 @@ interface BoardProps {
    */
   sweepRun?: SweepRunView | null;
   /** A finished sweep's failure summary; null hides the banner. */
-  sweepNotice?: string | null;
+  sweepNotice?: SweepNotice | null;
   onDismissSweepNotice?: () => void;
+  /** Restores the ids a cancelled run archived (unarchive each). */
+  onSweepUndo?: (threadIds: readonly string[]) => void;
   /**
    * Flips a card's sweep-selection membership. Called only for cards in the
    * armed column; the board refuses ids in `sweepBlockedIds` itself.
@@ -277,6 +284,7 @@ export function Board({
   sweepRun = null,
   sweepNotice = null,
   onDismissSweepNotice,
+  onSweepUndo,
   onSweepToggle,
   sweepBlockedIds,
   onSweepArm,
@@ -389,7 +397,7 @@ export function Board({
   // reorder does: the failed candidates stay highlighted (re-armed), but the
   // highlight alone does not say why the sweep stopped short.
   useEffect(() => {
-    if (sweepNotice === null || sweepNotice === "") return;
+    if (sweepNotice === null) return;
     const timer = setTimeout(
       () => onDismissSweepNotice?.(),
       RANK_ERROR_AUTO_DISMISS_MS,
@@ -509,22 +517,38 @@ export function Board({
           </button>
         </div>
       ) : null}
-      {sweepNotice !== null && sweepNotice !== "" ? (
+      {sweepNotice !== null ? (
         <div
           role="status"
           data-testid="sweep-notice"
           className="mx-3 mb-1 flex items-center justify-between gap-2 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-400"
         >
-          <p className="min-w-0">{sweepNotice}</p>
-          <button
-            type="button"
-            onClick={() => onDismissSweepNotice?.()}
-            aria-label="Dismiss sweep notice"
-            title="Dismiss"
-            className="shrink-0 rounded p-0.5 text-amber-700/70 transition-colors hover:bg-amber-500/10 hover:text-amber-700 focus-visible:outline focus-visible:outline-1 focus-visible:outline-amber-600 dark:text-amber-400/70 dark:hover:text-amber-400"
-          >
-            <Icon name="X" className="size-3" aria-hidden />
-          </button>
+          <p className="min-w-0">{sweepNotice.message}</p>
+          <span className="flex shrink-0 items-center gap-0.5">
+            {sweepNotice.undoIds !== undefined && sweepNotice.undoIds.length > 0 ? (
+              <button
+                type="button"
+                data-sweep-undo=""
+                onClick={() => {
+                  const ids = sweepNotice.undoIds;
+                  if (ids !== undefined) onSweepUndo?.(ids);
+                }}
+                aria-label={`Undo the sweep: restore ${sweepNotice.undoIds.length} archived threads`}
+                className="rounded px-1.5 py-0.5 font-medium underline decoration-dotted underline-offset-2 transition-colors hover:bg-amber-500/10 hover:text-amber-700 focus-visible:outline focus-visible:outline-1 focus-visible:outline-amber-600 dark:hover:text-amber-400"
+              >
+                Undo
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => onDismissSweepNotice?.()}
+              aria-label="Dismiss sweep notice"
+              title="Dismiss"
+              className="rounded p-0.5 text-amber-700/70 transition-colors hover:bg-amber-500/10 hover:text-amber-700 focus-visible:outline focus-visible:outline-1 focus-visible:outline-amber-600 dark:text-amber-400/70 dark:hover:text-amber-400"
+            >
+              <Icon name="X" className="size-3" aria-hidden />
+            </button>
+          </span>
         </div>
       ) : null}
       {sweepRefusal !== null ? (

@@ -30,7 +30,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **A sweep can be cancelled, not only confirmed.** An X beside the sweep
   pill exits sweep mode, and during a run it stops the loop: the archive in
   flight finishes, nothing else is swept, and the untouched cards stay
-  selected for inspection or a retry.
+  selected for inspection or a retry. When the stop landed after threads
+  had already archived, the notice offers an explicit Undo that restores
+  exactly the ids the run archived.
 
 - **Enter applies a sole dropdown search match.** When a filter dropdown's
   search has narrowed the list to one row, pressing Enter selects it and
