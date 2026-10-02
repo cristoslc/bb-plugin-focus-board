@@ -8,7 +8,11 @@ import type { FakePluginHarness } from "@get-bb/plugin-sdk/testing";
 import server from "../server";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const NOW = Date.parse("2026-09-25T12:00:00.000Z");
+// The CLI arm reads the real clock (server.ts injects Date.now() into
+// sweepCliEligible), so stamps must be relative to it. A pinned "now" went
+// stale the day real time crossed the done threshold past the stamp and the
+// suite started failing (2026-10-01).
+const NOW = Date.now();
 
 function iso(msAgo: number): string {
   return new Date(NOW - msAgo).toISOString();
