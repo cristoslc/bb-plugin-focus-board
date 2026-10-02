@@ -18,6 +18,9 @@
 // - Already-archived threads are never eligible; a Done thread below the
 //   Done threshold is not claimed by the idle arm (Done threads are only
 //   Done-arm candidates).
+// - Destinations (server.ts dispatches by reason): a confirmed Done-arm
+//   candidate archives; a confirmed idle-arm candidate is marked Done
+//   (staged exit — operator decision 2026-10-01), so both surfaces agree.
 //
 // `now` is always injected — no Date.now() here — so tests can pin time.
 

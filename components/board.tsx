@@ -2,7 +2,13 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { BoardColumn, GroupBy } from "./grouping";
 import { threadState } from "./grouping";
-import { sweepColumnKind, type ArmedSweep, type SweepRunView } from "../lib/sweep";
+import {
+  sweepColumnKind,
+  sweepDestination,
+  type ArmedSweep,
+  type SweepDestination,
+  type SweepRunView,
+} from "../lib/sweep";
 import { ThreadCard } from "./thread-card";
 import type { CardMenuAction } from "./thread-card-menu";
 import { Icon } from "@/components/ui/icon";
@@ -178,6 +184,7 @@ function SweepButton({
   eligibleCount,
   isArmed,
   run,
+  destination,
   onArm,
   onConfirm,
 }: {
@@ -185,16 +192,23 @@ function SweepButton({
   eligibleCount: number;
   isArmed: boolean;
   run: { done: number; total: number } | null;
+  /** Where a confirmed sweep sends this column's candidates. */
+  destination: SweepDestination;
   onArm: () => void;
   onConfirm: () => void;
 }) {
+  const destinationLabel = destination === "done" ? "Done" : "Archive";
+  const settledWord = destination === "done" ? "marked Done so far" : "archived so far";
+  // The pill's leading glyph names the destination: the Done arm leads to
+  // the archive; the idle arm leads to Done.
+  const destinationIcon = destination === "done" ? "Check" : "Archive";
   if (run !== null) {
     return (
       <button
         type="button"
         data-sweep-button=""
         disabled
-        aria-label={`Sweeping: ${run.done} of ${run.total} threads archived so far`}
+        aria-label={`Sweeping: ${run.done} of ${run.total} threads ${settledWord}`}
         className="inline-flex h-5 shrink-0 cursor-default items-center gap-1 whitespace-nowrap rounded bg-amber-500/90 px-1.5 text-[10px] font-medium text-amber-950"
       >
         <Icon name="Spinner" className="size-3 animate-spin" aria-hidden />
@@ -217,10 +231,10 @@ function SweepButton({
         isArmed
           ? inert
             ? "Confirm sweep: no threads selected; click cards to add them"
-            : `Confirm sweep of ${eligibleCount} threads from this column to Archive; click away to disarm`
+            : `Confirm sweep of ${eligibleCount} threads from this column to ${destinationLabel}; click away to disarm`
           : eligibleCount > 0
             ? `Arm sweep for this column: ${eligibleCount} eligible threads`
-            : "Enter sweep mode: click cards to select them for archiving"
+            : "Enter sweep mode: click cards to select threads to sweep"
       }
       onClick={(event) => {
         event.stopPropagation();
@@ -236,10 +250,10 @@ function SweepButton({
         inert && "cursor-default opacity-60",
       )}
     >
-      <Icon name="Archive" className="size-3" aria-hidden />
+      <Icon name={destinationIcon} className="size-3" aria-hidden />
       {isArmed ? (
         <>
-          Sweep {eligibleCount} → Archive
+          Sweep {eligibleCount} → {destinationLabel}
           <Icon name="CircleQuestion" className="size-3" aria-hidden />
         </>
       ) : (
@@ -652,6 +666,7 @@ export function Board({
                           ? null
                           : { done: runHere.done, total: runHere.total }
                       }
+                      destination={sweepDestination(column.id) ?? "archive"}
                       onArm={() => onSweepArm?.(column.id)}
                       onConfirm={() => onSweepConfirm?.(column.id)}
                     />

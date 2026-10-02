@@ -8,6 +8,7 @@ import {
   sweepCandidatesForDoneColumn,
   sweepCandidatesForIdleColumn,
   sweepColumnKind,
+  sweepDestination,
   toggleSweepSelection,
 } from "../lib/sweep";
 
@@ -396,6 +397,14 @@ describe("column classification", () => {
     expect(sweepColumnKind("idle-earlier")).toBeNull();
     expect(sweepColumnKind("earlier")).toBeNull();
     expect(sweepColumnKind("pinned")).toBeNull();
+  });
+
+  it("sends each arm to its own destination: Done-age archives, long-idle marks Done", () => {
+    expect(sweepDestination("done")).toBe("archive");
+    expect(sweepDestination("idle-awhile")).toBe("done");
+    expect(sweepDestination("awhile")).toBe("done");
+    expect(sweepDestination("working")).toBeNull();
+    expect(sweepDestination("idle-earlier")).toBeNull();
   });
 });
 

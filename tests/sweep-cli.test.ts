@@ -278,30 +278,57 @@ describe("bb focus-board sweep", () => {
   });
 
   describe("--confirm", () => {
-    it("archives exactly the resolved eligible set", async () => {
+    it("archives Done-age threads and marks long-idle threads Done", async () => {
       await load();
       listedThreads = [
-        idleThread("thr_a", 40),
-        idleThread("thr_b", 40),
+        makeThreadResponse({ id: "thr_d1" }),
+        idleThread("thr_i1", 40),
         idleThread("thr_fresh", 2),
       ];
-      const result = await harness.behavior.runCli(["sweep", "--confirm"]);
+      metadata.set("thr_d1", { done: { doneAt: iso(10 * DAY_MS) } });
+      const result = await harness.behavior.runCli(["sweep", "--confirm", "--json"]);
       expect(result.exitCode).toBe(0);
-      expect(archiveArgs().sort()).toEqual(["thr_a", "thr_b"]);
-      expect(result.stdout).toContain("archived thr_a");
-      expect(result.stdout).toContain("archived thr_b");
+      expect(archiveArgs()).toEqual(["thr_d1"]);
+      // The long-idle thread gains a fresh done stamp and is NOT archived.
+      const record = metadata.get("thr_i1")?.done as { doneAt: string };
+      expect(typeof record?.doneAt).toBe("string");
+      expect(Number.isNaN(Date.parse(record.doneAt))).toBe(false);
+      const body = JSON.parse(result.stdout) as {
+        archived: Array<{ id: string }>;
+        markedDone: Array<{ id: string }>;
+        count: number;
+      };
+      expect(body.archived.map((entry) => entry.id)).toEqual(["thr_d1"]);
+      expect(body.markedDone.map((entry) => entry.id)).toEqual(["thr_i1"]);
+      expect(body.count).toBe(2);
     });
 
-    it("archives nothing when nothing is eligible", async () => {
+    it("names each action in the human output", async () => {
+      await load();
+      listedThreads = [
+        makeThreadResponse({ id: "thr_d1" }),
+        idleThread("thr_i1", 40),
+      ];
+      metadata.set("thr_d1", { done: { doneAt: iso(10 * DAY_MS) } });
+      const result = await harness.behavior.runCli(["sweep", "--confirm"]);
+      expect(result.stdout).toContain("archived thr_d1");
+      expect(result.stdout).toContain("marked Done thr_i1");
+    });
+
+    it("does nothing when nothing is eligible", async () => {
       await load();
       listedThreads = [idleThread("thr_fresh", 1)];
       const result = await harness.behavior.runCli(["sweep", "--confirm", "--json"]);
       expect(result.exitCode).toBe(0);
-      expect(JSON.parse(result.stdout)).toEqual({ archived: [], count: 0 });
+      expect(JSON.parse(result.stdout)).toEqual({
+        archived: [],
+        markedDone: [],
+        count: 0,
+      });
       expect(harness.inspection.sdk.callsTo("threads.archive")).toHaveLength(0);
     });
 
-    it("with --ids, archives exactly those ids even if others also qualify", async () => {
+    it("with --ids, sweeps exactly those ids even if others also qualify", async () => {
       await load();
       listedThreads = [
         idleThread("thr_a", 40),
@@ -313,9 +340,14 @@ describe("bb focus-board sweep", () => {
         "--confirm",
         "--ids",
         "thr_b",
+        "--json",
       ]);
       expect(result.exitCode).toBe(0);
-      expect(archiveArgs()).toEqual(["thr_b"]);
+      expect(archiveArgs()).toEqual([]);
+      const body = JSON.parse(result.stdout) as {
+        markedDone: Array<{ id: string }>;
+      };
+      expect(body.markedDone.map((entry) => entry.id)).toEqual(["thr_b"]);
     });
 
     it("with --ids, skips named ids that are already archived", async () => {
@@ -336,14 +368,14 @@ describe("bb focus-board sweep", () => {
         "--json",
       ]);
       expect(result.exitCode).toBe(0);
-      expect(archiveArgs()).toEqual(["thr_a"]);
+      expect(archiveArgs()).toEqual([]);
       const body = JSON.parse(result.stdout) as {
-        archived: Array<{ id: string }>;
+        markedDone: Array<{ id: string }>;
       };
-      expect(body.archived.map((result2) => result2.id)).toEqual(["thr_a"]);
+      expect(body.markedDone.map((entry) => entry.id)).toEqual(["thr_a"]);
     });
 
-    it("never archives keep threads (metadata keep)", async () => {
+    it("never sweeps keep threads (metadata keep)", async () => {
       await load();
       listedThreads = [makeThreadResponse({ id: "thr_keep" })];
       metadata.set("thr_keep", {
@@ -351,11 +383,15 @@ describe("bb focus-board sweep", () => {
       });
       const result = await harness.behavior.runCli(["sweep", "--confirm", "--json"]);
       expect(result.exitCode).toBe(0);
-      expect(JSON.parse(result.stdout)).toEqual({ archived: [], count: 0 });
+      expect(JSON.parse(result.stdout)).toEqual({
+        archived: [],
+        markedDone: [],
+        count: 0,
+      });
       expect(harness.inspection.sdk.callsTo("threads.archive")).toHaveLength(0);
     });
 
-    it("never archives keep threads (KV keep store)", async () => {
+    it("never sweeps keep threads (KV keep store)", async () => {
       await load();
       listedThreads = [idleThread("thr_kvkeep", 90)];
       await harness.behavior.callRpc("sweep_keep_set", {
@@ -364,7 +400,11 @@ describe("bb focus-board sweep", () => {
       });
       const result = await harness.behavior.runCli(["sweep", "--confirm", "--json"]);
       expect(result.exitCode).toBe(0);
-      expect(JSON.parse(result.stdout)).toEqual({ archived: [], count: 0 });
+      expect(JSON.parse(result.stdout)).toEqual({
+        archived: [],
+        markedDone: [],
+        count: 0,
+      });
       expect(harness.inspection.sdk.callsTo("threads.archive")).toHaveLength(0);
     });
 

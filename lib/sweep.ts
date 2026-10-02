@@ -1,7 +1,11 @@
 /**
  * Sweep eligibility and arm-then-confirm semantics — pure logic, `now`
- * injected. The board's sweep is "archive old Done + long-idle", modeled on
- * the two-click arm-then-confirm pattern from docs/musings/2026-09-25-sweep.md.
+ * injected. The sweep is a staged exit: Done-age threads archive; long-idle
+ * threads are marked Done (they age into the archive through the Done arm).
+ * Modeled on the two-click arm-then-confirm pattern from
+ * docs/musings/2026-09-25-sweep.md; the idle arm's Done destination is the
+ * operator's 2026-10-01 decision, reversing the musing's archive-everything
+ * draft.
  */
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { threadState } from "../components/grouping";
@@ -99,6 +103,23 @@ export function sweepColumnKind(columnId: string): SweepColumnKind | null {
   if (columnId === "done") return "done";
   if (columnId === "idle-awhile" || columnId === "awhile") return "idle-bucket";
   return null;
+}
+
+/** What a confirmed sweep does to its candidates. */
+export type SweepDestination = "archive" | "done";
+
+/**
+ * Where each sweepable column's candidates go on confirm: Done-age threads
+ * archive (their exit is already staged); long-idle threads are marked Done
+ * — a quiet thread should read as "you decided it's done", not vanish into
+ * the archive. The Done stamp starts the 7-day archive clock, so a swept
+ * idle thread resurfaces in the Done arm instead of disappearing. Null for
+ * columns that cannot sweep.
+ */
+export function sweepDestination(columnId: string): SweepDestination | null {
+  const kind = sweepColumnKind(columnId);
+  if (kind === null) return null;
+  return kind === "done" ? "archive" : "done";
 }
 
 export interface ArmedSweep {
