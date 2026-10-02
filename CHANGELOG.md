@@ -26,6 +26,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Confirming a sweep now archives every highlighted candidate, not just
+  one.** bb's sidebar archive aborts the previous in-flight archive when a
+  new one starts, so the sweep's confirm loop was losing all but the last
+  candidate; each archive is now awaited in turn, the running sweep shows a
+  throbber on the card being archived, keeps the highlight on the rest, and
+  reads "Sweeping N of M" on its button until the loop finishes. A failed
+  archive keeps its card highlighted for a one-click retry and says so in a
+  dismissible banner.
+
 - **The pane's click-jump guard no longer cements an upward displacement.**
   It now does not arm for 3 seconds after any single scroll move of
   ≥300px, so the host shell's own corrections land undisturbed (shipped in

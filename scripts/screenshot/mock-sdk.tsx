@@ -199,6 +199,13 @@ const mockSdk = {
       return { environmentId: environment?.id ?? null };
     },
     unarchive: async () => {},
+    // The awaited archive the sweep runner uses; the mock drops the thread
+    // from the simulated sidebar so the harness sweep visibly empties.
+    archive: async ({ threadId }: { threadId: string }) => {
+      simThreads = simThreads.filter((candidate) => candidate.id !== threadId);
+      mockRender();
+      return { ok: true as const, archivedThreadIds: [threadId] };
+    },
     interactions: {
       list: async () => [],
       respond: async () => ({}),
