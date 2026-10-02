@@ -14,6 +14,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Sweep mode is now manual: enter it any time and click cards to choose
+  exactly what gets archived.** The sweep button stays visible on the Done
+  and A-while-ago columns even when nothing is past the threshold; entering
+  sweep mode pre-selects the past-threshold threads, clicking a card
+  toggles it in or out (clicking away or Escape exits), and a thread that
+  still has live children refuses with an on-screen note instead of
+  silently doing nothing.
+
 - **Enter applies a sole dropdown search match.** When a filter dropdown's
   search has narrowed the list to one row, pressing Enter selects it and
   closes the menu like clicking the row; with more matches or none, Enter

@@ -117,9 +117,9 @@ interface BoardProps {
   menuActionsFor: (thread: PluginSidebarThread) => readonly CardMenuAction[];
   /**
    * Sweep wiring: eligibility per column (empty when nothing is eligible),
-   * and the armed lifecycle. While armed, `armedSweep`'s FROZEN id list is
-   * the display and confirm truth; `sweepCandidatesFor` is consulted only at
-   * arm time by the caller.
+   * and the armed lifecycle. Arming pre-selects the past-threshold
+   * candidates; from there `armedSweep`'s list is LIVE — card clicks toggle
+   * membership, and the list is what displays, gathers, and confirms.
    */
   sweepCandidatesFor?: (columnId: string) => readonly string[];
   armedSweep?: ArmedSweep | null;
@@ -133,6 +133,17 @@ interface BoardProps {
   /** A finished sweep's failure summary; null hides the banner. */
   sweepNotice?: string | null;
   onDismissSweepNotice?: () => void;
+  /**
+   * Flips a card's sweep-selection membership. Called only for cards in the
+   * armed column; the board refuses ids in `sweepBlockedIds` itself.
+   */
+  onSweepToggle?: (threadId: string) => void;
+  /**
+   * Threads that may never join a sweep (live-child parents, the
+   * sweep-family contract). In sweep mode their cards neither select nor
+   * carry the selectable ring, and clicking one refuses on screen.
+   */
+  sweepBlockedIds?: ReadonlySet<string>;
   onSweepArm?: (columnId: string) => void;
   onSweepDisarm?: () => void;
   onSweepConfirm?: (columnId: string) => void;
@@ -164,6 +175,7 @@ function SweepButton({
   onArm,
   onConfirm,
 }: {
+  /** Threads past the threshold — the pre-selection a new sweep mode starts with. */
   eligibleCount: number;
   isArmed: boolean;
   run: { done: number; total: number } | null;
@@ -184,16 +196,25 @@ function SweepButton({
       </button>
     );
   }
-  if (eligibleCount === 0 && !isArmed) return null;
+  // Always present on a sweepable column: sweep mode is enterable on
+  // demand, even when nothing is past the threshold yet. With no
+  // pre-selection the button is icon-only; armed, it confirms whatever the
+  // operator's live selection holds, and an empty selection cannot confirm.
+  const inert = isArmed && eligibleCount === 0;
   return (
     <button
       type="button"
       data-sweep-button=""
       aria-pressed={isArmed}
+      disabled={inert}
       aria-label={
         isArmed
-          ? `Confirm sweep of ${eligibleCount} threads from this column to Archive; click away to disarm`
-          : `Arm sweep for this column: ${eligibleCount} eligible threads`
+          ? inert
+            ? "Confirm sweep: no threads selected; click cards to add them"
+            : `Confirm sweep of ${eligibleCount} threads from this column to Archive; click away to disarm`
+          : eligibleCount > 0
+            ? `Arm sweep for this column: ${eligibleCount} eligible threads`
+            : "Enter sweep mode: click cards to select them for archiving"
       }
       onClick={(event) => {
         event.stopPropagation();
@@ -206,6 +227,7 @@ function SweepButton({
         isArmed
           ? "bg-amber-500/90 text-amber-950 hover:bg-amber-500"
           : "text-muted-foreground/70 hover:bg-accent/60 hover:text-foreground",
+        inert && "cursor-default opacity-60",
       )}
     >
       <Icon name="Archive" className="size-3" aria-hidden />
@@ -215,7 +237,10 @@ function SweepButton({
           <Icon name="CircleQuestion" className="size-3" aria-hidden />
         </>
       ) : (
-        <>Sweep {eligibleCount}</>
+        <>
+          Sweep
+          {eligibleCount > 0 ? ` ${eligibleCount}` : ""}
+        </>
       )}
     </button>
   );
@@ -246,6 +271,8 @@ export function Board({
   sweepRun = null,
   sweepNotice = null,
   onDismissSweepNotice,
+  onSweepToggle,
+  sweepBlockedIds,
   onSweepArm,
   onSweepDisarm,
   onSweepConfirm,
@@ -362,6 +389,17 @@ export function Board({
     );
     return () => clearTimeout(timer);
   }, [sweepNotice, onDismissSweepNotice]);
+
+  // A sweep-mode click on a thread that may not join a sweep (live-child
+  // parent) refuses on screen: a click that silently does nothing reads as
+  // a board ignoring the operator, the exact failure this board shipped
+  // twice in the drag path.
+  const [sweepRefusal, setSweepRefusal] = useState<string | null>(null);
+  useEffect(() => {
+    if (sweepRefusal === null) return;
+    const timer = setTimeout(() => setSweepRefusal(null), RANK_ERROR_AUTO_DISMISS_MS);
+    return () => clearTimeout(timer);
+  }, [sweepRefusal]);
 
   // The card being dragged, captured at dragstart. Held here rather than read
   // from the payload because the payload is unreadable until the drop, and
@@ -482,6 +520,24 @@ export function Board({
           </button>
         </div>
       ) : null}
+      {sweepRefusal !== null ? (
+        <div
+          role="status"
+          data-testid="sweep-refusal"
+          className="mx-3 mb-1 flex items-center justify-between gap-2 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-[11px] text-destructive"
+        >
+          <p className="min-w-0">{sweepRefusal}</p>
+          <button
+            type="button"
+            onClick={() => setSweepRefusal(null)}
+            aria-label="Dismiss sweep refusal"
+            title="Dismiss"
+            className="shrink-0 rounded p-0.5 text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline focus-visible:outline-1 focus-visible:outline-destructive"
+          >
+            <Icon name="X" className="size-3" aria-hidden />
+          </button>
+        </div>
+      ) : null}
       <div className="flex h-full min-h-0 items-stretch gap-4">
         {columns.map((column) => {
           const dropHandler = dropHandlerFor(column.id);
@@ -491,9 +547,9 @@ export function Board({
           // A run is bound to its column: only that column's button shows
           // progress, and only its cards can carry the throbber.
           const runHere = sweepRun !== null && sweepRun.columnId === column.id ? sweepRun : null;
-          // While armed, the FROZEN list drives count, gather, and highlight
-          // — not the live eligible set. Before arming, the live eligible
-          // set is what the button proposes.
+          // While armed, the LIVE selection drives count, gather, and
+          // highlight — card clicks toggle it via onSweepToggle. Before
+          // arming, the past-threshold set is what the button proposes.
           const eligible = isArmed
             ? (armedSweep?.threadIds ?? [])
             : sweepActive && sweepKind !== null
@@ -779,6 +835,21 @@ export function Board({
                           isDone={doneIds.has(thread.id)}
                           isSweepHighlighted={armedSet?.has(thread.id) ?? false}
                           isSweeping={runHere !== null && runHere.activeId === thread.id}
+                          isSweepSelecting={isArmed}
+                          isSweepSelectable={
+                            isArmed &&
+                            !(armedSet?.has(thread.id) ?? false) &&
+                            !(sweepBlockedIds?.has(thread.id) ?? false)
+                          }
+                          onSweepToggle={(toggledId) => {
+                            if (sweepBlockedIds?.has(toggledId) ?? false) {
+                              setSweepRefusal(
+                                `"${thread.displayTitle}" still has live children, so it cannot join a sweep.`,
+                              );
+                              return;
+                            }
+                            onSweepToggle?.(toggledId);
+                          }}
                           projectName={projectNameFor(thread.projectId)}
                           repoHrefBase={repoBaseFor(thread.projectId) ?? undefined}
                           statusFor={statusFor}
@@ -827,13 +898,41 @@ export function Board({
   );
 }
 
-/** Disarm an armed sweep when the operator clicks anywhere else. */
-export function useSweepClickAway(armed: boolean, onDisarm: () => void): void {
+/**
+ * jsdom (the test environment) does not implement `CSS.escape`; real
+ * browsers do. Column ids are code constants (done, awhile), so the
+ * fallback is exact for them and safe for anything else.
+ */
+function cssEscape(value: string): string {
+  return typeof CSS !== "undefined" && typeof CSS.escape === "function"
+    ? CSS.escape(value)
+    : value.replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+}
+
+/**
+ * Disarm an armed sweep when the operator clicks anywhere else. Clicks on
+ * cards inside the armed column do NOT disarm: in sweep mode those clicks
+ * toggle the card's selection. The sweep button, the armed column's cards,
+ * and Escape are the only surfaces that keep the mode alive; anything else
+ * (empty board area, another column, a header) ends it.
+ */
+export function useSweepClickAway(
+  armedColumnId: string | null,
+  onDisarm: () => void,
+): void {
   useEffect(() => {
-    if (!armed) return;
+    if (armedColumnId === null) return;
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target;
-      if (target instanceof Element && target.closest("[data-sweep-button]")) return;
+      if (!(target instanceof Element)) return;
+      if (target.closest("[data-sweep-button]")) return;
+      if (
+        target.closest(
+          `[data-column-id="${cssEscape(armedColumnId)}"] [data-thread-card]`,
+        )
+      ) {
+        return;
+      }
       onDisarm();
     };
     const onKeyDown = (event: KeyboardEvent) => {
@@ -845,5 +944,5 @@ export function useSweepClickAway(armed: boolean, onDisarm: () => void): void {
       document.removeEventListener("pointerdown", onPointerDown, { capture: true });
       document.removeEventListener("keydown", onKeyDown, { capture: true });
     };
-  }, [armed, onDisarm]);
+  }, [armedColumnId, onDisarm]);
 }

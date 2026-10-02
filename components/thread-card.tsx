@@ -49,6 +49,18 @@ interface ThreadCardProps {
    * not a frozen board.
    */
   isSweeping?: boolean;
+  /**
+   * Sweep mode is active in this card's column: clicks toggle the card in
+   * or out of the sweep selection instead of opening the pane.
+   */
+  isSweepSelecting?: boolean;
+  /**
+   * In sweep mode but not selected: a quieter ring marks the card as
+   * toggleable, distinct from the selected highlight.
+   */
+  isSweepSelectable?: boolean;
+  /** Flips the card's sweep-selection membership. Sweep mode only. */
+  onSweepToggle?: (threadId: string) => void;
   projectName: string;
   menuActions?: readonly CardMenuAction[];
   /** Children that render as nested rows beneath this card, in display order. */
@@ -209,6 +221,9 @@ export function ThreadCard({
   doneIds,
   isSweepHighlighted = false,
   isSweeping = false,
+  isSweepSelecting = false,
+  isSweepSelectable = false,
+  onSweepToggle,
   projectName,
   repoHrefBase,
   statusFor,
@@ -274,6 +289,7 @@ export function ThreadCard({
         dimmed && "opacity-50",
         isSweepHighlighted &&
           "ring-2 ring-amber-500 bg-amber-500/10 saturate-100 opacity-100",
+        isSweepSelectable && "ring-1 ring-amber-500/40",
       )}
     >
       <span
@@ -312,6 +328,14 @@ export function ThreadCard({
           }}
           onDragEnd={() => onRankDragStart?.(null)}
           onClick={(event) => {
+            // Sweep mode is modal: the click curates the selection, it never
+            // navigates. Even modifier-clicks toggle — the mode owns the
+            // gesture until click-away or Escape ends it.
+            if (isSweepSelecting) {
+              event.preventDefault();
+              onSweepToggle?.(thread.id);
+              return;
+            }
             // Let modified clicks (middle-click handled natively, cmd/ctrl new
             // window) pass through; the host also routes plain clicks on href.
             if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
