@@ -122,3 +122,57 @@ export function armSweep(columnId: string, candidateIds: readonly string[]): Arm
 export function confirmSweep(armed: ArmedSweep, confirmed: boolean): string[] {
   return confirmed ? [...armed.threadIds] : [];
 }
+
+export interface SweepRunFailure {
+  threadId: string;
+  message: string;
+}
+
+export interface SweepArchiveCallbacks {
+  /** Archives one thread. The runner awaits it before the next. */
+  archive: (threadId: string) => Promise<unknown>;
+  /** Fired before each archive starts: the throbber target. */
+  onActive?: (threadId: string) => void;
+  /** Fired after each archive settles (success or failure). */
+  onSettled?: (threadId: string) => void;
+}
+
+/**
+ * Archive every captured candidate, strictly one at a time, collecting
+ * failures instead of stopping.
+ *
+ * Sequential is a hard requirement, not a style choice: the host's sidebar
+ * archive action aborts the previous in-flight archive when a new one starts
+ * (a single-slot design for one row at a time), so firing the loop without
+ * awaiting archives only the last candidate. Each await here gives the
+ * previous archive the whole window to finish.
+ */
+export async function runSweepArchive(
+  threadIds: readonly string[],
+  callbacks: SweepArchiveCallbacks,
+): Promise<SweepRunFailure[]> {
+  const failures: SweepRunFailure[] = [];
+  for (const threadId of threadIds) {
+    callbacks.onActive?.(threadId);
+    try {
+      await callbacks.archive(threadId);
+    } catch (error) {
+      failures.push({
+        threadId,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+    callbacks.onSettled?.(threadId);
+  }
+  return failures;
+}
+
+/** What the Board renders while a confirmed sweep is running. */
+export interface SweepRunView {
+  columnId: string;
+  total: number;
+  /** Archives settled so far, successful or not. */
+  done: number;
+  /** The card being archived right now; the throbber target. */
+  activeId: string | null;
+}

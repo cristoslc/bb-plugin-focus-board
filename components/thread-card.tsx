@@ -43,6 +43,12 @@ interface ThreadCardProps {
   doneIds?: ReadonlySet<string>;
   /** Highlighted because a sweep armed in this column captured the card. */
   isSweepHighlighted?: boolean;
+  /**
+   * A confirmed sweep is archiving THIS card right now: a throbber on the
+   * card while the highlight stays on, so a slow loop reads as progress,
+   * not a frozen board.
+   */
+  isSweeping?: boolean;
   projectName: string;
   menuActions?: readonly CardMenuAction[];
   /** Children that render as nested rows beneath this card, in display order. */
@@ -202,6 +208,7 @@ export function ThreadCard({
   isDone,
   doneIds,
   isSweepHighlighted = false,
+  isSweeping = false,
   projectName,
   repoHrefBase,
   statusFor,
@@ -255,6 +262,8 @@ export function ThreadCard({
   const card = (
     <div
       data-thread-card={thread.id}
+      data-sweep-highlighted={isSweepHighlighted ? "" : undefined}
+      data-sweep-active={isSweeping ? "" : undefined}
       className={cn(
         "relative overflow-hidden rounded-md bg-card transition-colors",
         "hover:bg-accent/50",
@@ -329,6 +338,20 @@ export function ThreadCard({
                     : "A subthread needs your input"
                 }
               />
+            ) : null}
+            {isSweeping ? (
+              <span
+                data-sweep-spinner
+                title="Archiving…"
+                aria-label="Archiving"
+                className="inline-flex shrink-0"
+              >
+                <Icon
+                  name="Spinner"
+                  className="size-3 animate-spin text-amber-600"
+                  aria-hidden
+                />
+              </span>
             ) : null}
             <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground/60">
               {relativeTime(thread.updatedAt, now)}

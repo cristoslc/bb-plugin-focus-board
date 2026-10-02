@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { BoardColumn, GroupBy } from "./grouping";
 import { threadState, withSweepGather } from "./grouping";
-import { sweepColumnKind, type ArmedSweep } from "../lib/sweep";
+import { sweepColumnKind, type ArmedSweep, type SweepRunView } from "../lib/sweep";
 import { ThreadCard } from "./thread-card";
 import type { CardMenuAction } from "./thread-card-menu";
 import { Icon } from "@/components/ui/icon";
@@ -123,6 +123,16 @@ interface BoardProps {
    */
   sweepCandidatesFor?: (columnId: string) => readonly string[];
   armedSweep?: ArmedSweep | null;
+  /**
+   * A confirmed sweep in progress (null when idle). While it runs for a
+   * column, that column's remaining candidates keep the armed highlight, the
+   * active card carries the throbber, and the sweep button shows progress
+   * and refuses clicks.
+   */
+  sweepRun?: SweepRunView | null;
+  /** A finished sweep's failure summary; null hides the banner. */
+  sweepNotice?: string | null;
+  onDismissSweepNotice?: () => void;
   onSweepArm?: (columnId: string) => void;
   onSweepDisarm?: () => void;
   onSweepConfirm?: (columnId: string) => void;
@@ -150,14 +160,30 @@ function StateDot({ thread }: { thread: PluginSidebarThread }) {
 function SweepButton({
   eligibleCount,
   isArmed,
+  run,
   onArm,
   onConfirm,
 }: {
   eligibleCount: number;
   isArmed: boolean;
+  run: { done: number; total: number } | null;
   onArm: () => void;
   onConfirm: () => void;
 }) {
+  if (run !== null) {
+    return (
+      <button
+        type="button"
+        data-sweep-button=""
+        disabled
+        aria-label={`Sweeping: ${run.done} of ${run.total} threads archived so far`}
+        className="inline-flex h-5 cursor-default items-center gap-1 rounded bg-amber-500/90 px-1.5 text-[10px] font-medium text-amber-950"
+      >
+        <Icon name="Spinner" className="size-3 animate-spin" aria-hidden />
+        Sweeping {run.done} of {run.total}
+      </button>
+    );
+  }
   if (eligibleCount === 0 && !isArmed) return null;
   return (
     <button
@@ -217,6 +243,9 @@ export function Board({
   menuActionsFor,
   sweepCandidatesFor,
   armedSweep = null,
+  sweepRun = null,
+  sweepNotice = null,
+  onDismissSweepNotice,
   onSweepArm,
   onSweepDisarm,
   onSweepConfirm,
@@ -322,6 +351,18 @@ export function Board({
     return () => clearTimeout(timer);
   }, [rankError, rankErrorSeq]);
 
+  // A sweep that partially failed says so on screen, the same way a refused
+  // reorder does: the failed candidates stay highlighted (re-armed), but the
+  // highlight alone does not say why the sweep stopped short.
+  useEffect(() => {
+    if (sweepNotice === null || sweepNotice === "") return;
+    const timer = setTimeout(
+      () => onDismissSweepNotice?.(),
+      RANK_ERROR_AUTO_DISMISS_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [sweepNotice, onDismissSweepNotice]);
+
   // The card being dragged, captured at dragstart. Held here rather than read
   // from the payload because the payload is unreadable until the drop, and
   // dragover needs to know this to avoid drawing an insertion line on the
@@ -423,12 +464,33 @@ export function Board({
           </button>
         </div>
       ) : null}
+      {sweepNotice !== null && sweepNotice !== "" ? (
+        <div
+          role="status"
+          data-testid="sweep-notice"
+          className="mx-3 mb-1 flex items-center justify-between gap-2 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-400"
+        >
+          <p className="min-w-0">{sweepNotice}</p>
+          <button
+            type="button"
+            onClick={() => onDismissSweepNotice?.()}
+            aria-label="Dismiss sweep notice"
+            title="Dismiss"
+            className="shrink-0 rounded p-0.5 text-amber-700/70 transition-colors hover:bg-amber-500/10 hover:text-amber-700 focus-visible:outline focus-visible:outline-1 focus-visible:outline-amber-600 dark:text-amber-400/70 dark:hover:text-amber-400"
+          >
+            <Icon name="X" className="size-3" aria-hidden />
+          </button>
+        </div>
+      ) : null}
       <div className="flex h-full min-h-0 items-stretch gap-4">
         {columns.map((column) => {
           const dropHandler = dropHandlerFor(column.id);
           const isDropTarget = dropHandler !== null;
           const sweepKind = sweepColumnKind(column.id);
           const isArmed = armedSweep !== null && armedSweep.columnId === column.id;
+          // A run is bound to its column: only that column's button shows
+          // progress, and only its cards can carry the throbber.
+          const runHere = sweepRun !== null && sweepRun.columnId === column.id ? sweepRun : null;
           // While armed, the FROZEN list drives count, gather, and highlight
           // — not the live eligible set. Before arming, the live eligible
           // set is what the button proposes.
@@ -518,6 +580,11 @@ export function Board({
                     <SweepButton
                       eligibleCount={eligible.length}
                       isArmed={isArmed}
+                      run={
+                        runHere === null
+                          ? null
+                          : { done: runHere.done, total: runHere.total }
+                      }
                       onArm={() => onSweepArm?.(column.id)}
                       onConfirm={() => onSweepConfirm?.(column.id)}
                     />
@@ -711,6 +778,7 @@ export function Board({
                           isActive={thread.id === activeThreadId}
                           isDone={doneIds.has(thread.id)}
                           isSweepHighlighted={armedSet?.has(thread.id) ?? false}
+                          isSweeping={runHere !== null && runHere.activeId === thread.id}
                           projectName={projectNameFor(thread.projectId)}
                           repoHrefBase={repoBaseFor(thread.projectId) ?? undefined}
                           statusFor={statusFor}

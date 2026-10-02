@@ -51,11 +51,13 @@ import {
   DEFAULT_IDLE_ARCHIVE_DAYS,
   armSweep,
   confirmSweep,
+  runSweepArchive,
   sweepCandidatesForDoneColumn,
   sweepCandidatesForIdleColumn,
   sweepColumnKind,
   type ArmedSweep,
   type DoneAgeSource,
+  type SweepRunView,
 } from "./lib/sweep";
 import { useSweepClickAway } from "./components/board";
 import {
@@ -470,8 +472,18 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Sweep arm state: at most one armed column at a time. The candidate id
   // list is captured at arm time and frozen — late arrivals never join.
   const [armedSweep, setArmedSweep] = useState<ArmedSweep | null>(null);
+  // A confirmed sweep in flight: sequential archives with per-card progress
+  // (throbber on the active card, highlight kept on the rest). Null when idle.
+  const [sweepRun, setSweepRun] = useState<SweepRunView | null>(null);
+  // A finished sweep's failure summary ("archived 2 of 5; 3 failed ...").
+  // Null when the last sweep fully succeeded (or none has run).
+  const [sweepNotice, setSweepNotice] = useState<string | null>(null);
+  // Stable dismiss: the Board's auto-dismiss timer effect keys on it.
+  const clearSweepNotice = useCallback(() => setSweepNotice(null), []);
   const disarmSweep = useCallback(() => setArmedSweep(null), []);
-  useSweepClickAway(armedSweep !== null, disarmSweep);
+  // Click-away and Escape disarm only an idle arm: a running sweep must not
+  // be dismissed out from under its own confirm gesture.
+  useSweepClickAway(armedSweep !== null && sweepRun === null, disarmSweep);
   // What's new: two "seen" models, picked by the running build. A stable
   // build compares versions: a fresh install (nothing stored) is stamped
   // silently — everything is new, so nothing counts as new — and an upgrade
@@ -674,9 +686,11 @@ function BoardPage({ subPath }: { subPath: string }) {
 
   const armSweepFor = useCallback(
     (columnId: string) => {
+      // A running sweep owns the gesture: no re-arming mid-run.
+      if (sweepRun !== null) return;
       setArmedSweep(armSweep(columnId, sweepCandidatesFor(columnId)));
     },
-    [sweepCandidatesFor],
+    [sweepCandidatesFor, sweepRun],
   );
 
   const confirmSweepFor = useCallback(
@@ -686,10 +700,45 @@ function BoardPage({ subPath }: { subPath: string }) {
       // must never run twice.
       const current = armedSweep;
       if (current === null || current.columnId !== columnId) return;
-      setArmedSweep(null);
-      for (const threadId of confirmSweep(current, true)) actions.archive(threadId);
+      if (sweepRun !== null) return; // one run at a time
+      const threadIds = confirmSweep(current, true);
+      if (threadIds.length === 0) {
+        setArmedSweep(null);
+        return;
+      }
+      setSweepNotice(null);
+      setSweepRun({ columnId, total: threadIds.length, done: 0, activeId: null });
+      void runSweepArchive(threadIds, {
+        // The awaited sdk client call, NOT actions.archive: the host's
+        // sidebar archive aborts the previous in-flight archive when a new
+        // one starts, so an unawaited loop archives only the last candidate
+        // (observed 2026-10-01: a 4-thread sweep archived one).
+        archive: (threadId) => sdk.threads.archive({ threadId }),
+        onActive: (activeId) =>
+          setSweepRun((run) => (run === null ? run : { ...run, activeId })),
+        onSettled: () =>
+          setSweepRun((run) =>
+            run === null ? run : { ...run, done: run.done + 1, activeId: null },
+          ),
+      }).then((failures) => {
+        setSweepRun(null);
+        if (failures.length === 0) {
+          setArmedSweep(null);
+          return;
+        }
+        // Fail loud: the failed candidates stay armed (highlight + gather)
+        // for a one-click retry, and a banner says what happened.
+        setArmedSweep({ columnId, threadIds: failures.map((f) => f.threadId) });
+        const failedTitles = failures.map((failure) => {
+          const match = threads.find((candidate) => candidate.id === failure.threadId);
+          return `"${match?.displayTitle ?? match?.titleFallback ?? failure.threadId}" (${failure.message})`;
+        });
+        setSweepNotice(
+          `Sweep archived ${threadIds.length - failures.length} of ${threadIds.length}; ${failures.length} failed: ${failedTitles.join(", ")}. The failed cards stay highlighted. Click Sweep to retry.`,
+        );
+      });
     },
-    [actions, armedSweep],
+    [armedSweep, sdk, sweepRun, threads],
   );
 
   // Live GitHub status for ticket chips. Batched: one RPC per visible-ref
@@ -1363,6 +1412,9 @@ function BoardPage({ subPath }: { subPath: string }) {
             onNewTask={openNewThread}
             sweepCandidatesFor={sweepCandidatesFor}
             armedSweep={armedSweep}
+            sweepRun={sweepRun}
+            sweepNotice={sweepNotice}
+            onDismissSweepNotice={clearSweepNotice}
             onSweepArm={armSweepFor}
             onSweepDisarm={disarmSweep}
             onSweepConfirm={confirmSweepFor}
