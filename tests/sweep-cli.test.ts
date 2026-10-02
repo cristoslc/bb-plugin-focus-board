@@ -8,7 +8,12 @@ import type { FakePluginHarness } from "@get-bb/plugin-sdk/testing";
 import server from "../server";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const NOW = Date.parse("2026-09-25T12:00:00.000Z");
+// The server CLI sweeps with the real clock (the pure eligibility core takes
+// an injected `now`; the CLI entry feeds it Date.now() and offers no seam).
+// Fixtures must therefore be relative to the real clock: a pinned NOW made
+// "done 2 days ago" cross the 7-day threshold five days after this file was
+// written, time-bombing the below-threshold test (observed 2026-10-01).
+const NOW = Date.now();
 
 function iso(msAgo: number): string {
   return new Date(NOW - msAgo).toISOString();
