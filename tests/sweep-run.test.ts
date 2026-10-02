@@ -43,7 +43,7 @@ describe("runSweepArchive archives every candidate, one at a time", () => {
       failures: [],
       cancelled: false,
       remaining: [],
-      archived: ["thr_a", "thr_b", "thr_c"],
+      swept: ["thr_a", "thr_b", "thr_c"],
     });
   });
 
@@ -69,7 +69,7 @@ describe("runSweepArchive archives every candidate, one at a time", () => {
           ? Promise.reject(new Error("host refused"))
           : Promise.resolve({ ok: true }),
     });
-    expect(result.archived).toEqual(["thr_ok1", "thr_ok2"]);
+    expect(result.swept).toEqual(["thr_ok1", "thr_ok2"]);
   });
 
   it("a cancelled run still names the ids it did archive", async () => {
@@ -77,7 +77,7 @@ describe("runSweepArchive archives every candidate, one at a time", () => {
       archive: () => Promise.resolve({ ok: true }),
       shouldContinue: () => false,
     });
-    expect(result.archived).toEqual(["thr_a"]);
+    expect(result.swept).toEqual(["thr_a"]);
     expect(result.remaining).toEqual(["thr_b", "thr_c"]);
   });
 

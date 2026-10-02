@@ -260,15 +260,15 @@ export default async function plugin(bb: BbPluginApi) {
     },
     idleArchiveValue: {
       type: "number",
-      label: "Sweep: archive long-idle threads after",
+      label: "Sweep: mark long-idle threads Done after",
       description:
-        "How long a thread stays quiet before the sweep offers to archive it — a count of the unit chosen below. Default 2 days.",
+        "How long a thread stays quiet before the sweep offers to mark it Done — a count of the unit chosen below. Default 2 days.",
       experimental_schema: z.number().int().min(1).max(3650),
       default: DEFAULT_ARCHIVE_VALUE,
     },
     idleArchiveUnit: {
       type: "select",
-      label: "Sweep: idle archive unit",
+      label: "Sweep: idle threshold unit",
       options: [...ARCHIVE_UNITS],
       experimental_schema: ARCHIVE_UNIT_SCHEMA,
       default: DEFAULT_ARCHIVE_UNIT,
@@ -816,13 +816,14 @@ export default async function plugin(bb: BbPluginApi) {
 
   const sweep = cliCommand({
     summary:
-      "Show (or with --confirm, archive) Done-past-threshold and long-idle threads",
+      "Show (or with --confirm, sweep) Done-past-threshold and long-idle threads",
     description:
-      "Without --confirm this is a dry-run: it prints the eligible set and exits 1 without archiving anything.",
+      "Without --confirm this is a dry-run: it prints the eligible set and exits 1 without touching anything. With --confirm, Done-past-threshold threads are archived and long-idle threads are marked Done (the fresh doneAt stamp starts the Done arm's archive clock, so a swept idle thread resurfaces in the Done sweep).",
     options: {
       confirm: {
         type: "boolean",
-        description: "Actually archive the resolved eligible set",
+        description:
+          "Sweep the resolved eligible set: archive Done threads, mark long-idle threads Done",
       },
       ids: {
         type: "string",
@@ -930,20 +931,51 @@ export default async function plugin(bb: BbPluginApi) {
             ) + "\n"
           : eligible.length === 0
             ? "No threads are sweep-eligible.\n"
-            : `${lines.join("\n")}\n${eligible.length} thread(s) eligible; re-run with --confirm to archive.\n`;
+            : `${lines.join("\n")}\n${eligible.length} thread(s) eligible; re-run with --confirm to sweep (Done threads archive; long-idle threads are marked Done).\n`;
         return { exitCode: 1, stdout };
       }
 
-      const results: Array<{ id: string; archived: boolean }> = [];
+      const results: Array<{ id: string; action: "archived" | "marked-done" }> = [];
       for (const entry of eligible) {
-        await bb.sdk.threads.archive({ threadId: entry.id });
-        results.push({ id: entry.id, archived: true });
+        // The sweep's staged exit: Done-age threads archive; long-idle
+        // threads are marked Done (operator decision 2026-10-01) — the
+        // fresh doneAt stamp starts the Done arm's archive clock, so a
+        // swept idle thread resurfaces in the Done sweep instead of
+        // vanishing while it was never done.
+        if (entry.reason === "idle") {
+          await writeDoneRecord(entry.id, true);
+          bb.realtime.publish(DONE_CHANGED, { threadId: entry.id, done: true });
+          results.push({ id: entry.id, action: "marked-done" });
+        } else {
+          await bb.sdk.threads.archive({ threadId: entry.id });
+          results.push({ id: entry.id, action: "archived" });
+        }
       }
+      const archivedIds = results
+        .filter((result) => result.action === "archived")
+        .map((result) => ({ id: result.id }));
+      const markedDoneIds = results
+        .filter((result) => result.action === "marked-done")
+        .map((result) => ({ id: result.id }));
       const stdout = input.options.json
-        ? JSON.stringify({ archived: results, count: results.length }, null, 2) + "\n"
+        ? JSON.stringify(
+            {
+              archived: archivedIds,
+              markedDone: markedDoneIds,
+              count: results.length,
+            },
+            null,
+            2,
+          ) + "\n"
         : results.length === 0
-          ? "Nothing to archive.\n"
-          : results.map((result) => `archived ${result.id}`).join("\n") + "\n";
+          ? "Nothing to sweep.\n"
+          : results
+              .map((result) =>
+                result.action === "marked-done"
+                  ? `marked Done ${result.id}`
+                  : `archived ${result.id}`,
+              )
+              .join("\n") + "\n";
       return { exitCode: 0, stdout };
     },
   });

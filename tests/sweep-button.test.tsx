@@ -16,6 +16,14 @@ const NOW = 10_000_000;
 const context = { projects: [{ id: "p1", name: "One" }], providers: [{ id: "pi" }] };
 
 const doneThread: PluginSidebarThread = thread({ id: "thr_done", status: "idle" });
+// Forty days quiet: lands in the "Idle · A while ago" bucket (idle-awhile),
+// the only sweepable idle column.
+const idleThreadFixture: PluginSidebarThread = thread({
+  id: "thr_idle_old",
+  status: "idle",
+  updatedAt: NOW - 40 * 24 * 60 * 60 * 1000,
+  lastReadAt: NOW - 40 * 24 * 60 * 60 * 1000,
+});
 
 type BoardProps = Parameters<typeof Board>[0];
 
@@ -100,5 +108,47 @@ describe("sweep button", () => {
         expect(node.textContent?.trim()).not.toBe("?");
       }
     }
+  });
+
+  it("the long-idle arm's armed pill names Done as its destination", () => {
+    const { rerender } = render(
+      <Board
+        {...baseProps({
+          columns: buildColumns(
+            [idleThreadFixture],
+            "status",
+            context,
+            new Map(),
+            new Set<string>(),
+            NOW,
+            {},
+          ),
+          doneIds: new Set<string>(),
+          sweepCandidatesFor: (columnId) =>
+            columnId === "idle-awhile" ? ["thr_idle_old"] : [],
+        })}
+      />,
+    );
+    rerender(
+      <Board
+        {...baseProps({
+          columns: buildColumns(
+            [idleThreadFixture],
+            "status",
+            context,
+            new Map(),
+            new Set<string>(),
+            NOW,
+            {},
+          ),
+          doneIds: new Set<string>(),
+          sweepCandidatesFor: (columnId) =>
+            columnId === "idle-awhile" ? ["thr_idle_old"] : [],
+          armedSweep: armSweep("idle-awhile", ["thr_idle_old"]),
+        })}
+      />,
+    );
+    expect(sweepButton().textContent).toContain("Sweep 1 → Done");
+    expect(sweepButton().textContent).not.toContain("Archive");
   });
 });

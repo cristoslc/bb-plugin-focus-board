@@ -55,9 +55,11 @@ import {
   sweepCandidatesForDoneColumn,
   sweepCandidatesForIdleColumn,
   sweepColumnKind,
+  sweepDestination,
   toggleSweepSelection,
   type ArmedSweep,
   type DoneAgeSource,
+  type SweepDestination,
   type SweepNotice,
   type SweepRunView,
 } from "./lib/sweep";
@@ -512,18 +514,29 @@ function BoardPage({ subPath }: { subPath: string }) {
     }
     setArmedSweep(null);
   }, [sweepRun]);
-  // Undo a cancelled run: unarchive exactly the ids the run archived — the
-  // top-level selections only, never the server's whole archivedThreadIds
-  // subtree, because a child already archived before the sweep must stay
-  // archived. Sequential like the run itself; failures surface in the
-  // banner, the successes quietly return to their columns.
+  // Undo a cancelled run, reversing exactly what it settled: unarchive the
+  // Done arm's ids, unmark Done the idle arm's ids (the thread was never
+  // archived; a done_set(false) returns it to its column). Top-level
+  // selections only, never the server's whole archivedThreadIds subtree,
+  // because a child already archived before the sweep must stay archived.
+  // Sequential like the run itself; failures surface in the banner, the
+  // successes quietly return to their columns.
   const undoSweepFor = useCallback(
-    (threadIds: readonly string[]) => {
+    (threadIds: readonly string[], destination: SweepDestination) => {
       void (async () => {
         const failed: string[] = [];
         for (const threadId of threadIds) {
           try {
-            await sdk.threads.unarchive({ threadId });
+            if (destination === "done") {
+              await rpc.call("done_set", { threadId, done: false });
+              setDoneIds((current) => {
+                const next = new Set(current);
+                next.delete(threadId);
+                return next;
+              });
+            } else {
+              await sdk.threads.unarchive({ threadId });
+            }
           } catch (error) {
             failed.push(
               error instanceof Error ? `${threadId} (${error.message})` : threadId,
@@ -539,7 +552,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         });
       })();
     },
-    [sdk],
+    [rpc, sdk],
   );
   // What's new: two "seen" models, picked by the running build. A stable
   // build compares versions: a fresh install (nothing stored) is stamped
@@ -753,32 +766,57 @@ function BoardPage({ subPath }: { subPath: string }) {
   const confirmSweepFor = useCallback(
     (columnId: string) => {
       // Side effects stay out of the state updater: read the armed snapshot,
-      // clear it, then archive. React may re-invoke updaters; an archive call
+      // clear it, then sweep. React may re-invoke updaters; an action call
       // must never run twice.
       const current = armedSweep;
       if (current === null || current.columnId !== columnId) return;
       if (sweepRun !== null) return; // one run at a time
       const threadIds = confirmSweep(current, true);
+      const destination = sweepDestination(columnId) ?? "archive";
       if (threadIds.length === 0) {
         setArmedSweep(null);
         return;
       }
+      // The idle arm's exit is staged: mark Done (the same recipe as a drop
+      // on the Done column), never archive a quiet-but-not-done thread. The
+      // fresh doneAt stamp starts the Done arm's archive clock, so swept
+      // threads resurface there in doneArchiveDays instead of vanishing.
+      const markDone = async (threadId: string): Promise<void> => {
+        await rpc.call("done_set", { threadId, done: true });
+        setDoneIds((currentDone) => {
+          const next = new Set(currentDone);
+          next.add(threadId);
+          return next;
+        });
+        // Done implies read: the card must not land in Done still claiming
+        // unread (the same rule the drop-on-Done path applies).
+        const thread = threads.find((candidate) => candidate.id === threadId);
+        if (thread !== undefined && thread.isUnread) {
+          void actions.setRead(threadId, true);
+        }
+      };
+      const sweepOne =
+        destination === "done"
+          ? markDone
+          : (threadId: string) => sdk.threads.archive({ threadId });
+      const settledWord =
+        destination === "done" ? "marked Done" : "archived";
       setSweepNotice(null);
       setSweepRun({ columnId, total: threadIds.length, done: 0, activeId: null });
       sweepCancelRef.current = false;
       void runSweepArchive(threadIds, {
-        // The awaited sdk client call, NOT actions.archive: the host's
+        // One action at a time, awaited (the runner's contract): the host's
         // sidebar archive aborts the previous in-flight archive when a new
         // one starts, so an unawaited loop archives only the last candidate
         // (observed 2026-10-01: a 4-thread sweep archived one).
-        archive: (threadId) => sdk.threads.archive({ threadId }),
+        archive: sweepOne,
         onActive: (activeId) =>
           setSweepRun((run) => (run === null ? run : { ...run, activeId })),
         onSettled: () =>
           setSweepRun((run) =>
             run === null ? run : { ...run, done: run.done + 1, activeId: null },
           ),
-        // Cancel between archives; the one in flight always finishes.
+        // Cancel between actions; the one in flight always finishes.
         shouldContinue: () => !sweepCancelRef.current,
       }).then((result) => {
         setSweepRun(null);
@@ -793,7 +831,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           : failedIds;
         setArmedSweep(stayArmed.length > 0 ? { columnId, threadIds: stayArmed } : null);
         if (result.cancelled) {
-          if (result.archived.length === 0 && result.failures.length === 0) return;
+          if (result.swept.length === 0 && result.failures.length === 0) return;
           const failedCopy =
             result.failures.length > 0
               ? ` ${result.failures.length} failed: ${result.failures
@@ -801,8 +839,8 @@ function BoardPage({ subPath }: { subPath: string }) {
                   .join(", ")}.`
               : "";
           setSweepNotice({
-            message: `Sweep stopped. ${result.archived.length} archived, ${result.remaining.length} not attempted.${failedCopy}`,
-            undoIds: result.archived,
+            message: `Sweep stopped. ${result.swept.length} ${settledWord}, ${result.remaining.length} not attempted.${failedCopy}`,
+            undo: { ids: result.swept, destination },
           });
           return;
         }
@@ -815,11 +853,11 @@ function BoardPage({ subPath }: { subPath: string }) {
         });
         const attempted = threadIds.length - result.remaining.length;
         setSweepNotice({
-          message: `Sweep archived ${attempted - result.failures.length} of ${threadIds.length}; ${result.failures.length} failed: ${failedTitles.join(", ")}. The failed cards stay highlighted. Click Sweep to retry.`,
+          message: `Sweep ${settledWord} ${attempted - result.failures.length} of ${threadIds.length}; ${result.failures.length} failed: ${failedTitles.join(", ")}. The failed cards stay highlighted. Click Sweep to retry.`,
         });
       });
     },
-    [armedSweep, sdk, sweepRun, threads],
+    [actions, armedSweep, rpc, sdk, sweepRun, threads],
   );
 
   // Live GitHub status for ticket chips. Batched: one RPC per visible-ref

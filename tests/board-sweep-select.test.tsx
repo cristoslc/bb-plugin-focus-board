@@ -79,14 +79,14 @@ describe("the sweep notice can offer an undo", () => {
     renderBoard(undoCandidates, {
       sweepNotice: {
         message: "Sweep stopped. 2 archived before the cancel.",
-        undoIds: ["thr_d1", "thr_d2"],
+        undo: { ids: ["thr_d1", "thr_d2"], destination: "archive" },
       },
       onSweepUndo,
     });
     const undo = document.querySelector<HTMLButtonElement>("[data-sweep-undo]");
     expect(undo).not.toBeNull();
     fireEvent.click(undo!);
-    expect(onSweepUndo).toHaveBeenCalledWith(["thr_d1", "thr_d2"]);
+    expect(onSweepUndo).toHaveBeenCalledWith(["thr_d1", "thr_d2"], "archive");
   });
 
   it("a notice without undo ids has no Undo button", () => {

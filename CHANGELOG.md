@@ -14,6 +14,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **The long-idle sweep now marks threads Done instead of archiving them.**
+  Confirming a sweep on the Idle · A-while-ago column sends its quiet threads
+  to the Done column — the same mark-dragging a card there performs — instead
+  of straight to the archive; the fresh done stamp starts the Done-arm clock,
+  so they resurface in the Done sweep and archive only after aging there. The
+  Done column's own sweep still archives. A cancelled sweep's Undo unmarks
+  Done for these threads instead of unarchiving. The CLI sweep mirrors this:
+  with `--confirm`, Done-age threads archive and long-idle threads are marked
+  Done (`sweep --json` now reports `archived` and `markedDone` separately).
+
 - **Sweep mode is now manual: enter it any time and click cards to choose
   exactly what gets archived.** The sweep button stays visible on the Done
   and A-while-ago columns even when nothing is past the threshold; entering

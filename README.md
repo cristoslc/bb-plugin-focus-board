@@ -42,7 +42,9 @@ they've been quiet.
 - **Leaving Pinned unpins**: dropping a pinned card on Unread or Done — or
   marking it done from its menu — takes the pin with it, so the card stays
   where you put it instead of snapping back into Pinned
-- **Sweep** stale Done and long-idle threads to Archive in two clicks
+- **Sweep** stale Done threads to Archive and long-idle threads to Done, in
+  two clicks; swept idle threads resurface in the Done column and archive
+  later through the Done sweep
 - **Ticket chips** with GitHub status dots, linking to the tracker
 - **Thread pane** slides in beside the board; works on phone. The open pane
   is part of the panel's URL (`…/board/t/<threadId>`), so bb's back arrow
