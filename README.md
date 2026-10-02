@@ -116,12 +116,16 @@ bb plugin install git:https://github.com/cristoslc/bb-plugin-focus-board@v0.3.1
 
 ## Configuration
 
-Set sweep thresholds in Settings → Installed plugins or with the CLI:
+Set sweep thresholds in Settings → Installed plugins or with the CLI. Each
+threshold is a count plus a unit (hours, days, or weeks); both default to
+2 days:
 
 | Setting | Default | Effect |
 |---|---|---|
-| `doneArchiveDays` | 7 | Done threads older than this become sweep-eligible |
-| `idleArchiveDays` | 30 | Threads idle longer than this become sweep-eligible |
+| `doneArchiveValue` | 2 | Done threads older than this (in `doneArchiveUnit`) become sweep-eligible |
+| `doneArchiveUnit` | days | Unit for the Done threshold: `hours`, `days`, or `weeks` |
+| `idleArchiveValue` | 2 | Threads idle longer than this (in `idleArchiveUnit`) become sweep-eligible |
+| `idleArchiveUnit` | days | Unit for the idle threshold: `hours`, `days`, or `weeks` |
 
 Any thread can be exempted from both sweeps with the card-menu
 "Keep from sweep" override.
@@ -136,7 +140,7 @@ bb focus-board done mark <thread-id>...
 bb focus-board done clear <thread-id>...
 bb focus-board sweep [--ids <id>...] [--confirm]
 bb focus-board config show
-bb focus-board config set <doneArchiveDays|idleArchiveDays> <days>
+bb focus-board config set <doneArchiveValue|doneArchiveUnit|idleArchiveValue|idleArchiveUnit> <count|hours|days|weeks>
 ```
 
 All commands accept `--json`. The sweep never archives without `--confirm`;

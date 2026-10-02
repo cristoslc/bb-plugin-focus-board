@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createFakePluginHost,
   makeThreadResponse,
@@ -9,7 +9,6 @@ import server from "../server";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOW = Date.parse("2026-09-25T12:00:00.000Z");
-
 function iso(msAgo: number): string {
   return new Date(NOW - msAgo).toISOString();
 }
@@ -27,6 +26,11 @@ describe("bb focus-board sweep", () => {
   let archived: string[];
 
   beforeEach(() => {
+    // The sweep resolves eligibility against Date.now() (injected by
+    // server.ts); pin the clock to NOW so fixture ages stay exact no
+    // matter when the suite runs. Fake only Date — the harness and plugin
+    // never await timers during a CLI run.
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
     metadata = new Map();
     listedThreads = [];
     archived = [];
@@ -74,6 +78,7 @@ describe("bb focus-board sweep", () => {
 
   afterEach(async () => {
     await harness.lifecycle.dispose();
+    vi.useRealTimers();
   });
 
   function archiveArgs(): string[] {
@@ -95,9 +100,9 @@ describe("bb focus-board sweep", () => {
       const result = await harness.behavior.runCli(["sweep"]);
       expect(result.exitCode).toBe(1);
       expect(result.stdout).toContain("thr_old");
-      expect(result.stdout).toContain("idle longer than 30d");
+      expect(result.stdout).toContain("idle longer than 2 days");
       expect(result.stdout).toContain("thr_done");
-      expect(result.stdout).toContain("done longer than 7d");
+      expect(result.stdout).toContain("done longer than 2 days");
       expect(result.stdout).toContain("--confirm");
       expect(archived).toEqual([]);
       expect(harness.inspection.sdk.callsTo("threads.archive")).toHaveLength(0);
@@ -114,7 +119,8 @@ describe("bb focus-board sweep", () => {
 
     it("counts a thread at exactly the threshold as eligible", async () => {
       await load();
-      listedThreads = [idleThread("thr_edge", 30)];
+      // Exactly the 2-day default idle threshold; boundary counts.
+      listedThreads = [idleThread("thr_edge", 2)];
       const result = await harness.behavior.runCli(["sweep", "--json"]);
       const body = JSON.parse(result.stdout) as {
         eligible: Array<{ id: string; reason: string }>;
@@ -167,7 +173,9 @@ describe("bb focus-board sweep", () => {
       listedThreads = [
         makeThreadResponse({ id: "thr_recent", updatedAt: 0 }),
       ];
-      metadata.set("thr_recent", { done: { doneAt: iso(2 * DAY_MS) } });
+      // Done one day ago: below the 2-day done threshold, so not
+      // done-eligible — and the idle arm never claims a done thread.
+      metadata.set("thr_recent", { done: { doneAt: iso(DAY_MS) } });
 
       const result = await harness.behavior.runCli(["sweep", "--json"]);
       expect(JSON.parse(result.stdout)).toEqual({ eligible: [], count: 0 });
@@ -278,7 +286,8 @@ describe("bb focus-board sweep", () => {
       listedThreads = [
         idleThread("thr_a", 40),
         idleThread("thr_b", 40),
-        idleThread("thr_fresh", 2),
+        // One day idle: under the 2-day default, so not eligible.
+        idleThread("thr_fresh", 1),
       ];
       const result = await harness.behavior.runCli(["sweep", "--confirm"]);
       expect(result.exitCode).toBe(0);
@@ -375,17 +384,20 @@ describe("bb focus-board sweep", () => {
   });
 
   describe("settings integration", () => {
-    it("respects a config-set threshold change", async () => {
+    it("respects a config-set threshold change, including the unit", async () => {
       await load();
-      listedThreads = [idleThread("thr_mid", 14)];
-      // Below the default 30d idle threshold.
+      // One day idle: under the 2-day default threshold, so not eligible.
+      listedThreads = [idleThread("thr_mid", 1)];
       expect(
         JSON.parse(
           (await harness.behavior.runCli(["sweep", "--json"])).stdout,
         ),
       ).toEqual({ eligible: [], count: 0 });
 
-      await harness.behavior.runCli(["config", "set", "idleArchiveDays", "14"]);
+      // Switching the unit and count moves the threshold to 12 hours:
+      // the one-day-old thread is now eligible.
+      await harness.behavior.runCli(["config", "set", "idleArchiveUnit", "hours"]);
+      await harness.behavior.runCli(["config", "set", "idleArchiveValue", "12"]);
       const after = await harness.behavior.runCli(["sweep", "--json"]);
       const body = JSON.parse(after.stdout) as {
         eligible: Array<{ id: string }>;

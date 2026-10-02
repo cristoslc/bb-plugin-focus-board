@@ -1,17 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
+import { DAY_MS, HOUR_MS } from "../lib/duration";
 import {
-  DEFAULT_DONE_ARCHIVE_DAYS,
-  DEFAULT_IDLE_ARCHIVE_DAYS,
+  DEFAULT_DONE_ARCHIVE_MS,
+  DEFAULT_IDLE_ARCHIVE_MS,
   armSweep,
   confirmSweep,
   sweepCandidatesForDoneColumn,
   sweepCandidatesForIdleColumn,
   sweepColumnKind,
 } from "../lib/sweep";
-
-const HOUR = 60 * 60 * 1000;
-const DAY = 24 * HOUR;
 
 function thread(overrides: Partial<PluginSidebarThread> & { id: string }): PluginSidebarThread {
   return {
@@ -57,15 +55,15 @@ function thread(overrides: Partial<PluginSidebarThread> & { id: string }): Plugi
   } as PluginSidebarThread;
 }
 
-const NOW = 100 * DAY;
+const NOW = 100 * DAY_MS;
 
 describe("sweepCandidatesForDoneColumn", () => {
   it("is empty for a fresh done thread", () => {
     const candidates = sweepCandidatesForDoneColumn(
       [thread({ id: "a" })],
       new Set(["a"]),
-      { doneMarkedAt: () => NOW - HOUR, kept: () => false },
-      { doneArchiveDays: 7 },
+      { doneMarkedAt: () => NOW - HOUR_MS, kept: () => false },
+      { doneArchiveMs: 7 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual([]);
@@ -75,8 +73,8 @@ describe("sweepCandidatesForDoneColumn", () => {
     const candidates = sweepCandidatesForDoneColumn(
       [thread({ id: "a" })],
       new Set(["a"]),
-      { doneMarkedAt: () => NOW - 8 * DAY, kept: () => false },
-      { doneArchiveDays: 7 },
+      { doneMarkedAt: () => NOW - 8 * DAY_MS, kept: () => false },
+      { doneArchiveMs: 7 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual(["a"]);
@@ -86,8 +84,8 @@ describe("sweepCandidatesForDoneColumn", () => {
     const candidates = sweepCandidatesForDoneColumn(
       [thread({ id: "a" })],
       new Set(["a"]),
-      { doneMarkedAt: () => NOW - 7 * DAY, kept: () => false },
-      { doneArchiveDays: 7 },
+      { doneMarkedAt: () => NOW - 7 * DAY_MS, kept: () => false },
+      { doneArchiveMs: 7 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual(["a"]);
@@ -97,8 +95,8 @@ describe("sweepCandidatesForDoneColumn", () => {
     const candidates = sweepCandidatesForDoneColumn(
       [thread({ id: "a" })],
       new Set(["a"]),
-      { doneMarkedAt: () => NOW - 7 * DAY + 1, kept: () => false },
-      { doneArchiveDays: 7 },
+      { doneMarkedAt: () => NOW - 7 * DAY_MS + 1, kept: () => false },
+      { doneArchiveMs: 7 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual([]);
@@ -109,10 +107,10 @@ describe("sweepCandidatesForDoneColumn", () => {
       [thread({ id: "a" }), thread({ id: "b" })],
       new Set(["a", "b"]),
       {
-        doneMarkedAt: (id) => (id === "a" ? NOW - 30 * DAY : NOW - 30 * DAY),
+        doneMarkedAt: (id) => (id === "a" ? NOW - 30 * DAY_MS : NOW - 30 * DAY_MS),
         kept: (id) => id === "a",
       },
-      { doneArchiveDays: 7 },
+      { doneArchiveMs: 7 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual(["b"]);
@@ -123,7 +121,7 @@ describe("sweepCandidatesForDoneColumn", () => {
       [thread({ id: "a" })],
       new Set(["a"]),
       { doneMarkedAt: () => null, kept: () => false },
-      { doneArchiveDays: 7 },
+      { doneArchiveMs: 7 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual([]);
@@ -133,18 +131,18 @@ describe("sweepCandidatesForDoneColumn", () => {
     const candidates = sweepCandidatesForDoneColumn(
       [thread({ id: "a" })],
       new Set(),
-      { doneMarkedAt: () => NOW - 30 * DAY, kept: () => false },
-      { doneArchiveDays: 7 },
+      { doneMarkedAt: () => NOW - 30 * DAY_MS, kept: () => false },
+      { doneArchiveMs: 7 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual([]);
   });
 
-  it("defaults doneArchiveDays to 7 when omitted", () => {
+  it("defaults doneArchiveMs to 2 days when omitted", () => {
     const candidates = sweepCandidatesForDoneColumn(
       [thread({ id: "a" })],
       new Set(["a"]),
-      { doneMarkedAt: () => NOW - 8 * DAY, kept: () => false },
+      { doneMarkedAt: () => NOW - 8 * DAY_MS, kept: () => false },
       {},
       NOW,
     );
@@ -156,10 +154,10 @@ describe("sweepCandidatesForDoneColumn", () => {
       [thread({ id: "old" }), thread({ id: "newer" })],
       new Set(["old", "newer"]),
       {
-        doneMarkedAt: (id) => (id === "old" ? NOW - 30 * DAY : NOW - 9 * DAY),
+        doneMarkedAt: (id) => (id === "old" ? NOW - 30 * DAY_MS : NOW - 9 * DAY_MS),
         kept: () => false,
       },
-      { doneArchiveDays: 7 },
+      { doneArchiveMs: 7 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual(["newer", "old"]);
@@ -169,9 +167,9 @@ describe("sweepCandidatesForDoneColumn", () => {
 describe("sweepCandidatesForIdleColumn", () => {
   it("includes a long-idle thread past the idle threshold", () => {
     const candidates = sweepCandidatesForIdleColumn(
-      [thread({ id: "a", updatedAt: NOW - 31 * DAY })],
+      [thread({ id: "a", updatedAt: NOW - 31 * DAY_MS })],
       new Set(),
-      { idleArchiveDays: 30 },
+      { idleArchiveMs: 30 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual(["a"]);
@@ -179,9 +177,9 @@ describe("sweepCandidatesForIdleColumn", () => {
 
   it("is empty for a thread under the idle threshold", () => {
     const candidates = sweepCandidatesForIdleColumn(
-      [thread({ id: "a", updatedAt: NOW - 29 * DAY })],
+      [thread({ id: "a", updatedAt: NOW - 29 * DAY_MS })],
       new Set(),
-      { idleArchiveDays: 30 },
+      { idleArchiveMs: 30 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual([]);
@@ -189,9 +187,9 @@ describe("sweepCandidatesForIdleColumn", () => {
 
   it("includes a thread at exactly the threshold", () => {
     const candidates = sweepCandidatesForIdleColumn(
-      [thread({ id: "a", updatedAt: NOW - 30 * DAY })],
+      [thread({ id: "a", updatedAt: NOW - 30 * DAY_MS })],
       new Set(),
-      { idleArchiveDays: 30 },
+      { idleArchiveMs: 30 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual(["a"]);
@@ -200,16 +198,16 @@ describe("sweepCandidatesForIdleColumn", () => {
   it("excludes non-idle states — only quiet threads sweep", () => {
     const candidates = sweepCandidatesForIdleColumn(
       [
-        thread({ id: "working", status: "active", updatedAt: NOW - 60 * DAY }),
+        thread({ id: "working", status: "active", updatedAt: NOW - 60 * DAY_MS }),
         thread({
           id: "attention",
           hasPendingInteraction: true,
-          updatedAt: NOW - 60 * DAY,
+          updatedAt: NOW - 60 * DAY_MS,
         }),
-        thread({ id: "unread", isUnread: true, updatedAt: NOW - 60 * DAY }),
+        thread({ id: "unread", isUnread: true, updatedAt: NOW - 60 * DAY_MS }),
       ],
       new Set(),
-      { idleArchiveDays: 30 },
+      { idleArchiveMs: 30 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual([]);
@@ -217,9 +215,9 @@ describe("sweepCandidatesForIdleColumn", () => {
 
   it("never claims a done thread — that is the Done arm's job", () => {
     const candidates = sweepCandidatesForIdleColumn(
-      [thread({ id: "a", updatedAt: NOW - 60 * DAY })],
+      [thread({ id: "a", updatedAt: NOW - 60 * DAY_MS })],
       new Set(["a"]),
-      { idleArchiveDays: 30 },
+      { idleArchiveMs: 30 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual([]);
@@ -227,9 +225,9 @@ describe("sweepCandidatesForIdleColumn", () => {
 
   it("excludes pinned threads — pins are an explicit keep", () => {
     const candidates = sweepCandidatesForIdleColumn(
-      [thread({ id: "a", isPinned: true, updatedAt: NOW - 60 * DAY })],
+      [thread({ id: "a", isPinned: true, updatedAt: NOW - 60 * DAY_MS })],
       new Set(),
-      { idleArchiveDays: 30 },
+      { idleArchiveMs: 30 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual([]);
@@ -237,17 +235,17 @@ describe("sweepCandidatesForIdleColumn", () => {
 
   it("excludes kept (overridden) threads", () => {
     const candidates = sweepCandidatesForIdleColumn(
-      [thread({ id: "a", updatedAt: NOW - 60 * DAY })],
+      [thread({ id: "a", updatedAt: NOW - 60 * DAY_MS })],
       new Set(),
-      { idleArchiveDays: 30, kept: (id) => id === "a" },
+      { idleArchiveMs: 30 * DAY_MS, kept: (id) => id === "a" },
       NOW,
     );
     expect(candidates).toEqual([]);
   });
 
-  it("defaults idleArchiveDays to 30 when omitted", () => {
+  it("defaults idleArchiveMs to 2 days when omitted", () => {
     const candidates = sweepCandidatesForIdleColumn(
-      [thread({ id: "a", updatedAt: NOW - 31 * DAY })],
+      [thread({ id: "a", updatedAt: NOW - 31 * DAY_MS })],
       new Set(),
       {},
       NOW,
@@ -258,11 +256,11 @@ describe("sweepCandidatesForIdleColumn", () => {
   it("orders candidates newest-activity first", () => {
     const candidates = sweepCandidatesForIdleColumn(
       [
-        thread({ id: "older", updatedAt: NOW - 60 * DAY }),
-        thread({ id: "newer", updatedAt: NOW - 35 * DAY }),
+        thread({ id: "older", updatedAt: NOW - 60 * DAY_MS }),
+        thread({ id: "newer", updatedAt: NOW - 35 * DAY_MS }),
       ],
       new Set(),
-      { idleArchiveDays: 30 },
+      { idleArchiveMs: 30 * DAY_MS },
       NOW,
     );
     expect(candidates).toEqual(["newer", "older"]);
@@ -276,9 +274,9 @@ describe("sweep-family contract", () => {
   it("a parent with a live child is never eligible in the idle arm, regardless of age", () => {
     expect(
       sweepCandidatesForIdleColumn(
-        [thread({ id: "parent", updatedAt: NOW - 90 * DAY })],
+        [thread({ id: "parent", updatedAt: NOW - 90 * DAY_MS })],
         new Set(),
-        { idleArchiveDays: 30 },
+        { idleArchiveMs: 30 * DAY_MS },
         NOW,
         liveChildParents,
       ),
@@ -289,8 +287,8 @@ describe("sweep-family contract", () => {
     const candidates = sweepCandidatesForDoneColumn(
       [thread({ id: "parent" })],
       new Set(["parent"]),
-      { doneMarkedAt: () => NOW - 90 * DAY, kept: () => true },
-      { doneArchiveDays: 7 },
+      { doneMarkedAt: () => NOW - 90 * DAY_MS, kept: () => true },
+      { doneArchiveMs: 7 * DAY_MS },
       NOW,
       liveChildParents,
     );
@@ -300,15 +298,15 @@ describe("sweep-family contract", () => {
   it("the child is eligible independently of its parent", () => {
     const candidates = sweepCandidatesForIdleColumn(
       [
-        thread({ id: "parent", updatedAt: NOW - 90 * DAY }),
+        thread({ id: "parent", updatedAt: NOW - 90 * DAY_MS }),
         thread({
           id: "child",
           parentThreadId: "parent",
-          updatedAt: NOW - 90 * DAY,
+          updatedAt: NOW - 90 * DAY_MS,
         }),
       ],
       new Set(),
-      { idleArchiveDays: 30 },
+      { idleArchiveMs: 30 * DAY_MS },
       NOW,
       liveChildParents,
     );
@@ -318,22 +316,22 @@ describe("sweep-family contract", () => {
 
 describe("arm-then-confirm semantics", () => {
   const doneSource = {
-    doneMarkedAt: (id: string) => (id === "a" ? NOW - 30 * DAY : null),
+    doneMarkedAt: (id: string) => (id === "a" ? NOW - 30 * DAY_MS : null),
     kept: () => false,
   };
 
   it("captures a frozen list at arm time; late arrivals do not join", () => {
-    const threads = [thread({ id: "a", updatedAt: NOW - 30 * DAY })];
-    const armed = armSweep("done", sweepCandidatesForDoneColumn(threads, new Set(["a"]), doneSource, { doneArchiveDays: 7 }, NOW));
+    const threads = [thread({ id: "a", updatedAt: NOW - 30 * DAY_MS })];
+    const armed = armSweep("done", sweepCandidatesForDoneColumn(threads, new Set(["a"]), doneSource, { doneArchiveMs: 7 * DAY_MS }, NOW));
     expect(armed.threadIds).toEqual(["a"]);
 
     // A late arrival becomes eligible after arming.
     const doneSourceLate = {
-      doneMarkedAt: (id: string) => (id === "a" || id === "late" ? NOW - 30 * DAY : null),
+      doneMarkedAt: (id: string) => (id === "a" || id === "late" ? NOW - 30 * DAY_MS : null),
       kept: () => false,
     };
-    const late = [...threads, thread({ id: "late", updatedAt: NOW - 30 * DAY })];
-    const lateCandidates = sweepCandidatesForDoneColumn(late, new Set(["a", "late"]), doneSourceLate, { doneArchiveDays: 7 }, NOW);
+    const late = [...threads, thread({ id: "late", updatedAt: NOW - 30 * DAY_MS })];
+    const lateCandidates = sweepCandidatesForDoneColumn(late, new Set(["a", "late"]), doneSourceLate, { doneArchiveMs: 7 * DAY_MS }, NOW);
     expect(lateCandidates).toContain("late");
 
     // But the armed list is frozen: it still holds only the captured card.
@@ -372,8 +370,8 @@ describe("column classification", () => {
 });
 
 describe("threshold defaults", () => {
-  it("uses 7 days for done and 30 for idle", () => {
-    expect(DEFAULT_DONE_ARCHIVE_DAYS).toBe(7);
-    expect(DEFAULT_IDLE_ARCHIVE_DAYS).toBe(30);
+  it("uses 2 days for both arms", () => {
+    expect(DEFAULT_DONE_ARCHIVE_MS).toBe(2 * DAY_MS);
+    expect(DEFAULT_IDLE_ARCHIVE_MS).toBe(2 * DAY_MS);
   });
 });

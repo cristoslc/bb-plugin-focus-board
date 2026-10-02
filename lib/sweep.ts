@@ -5,11 +5,22 @@
  */
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { threadState } from "../components/grouping";
+import {
+  DEFAULT_ARCHIVE_UNIT,
+  DEFAULT_ARCHIVE_VALUE,
+  archiveThresholdMs,
+} from "./duration";
 
-export const DEFAULT_DONE_ARCHIVE_DAYS = 7;
-export const DEFAULT_IDLE_ARCHIVE_DAYS = 30;
-
-const DAY = 24 * 60 * 60 * 1000;
+/**
+ * Per-arm default thresholds: 2 days each (lib/duration owns the number).
+ * Resolved once here so the pure core's `?? default` path and the
+ * settings plumbing cannot drift.
+ */
+export const DEFAULT_DONE_ARCHIVE_MS = archiveThresholdMs(
+  DEFAULT_ARCHIVE_VALUE,
+  DEFAULT_ARCHIVE_UNIT,
+);
+export const DEFAULT_IDLE_ARCHIVE_MS = DEFAULT_DONE_ARCHIVE_MS;
 
 /**
  * Where Done ages come from. The done-state musing's final lean is bb-native
@@ -26,15 +37,17 @@ export interface DoneAgeSource {
 }
 
 export interface SweepConfig {
-  doneArchiveDays?: number;
-  idleArchiveDays?: number;
+  /** Done-arm threshold in epoch ms (resolved from the value+unit settings). */
+  doneArchiveMs?: number;
+  /** Idle-arm threshold in epoch ms. */
+  idleArchiveMs?: number;
   /** Idle-arm override lookup; the Done arm uses DoneAgeSource.kept. */
   kept?: (threadId: string) => boolean;
 }
 
 /**
  * Done-arm candidates: done threads whose done-marked age is >=
- * `doneArchiveDays` (default 7) and not overridden. Ordered newest-done
+ * `doneArchiveMs` (default 2 days) and not overridden. Ordered newest-done
  * first so the gathered cards read most-recently-retired at the top.
  *
  * Sweep-family contract: `liveChildParents` lists thread ids that have at
@@ -49,7 +62,7 @@ export function sweepCandidatesForDoneColumn(
   now: number,
   liveChildParents: ReadonlySet<string> = new Set(),
 ): string[] {
-  const threshold = (config.doneArchiveDays ?? DEFAULT_DONE_ARCHIVE_DAYS) * DAY;
+  const threshold = config.doneArchiveMs ?? DEFAULT_DONE_ARCHIVE_MS;
   return threads
     .filter((thread) => doneIds.has(thread.id))
     .map((thread) => ({ id: thread.id, doneAt: doneSource.doneMarkedAt(thread.id) }))
@@ -63,7 +76,7 @@ export function sweepCandidatesForDoneColumn(
 
 /**
  * Idle-arm candidates: idle-state (quiet, not done) threads whose last
- * activity is >= `idleArchiveDays` (default 30) ago, excluding pinned and
+ * activity is >= `idleArchiveMs` (default 2 days) ago, excluding pinned and
  * overridden threads. Ordered newest-activity first.
  *
  * Sweep-family contract: `liveChildParents` lists thread ids that have at
@@ -77,7 +90,7 @@ export function sweepCandidatesForIdleColumn(
   now: number,
   liveChildParents: ReadonlySet<string> = new Set(),
 ): string[] {
-  const threshold = (config.idleArchiveDays ?? DEFAULT_IDLE_ARCHIVE_DAYS) * DAY;
+  const threshold = config.idleArchiveMs ?? DEFAULT_IDLE_ARCHIVE_MS;
   return threads
     .filter((thread) => !doneIds.has(thread.id) && !thread.isPinned)
     .filter((thread) => threadState(thread) === "idle")

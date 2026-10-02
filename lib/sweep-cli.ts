@@ -5,11 +5,11 @@
 // server-side; the CLI works from the server-side thread rows and the
 // board's Done records. Same semantics, different inputs:
 //
-// - Done arm: a thread whose done stamp is older than `doneArchiveDays`
+// - Done arm: a thread whose done stamp is older than `doneArchiveMs`
 //   and not kept (metadata keep OR the KV keep store) is eligible.
 // - Idle arm: a thread with no Done record, not archived, not pinned, not
 //   kept, not running, not unread, without a live child, whose last
-//   activity is older than `idleArchiveDays` is eligible — the server-side
+//   activity is older than `idleArchiveMs` is eligible — the server-side
 //   mirror of the board's `threadState === "idle"` rule for everything a
 //   raw thread row can see.
 // - Sweep-family contract: a thread with ≥1 live (non-archived) child is
@@ -21,11 +21,10 @@
 //
 // `now` is always injected — no Date.now() here — so tests can pin time.
 
-export const DAY_MS = 24 * 60 * 60 * 1000;
-
+/** Resolved thresholds in epoch ms (from the value+unit settings). */
 export interface SweepThresholds {
-  doneArchiveDays: number;
-  idleArchiveDays: number;
+  doneArchiveMs: number;
+  idleArchiveMs: number;
 }
 
 /** One server-side thread row, resolved against the board's own state. */
@@ -69,8 +68,8 @@ export function sweepCliEligible(
   thresholds: SweepThresholds,
   now: number,
 ): SweepEligible[] {
-  const doneThreshold = thresholds.doneArchiveDays * DAY_MS;
-  const idleThreshold = thresholds.idleArchiveDays * DAY_MS;
+  const doneThreshold = thresholds.doneArchiveMs;
+  const idleThreshold = thresholds.idleArchiveMs;
   const eligible: SweepEligible[] = [];
   for (const fact of facts) {
     if (fact.archived) continue;

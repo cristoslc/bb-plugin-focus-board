@@ -11,6 +11,9 @@ import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
 import { SIM_DONE_IDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES } from "./data";
 import { applyMoveVisible } from "../../lib/rank";
+// Pure constants only — lib/sweep would drag components/grouping into the
+// mock, whose SDK-app import this file itself stands in for (cycle).
+import { DAY_MS } from "../../lib/duration";
 
 export const registeredNavPanel: {
   path?: string;
@@ -242,7 +245,11 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   uatCalls.push({ method, args });
   if (method === "done_list") return { doneIds: SIM_DONE_IDS, records: {} };
   if (method === "sweep_config_get") {
-    return { doneArchiveDays: 7, idleArchiveDays: 30 };
+    // Resolved ms, mirroring the real server: defaults are 2 days per arm.
+    return {
+      doneArchiveMs: 2 * DAY_MS,
+      idleArchiveMs: 2 * DAY_MS,
+    };
   }
   if (method === "rank_list") return { orders: structuredClone(simRanks) };
   if (method === "workspace_files_exist") {

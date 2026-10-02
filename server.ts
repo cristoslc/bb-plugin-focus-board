@@ -24,7 +24,12 @@ import {
   stampDone,
   type DoneRecord,
 } from "./lib/done-metadata";
-import { DEFAULT_DONE_ARCHIVE_DAYS, DEFAULT_IDLE_ARCHIVE_DAYS } from "./lib/sweep";
+import {
+  ARCHIVE_UNITS,
+  DEFAULT_ARCHIVE_UNIT,
+  DEFAULT_ARCHIVE_VALUE,
+  archiveThresholdMs,
+} from "./lib/duration";
 import {
   RANK_KV_KEY,
   applyMoveVisible,
@@ -103,9 +108,14 @@ export const rpcContract = defineRpcContract({
 
   sweep_config_get: {
     input: z.null(),
+    /**
+     * Thresholds resolved to exact epoch ms from the operator's value+unit
+     * settings (lib/duration owns the conversion). The board stays
+     * unit-ignorant; the CLI reads the raw settings for display.
+     */
     output: z.object({
-      doneArchiveDays: z.number().int().min(1),
-      idleArchiveDays: z.number().int().min(1),
+      doneArchiveMs: z.number().int().min(1),
+      idleArchiveMs: z.number().int().min(1),
     }),
   },
   sweep_keep_set: {
@@ -141,6 +151,13 @@ export const rpcContract = defineRpcContract({
     output: z.object({ columnKey: COLUMN_KEY_SCHEMA, order: z.array(z.string()) }),
   },
 });
+
+/**
+ * The unit select's stored value is typed plain `string`; the descriptor's
+ * enum schema guarantees membership at write time — re-parse to narrow the
+ * type (and to fail loud if a foreign value ever lands in the store).
+ */
+const ARCHIVE_UNIT_SCHEMA = z.enum(ARCHIVE_UNITS);
 
 /** Realtime signal after every done/keep write. Payload is { threadId, done }
  *  (was { count } before the metadata migration); consumers refetch on the
@@ -200,17 +217,40 @@ export default async function plugin(bb: BbPluginApi) {
   bb.log.info("loaded");
 
   const settings = bb.settings.define({
-    doneArchiveDays: {
+    // Each sweep threshold is a value+unit pair: the number is a count of
+    // the unit setting next to it (hours | days | weeks). Both arms
+    // default to 2 days — the operator-tuned aggressive default. The
+    // integer caps keep the old per-arm ranges as a garbage rail (365 for
+    // Done, 3650 for idle) in whatever unit is configured.
+    doneArchiveValue: {
       type: "number",
-      label: "Sweep: archive Done threads after (days)",
+      label: "Sweep: archive Done threads after",
+      description:
+        "How long a thread stays Done before the sweep offers to archive it — a count of the unit chosen below. Default 2 days.",
       experimental_schema: z.number().int().min(1).max(365),
-      default: DEFAULT_DONE_ARCHIVE_DAYS,
+      default: DEFAULT_ARCHIVE_VALUE,
     },
-    idleArchiveDays: {
+    doneArchiveUnit: {
+      type: "select",
+      label: "Sweep: Done archive unit",
+      options: [...ARCHIVE_UNITS],
+      experimental_schema: ARCHIVE_UNIT_SCHEMA,
+      default: DEFAULT_ARCHIVE_UNIT,
+    },
+    idleArchiveValue: {
       type: "number",
-      label: "Sweep: archive long-idle threads after (days)",
+      label: "Sweep: archive long-idle threads after",
+      description:
+        "How long a thread stays quiet before the sweep offers to archive it — a count of the unit chosen below. Default 2 days.",
       experimental_schema: z.number().int().min(1).max(3650),
-      default: DEFAULT_IDLE_ARCHIVE_DAYS,
+      default: DEFAULT_ARCHIVE_VALUE,
+    },
+    idleArchiveUnit: {
+      type: "select",
+      label: "Sweep: idle archive unit",
+      options: [...ARCHIVE_UNITS],
+      experimental_schema: ARCHIVE_UNIT_SCHEMA,
+      default: DEFAULT_ARCHIVE_UNIT,
     },
     // The thread pane's Escape behavior. Rendered as a toggle in the
     // plugin detail page's configuration panel; the board reads it
@@ -467,8 +507,14 @@ export default async function plugin(bb: BbPluginApi) {
     sweep_config_get: async () => {
       const values = await settings.get();
       return {
-        doneArchiveDays: values.doneArchiveDays,
-        idleArchiveDays: values.idleArchiveDays,
+        doneArchiveMs: archiveThresholdMs(
+          values.doneArchiveValue,
+          ARCHIVE_UNIT_SCHEMA.parse(values.doneArchiveUnit),
+        ),
+        idleArchiveMs: archiveThresholdMs(
+          values.idleArchiveValue,
+          ARCHIVE_UNIT_SCHEMA.parse(values.idleArchiveUnit),
+        ),
       };
     },
     sweep_keep_set: async ({ threadId, keep }) => {
@@ -520,11 +566,17 @@ export default async function plugin(bb: BbPluginApi) {
   // sweep over the board's own eligibility rules and settings, and the
   // threshold config. It never re-spells `bb thread` commands.
 
-  const settingsKeys = ["doneArchiveDays", "idleArchiveDays"] as const;
-  const settingsCaps: Record<(typeof settingsKeys)[number], number> = {
-    doneArchiveDays: 365,
-    idleArchiveDays: 3650,
-  };
+  const settingsKeys = [
+    "doneArchiveValue",
+    "doneArchiveUnit",
+    "idleArchiveValue",
+    "idleArchiveUnit",
+  ] as const;
+  /** Count caps mirror the descriptor schemas (in the configured unit). */
+  const settingsCaps = {
+    doneArchiveValue: 365,
+    idleArchiveValue: 3650,
+  } as const;
 
   /** The SDK's thread row shape, as returned by `threads.list`. */
   type ThreadRow = Awaited<ReturnType<typeof bb.sdk.threads.list>>[number];
@@ -705,7 +757,17 @@ export default async function plugin(bb: BbPluginApi) {
       await importLegacyDone();
       const confirm = input.options.confirm === true;
       const ids = input.options.ids ?? [];
-      const thresholds = await settings.get();
+      const values = await settings.get();
+      const thresholds = {
+        doneArchiveMs: archiveThresholdMs(
+          values.doneArchiveValue,
+          ARCHIVE_UNIT_SCHEMA.parse(values.doneArchiveUnit),
+        ),
+        idleArchiveMs: archiveThresholdMs(
+          values.idleArchiveValue,
+          ARCHIVE_UNIT_SCHEMA.parse(values.idleArchiveUnit),
+        ),
+      };
       const { rows: candidates, liveIds } = await listCandidateThreads();
       const byId = new Map(candidates.map((row) => [row.id, row]));
       const kept = await readKept();
@@ -761,8 +823,8 @@ export default async function plugin(bb: BbPluginApi) {
 
       const describe = (entry: SweepEligible): string =>
         entry.reason === "done"
-          ? `done longer than ${thresholds.doneArchiveDays}d`
-          : `idle longer than ${thresholds.idleArchiveDays}d`;
+          ? `done longer than ${values.doneArchiveValue} ${values.doneArchiveUnit}`
+          : `idle longer than ${values.idleArchiveValue} ${values.idleArchiveUnit}`;
       const titleOf = (id: string): string | null => {
         const thread = byId.get(id);
         return thread?.title ?? thread?.titleFallback ?? null;
@@ -813,9 +875,11 @@ export default async function plugin(bb: BbPluginApi) {
     },
     async run(input) {
       const values = await settings.get();
-      const defaults = {
-        doneArchiveDays: DEFAULT_DONE_ARCHIVE_DAYS,
-        idleArchiveDays: DEFAULT_IDLE_ARCHIVE_DAYS,
+      const defaults: Record<(typeof settingsKeys)[number], number | string> = {
+        doneArchiveValue: DEFAULT_ARCHIVE_VALUE,
+        doneArchiveUnit: DEFAULT_ARCHIVE_UNIT,
+        idleArchiveValue: DEFAULT_ARCHIVE_VALUE,
+        idleArchiveUnit: DEFAULT_ARCHIVE_UNIT,
       };
       const rows = (Object.keys(defaults) as Array<keyof typeof defaults>).map(
         (key) => ({
@@ -842,10 +906,16 @@ export default async function plugin(bb: BbPluginApi) {
     positionals: [
       {
         name: "key",
-        description: `doneArchiveDays or idleArchiveDays`,
+        description:
+          "doneArchiveValue, doneArchiveUnit, idleArchiveValue, or idleArchiveUnit",
         required: true,
       },
-      { name: "value", description: "Positive integer (days)", required: true },
+      {
+        name: "value",
+        description:
+          "Count for the value keys; hours | days | weeks for the unit keys",
+        required: true,
+      },
     ],
     options: {
       json: { type: "boolean", description: "Emit machine-readable JSON" },
@@ -859,17 +929,31 @@ export default async function plugin(bb: BbPluginApi) {
         });
       }
       const raw = input.positionals.value;
-      const value = Number(raw);
-      const cap = settingsCaps[key as (typeof settingsKeys)[number]];
-      if (!Number.isInteger(value) || value < 1 || value > cap) {
-        throw new PluginCliError(`invalid value '${raw}' for ${key}`, {
-          code: "invalid_value",
-          hint: `Expected an integer between 1 and ${cap} (days).`,
-        });
+      let value: number | string;
+      if (key === "doneArchiveUnit" || key === "idleArchiveUnit") {
+        if (!(ARCHIVE_UNITS as readonly string[]).includes(raw)) {
+          throw new PluginCliError(`invalid value '${raw}' for ${key}`, {
+            code: "invalid_value",
+            hint: `Expected one of: ${ARCHIVE_UNITS.join(", ")}.`,
+          });
+        }
+        value = raw;
+      } else {
+        const cap = settingsCaps[key as keyof typeof settingsCaps];
+        const parsed = Number(raw);
+        if (!Number.isInteger(parsed) || parsed < 1 || parsed > cap) {
+          throw new PluginCliError(`invalid value '${raw}' for ${key}`, {
+            code: "invalid_value",
+            hint: `Expected an integer between 1 and ${cap} (in the configured unit).`,
+          });
+        }
+        value = parsed;
       }
+      // The key is one of the four declared settings and `value` matches
+      // that key's type (branch above), so the computed write is shape-safe.
       const next = await settings.experimental_set({
         [key]: value,
-      });
+      } as Parameters<typeof settings.experimental_set>[0]);
       const effective = next[key as (typeof settingsKeys)[number]];
       const stdout = input.options.json
         ? JSON.stringify({ key, value: effective }, null, 2) + "\n"
