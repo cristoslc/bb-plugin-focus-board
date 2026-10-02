@@ -247,7 +247,6 @@ function SweepButton({
       {isArmed ? (
         <>
           Sweep {eligibleCount} → Archive
-          <Icon name="CircleQuestion" className="size-3" aria-hidden />
         </>
       ) : (
         <>
