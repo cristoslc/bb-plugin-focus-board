@@ -116,6 +116,31 @@ export function createChatClickJumpGuard(
 	getChatRoot: () => ParentNode | null,
 ): ChatClickJumpGuard {
 	let armed: Armed | null = null;
+	/** The scroller's position recorded when the CURRENT input sequence
+	 * started: a window-level pointerdown capture runs before any commit
+	 * can write, so this value is the race-proof pre-displacement point
+	 * (the shell's jump fires in this sequence's commit, and its scroll
+	 * event is delivered after the arming handler — see the probe runs
+	 * d11/d12/d14/d15). */
+	let startedAt: { el: HTMLElement; top: number } | null = null;
+	const pointerDownListener = (event: Event) => {
+		const root = getChatRoot();
+		if (root === null) {
+			startedAt = null;
+			return;
+		}
+		const target = event.target;
+		if (!(target instanceof Element)) return;
+		const state = readScroller(root, target);
+		if (state === null) {
+			startedAt = null;
+			return;
+		}
+		startedAt = { el: state.el, top: state.top };
+	};
+	if (typeof window !== "undefined" && typeof document !== "undefined") {
+		window.addEventListener("pointerdown", pointerDownListener, { capture: true, passive: true });
+	}
 	/** Settled-position observer: an always-on passive scroll listener (per
 	 * scroller, re-attached when the pane remounts) that records the last
 	 * seen position and, when the position moves >=300px in one event,
@@ -145,6 +170,14 @@ export function createChatClickJumpGuard(
 				scroller.removeEventListener("scroll", listener);
 			},
 		};
+	};
+
+	const disposeListenerCleanup = () => {
+		tracker?.remove();
+		tracker = null;
+		if (typeof window !== "undefined") {
+			window.removeEventListener("pointerdown", pointerDownListener, { capture: true } as EventListenerOptions);
+		}
 	};
 
 	const disarm = () => {
@@ -215,6 +248,14 @@ export function createChatClickJumpGuard(
 		// reverting it would cement a displacement.
 		ensureTracker(state.el);
 		if (tracker !== null && performance.now() < tracker.suppressUntil) return;
+		// Settled-start gate: if this input sequence's own pointerdown saw a
+		// different position than the fresh read, the view moved under the
+		// sequence (the shell's jump, or its correction) — arming here would
+		// revert the shell's imminent self-correction and cement a
+		// displacement.
+		if (startedAt !== null && startedAt.el === state.el && Math.abs(state.top - startedAt.top) >= JUMP_SUPPRESS_THRESHOLD) {
+			return;
+		}
 		disarm();
 		const { el, top: baseline } = state;
 		const removeListeners: Array<() => void> = [];
@@ -245,5 +286,5 @@ export function createChatClickJumpGuard(
 		}
 	};
 
-	return { onChatClickCapture, dispose: disarm };
+	return { onChatClickCapture, dispose: () => { disarm(); disposeListenerCleanup(); } };
 }
