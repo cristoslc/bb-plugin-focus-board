@@ -83,7 +83,7 @@ describe("sweep button", () => {
     expect(button.classList.contains("whitespace-nowrap")).toBe(true);
   });
 
-  it("armed confirm hint is a glyph, not a bare ? text node", () => {
+  it("armed pill carries only the archive icon — no question-mark hint", () => {
     const { rerender } = render(<Board {...baseProps()} />);
     rerender(
       <Board
@@ -91,8 +91,10 @@ describe("sweep button", () => {
       />,
     );
     const button = sweepButton();
-    // Archive icon + confirm glyph, and no stray "?" character text.
-    expect(button.querySelectorAll("svg").length).toBe(2);
+    // A trailing question glyph reads as "help", but the whole pill confirms
+    // the sweep when clicked — the glyph was a trap, so it is gone. The
+    // archive icon alone rides the "Sweep N → Archive" label.
+    expect(button.querySelectorAll("svg").length).toBe(1);
     for (const node of Array.from(button.childNodes)) {
       if (node.nodeType === Node.TEXT_NODE) {
         expect(node.textContent?.trim()).not.toBe("?");
