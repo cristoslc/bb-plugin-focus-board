@@ -24,7 +24,18 @@ import {
   stampDone,
   type DoneRecord,
 } from "./lib/done-metadata";
-import { DEFAULT_DONE_ARCHIVE_DAYS, DEFAULT_IDLE_ARCHIVE_DAYS } from "./lib/sweep";
+import {
+  ARCHIVE_UNITS,
+  DEFAULT_ARCHIVE_UNIT,
+  DEFAULT_ARCHIVE_VALUE,
+  archiveThresholdMs,
+} from "./lib/duration";
+import {
+  PIN_PARK_METADATA_KEY,
+  parsePinParkRecord,
+  stampPinPark,
+  type PinParkRecord,
+} from "./lib/pin-park";
 import {
   RANK_KV_KEY,
   applyMoveVisible,
@@ -73,6 +84,21 @@ export const rpcContract = defineRpcContract({
     input: z.object({ threadId: z.string().min(1), done: z.boolean() }),
     output: z.object({ done: z.boolean() }),
   },
+  // Parked-pin record store: the lane-exit unpin writes a park marker here
+  // (see lib/pin-park.ts), and the state writes that bring the card back to
+  // the operator — Mark Not Done, Mark Unread — read it to restore the pin.
+  // A dumb record store on purpose: the composition (who unpins, who
+  // restores) lives with the sidebar-action caller, where the writes stream.
+  pin_parks_list: {
+    input: z.null(),
+    output: z.object({
+      parks: z.record(z.string(), z.object({ parkedAt: z.string() })),
+    }),
+  },
+  pin_park_set: {
+    input: z.object({ threadId: z.string().min(1), parked: z.boolean() }),
+    output: z.object({ threadId: z.string(), parked: z.boolean() }),
+  },
   tracker_status: {
     input: z.object({
       repo: z.string().min(1),
@@ -103,9 +129,14 @@ export const rpcContract = defineRpcContract({
 
   sweep_config_get: {
     input: z.null(),
+    /**
+     * Thresholds resolved to exact epoch ms from the operator's value+unit
+     * settings (lib/duration owns the conversion). The board stays
+     * unit-ignorant; the CLI reads the raw settings for display.
+     */
     output: z.object({
-      doneArchiveDays: z.number().int().min(1),
-      idleArchiveDays: z.number().int().min(1),
+      doneArchiveMs: z.number().int().min(1),
+      idleArchiveMs: z.number().int().min(1),
     }),
   },
   sweep_keep_set: {
@@ -141,6 +172,13 @@ export const rpcContract = defineRpcContract({
     output: z.object({ columnKey: COLUMN_KEY_SCHEMA, order: z.array(z.string()) }),
   },
 });
+
+/**
+ * The unit select's stored value is typed plain `string`; the descriptor's
+ * enum schema guarantees membership at write time — re-parse to narrow the
+ * type (and to fail loud if a foreign value ever lands in the store).
+ */
+const ARCHIVE_UNIT_SCHEMA = z.enum(ARCHIVE_UNITS);
 
 /** Realtime signal after every done/keep write. Payload is { threadId, done }
  *  (was { count } before the metadata migration); consumers refetch on the
@@ -200,17 +238,40 @@ export default async function plugin(bb: BbPluginApi) {
   bb.log.info("loaded");
 
   const settings = bb.settings.define({
-    doneArchiveDays: {
+    // Each sweep threshold is a value+unit pair: the number is a count of
+    // the unit setting next to it (hours | days | weeks). Both arms
+    // default to 2 days — the operator-tuned aggressive default. The
+    // integer caps keep the old per-arm ranges as a garbage rail (365 for
+    // Done, 3650 for idle) in whatever unit is configured.
+    doneArchiveValue: {
       type: "number",
-      label: "Sweep: archive Done threads after (days)",
+      label: "Sweep: archive Done threads after",
+      description:
+        "How long a thread stays Done before the sweep offers to archive it — a count of the unit chosen below. Default 2 days.",
       experimental_schema: z.number().int().min(1).max(365),
-      default: DEFAULT_DONE_ARCHIVE_DAYS,
+      default: DEFAULT_ARCHIVE_VALUE,
     },
-    idleArchiveDays: {
+    doneArchiveUnit: {
+      type: "select",
+      label: "Sweep: Done archive unit",
+      options: [...ARCHIVE_UNITS],
+      experimental_schema: ARCHIVE_UNIT_SCHEMA,
+      default: DEFAULT_ARCHIVE_UNIT,
+    },
+    idleArchiveValue: {
       type: "number",
-      label: "Sweep: archive long-idle threads after (days)",
+      label: "Sweep: mark long-idle threads Done after",
+      description:
+        "How long a thread stays quiet before the sweep offers to mark it Done — a count of the unit chosen below. Default 2 days.",
       experimental_schema: z.number().int().min(1).max(3650),
-      default: DEFAULT_IDLE_ARCHIVE_DAYS,
+      default: DEFAULT_ARCHIVE_VALUE,
+    },
+    idleArchiveUnit: {
+      type: "select",
+      label: "Sweep: idle threshold unit",
+      options: [...ARCHIVE_UNITS],
+      experimental_schema: ARCHIVE_UNIT_SCHEMA,
+      default: DEFAULT_ARCHIVE_UNIT,
     },
     // The thread pane's Escape behavior. Rendered as a toggle in the
     // plugin detail page's configuration panel; the board reads it
@@ -222,6 +283,20 @@ export default async function plugin(bb: BbPluginApi) {
       description:
         "While a thread is running, Escape interrupts its turn instead of closing the pane; the pane closes with Escape once nothing is running.",
       default: true,
+    },
+    // Debug-mode scroll instrumentation for the pane's embedded chat
+    // (docs/chat-click-jump-2026-09-29.md investigation). Ships OFF: the
+    // committed default is off everywhere, so stable builds never
+    // instrument; it is turned on in a developer environment through this
+    // setting alone. While on, the pane wraps the transcript scroller's
+    // scrollTop setter and logging session with a copyable export
+    // (see components/scroll-debug.ts).
+    scrollDebugInstrumentation: {
+      type: "boolean",
+      label: "Developer: instrument pane chat scrolling (debug)",
+      description:
+        "Logs the pane chat transcript's scroll writes with calling stacks, plus scroll/wheel/touch events, and adds a copyable debug log to the pane header. Debug use only; keep off otherwise.",
+      default: false,
     },
   });
 
@@ -257,8 +332,7 @@ export default async function plugin(bb: BbPluginApi) {
     );
   }
 
-  async function writeDoneRecord(threadId: string, done: boolean) {
-    const now = new Date();
+  async function writeDoneRecord(threadId: string, done: boolean) {    const now = new Date();
     if (done) {
       const existing = await readDoneRecord(threadId);
       const record = stampDone(existing, now);
@@ -273,6 +347,36 @@ export default async function plugin(bb: BbPluginApi) {
         remove: [DONE_METADATA_KEY],
       });
       await removeFromDoneIndex(threadId);
+    }
+  }
+
+  async function readPinParkRecord(
+    threadId: string,
+  ): Promise<PinParkRecord | null> {
+    // Same cast contract as readDoneRecord above: getPluginMetadata returns
+    // an untyped namespace record; parsePinParkRecord validates the shape.
+    const namespace = await bb.sdk.threads.getPluginMetadata({ threadId });
+    const value = (namespace as Record<string, JsonValue>)[PIN_PARK_METADATA_KEY];
+    return parsePinParkRecord(value);
+  }
+
+  /**
+   * Park or clear the lane-exit pin marker. Parking refreshes the stamp —
+   * a prior park never survives a newer gesture; clearing deletes the key.
+   */
+  async function writePinPark(threadId: string, parked: boolean): Promise<void> {
+    if (parked) {
+      const existing = await readPinParkRecord(threadId);
+      const record = stampPinPark(existing, new Date());
+      await bb.sdk.threads.updatePluginMetadata({
+        threadId,
+        set: { [PIN_PARK_METADATA_KEY]: record },
+      });
+    } else {
+      await bb.sdk.threads.updatePluginMetadata({
+        threadId,
+        remove: [PIN_PARK_METADATA_KEY],
+      });
     }
   }
 
@@ -424,6 +528,22 @@ export default async function plugin(bb: BbPluginApi) {
       bb.realtime.publish(DONE_CHANGED, { threadId, done });
       return { done };
     },
+    pin_parks_list: async () => {
+      // The live list only: a park on an archived thread has no consumer —
+      // un-archiving returns the thread through done state, not a pin — and
+      // the SDK scan the done CLI lacks is not needed here.
+      const rows = await bb.sdk.threads.list({});
+      const parks: Record<string, PinParkRecord> = {};
+      for (const row of rows) {
+        const record = await readPinParkRecord(row.id);
+        if (record !== null) parks[row.id] = record;
+      }
+      return { parks };
+    },
+    pin_park_set: async ({ threadId, parked }) => {
+      await writePinPark(threadId, parked);
+      return { threadId, parked };
+    },
     tracker_status: async ({ repo, numbers }) => {
       const home = process.env.HOME ?? "";
       if (home === "") return { statuses: {} };
@@ -467,8 +587,14 @@ export default async function plugin(bb: BbPluginApi) {
     sweep_config_get: async () => {
       const values = await settings.get();
       return {
-        doneArchiveDays: values.doneArchiveDays,
-        idleArchiveDays: values.idleArchiveDays,
+        doneArchiveMs: archiveThresholdMs(
+          values.doneArchiveValue,
+          ARCHIVE_UNIT_SCHEMA.parse(values.doneArchiveUnit),
+        ),
+        idleArchiveMs: archiveThresholdMs(
+          values.idleArchiveValue,
+          ARCHIVE_UNIT_SCHEMA.parse(values.idleArchiveUnit),
+        ),
       };
     },
     sweep_keep_set: async ({ threadId, keep }) => {
@@ -520,11 +646,17 @@ export default async function plugin(bb: BbPluginApi) {
   // sweep over the board's own eligibility rules and settings, and the
   // threshold config. It never re-spells `bb thread` commands.
 
-  const settingsKeys = ["doneArchiveDays", "idleArchiveDays"] as const;
-  const settingsCaps: Record<(typeof settingsKeys)[number], number> = {
-    doneArchiveDays: 365,
-    idleArchiveDays: 3650,
-  };
+  const settingsKeys = [
+    "doneArchiveValue",
+    "doneArchiveUnit",
+    "idleArchiveValue",
+    "idleArchiveUnit",
+  ] as const;
+  /** Count caps mirror the descriptor schemas (in the configured unit). */
+  const settingsCaps = {
+    doneArchiveValue: 365,
+    idleArchiveValue: 3650,
+  } as const;
 
   /** The SDK's thread row shape, as returned by `threads.list`. */
   type ThreadRow = Awaited<ReturnType<typeof bb.sdk.threads.list>>[number];
@@ -684,13 +816,14 @@ export default async function plugin(bb: BbPluginApi) {
 
   const sweep = cliCommand({
     summary:
-      "Show (or with --confirm, archive) Done-past-threshold and long-idle threads",
+      "Show (or with --confirm, sweep) Done-past-threshold and long-idle threads",
     description:
-      "Without --confirm this is a dry-run: it prints the eligible set and exits 1 without archiving anything.",
+      "Without --confirm this is a dry-run: it prints the eligible set and exits 1 without touching anything. With --confirm, Done-past-threshold threads are archived and long-idle threads are marked Done (the fresh doneAt stamp starts the Done arm's archive clock, so a swept idle thread resurfaces in the Done sweep).",
     options: {
       confirm: {
         type: "boolean",
-        description: "Actually archive the resolved eligible set",
+        description:
+          "Sweep the resolved eligible set: archive Done threads, mark long-idle threads Done",
       },
       ids: {
         type: "string",
@@ -705,7 +838,17 @@ export default async function plugin(bb: BbPluginApi) {
       await importLegacyDone();
       const confirm = input.options.confirm === true;
       const ids = input.options.ids ?? [];
-      const thresholds = await settings.get();
+      const values = await settings.get();
+      const thresholds = {
+        doneArchiveMs: archiveThresholdMs(
+          values.doneArchiveValue,
+          ARCHIVE_UNIT_SCHEMA.parse(values.doneArchiveUnit),
+        ),
+        idleArchiveMs: archiveThresholdMs(
+          values.idleArchiveValue,
+          ARCHIVE_UNIT_SCHEMA.parse(values.idleArchiveUnit),
+        ),
+      };
       const { rows: candidates, liveIds } = await listCandidateThreads();
       const byId = new Map(candidates.map((row) => [row.id, row]));
       const kept = await readKept();
@@ -761,8 +904,8 @@ export default async function plugin(bb: BbPluginApi) {
 
       const describe = (entry: SweepEligible): string =>
         entry.reason === "done"
-          ? `done longer than ${thresholds.doneArchiveDays}d`
-          : `idle longer than ${thresholds.idleArchiveDays}d`;
+          ? `done longer than ${values.doneArchiveValue} ${values.doneArchiveUnit}`
+          : `idle longer than ${values.idleArchiveValue} ${values.idleArchiveUnit}`;
       const titleOf = (id: string): string | null => {
         const thread = byId.get(id);
         return thread?.title ?? thread?.titleFallback ?? null;
@@ -788,20 +931,51 @@ export default async function plugin(bb: BbPluginApi) {
             ) + "\n"
           : eligible.length === 0
             ? "No threads are sweep-eligible.\n"
-            : `${lines.join("\n")}\n${eligible.length} thread(s) eligible; re-run with --confirm to archive.\n`;
+            : `${lines.join("\n")}\n${eligible.length} thread(s) eligible; re-run with --confirm to sweep (Done threads archive; long-idle threads are marked Done).\n`;
         return { exitCode: 1, stdout };
       }
 
-      const results: Array<{ id: string; archived: boolean }> = [];
+      const results: Array<{ id: string; action: "archived" | "marked-done" }> = [];
       for (const entry of eligible) {
-        await bb.sdk.threads.archive({ threadId: entry.id });
-        results.push({ id: entry.id, archived: true });
+        // The sweep's staged exit: Done-age threads archive; long-idle
+        // threads are marked Done (operator decision 2026-10-01) — the
+        // fresh doneAt stamp starts the Done arm's archive clock, so a
+        // swept idle thread resurfaces in the Done sweep instead of
+        // vanishing while it was never done.
+        if (entry.reason === "idle") {
+          await writeDoneRecord(entry.id, true);
+          bb.realtime.publish(DONE_CHANGED, { threadId: entry.id, done: true });
+          results.push({ id: entry.id, action: "marked-done" });
+        } else {
+          await bb.sdk.threads.archive({ threadId: entry.id });
+          results.push({ id: entry.id, action: "archived" });
+        }
       }
+      const archivedIds = results
+        .filter((result) => result.action === "archived")
+        .map((result) => ({ id: result.id }));
+      const markedDoneIds = results
+        .filter((result) => result.action === "marked-done")
+        .map((result) => ({ id: result.id }));
       const stdout = input.options.json
-        ? JSON.stringify({ archived: results, count: results.length }, null, 2) + "\n"
+        ? JSON.stringify(
+            {
+              archived: archivedIds,
+              markedDone: markedDoneIds,
+              count: results.length,
+            },
+            null,
+            2,
+          ) + "\n"
         : results.length === 0
-          ? "Nothing to archive.\n"
-          : results.map((result) => `archived ${result.id}`).join("\n") + "\n";
+          ? "Nothing to sweep.\n"
+          : results
+              .map((result) =>
+                result.action === "marked-done"
+                  ? `marked Done ${result.id}`
+                  : `archived ${result.id}`,
+              )
+              .join("\n") + "\n";
       return { exitCode: 0, stdout };
     },
   });
@@ -813,9 +987,11 @@ export default async function plugin(bb: BbPluginApi) {
     },
     async run(input) {
       const values = await settings.get();
-      const defaults = {
-        doneArchiveDays: DEFAULT_DONE_ARCHIVE_DAYS,
-        idleArchiveDays: DEFAULT_IDLE_ARCHIVE_DAYS,
+      const defaults: Record<(typeof settingsKeys)[number], number | string> = {
+        doneArchiveValue: DEFAULT_ARCHIVE_VALUE,
+        doneArchiveUnit: DEFAULT_ARCHIVE_UNIT,
+        idleArchiveValue: DEFAULT_ARCHIVE_VALUE,
+        idleArchiveUnit: DEFAULT_ARCHIVE_UNIT,
       };
       const rows = (Object.keys(defaults) as Array<keyof typeof defaults>).map(
         (key) => ({
@@ -842,10 +1018,16 @@ export default async function plugin(bb: BbPluginApi) {
     positionals: [
       {
         name: "key",
-        description: `doneArchiveDays or idleArchiveDays`,
+        description:
+          "doneArchiveValue, doneArchiveUnit, idleArchiveValue, or idleArchiveUnit",
         required: true,
       },
-      { name: "value", description: "Positive integer (days)", required: true },
+      {
+        name: "value",
+        description:
+          "Count for the value keys; hours | days | weeks for the unit keys",
+        required: true,
+      },
     ],
     options: {
       json: { type: "boolean", description: "Emit machine-readable JSON" },
@@ -859,17 +1041,31 @@ export default async function plugin(bb: BbPluginApi) {
         });
       }
       const raw = input.positionals.value;
-      const value = Number(raw);
-      const cap = settingsCaps[key as (typeof settingsKeys)[number]];
-      if (!Number.isInteger(value) || value < 1 || value > cap) {
-        throw new PluginCliError(`invalid value '${raw}' for ${key}`, {
-          code: "invalid_value",
-          hint: `Expected an integer between 1 and ${cap} (days).`,
-        });
+      let value: number | string;
+      if (key === "doneArchiveUnit" || key === "idleArchiveUnit") {
+        if (!(ARCHIVE_UNITS as readonly string[]).includes(raw)) {
+          throw new PluginCliError(`invalid value '${raw}' for ${key}`, {
+            code: "invalid_value",
+            hint: `Expected one of: ${ARCHIVE_UNITS.join(", ")}.`,
+          });
+        }
+        value = raw;
+      } else {
+        const cap = settingsCaps[key as keyof typeof settingsCaps];
+        const parsed = Number(raw);
+        if (!Number.isInteger(parsed) || parsed < 1 || parsed > cap) {
+          throw new PluginCliError(`invalid value '${raw}' for ${key}`, {
+            code: "invalid_value",
+            hint: `Expected an integer between 1 and ${cap} (in the configured unit).`,
+          });
+        }
+        value = parsed;
       }
+      // The key is one of the four declared settings and `value` matches
+      // that key's type (branch above), so the computed write is shape-safe.
       const next = await settings.experimental_set({
         [key]: value,
-      });
+      } as Parameters<typeof settings.experimental_set>[0]);
       const effective = next[key as (typeof settingsKeys)[number]];
       const stdout = input.options.json
         ? JSON.stringify({ key, value: effective }, null, 2) + "\n"

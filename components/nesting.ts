@@ -431,14 +431,96 @@ export function nestUnderParents(
   // column lists entirely. Only roots (and promoted/flat children) stay.
   const nestedKeyIds = nestedKeys(nested);
   sortNestedByColumnRank(nested, columns, groupBy, ranks);
-  const outColumns: BoardColumn[] = columns.map((column) => {
-    const kept = column.threads.filter(
-      (thread) => !nestedKeyIds.has(thread.id) && (flatIds.has(thread.id) || index.rootIds.has(thread.id)),
-    );
-    return { ...column, threads: kept };
-  });
+  // Pinned-lane attention lift: a pinned family with a live member needing
+  // the operator cannot move out of Pinned (the family-column overrides apply
+  // to unpinned roots only), so within the lane it rises to the top instead
+  // — the same "urgent floats first" tier the nested rows use. See
+  // `pinnedAttentionIds` / `withAttentionFirst` below.
+  const pinnedAttention = pinnedAttentionIds(columns, nested, doneIds);
+  const outColumns: BoardColumn[] = columns
+    .map((column) => {
+      const kept = column.threads.filter(
+        (thread) => !nestedKeyIds.has(thread.id) && (flatIds.has(thread.id) || index.rootIds.has(thread.id)),
+      );
+      return {
+        ...column,
+        threads: column.id === "pinned" ? withAttentionFirst(kept, pinnedAttention) : kept,
+      };
+    })
+    // Nesting drains a column when its every card is a nested child (a live
+    // parent carries its whole family into the family column — R4 — and the
+    // card itself takes a slot elsewhere). buildColumns never yields an
+    // empty bucket: “columns exist only while they hold cards” is the rule
+    // that keeps the board readable and that hides Idle·buckets that have
+    // aged out or emptied. A lane drained to zero violates it — the board
+    // would park an empty lane (header, count 0, maybe a stale drop hint)
+    // beside columns that all earn their place. Hide the drained column
+    // entirely; if a card leaves the nest it returns to its own column and
+    // the lane reappears with it.
+    .filter((column) => column.threads.length > 0);
 
   return { columns: outColumns, childrenByParent: nested };
+}
+
+/**
+ * Which Pinned-lane cards represent a family that currently wants the
+ * operator. A pinned family cannot relocate to a Needs-you lane — the state
+ * column overrides apply to unpinned roots only (`buildColumns` splits pinned
+ * threads out before the overrides are read) — so the attention must surface
+ * where the family already sits. The set holds:
+ *
+ * - a pinned thread whose OWN live state is `attention` (a pinned thread with
+ *   a pending interaction stays in Pinned too), and
+ * - a pinned root whose nested family has an `attention` member.
+ *
+ * Done and archived members never count: completed or stale state must not
+ * demand attention. The pinned card's pulse (`ThreadCard`'s
+ * `familyNeedsAttention`) reads the same states from the same members, so
+ * the lift and the border never disagree about who is urgent.
+ */
+export function pinnedAttentionIds(
+  columns: readonly BoardColumn[],
+  nested: ReadonlyMap<string, readonly PluginSidebarThread[]>,
+  doneIds: ReadonlySet<string>,
+): ReadonlySet<string> {
+  const pinned = columns.find((column) => column.id === "pinned");
+  const ids = new Set<string>();
+  if (pinned !== undefined) {
+    for (const thread of pinned.threads) {
+      if (threadState(thread) === "attention") ids.add(thread.id);
+    }
+  } else {
+    return ids;
+  }
+  for (const [parentId, children] of nested) {
+    if (
+      pinned.threads.some((thread) => thread.id === parentId) &&
+      children.some(
+        (child) =>
+          threadState(child) === "attention" &&
+          !child.isArchived &&
+          !doneIds.has(child.id),
+      )
+    ) {
+      ids.add(parentId);
+    }
+  }
+  return ids;
+}
+
+/**
+ * Insert an attention tier above the Pinned lane's own order: attention
+ * families lead; the rest keep their relative order (the stable sort
+ * preserves manual ranks underneath, exactly as urgent nested children float
+ * above every tier in `sortNestedByColumnRank`).
+ */
+function withAttentionFirst(
+  threads: readonly PluginSidebarThread[],
+  attentionIds: ReadonlySet<string>,
+): PluginSidebarThread[] {
+  return [...threads].sort(
+    (a, b) => (attentionIds.has(a.id) ? 0 : 1) - (attentionIds.has(b.id) ? 0 : 1),
+  );
 }
 
 /**

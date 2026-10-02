@@ -3,10 +3,21 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   APP_VERSION,
+  CURRENT_UNRELEASED_FINGERPRINT,
+  EMPTY_UNRELEASED_FINGERPRINT,
   WHATS_NEW,
   compareVersions,
+  whatsNewEntriesFor,
   entriesSince,
+  hasUnseenWhatsNew,
+  isPrereleaseVersion,
+  unreleasedFingerprint,
 } from "../lib/whats-new";
+import {
+  parseUnreleasedChangelog,
+} from "../lib/unreleased-changelog";
+import { leadFromBullet, parsePublishedChangelog } from "../lib/changelog-markdown";
+import { UNRELEASED_ITEMS } from "../lib/unreleased-changelog.generated";
 
 const packageVersion = (): string =>
   (JSON.parse(
@@ -20,9 +31,223 @@ describe("APP_VERSION stays in lockstep with package.json", () => {
     expect(APP_VERSION).toBe(packageVersion());
   });
 
-  it("has a WHATS_NEW entry for the current version", () => {
-    // An update whose modal cannot describe itself is a silent update.
+  it("has a WHATS_NEW entry for the current released version", () => {
+    // A released version whose modal cannot describe itself is a silent
+    // update. A -dev build is not a release — its "entry" lives in the
+    // changelog's [Unreleased] group and gets its WHATS_NEW entry when the
+    // finalize commit strips the suffix, and the pulse guard keeps dev
+    // quiet rather than a placeholder entry doing it.
+    if (isPrereleaseVersion(APP_VERSION)) return;
     expect(WHATS_NEW.some((entry) => entry.version === APP_VERSION)).toBe(true);
+  });
+
+  it("recognizes prerelease suffixes", () => {
+    expect(isPrereleaseVersion("0.6.0-dev")).toBe(true);
+    expect(isPrereleaseVersion("0.6.0-beta.2")).toBe(true);
+    expect(isPrereleaseVersion("0.6.0")).toBe(false);
+  });
+});
+
+const FULL_CHANGELOG_FIXTURE = `# Changelog
+
+All notable changes.
+
+## [Unreleased]
+
+### Added
+
+- **First.** Multi
+  line continuation.
+
+- **Second.** Plain.
+
+### Changed
+
+- **Third.** After a subsection.
+
+## [0.5.21] - 2026-09-30
+
+### Fixed
+
+- **Old.** Released work stays out.
+`;
+
+const EMPTY_UNRELEASED_FIXTURE = `## [Unreleased]
+
+_Nothing unreleased — bullets land here as work merges._
+
+### Added
+
+### Changed
+
+### Fixed
+
+## [0.5.21] - 2026-09-30
+`;
+
+describe("parseUnreleasedChangelog", () => {
+  it("extracts bullets from the group, unwrapped and unbolded", () => {
+    const parsed = parseUnreleasedChangelog(FULL_CHANGELOG_FIXTURE);
+    expect(parsed.items).toEqual([
+      "First. Multi line continuation.",
+      "Second. Plain.",
+      "Third. After a subsection.",
+    ]);
+  });
+
+  it("returns nothing for the current committed state if the group is empty", () => {
+    expect(parseUnreleasedChangelog(EMPTY_UNRELEASED_FIXTURE).items).toEqual([]);
+  });
+
+  it("returns nothing when there is no [Unreleased] group", () => {
+    expect(parseUnreleasedChangelog("# Changelog\npublished only\n").items).toEqual([]);
+  });
+
+  it("stops at the next release section", () => {
+    const parsed = parseUnreleasedChangelog(
+      "## [Unreleased]\n\n- **New.** Unreleased work\n\n## [0.5.21] - 2026-09-30\n\n- **Old.** Released work\n",
+    );
+    expect(parsed.items).toEqual(["New. Unreleased work"]);
+  });
+});
+
+describe("unreleasedFingerprint", () => {
+  it("is stable and order-sensitive", () => {
+    const first = ["One item."];
+    expect(unreleasedFingerprint(first)).toBe(unreleasedFingerprint([...first]));
+    expect(unreleasedFingerprint(first)).not.toBe(
+      unreleasedFingerprint(["Two items.", "Different one."]),
+    );
+  });
+
+  it("distinguishes the empty group from anything non-empty", () => {
+    expect(unreleasedFingerprint([])).not.toBe(unreleasedFingerprint(["One item."]));
+  });
+});
+
+describe("hasUnseenWhatsNew", () => {
+  // Mirrors the app.tsx wiring — this constant is the embedded group's fp.
+  it("pulses on the unreleased group for prerelease builds, keyed to content", () => {
+    const fp = unreleasedFingerprint(["An unreleased bullet."]);
+    const state = {
+      runningVersion: "0.6.0-dev",
+      lastSeenVersion: "0.6.0-dev",
+      unreleasedFingerprint: fp,
+    };
+    // Same content and opened: seen. The version alone can never make a dev
+    // build pulse.
+    expect(hasUnseenWhatsNew({ ...state, lastSeenUnreleasedFingerprint: fp })).toBe(false);
+    // A changelog landing changes the content: pulse again, even in-session.
+    expect(
+      hasUnseenWhatsNew({ ...state, lastSeenUnreleasedFingerprint: "00000000" }),
+    ).toBe(true);
+    // Never opened (null snapshot) with standing bullets: pulse — the group
+    // standing in the build advertises itself until the reader opens once.
+    expect(hasUnseenWhatsNew({ ...state, lastSeenUnreleasedFingerprint: null })).toBe(true);
+  });
+
+  it("never pulses an empty unreleased group", () => {
+    const empty = unreleasedFingerprint([]);
+    expect(empty).toBe(EMPTY_UNRELEASED_FINGERPRINT);
+    const state = {
+      runningVersion: "0.6.0-dev",
+      lastSeenVersion: "0.6.0-dev",
+      unreleasedFingerprint: empty,
+    };
+    expect(hasUnseenWhatsNew({ ...state, lastSeenUnreleasedFingerprint: null })).toBe(false);
+    expect(hasUnseenWhatsNew({ ...state, lastSeenUnreleasedFingerprint: empty })).toBe(false);
+  });
+
+  it("keeps version-based pulse semantics for stable builds", () => {
+    expect(
+      hasUnseenWhatsNew({
+        runningVersion: "0.6.0",
+        lastSeenVersion: "0.5.21",
+        unreleasedFingerprint: CURRENT_UNRELEASED_FINGERPRINT,
+        lastSeenUnreleasedFingerprint: null,
+      }),
+    ).toBe(true);
+    expect(
+      hasUnseenWhatsNew({
+        runningVersion: "0.6.0",
+        lastSeenVersion: "0.6.0",
+        unreleasedFingerprint: CURRENT_UNRELEASED_FINGERPRINT,
+        lastSeenUnreleasedFingerprint: null,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("whatsNewEntriesFor", () => {
+  it("leads a prerelease build with its unreleased group, then the published feed", () => {
+    // The committed [Unreleased] group's shape is whatever the changelog
+    // holds right now — assert structure, not emptiness; lastSeen null means
+    // the fresh-install rules give no published delta. The group's bullets
+    // reach the modal as their lead sentences (leadFromBullet), the same
+    // seam the published feed derives through.
+    if (UNRELEASED_ITEMS.length > 0) {
+      const head = {
+        version: "0.6.0-dev",
+        unreleased: true,
+        items: UNRELEASED_ITEMS.map(leadFromBullet),
+      };
+      expect(whatsNewEntriesFor("0.6.0-dev", true, null)).toEqual([head]);
+      expect(whatsNewEntriesFor("0.6.0-dev", false, null)).toEqual([head, ...WHATS_NEW]);
+    } else {
+      expect(whatsNewEntriesFor("0.6.0-dev", true, null)).toEqual([]);
+      expect(whatsNewEntriesFor("0.6.0-dev", false, null)).toEqual([...WHATS_NEW]);
+    }
+  });
+
+  it("keeps stable-build behavior", () => {
+    expect(whatsNewEntriesFor("0.6.0", true, "0.4.2")).toEqual(entriesSince("0.4.2"));
+    expect(whatsNewEntriesFor("0.6.0", false, null)).toEqual([...WHATS_NEW]);
+  });
+});
+
+const CHANGELOG = readFileSync(
+  fileURLToPath(new URL("../CHANGELOG.md", import.meta.url)),
+  "utf8",
+);
+
+describe("WHATS_NEW derives from CHANGELOG.md's published sections", () => {
+  const sections = parsePublishedChangelog(CHANGELOG);
+
+  it("covers every published section, versions sorted newest first", () => {
+    // Subset, not equality: WHATS_NEW may also hold legacy hand-written
+    // entries for versions (0.5.6–0.5.12) the changelog has no section for.
+    const covered = new Set(WHATS_NEW.map((entry) => entry.version));
+    for (const section of sections) {
+      expect(covered.has(section.version)).toBe(true);
+    }
+    for (let i = 1; i < WHATS_NEW.length; i += 1) {
+      // Strictly descending: the feed must never order two entries alike.
+      expect(compareVersions(WHATS_NEW[i].version, WHATS_NEW[i - 1].version)).toBeLessThan(0);
+    }
+  });
+
+  it("gives every entry a sentence-lead item set", () => {
+    for (const entry of WHATS_NEW) {
+      expect(entry.items.length).toBeGreaterThan(0);
+      for (const item of entry.items) {
+        // Every item is the bullet's first sentence: terminal punctuation,
+        // no stray bold markup, and — unlike a bullet — no doc links.
+        expect(item).toMatch(/[.!?]$/);
+        expect(item).not.toMatch(/\*\*/);
+      }
+    }
+  });
+
+  it("scrapes the lead through the bold span, then the first sentence", () => {
+    // Lead closes its own sentence: the lead is the item.
+    expect(leadFromBullet("**Surface ready.** Full mechanics live here.")).toBe("Surface ready.");
+    // Lead runs on: the item is the first full sentence from the lead.
+    expect(leadFromBullet("**Sorts by done date, newest**, instead of by activity."))
+      .toBe("Sorts by done date, newest, instead of by activity.");
+    // Ticket refs never reach the modal.
+    expect(leadFromBullet("**Renamed to Focus Board** (#8): package renamed.")).toBe("Renamed to Focus Board: package renamed.");
+    // No bold and unbroken sentence: first sentence.
+    expect(leadFromBullet("One plain sentence. Then elaboration.")).toBe("One plain sentence.");
   });
 });
 
@@ -53,6 +278,7 @@ describe("entriesSince", () => {
   it("returns entries strictly newer than the stored version", () => {
     const entries = entriesSince("0.4.2");
     expect(entries.map((entry) => entry.version)).toEqual([
+      "0.5.21",
       "0.5.20",
       "0.5.19",
       "0.5.18",
@@ -74,6 +300,8 @@ describe("entriesSince", () => {
       "0.5.2",
       "0.5.1",
       "0.5.0",
+      "0.4.6",
+      "0.4.5",
       "0.4.4",
       "0.4.3",
     ]);

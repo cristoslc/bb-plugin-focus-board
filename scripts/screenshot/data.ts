@@ -48,6 +48,16 @@ export const SIM_PROVIDERS: readonly { id: string; displayName: string }[] = [
 /** Thread ids marked Done on the simulated board. */
 export const SIM_DONE_IDS: readonly string[] = ["thr_pane_padding", "thr_license"];
 
+/**
+ * Done records for the Done fixtures, stamped past the default 7-day sweep
+ * threshold so the Done column's sweep button is eligible (and the armed
+ * state is reachable) in screenshots and UAT.
+ */
+export const SIM_DONE_RECORDS: Record<string, { doneAt: string }> = {
+  thr_pane_padding: { doneAt: new Date(SIM_NOW - 9 * DAY).toISOString() },
+  thr_license: { doneAt: new Date(SIM_NOW - 12 * DAY).toISOString() },
+};
+
 type SimThread = Record<string, unknown> & {
   id: string;
   updatedAt: number;
