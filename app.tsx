@@ -632,10 +632,11 @@ function BoardPage({ subPath }: { subPath: string }) {
   // additionally fires on host-side changes so cards never sit stale.
   useRealtime("thread-list-changed", () => {});
 
-  // R2: the family pipeline runs on the NON-HIDDEN set — archived threads
-  // are included so an archived child stays under its parent. Archived
-  // threads never render standalone; `assembleBoard` keeps them out of the
-  // columns in both modes.
+  // The family pipeline runs on the NON-HIDDEN set. Archived threads are
+  // included here but are hidden by the pipeline itself: buildFamilyIndex —
+  // the single authoritative hide — drops them, so an archived child renders
+  // nowhere (in either board view) and a child of an archived parent
+  // re-roots. assembleBoard keeps them out of the columns in both modes.
   const nonHiddenThreads = useMemo(
     () => threads.filter((thread) => !thread.isHidden),
     [threads],
@@ -657,7 +658,8 @@ function BoardPage({ subPath }: { subPath: string }) {
 
   // Family-aware filtering replaces per-thread filtering when nesting is ON:
   // a family passes when any member matches, non-matching members render
-  // dimmed (archived riders always dim; they never contribute a match).
+  // dimmed (archived members are hidden outright by the family index, so
+  // they never appear here at all).
   // Nesting OFF means a fully flat board — per-thread filtering again. The
   // "parent" grouping overrides that (D11): the nesting toggle is inert
   // there, and lane mode always filters family-first (D10 keep-and-dim).
@@ -687,9 +689,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Single assembly: buildColumns → nestUnderParents. The nesting result's
   // map (not the raw family index) drives which children render as nested
   // rows, so a promoted or cross-axis child appears only as its standalone
-  // card — never both standalone AND nested. The raw index's counts drive the
-  // parent card's child-count chip, which counts every child (archived
-  // included). With nesting OFF the board is flat: no rows, no chips.
+  // card — never both standalone AND nested. `doneChildrenByParent` drives
+  // the Done projection cards. The chip counts come from the assembly too,
+  // counted per card's own space (live children on a live card; done rows on
+  // a Done card). With nesting OFF the board is flat: no rows, no chips.
   const isParentGroupBy = groupBy === "parent";
   const parentLanes = useMemo(
     () => (isParentGroupBy ? buildParentLanes(searched, doneIds, Date.now(), doneTimes) : null),
@@ -752,6 +755,17 @@ function BoardPage({ subPath }: { subPath: string }) {
           );
     },
     [columns, doneIds, doneAgeSource, idleKept, liveChildParentIds, sweepConfig],
+  );
+
+  // A Done-column projection card (a live family's Done card) cannot join a
+  // sweep either: it is a rendering of a live parent, not a done thread.
+  const doneProjectionParentIds = useMemo(
+    () => new Set(assembly?.doneChildrenByParent.keys() ?? []),
+    [assembly],
+  );
+  const sweepBlockedIds = useMemo(
+    () => new Set([...liveChildParentIds, ...doneProjectionParentIds]),
+    [liveChildParentIds, doneProjectionParentIds],
   );
 
   const armSweepFor = useCallback(
@@ -1522,6 +1536,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             doneIds={doneIds}
             nestedChildrenByParent={assembly?.nestedChildrenByParent ?? new Map()}
             childCountByParent={assembly?.childCountByParent ?? new Map()}
+            doneChildrenByParent={assembly?.doneChildrenByParent ?? new Map()}
             dimmedIds={dimmedIds}
             projectNameFor={projectNameFor}
             repoBaseFor={repoBaseFor}
@@ -1536,7 +1551,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             onDismissSweepNotice={clearSweepNotice}
             onSweepUndo={undoSweepFor}
             onSweepToggle={toggleSweepSelectionFor}
-            sweepBlockedIds={liveChildParentIds}
+            sweepBlockedIds={sweepBlockedIds}
             onSweepArm={armSweepFor}
             onSweepDisarm={disarmSweep}
             onSweepConfirm={confirmSweepFor}

@@ -7,12 +7,34 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **A family's done work now renders as a second family card in the Done
+  column.** Done children no longer nest under the family's active card —
+  they move to the Done column under a projection of the parent's card
+  (dimmed, with the done children nested beneath it), so a family can live in
+  both spaces at once: the live portion in its attention lane, the done
+  portion in Done. A done parent keeps its single Done card with its done
+  children nested. Each card's child-count chip counts its own space, and a
+  projection card refuses sweep selection (it is not a done thread).
+
+- **Big families scroll inside their card.** When a family card nests more
+  than five child rows, the list caps its height and scrolls; five or fewer
+  render at natural height as before. The collapse chevron still hides the
+  whole list.
+
+### Changed
+
+- **Archived children are now hidden outright, everywhere.** They no longer
+  render as dimmed rows under the family card on the Attention board or as
+  riders under the family header in the Parent-thread view — archiving a
+  thread removes it from the board completely, matching bb's sidebar. Child
+  chips count only visible children, and the children of an archived parent
+  now render as standalone cards instead of vanishing under a card that
+  never renders.
+
 - **Developer toggle: pane chat scroll instrumentation.** A new off-by-default
   Focus Board setting logs the thread pane transcript's scroll activity
   while enabled — programmatic `scrollTop` writes with stacks, the gesture
   stream, a copyable log in the pane header (`docs/chat-click-jump-2026-09-29.md`).
-
-### Changed
 
 - **The long-idle sweep now marks threads Done instead of archiving them.**
   Confirming a sweep on the Idle · A-while-ago column sends its quiet threads

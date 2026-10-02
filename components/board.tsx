@@ -76,6 +76,13 @@ interface BoardProps {
    * child-count chip, which counts children that render standalone too.
    */
   childCountByParent: ReadonlyMap<string, number>;
+  /**
+   * Parent id → done children that render nested under the family's
+   * projection card in the Done column. A live parent's card in the Done
+   * column IS that projection: it shows the done portion of the family while
+   * the active card keeps the live portion.
+   */
+  doneChildrenByParent: ReadonlyMap<string, readonly PluginSidebarThread[]>;
   /** Family members that did not match the active filters; rendered dimmed. */
   dimmedIds: ReadonlySet<string>;
   projectNameFor: (projectId: string) => string;
@@ -278,6 +285,7 @@ export function Board({
   doneIds,
   nestedChildrenByParent,
   childCountByParent,
+  doneChildrenByParent,
   dimmedIds,
   projectNameFor,
   repoBaseFor,
@@ -731,7 +739,17 @@ export function Board({
                 ) : null}
                 {column.threads.length === 0 ? null : (
                   <ul className="flex flex-col gap-1.5">
-                    {shownThreads.map((thread) => (
+                    {shownThreads.map((thread) => {
+                      // A live thread sitting in the Done column is a family's
+                      // projection card: it renders the done portion of the
+                      // family (done children nested under it) while the
+                      // active card keeps the live portion. It is not a done
+                      // thread — it carries the Done treatment and refuses
+                      // sweep selection.
+                      const isDoneProjection =
+                        column.id === "done" && !doneIds.has(thread.id);
+                      const projectionChildren = doneChildrenByParent.get(thread.id);
+                      return (
                       <li
                         key={thread.id}
                         data-rank-slot={ranking ? thread.id : undefined}
@@ -903,12 +921,13 @@ export function Board({
                           thread={thread}
                           stateDot={<StateDot thread={thread} />}
                           isActive={thread.id === activeThreadId}
-                          isDone={doneIds.has(thread.id)}
+                          isDone={doneIds.has(thread.id) || isDoneProjection}
                           isSweepHighlighted={armedSet?.has(thread.id) ?? false}
                           isSweeping={runHere !== null && runHere.activeId === thread.id}
                           isSweepSelecting={isArmed}
                           isSweepSelectable={
                             isArmed &&
+                            !isDoneProjection &&
                             !(armedSet?.has(thread.id) ?? false) &&
                             !(sweepBlockedIds?.has(thread.id) ?? false)
                           }
@@ -919,14 +938,28 @@ export function Board({
                               );
                               return;
                             }
+                            if (isDoneProjection) {
+                              setSweepRefusal(
+                                `"${thread.displayTitle}" is a family's Done card, not a done thread.`,
+                              );
+                              return;
+                            }
                             onSweepToggle?.(toggledId);
                           }}
                           projectName={projectNameFor(thread.projectId)}
                           repoHrefBase={repoBaseFor(thread.projectId) ?? undefined}
                           statusFor={statusFor}
                           menuActions={menuActionsFor(thread)}
-                          childThreads={nestedChildrenByParent.get(thread.id)}
-                          childCount={childCountByParent.get(thread.id) ?? 0}
+                          childThreads={
+                            isDoneProjection
+                              ? projectionChildren
+                              : nestedChildrenByParent.get(thread.id)
+                          }
+                          childCount={
+                            isDoneProjection
+                              ? (projectionChildren?.length ?? 0)
+                              : (childCountByParent.get(thread.id) ?? 0)
+                          }
                           doneIds={doneIds}
                           activeThreadId={activeThreadId}
                           dimmed={dimmedIds.has(thread.id)}
@@ -943,7 +976,8 @@ export function Board({
                           }}
                         />
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 )}
                 {column.id === "working" ? (
