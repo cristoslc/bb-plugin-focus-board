@@ -73,6 +73,63 @@ function cardAnchor(fromId: string): HTMLElement {
 
 afterEach(cleanup);
 
+describe("cancelling a sweep", () => {
+  const cancelCandidates = ["thr_d1", "thr_d2", "thr_d3"].map(doneThread);
+  const cancelArmed = armSweep("done", ["thr_d1", "thr_d2", "thr_d3"]);
+
+  it("an armed mode offers an exit that disarms, distinct from confirm", () => {
+    const onSweepCancel = vi.fn();
+    renderBoard(cancelCandidates, {
+      armedSweep: cancelArmed,
+      onSweepCancel,
+    });
+    const cancel = document.querySelector<HTMLButtonElement>("[data-sweep-cancel]");
+    expect(cancel).not.toBeNull();
+    expect(cancel?.getAttribute("aria-label")).toBe("Exit sweep mode");
+    fireEvent.click(cancel!);
+    expect(onSweepCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("a running sweep offers a cancel", () => {
+    const onSweepCancel = vi.fn();
+    renderBoard(cancelCandidates, {
+      armedSweep: cancelArmed,
+      sweepRun: { columnId: "done", total: 3, done: 1, activeId: "thr_d2" },
+      onSweepCancel,
+    });
+    const cancel = document.querySelector<HTMLButtonElement>("[data-sweep-cancel]");
+    expect(cancel?.getAttribute("aria-label")).toBe("Cancel sweep");
+    fireEvent.click(cancel!);
+    expect(onSweepCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("no cancel affordance when idle", () => {
+    renderBoard(cancelCandidates, {});
+    expect(document.querySelector("[data-sweep-cancel]")).toBeNull();
+  });
+});
+
+describe("selection never reorders the column", () => {
+  it("selected cards highlight in place; the list keeps its order", () => {
+    // Deliberately NOT the gather order: thr_d3 selected first, and the
+    // column's own order (recency here) must survive untouched.
+    renderBoard(
+      ["thr_d1", "thr_d2", "thr_d3"].map(doneThread),
+      { armedSweep: armSweep("done", ["thr_d3"]) },
+    );
+    const rendered = [
+      ...document.querySelectorAll("[data-card-list] [data-thread-card]"),
+    ].map((node) => node.getAttribute("data-thread-card"));
+    expect(rendered).toEqual(["thr_d1", "thr_d2", "thr_d3"]);
+    // The selected card is still highlighted where it sits.
+    expect(
+      document
+        .querySelector('[data-thread-card="thr_d3"]')
+        ?.hasAttribute("data-sweep-highlighted"),
+    ).toBe(true);
+  });
+});
+
 describe("the sweep button is always available", () => {
   it("renders icon-only when nothing is past the threshold, and arms on click", () => {
     const onSweepArm = vi.fn();

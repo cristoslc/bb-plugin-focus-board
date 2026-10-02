@@ -107,7 +107,10 @@ export interface ArmedSweep {
   threadIds: readonly string[];
 }
 
-/** Arm: capture the explicit, frozen list. Nothing moves until confirm. */
+/**
+ * Arm: enter sweep mode with the past-threshold threads pre-selected. The
+ * selection stays live from here — card clicks toggle membership.
+ */
 export function armSweep(columnId: string, candidateIds: readonly string[]): ArmedSweep {
   return {
     columnId,
@@ -139,6 +142,14 @@ export interface SweepRunFailure {
   message: string;
 }
 
+export interface SweepRunResult {
+  failures: SweepRunFailure[];
+  /** True when a cancel stopped the loop before every id was processed. */
+  cancelled: boolean;
+  /** Ids never attempted (all processed when `cancelled` is false). */
+  remaining: string[];
+}
+
 export interface SweepArchiveCallbacks {
   /** Archives one thread. The runner awaits it before the next. */
   archive: (threadId: string) => Promise<unknown>;
@@ -146,6 +157,12 @@ export interface SweepArchiveCallbacks {
   onActive?: (threadId: string) => void;
   /** Fired after each archive settles (success or failure). */
   onSettled?: (threadId: string) => void;
+  /**
+   * Asked before every archive AFTER the first. False stops the run: the
+   * archive already in flight finishes (cancel means "no more", not "yank
+   * the current one"), the rest are reported as `remaining`.
+   */
+  shouldContinue?: () => boolean;
 }
 
 /**
@@ -161,9 +178,20 @@ export interface SweepArchiveCallbacks {
 export async function runSweepArchive(
   threadIds: readonly string[],
   callbacks: SweepArchiveCallbacks,
-): Promise<SweepRunFailure[]> {
+): Promise<SweepRunResult> {
   const failures: SweepRunFailure[] = [];
-  for (const threadId of threadIds) {
+  for (const [index, threadId] of threadIds.entries()) {
+    if (
+      index > 0 &&
+      callbacks.shouldContinue !== undefined &&
+      !callbacks.shouldContinue()
+    ) {
+      return {
+        failures,
+        cancelled: true,
+        remaining: threadIds.slice(index),
+      };
+    }
     callbacks.onActive?.(threadId);
     try {
       await callbacks.archive(threadId);
@@ -175,7 +203,7 @@ export async function runSweepArchive(
     }
     callbacks.onSettled?.(threadId);
   }
-  return failures;
+  return { failures, cancelled: false, remaining: [] };
 }
 
 /** What the Board renders while a confirmed sweep is running. */

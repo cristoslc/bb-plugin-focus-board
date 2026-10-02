@@ -476,6 +476,9 @@ function BoardPage({ subPath }: { subPath: string }) {
   // A confirmed sweep in flight: sequential archives with per-card progress
   // (throbber on the active card, highlight kept on the rest). Null when idle.
   const [sweepRun, setSweepRun] = useState<SweepRunView | null>(null);
+  // Cancel flag for the live run: read by the runner between archives.
+  // A ref, not state — cancelling must not re-render the loop's inputs.
+  const sweepCancelRef = useRef(false);
   // A finished sweep's failure summary ("archived 2 of 5; 3 failed ...").
   // Null when the last sweep fully succeeded (or none has run).
   const [sweepNotice, setSweepNotice] = useState<string | null>(null);
@@ -499,6 +502,15 @@ function BoardPage({ subPath }: { subPath: string }) {
       current === null ? current : toggleSweepSelection(current, threadId),
     );
   }, []);
+  // The sweep's way out: during a run, stop before the next archive; in an
+  // idle armed mode, exit. One X button serves both, labeled per state.
+  const cancelSweepFor = useCallback(() => {
+    if (sweepRun !== null) {
+      sweepCancelRef.current = true;
+      return;
+    }
+    setArmedSweep(null);
+  }, [sweepRun]);
   // What's new: two "seen" models, picked by the running build. A stable
   // build compares versions: a fresh install (nothing stored) is stamped
   // silently — everything is new, so nothing counts as new — and an upgrade
@@ -723,6 +735,7 @@ function BoardPage({ subPath }: { subPath: string }) {
       }
       setSweepNotice(null);
       setSweepRun({ columnId, total: threadIds.length, done: 0, activeId: null });
+      sweepCancelRef.current = false;
       void runSweepArchive(threadIds, {
         // The awaited sdk client call, NOT actions.archive: the host's
         // sidebar archive aborts the previous in-flight archive when a new
@@ -735,21 +748,34 @@ function BoardPage({ subPath }: { subPath: string }) {
           setSweepRun((run) =>
             run === null ? run : { ...run, done: run.done + 1, activeId: null },
           ),
-      }).then((failures) => {
+        // Cancel between archives; the one in flight always finishes.
+        shouldContinue: () => !sweepCancelRef.current,
+      }).then((result) => {
         setSweepRun(null);
-        if (failures.length === 0) {
+        const failedIds = result.failures.map((failure) => failure.threadId);
+        // A cancelled run keeps whatever was never swept armed (plus any
+        // failures) so it can be inspected, retried, or explicitly exited;
+        // the pill flipping back to "Sweep N" is the cancellation feedback.
+        const stayArmed = result.cancelled
+          ? [...failedIds, ...result.remaining]
+          : failedIds;
+        if (stayArmed.length === 0) {
           setArmedSweep(null);
           return;
         }
-        // Fail loud: the failed candidates stay armed (highlight + gather)
-        // for a one-click retry, and a banner says what happened.
-        setArmedSweep({ columnId, threadIds: failures.map((f) => f.threadId) });
-        const failedTitles = failures.map((failure) => {
+        // Fail loud: the failed candidates stay armed (highlight) for a
+        // one-click retry, and a banner says what happened.
+        setArmedSweep({ columnId, threadIds: stayArmed });
+        if (result.failures.length === 0) return;
+        const failedTitles = result.failures.map((failure) => {
           const match = threads.find((candidate) => candidate.id === failure.threadId);
           return `"${match?.displayTitle ?? match?.titleFallback ?? failure.threadId}" (${failure.message})`;
         });
+        const attempted = threadIds.length - result.remaining.length;
         setSweepNotice(
-          `Sweep archived ${threadIds.length - failures.length} of ${threadIds.length}; ${failures.length} failed: ${failedTitles.join(", ")}. The failed cards stay highlighted. Click Sweep to retry.`,
+          result.cancelled
+            ? `Sweep cancelled. ${attempted - result.failures.length} archived, ${result.remaining.length} not attempted; ${result.failures.length} failed: ${failedTitles.join(", ")}.`
+            : `Sweep archived ${attempted - result.failures.length} of ${threadIds.length}; ${result.failures.length} failed: ${failedTitles.join(", ")}. The failed cards stay highlighted. Click Sweep to retry.`,
         );
       });
     },
@@ -1435,6 +1461,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             onSweepArm={armSweepFor}
             onSweepDisarm={disarmSweep}
             onSweepConfirm={confirmSweepFor}
+            onSweepCancel={cancelSweepFor}
             onDropDone={(threadId) => {
               const thread = threads.find((candidate) => candidate.id === threadId);
               const next = new Set(doneIds);
