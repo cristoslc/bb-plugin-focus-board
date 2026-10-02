@@ -9,7 +9,7 @@
  */
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
-import { SIM_DONE_IDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES } from "./data";
+import { SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES } from "./data";
 import { applyMoveVisible } from "../../lib/rank";
 
 export const registeredNavPanel: {
@@ -250,7 +250,9 @@ const uatCalls: { method: string; args?: unknown }[] = [];
 
 const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   uatCalls.push({ method, args });
-  if (method === "done_list") return { doneIds: SIM_DONE_IDS, records: {} };
+  if (method === "done_list") {
+    return { doneIds: SIM_DONE_IDS, records: structuredClone(SIM_DONE_RECORDS) };
+  }
   if (method === "sweep_config_get") {
     return { doneArchiveDays: 7, idleArchiveDays: 30 };
   }

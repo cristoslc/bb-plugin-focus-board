@@ -201,7 +201,7 @@ function SweepButton({
         else onArm();
       }}
       className={cn(
-        "inline-flex h-5 items-center gap-1 rounded px-1.5 text-[10px] font-medium transition-colors",
+        "inline-flex h-5 shrink-0 items-center gap-1 whitespace-nowrap rounded px-1.5 text-[10px] font-medium transition-colors",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         isArmed
           ? "bg-amber-500/90 text-amber-950 hover:bg-amber-500"
@@ -212,7 +212,7 @@ function SweepButton({
       {isArmed ? (
         <>
           Sweep {eligibleCount} → Archive
-          <span aria-hidden>?</span>
+          <Icon name="CircleQuestion" className="size-3" aria-hidden />
         </>
       ) : (
         <>Sweep {eligibleCount}</>
