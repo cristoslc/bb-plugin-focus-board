@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { BoardColumn, GroupBy } from "./grouping";
-import { threadState, withSweepGather } from "./grouping";
+import { threadState } from "./grouping";
 import { sweepColumnKind, type ArmedSweep, type SweepRunView } from "../lib/sweep";
 import { ThreadCard } from "./thread-card";
 import type { CardMenuAction } from "./thread-card-menu";
@@ -147,6 +147,12 @@ interface BoardProps {
   onSweepArm?: (columnId: string) => void;
   onSweepDisarm?: () => void;
   onSweepConfirm?: (columnId: string) => void;
+  /**
+   * The sweep's way out, whatever state it is in: an armed mode exits
+   * (disarm), a running sweep stops before its next archive. The board
+   * renders the button and labels it per state; the caller dispatches.
+   */
+  onSweepCancel?: () => void;
 }
 
 const DOT_CLASS: Record<string, string> = {
@@ -276,6 +282,7 @@ export function Board({
   onSweepArm,
   onSweepDisarm,
   onSweepConfirm,
+  onSweepCancel,
 }: BoardProps) {
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   // { columnId, threadId, edge } of the insertion line while a ranked card
@@ -555,7 +562,11 @@ export function Board({
             : sweepActive && sweepKind !== null
               ? (sweepCandidatesFor?.(column.id) ?? [])
               : [];
-          const shownThreads = isArmed ? withSweepGather(column.threads, eligible) : column.threads;
+          // Selection never reorders the column: highlighted cards stay
+          // where they are and the operator scrolls to see the blast
+          // radius. Reordering on every toggle made deselecting feel like
+          // the board was shuffling a deck (observed 2026-10-01).
+          const shownThreads = column.threads;
           const armedSet = isArmed ? new Set(eligible) : null;
           const rankKey = columnRankKey(groupBy, column.id);
           // Seed on first intent: every card is a reorder target for its OWN
@@ -632,7 +643,7 @@ export function Board({
                   </span>
                 ) : null}
                 {sweepActive ? (
-                  <span className="ml-auto">
+                  <span className="ml-auto flex items-center gap-0.5">
                     <SweepButton
                       eligibleCount={eligible.length}
                       isArmed={isArmed}
@@ -644,6 +655,25 @@ export function Board({
                       onArm={() => onSweepArm?.(column.id)}
                       onConfirm={() => onSweepConfirm?.(column.id)}
                     />
+                    {isArmed || runHere !== null ? (
+                      <button
+                        type="button"
+                        data-sweep-cancel=""
+                        aria-label={runHere !== null ? "Cancel sweep" : "Exit sweep mode"}
+                        title={
+                          runHere !== null
+                            ? "Cancel: the current archive finishes, nothing else is swept"
+                            : "Exit sweep mode"
+                        }
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onSweepCancel?.();
+                        }}
+                        className="inline-flex size-5 items-center justify-center rounded text-muted-foreground/70 transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <Icon name="X" className="size-3" aria-hidden />
+                      </button>
+                    ) : null}
                   </span>
                 ) : null}
               </header>
@@ -912,9 +942,9 @@ function cssEscape(value: string): string {
 /**
  * Disarm an armed sweep when the operator clicks anywhere else. Clicks on
  * cards inside the armed column do NOT disarm: in sweep mode those clicks
- * toggle the card's selection. The sweep button, the armed column's cards,
- * and Escape are the only surfaces that keep the mode alive; anything else
- * (empty board area, another column, a header) ends it.
+ * toggle the card's selection. The sweep button, the cancel button, the
+ * armed column's cards, and Escape are the only surfaces that keep the mode
+ * alive; anything else (empty board area, another column, a header) ends it.
  */
 export function useSweepClickAway(
   armedColumnId: string | null,
@@ -925,7 +955,7 @@ export function useSweepClickAway(
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
-      if (target.closest("[data-sweep-button]")) return;
+      if (target.closest("[data-sweep-button], [data-sweep-cancel]")) return;
       if (
         target.closest(
           `[data-column-id="${cssEscape(armedColumnId)}"] [data-thread-card]`,
