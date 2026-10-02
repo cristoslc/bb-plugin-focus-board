@@ -8,6 +8,7 @@ import {
   sweepCandidatesForDoneColumn,
   sweepCandidatesForIdleColumn,
   sweepColumnKind,
+  toggleSweepSelection,
 } from "../lib/sweep";
 
 const HOUR = 60 * 60 * 1000;
@@ -356,6 +357,33 @@ describe("arm-then-confirm semantics", () => {
     const armed = armSweep("done", ["a"]);
     const disarmed = confirmSweep(armed, false);
     expect(disarmed).toEqual([]);
+  });
+});
+
+describe("manual sweep selection (click to toggle while armed)", () => {
+  it("adds an unselected thread to the selection", () => {
+    const armed = armSweep("done", ["a"]);
+    const next = toggleSweepSelection(armed, "b");
+    expect(next.threadIds).toEqual(["a", "b"]);
+    expect(next.columnId).toBe("done");
+  });
+
+  it("removes a selected thread from the selection", () => {
+    const armed = armSweep("done", ["a", "b"]);
+    const next = toggleSweepSelection(armed, "a");
+    expect(next.threadIds).toEqual(["b"]);
+  });
+
+  it("does not mutate the armed state it was given", () => {
+    const armed = armSweep("done", ["a"]);
+    toggleSweepSelection(armed, "b");
+    toggleSweepSelection(armed, "a");
+    expect(armed.threadIds).toEqual(["a"]);
+  });
+
+  it("toggling the same thread twice returns to the start", () => {
+    const armed = armSweep("done", ["a"]);
+    expect(toggleSweepSelection(toggleSweepSelection(armed, "b"), "b").threadIds).toEqual(["a"]);
   });
 });
 

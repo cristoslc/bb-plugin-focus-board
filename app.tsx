@@ -55,6 +55,7 @@ import {
   sweepCandidatesForDoneColumn,
   sweepCandidatesForIdleColumn,
   sweepColumnKind,
+  toggleSweepSelection,
   type ArmedSweep,
   type DoneAgeSource,
   type SweepRunView,
@@ -481,9 +482,23 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Stable dismiss: the Board's auto-dismiss timer effect keys on it.
   const clearSweepNotice = useCallback(() => setSweepNotice(null), []);
   const disarmSweep = useCallback(() => setArmedSweep(null), []);
-  // Click-away and Escape disarm only an idle arm: a running sweep must not
-  // be dismissed out from under its own confirm gesture.
-  useSweepClickAway(armedSweep !== null && sweepRun === null, disarmSweep);
+  // Click-away and Escape disarm only an idle arm — and only from outside
+  // the armed column: its cards' clicks toggle the sweep selection, so the
+  // hook needs the column id to spare them. A running sweep is not armed
+  // for this hook at all; it cannot be dismissed out from under itself.
+  useSweepClickAway(
+    armedSweep !== null && sweepRun === null ? armedSweep.columnId : null,
+    disarmSweep,
+  );
+  // Sweep mode is manual from here: arming pre-selects the past-threshold
+  // candidates (armSweepFor), then every card click in the column flips its
+  // membership. Live-child parents are refused by the Board itself and
+  // never reach this toggle.
+  const toggleSweepSelectionFor = useCallback((threadId: string) => {
+    setArmedSweep((current) =>
+      current === null ? current : toggleSweepSelection(current, threadId),
+    );
+  }, []);
   // What's new: two "seen" models, picked by the running build. A stable
   // build compares versions: a fresh install (nothing stored) is stamped
   // silently — everything is new, so nothing counts as new — and an upgrade
@@ -1415,6 +1430,8 @@ function BoardPage({ subPath }: { subPath: string }) {
             sweepRun={sweepRun}
             sweepNotice={sweepNotice}
             onDismissSweepNotice={clearSweepNotice}
+            onSweepToggle={toggleSweepSelectionFor}
+            sweepBlockedIds={liveChildParentIds}
             onSweepArm={armSweepFor}
             onSweepDisarm={disarmSweep}
             onSweepConfirm={confirmSweepFor}

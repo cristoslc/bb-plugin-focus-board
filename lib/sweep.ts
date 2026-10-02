@@ -123,6 +123,17 @@ export function confirmSweep(armed: ArmedSweep, confirmed: boolean): string[] {
   return confirmed ? [...armed.threadIds] : [];
 }
 
+/**
+ * Toggle one thread's membership in the live sweep selection. Arming still
+ * pre-selects the past-threshold candidates, but from there the operator
+ * curates: clicking a card in sweep mode flips it in or out.
+ */
+export function toggleSweepSelection(armed: ArmedSweep, threadId: string): ArmedSweep {
+  return armed.threadIds.includes(threadId)
+    ? { ...armed, threadIds: armed.threadIds.filter((id) => id !== threadId) }
+    : { ...armed, threadIds: [...armed.threadIds, threadId] };
+}
+
 export interface SweepRunFailure {
   threadId: string;
   message: string;
