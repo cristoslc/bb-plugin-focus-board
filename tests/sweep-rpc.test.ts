@@ -3,21 +3,21 @@ import { z } from "zod";
 import { rpcContract } from "../server";
 
 describe("sweep RPC contract", () => {
-  it("sweep_config_get returns both thresholds as positive integers", () => {
+  it("sweep_config_get returns both thresholds as positive ms integers", () => {
     const parsed = rpcContract.sweep_config_get.output.parse({
-      doneArchiveDays: 7,
-      idleArchiveDays: 30,
+      doneArchiveMs: 2 * 24 * 60 * 60 * 1000,
+      idleArchiveMs: 12 * 60 * 60 * 1000,
     });
-    expect(parsed.doneArchiveDays).toBe(7);
-    expect(parsed.idleArchiveDays).toBe(30);
+    expect(parsed.doneArchiveMs).toBe(2 * 24 * 60 * 60 * 1000);
+    expect(parsed.idleArchiveMs).toBe(12 * 60 * 60 * 1000);
   });
 
-  it("sweep_config_get output rejects non-integers", () => {
+  it("sweep_config_get output rejects non-integers and non-positives", () => {
     expect(() =>
-      rpcContract.sweep_config_get.output.parse({ doneArchiveDays: 1.5, idleArchiveDays: 30 }),
+      rpcContract.sweep_config_get.output.parse({ doneArchiveMs: 1.5, idleArchiveMs: 1000 }),
     ).toThrow(z.ZodError);
     expect(() =>
-      rpcContract.sweep_config_get.output.parse({ doneArchiveDays: 0, idleArchiveDays: 30 }),
+      rpcContract.sweep_config_get.output.parse({ doneArchiveMs: 0, idleArchiveMs: 1000 }),
     ).toThrow(z.ZodError);
   });
 

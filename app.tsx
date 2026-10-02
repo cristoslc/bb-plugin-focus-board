@@ -47,8 +47,8 @@ import {
 import { applyMoveVisible, orderForColumn, type RankStore } from "./lib/rank";
 import { pinStateChangeFromEvent, readStateChangeFromEvent } from "./lib/pin-park";
 import {
-  DEFAULT_DONE_ARCHIVE_DAYS,
-  DEFAULT_IDLE_ARCHIVE_DAYS,
+  DEFAULT_DONE_ARCHIVE_MS,
+  DEFAULT_IDLE_ARCHIVE_MS,
   armSweep,
   confirmSweep,
   runSweepArchive,
@@ -261,8 +261,8 @@ function BoardPage({ subPath }: { subPath: string }) {
   // adapter (lib/done-metadata) feeds the sweep's injected `now` contract.
   const [doneExtras, setDoneExtras] = useState<Record<string, { doneAt?: number; keep?: boolean }>>({});
   const [sweepConfig, setSweepConfig] = useState({
-    doneArchiveDays: DEFAULT_DONE_ARCHIVE_DAYS,
-    idleArchiveDays: DEFAULT_IDLE_ARCHIVE_DAYS,
+    doneArchiveMs: DEFAULT_DONE_ARCHIVE_MS,
+    idleArchiveMs: DEFAULT_IDLE_ARCHIVE_MS,
   });
   useEffect(() => {
     rpc.call("done_list").then(
@@ -279,8 +279,8 @@ function BoardPage({ subPath }: { subPath: string }) {
     rpc.call("sweep_config_get").then(
       (result) =>
         setSweepConfig({
-          doneArchiveDays: result.doneArchiveDays,
-          idleArchiveDays: result.idleArchiveDays,
+          doneArchiveMs: result.doneArchiveMs,
+          idleArchiveMs: result.idleArchiveMs,
         }),
       () => {}, // Settings are optional; defaults apply when unreachable.
     );
@@ -302,8 +302,8 @@ function BoardPage({ subPath }: { subPath: string }) {
     rpc.call("sweep_config_get").then(
       (result) =>
         setSweepConfig({
-          doneArchiveDays: result.doneArchiveDays,
-          idleArchiveDays: result.idleArchiveDays,
+          doneArchiveMs: result.doneArchiveMs,
+          idleArchiveMs: result.idleArchiveMs,
         }),
       () => {},
     );
@@ -696,14 +696,14 @@ function BoardPage({ subPath }: { subPath: string }) {
             column.threads,
             doneIds,
             doneAgeSource,
-            { doneArchiveDays: sweepConfig.doneArchiveDays },
+            { doneArchiveMs: sweepConfig.doneArchiveMs },
             now,
             liveChildParentIds,
           )
         : sweepCandidatesForIdleColumn(
             column.threads,
             doneIds,
-            { idleArchiveDays: sweepConfig.idleArchiveDays, kept: idleKept },
+            { idleArchiveMs: sweepConfig.idleArchiveMs, kept: idleKept },
             now,
             liveChildParentIds,
           );
