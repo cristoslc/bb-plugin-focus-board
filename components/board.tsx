@@ -177,7 +177,7 @@ function SweepButton({
         data-sweep-button=""
         disabled
         aria-label={`Sweeping: ${run.done} of ${run.total} threads archived so far`}
-        className="inline-flex h-5 cursor-default items-center gap-1 rounded bg-amber-500/90 px-1.5 text-[10px] font-medium text-amber-950"
+        className="inline-flex h-5 shrink-0 cursor-default items-center gap-1 whitespace-nowrap rounded bg-amber-500/90 px-1.5 text-[10px] font-medium text-amber-950"
       >
         <Icon name="Spinner" className="size-3 animate-spin" aria-hidden />
         Sweeping {run.done} of {run.total}
