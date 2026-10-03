@@ -20,6 +20,7 @@ import AttachmentIcon from "@hugeicons/core-free-icons/AttachmentIcon";
 import BellDotIcon from "@hugeicons/core-free-icons/BellDotIcon";
 import Book02Icon from "@hugeicons/core-free-icons/Book02Icon";
 import BrainIcon from "@hugeicons/core-free-icons/BrainIcon";
+import BrushCleaningIcon from "@hugeicons/core-free-icons/BrushCleaningIcon";
 import BrowserIcon from "@hugeicons/core-free-icons/BrowserIcon";
 import Calendar03Icon from "@hugeicons/core-free-icons/Calendar03Icon";
 import CalendarCheckOut02Icon from "@hugeicons/core-free-icons/CalendarCheckOut02Icon";
@@ -234,6 +235,7 @@ export const EXTENDED_ICON_MAP: ExtendedIconMap = {
   BellDot: BellDotIcon,
   Browser: BrowserIcon,
   Brain: BrainIcon,
+  Broom: BrushCleaningIcon,
   Calendar: Calendar03Icon,
   CalendarCheckOut02: CalendarCheckOut02Icon,
   ChartColumn: ChartColumnIcon,

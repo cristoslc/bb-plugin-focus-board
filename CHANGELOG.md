@@ -14,6 +14,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Every lane now has its sweep, each with its own destination.** Pinned
+  sweeps to Unpinned — the lane exit, so the pin is parked and returns the
+  next time the thread calls for attention; Unread sweeps to Read, the
+  catch-up gesture; and every Idle bucket (not just A while ago) sweeps to
+  Done. Needs You and Working never sweep, and the pill exists only on
+  lanes that can — arming a non-sweepable column is refused instead of
+  falling back to archive. A cancelled sweep's Undo reverses each
+  destination: unarchive, unmark Done, re-pin (consuming the park), or
+  mark unread again.
+
+- **The sweep pill drops the word "Sweep."** The word repeated on every
+  column header read as noise, so the pill is a broom glyph plus the
+  eligible count; armed it reads "N → Archive" / "N → Done" / "N →
+  Unpinned" / "N → Read", running it reads "N of M". Screen-reader labels
+  keep the full sweep wording.
+
 - **The long-idle sweep now marks threads Done instead of archiving them.**
   Confirming a sweep on the Idle · A-while-ago column sends its quiet threads
   to the Done column — the same mark-dragging a card there performs — instead

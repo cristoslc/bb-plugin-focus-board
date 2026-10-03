@@ -1,16 +1,17 @@
-// The sweep confirm loop must archive EVERY captured candidate, and it must
-// do so strictly one at a time. The host's sidebar archive action aborts the
-// previous in-flight archive when a new one starts (a single-slot design for
-// one row at a time), so a synchronous loop over `actions.archive` archives
-// only the last candidate — observed 2026-10-01: sweeping 4 Done threads
-// archived exactly one, with one toast. The runner awaits each archive before
-// starting the next, which is the contract the host path cannot give us.
+// The sweep confirm loop applies the sweep's per-thread gesture (archive,
+// mark Done, unpin, mark read) to EVERY captured candidate, strictly one at
+// a time. The host's sidebar actions run one row at a time (a new write
+// aborts the previous in-flight one), so a synchronous loop over the action
+// applies only the last candidate — observed 2026-10-01: sweeping 4 Done
+// threads archived exactly one, with one toast. The runner awaits each
+// gesture before starting the next, which is the contract the host path
+// cannot give us.
 //
-// The runner is also cancellable: a cancel between archives stops the loop
-// and reports what it never started. The archive already in flight always
+// The runner is also cancellable: a cancel between gestures stops the loop
+// and reports what it never started. The gesture already in flight always
 // finishes — cancel means "no more", not "yank the current one".
 import { describe, expect, it, vi } from "vitest";
-import { runSweepArchive } from "../lib/sweep";
+import { runSweep } from "../lib/sweep";
 
 /** A promise resolved by hand, for gating the runner mid-loop. */
 function deferred(): { promise: Promise<void>; release: () => void } {
@@ -21,7 +22,7 @@ function deferred(): { promise: Promise<void>; release: () => void } {
   return { promise, release };
 }
 
-describe("runSweepArchive archives every candidate, one at a time", () => {
+describe("runSweep archives every candidate, one at a time", () => {
   it("starts the next archive only after the previous one settles", async () => {
     const gate = deferred();
     const calls: string[] = [];
@@ -31,7 +32,7 @@ describe("runSweepArchive archives every candidate, one at a time", () => {
       calls.push(threadId);
       return threadId === "thr_a" ? first.then(() => ({ ok: true })) : Promise.resolve({ ok: true });
     });
-    const run = runSweepArchive(["thr_a", "thr_b", "thr_c"], { archive });
+    const run = runSweep(["thr_a", "thr_b", "thr_c"], { act: archive });
     // Flush microtasks: the runner must still be waiting on thr_a.
     await Promise.resolve();
     await Promise.resolve();
@@ -53,18 +54,18 @@ describe("runSweepArchive archives every candidate, one at a time", () => {
         ? Promise.reject(new Error("host refused"))
         : Promise.resolve({ ok: true }),
     );
-    const result = await runSweepArchive(
+    const result = await runSweep(
       ["thr_ok1", "thr_bad", "thr_ok2"],
-      { archive },
+      { act: archive },
     );
     expect(archive).toHaveBeenCalledTimes(3);
     expect(result.failures).toEqual([{ threadId: "thr_bad", message: "host refused" }]);
     expect(result.cancelled).toBe(false);
   });
 
-  it("reports exactly the ids whose archives resolved", async () => {
-    const result = await runSweepArchive(["thr_ok1", "thr_bad", "thr_ok2"], {
-      archive: (threadId: string) =>
+  it("reports exactly the ids whose gestures resolved", async () => {
+    const result = await runSweep(["thr_ok1", "thr_bad", "thr_ok2"], {
+      act: (threadId: string) =>
         threadId === "thr_bad"
           ? Promise.reject(new Error("host refused"))
           : Promise.resolve({ ok: true }),
@@ -73,8 +74,8 @@ describe("runSweepArchive archives every candidate, one at a time", () => {
   });
 
   it("a cancelled run still names the ids it did archive", async () => {
-    const result = await runSweepArchive(["thr_a", "thr_b", "thr_c"], {
-      archive: () => Promise.resolve({ ok: true }),
+    const result = await runSweep(["thr_a", "thr_b", "thr_c"], {
+      act: () => Promise.resolve({ ok: true }),
       shouldContinue: () => false,
     });
     expect(result.swept).toEqual(["thr_a"]);
@@ -82,16 +83,16 @@ describe("runSweepArchive archives every candidate, one at a time", () => {
   });
 
   it("names non-Error rejections in the failure list", async () => {
-    const result = await runSweepArchive(["thr_x"], {
-      archive: () => Promise.reject("boom"),
+    const result = await runSweep(["thr_x"], {
+      act: () => Promise.reject("boom"),
     });
     expect(result.failures).toEqual([{ threadId: "thr_x", message: "boom" }]);
   });
 
   it("fires onActive before each archive and onSettled after it", async () => {
     const events: string[] = [];
-    await runSweepArchive(["thr_a", "thr_b"], {
-      archive: async (threadId: string) => {
+    await runSweep(["thr_a", "thr_b"], {
+      act: async (threadId: string) => {
         events.push(`archive:${threadId}`);
       },
       onActive: (threadId) => events.push(`active:${threadId}`),
@@ -108,14 +109,14 @@ describe("runSweepArchive archives every candidate, one at a time", () => {
   });
 });
 
-describe("runSweepArchive cancellation", () => {
+describe("runSweep cancellation", () => {
   it("stops before the next archive when shouldContinue turns false", async () => {
     const archive = vi.fn((threadId: string) => Promise.resolve({ ok: true }));
     // The first archive always runs; each subsequent one asks first.
     const continueFlags = [true, false];
     let call = 0;
-    const result = await runSweepArchive(["thr_a", "thr_b", "thr_c"], {
-      archive,
+    const result = await runSweep(["thr_a", "thr_b", "thr_c"], {
+      act: archive,
       shouldContinue: () => continueFlags[call++] ?? false,
     });
     // thr_a and thr_b ran; the check before thr_c said stop.
@@ -129,8 +130,8 @@ describe("runSweepArchive cancellation", () => {
     const gate = deferred();
     const archive = vi.fn(() => gate.promise);
     let proceed = true;
-    const run = runSweepArchive(["thr_a", "thr_b"], {
-      archive,
+    const run = runSweep(["thr_a", "thr_b"], {
+      act: archive,
       shouldContinue: () => proceed,
     });
     proceed = false; // cancel while thr_a is still in flight
@@ -142,8 +143,8 @@ describe("runSweepArchive cancellation", () => {
   });
 
   it("a cancel that lands after the last archive is just a normal completion", async () => {
-    const result = await runSweepArchive(["thr_a"], {
-      archive: () => Promise.resolve({ ok: true }),
+    const result = await runSweep(["thr_a"], {
+      act: () => Promise.resolve({ ok: true }),
       shouldContinue: () => false,
     });
     expect(result.cancelled).toBe(false);
@@ -151,8 +152,8 @@ describe("runSweepArchive cancellation", () => {
   });
 
   it("a cancelled run still reports failures it already collected", async () => {
-    const result = await runSweepArchive(["thr_bad", "thr_b"], {
-      archive: (threadId: string) =>
+    const result = await runSweep(["thr_bad", "thr_b"], {
+      act: (threadId: string) =>
         threadId === "thr_bad" ? Promise.reject(new Error("refused")) : Promise.resolve({ ok: true }),
       shouldContinue: () => false,
     });

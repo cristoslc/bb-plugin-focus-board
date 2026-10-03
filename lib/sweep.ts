@@ -5,7 +5,10 @@
  * Modeled on the two-click arm-then-confirm pattern from
  * docs/musings/2026-09-25-sweep.md; the idle arm's Done destination is the
  * operator's 2026-10-01 decision, reversing the musing's archive-everything
- * draft.
+ * draft. The 2026-10-02 destination map covers every lane: Pinned sweeps to
+ * Unpinned (the lane exit: unpin, pin parked), Unread sweeps to Read (the
+ * catch-up gesture), every Idle bucket marks Done, and Needs You and Working
+ * never sweep at all.
  */
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { threadState } from "../components/grouping";
@@ -105,34 +108,102 @@ export function sweepCandidatesForIdleColumn(
     .map((thread) => thread.id);
 }
 
-export type SweepColumnKind = "done" | "idle-bucket";
+/**
+ * Pinned-arm candidates: every pinned thread in the lane. The lane itself is
+ * the threshold — a pin is a standing keep, and sweeping the lane is the
+ * explicit "I'm caught up on these" gesture, so there is no age gate and no
+ * keep flag here. The sweep-family contract does not apply: unpinning never
+ * archives, so a parent with live children may sweep freely (its pin ends,
+ * the thread stays live). Order follows the lane's own order.
+ */
+export function sweepCandidatesForPinnedColumn(
+  threads: readonly PluginSidebarThread[],
+  _liveChildParents: ReadonlySet<string> = new Set(),
+): string[] {
+  return threads
+    .filter((thread) => thread.isPinned)
+    .map((thread) => thread.id);
+}
+
+/**
+ * Unread-arm candidates: every unread thread in the lane. The lane itself is
+ * the threshold — sweeping it is the catch-up gesture ("I've read these"),
+ * with no age gate. A read thread frozen into the lane (the open pane holds
+ * its column) is skipped: pre-selection marks only what is actually unread,
+ * though the operator may still toggle any card in manually. The
+ * sweep-family contract does not apply — marking read keeps the thread live.
+ * Order follows the lane's own order.
+ */
+export function sweepCandidatesForUnreadColumn(
+  threads: readonly PluginSidebarThread[],
+  _liveChildParents: ReadonlySet<string> = new Set(),
+): string[] {
+  return threads
+    .filter((thread) => thread.isUnread)
+    .map((thread) => thread.id);
+}
+
+export type SweepColumnKind = "done" | "idle-bucket" | "pinned" | "unread";
 
 /**
  * Which sweep arm a column belongs to, or null when it is not sweepable.
  * Single source of truth used by Board (button placement), app.tsx
- * (eligibility dispatch), and armSweep.
+ * (eligibility dispatch), and armSweep. Needs You and Working return null:
+ * attention is not the operator's to clear, and a running thread cannot be
+ * swept out from under itself.
  */
 export function sweepColumnKind(columnId: string): SweepColumnKind | null {
   if (columnId === "done") return "done";
-  if (columnId === "idle-awhile" || columnId === "awhile") return "idle-bucket";
+  if (columnId === "pinned") return "pinned";
+  if (columnId === "unread") return "unread";
+  // The Attention board's idle buckets, all of them: every idle state
+  // sweeps to Done. "awhile" is the Last-activity grouping's twin of
+  // idle-awhile and keeps its pre-existing arm.
+  if (
+    columnId === "idle-awhile" ||
+    columnId === "idle-earlier" ||
+    columnId === "idle-today" ||
+    columnId === "idle-recent" ||
+    columnId === "awhile"
+  ) {
+    return "idle-bucket";
+  }
   return null;
 }
 
 /** What a confirmed sweep does to its candidates. */
-export type SweepDestination = "archive" | "done";
+export type SweepDestination = "archive" | "done" | "unpinned" | "read";
 
 /**
  * Where each sweepable column's candidates go on confirm: Done-age threads
  * archive (their exit is already staged); long-idle threads are marked Done
  * — a quiet thread should read as "you decided it's done", not vanish into
- * the archive. The Done stamp starts the 7-day archive clock, so a swept
- * idle thread resurfaces in the Done arm instead of disappearing. Null for
- * columns that cannot sweep.
+ * the archive (the Done stamp starts the archive clock, so a swept idle
+ * thread resurfaces in the Done arm instead of disappearing); pinned
+ * threads unpin through the lane exit, so the pin is parked and returns the
+ * next time the thread calls for attention; unread threads are marked read,
+ * the catch-up gesture. Null for columns that cannot sweep.
  */
 export function sweepDestination(columnId: string): SweepDestination | null {
   const kind = sweepColumnKind(columnId);
   if (kind === null) return null;
-  return kind === "done" ? "archive" : "done";
+  if (kind === "done") return "archive";
+  if (kind === "pinned") return "unpinned";
+  if (kind === "unread") return "read";
+  return "done";
+}
+
+/**
+ * Whether the column's sweep action removes the thread from the live board
+ * (archive) or re-stamps it out of its lane (Done). Those are the arms
+ * where the sweep-family contract applies: a parent with live children may
+ * never join, because the action strands the family view. Unpinning and
+ * marking read leave the thread live in place, so parents sweep freely in
+ * the Pinned and Unread arms.
+ */
+export function sweepRemovesThreads(columnId: string): boolean {
+  const destination = sweepDestination(columnId);
+  return destination === "archive" || destination === "done";
 }
 
 export interface ArmedSweep {
@@ -140,6 +211,22 @@ export interface ArmedSweep {
   /** Frozen at arm time; late arrivals never join. */
   threadIds: readonly string[];
 }
+
+/** The armed pill's destination word, per sweep destination. */
+export const SWEEP_DESTINATION_LABELS: Record<SweepDestination, string> = {
+  archive: "Archive",
+  done: "Done",
+  unpinned: "Unpinned",
+  read: "Read",
+};
+
+/** The word a notice uses for what a sweep did to its candidates. */
+export const SWEEP_SETTLED_WORDS: Record<SweepDestination, string> = {
+  archive: "archived",
+  done: "marked Done",
+  unpinned: "unpinned",
+  read: "marked read",
+};
 
 /**
  * Arm: enter sweep mode with the past-threshold threads pre-selected. The
@@ -186,34 +273,37 @@ export interface SweepRunResult {
   swept: string[];
 }
 
-export interface SweepArchiveCallbacks {
-  /** Archives one thread. The runner awaits it before the next. */
-  archive: (threadId: string) => Promise<unknown>;
-  /** Fired before each archive starts: the throbber target. */
+export interface SweepRunCallbacks {
+  /**
+   * The sweep's per-thread gesture — archive, mark Done, unpin, or mark
+   * read, per the arm's destination. The runner awaits it before the next.
+   */
+  act: (threadId: string) => Promise<unknown>;
+  /** Fired before each gesture starts: the throbber target. */
   onActive?: (threadId: string) => void;
-  /** Fired after each archive settles (success or failure). */
+  /** Fired after each gesture settles (success or failure). */
   onSettled?: (threadId: string) => void;
   /**
-   * Asked before every archive AFTER the first. False stops the run: the
-   * archive already in flight finishes (cancel means "no more", not "yank
+   * Asked before every gesture AFTER the first. False stops the run: the
+   * action already in flight finishes (cancel means "no more", not "yank
    * the current one"), the rest are reported as `remaining`.
    */
   shouldContinue?: () => boolean;
 }
 
 /**
- * Archive every captured candidate, strictly one at a time, collecting
- * failures instead of stopping.
+ * Apply the sweep's per-thread gesture to every captured candidate,
+ * strictly one at a time, collecting failures instead of stopping.
  *
  * Sequential is a hard requirement, not a style choice: the host's sidebar
- * archive action aborts the previous in-flight archive when a new one starts
- * (a single-slot design for one row at a time), so firing the loop without
- * awaiting archives only the last candidate. Each await here gives the
- * previous archive the whole window to finish.
+ * actions run one row at a time (a new write aborts the previous in-flight
+ * one — a single-slot design), so firing the loop without awaiting applies
+ * only the last candidate. Each await here gives the previous gesture the
+ * whole window to finish.
  */
-export async function runSweepArchive(
+export async function runSweep(
   threadIds: readonly string[],
-  callbacks: SweepArchiveCallbacks,
+  callbacks: SweepRunCallbacks,
 ): Promise<SweepRunResult> {
   const failures: SweepRunFailure[] = [];
   const swept: string[] = [];
@@ -232,7 +322,7 @@ export async function runSweepArchive(
     }
     callbacks.onActive?.(threadId);
     try {
-      await callbacks.archive(threadId);
+      await callbacks.act(threadId);
       swept.push(threadId);
     } catch (error) {
       failures.push({
@@ -261,9 +351,10 @@ export interface SweepNotice {
   /**
    * Undo offer for a cancelled run: the ids the run settled and how to
    * reverse them (unarchive for the Done arm, unmark Done for the idle
-   * arm). Present only after a cancel that actually settled something:
-   * undo is offered, never automatic — cancel means "stop", undo is a
-   * deliberate second click.
+   * arm, re-pin for the Pinned arm, mark unread for the Unread arm).
+   * Present only after a cancel that actually settled something: undo is
+   * offered, never automatic — cancel means "stop", undo is a deliberate
+   * second click.
    */
   undo?: {
     ids: readonly string[];

@@ -8,8 +8,11 @@ import {
   confirmSweep,
   sweepCandidatesForDoneColumn,
   sweepCandidatesForIdleColumn,
+  sweepCandidatesForPinnedColumn,
+  sweepCandidatesForUnreadColumn,
   sweepColumnKind,
   sweepDestination,
+  sweepRemovesThreads,
   toggleSweepSelection,
 } from "../lib/sweep";
 
@@ -387,22 +390,111 @@ describe("manual sweep selection (click to toggle while armed)", () => {
 });
 
 describe("column classification", () => {
-  it("names the sweepable columns; done vs idle-bucket; null for others", () => {
+  it("names the sweepable columns; null for lanes that never sweep", () => {
     expect(sweepColumnKind("done")).toBe("done");
     expect(sweepColumnKind("idle-awhile")).toBe("idle-bucket");
+    expect(sweepColumnKind("idle-earlier")).toBe("idle-bucket");
+    expect(sweepColumnKind("idle-today")).toBe("idle-bucket");
+    expect(sweepColumnKind("idle-recent")).toBe("idle-bucket");
     expect(sweepColumnKind("awhile")).toBe("idle-bucket");
+    expect(sweepColumnKind("pinned")).toBe("pinned");
+    expect(sweepColumnKind("unread")).toBe("unread");
+    // Needs You and Working never sweep: attention is not the operator's to
+    // clear, and running threads cannot be swept out from under themselves.
+    expect(sweepColumnKind("attention")).toBeNull();
     expect(sweepColumnKind("working")).toBeNull();
-    expect(sweepColumnKind("idle-earlier")).toBeNull();
     expect(sweepColumnKind("earlier")).toBeNull();
-    expect(sweepColumnKind("pinned")).toBeNull();
   });
 
-  it("sends each arm to its own destination: Done-age archives, long-idle marks Done", () => {
+  it("sends each arm to its own destination", () => {
     expect(sweepDestination("done")).toBe("archive");
     expect(sweepDestination("idle-awhile")).toBe("done");
+    expect(sweepDestination("idle-earlier")).toBe("done");
+    expect(sweepDestination("idle-today")).toBe("done");
+    expect(sweepDestination("idle-recent")).toBe("done");
     expect(sweepDestination("awhile")).toBe("done");
+    expect(sweepDestination("pinned")).toBe("unpinned");
+    expect(sweepDestination("unread")).toBe("read");
+    expect(sweepDestination("attention")).toBeNull();
     expect(sweepDestination("working")).toBeNull();
-    expect(sweepDestination("idle-earlier")).toBeNull();
+  });
+
+  it("only the archive and Done arms remove threads from the live board", () => {
+    expect(sweepRemovesThreads("done")).toBe(true);
+    expect(sweepRemovesThreads("idle-awhile")).toBe(true);
+    // Unpinning and marking read leave the thread live in place, so the
+    // sweep-family contract (live-child parents refuse) does not apply.
+    expect(sweepRemovesThreads("pinned")).toBe(false);
+    expect(sweepRemovesThreads("unread")).toBe(false);
+  });
+});
+
+describe("sweepCandidatesForPinnedColumn", () => {
+  it("pre-selects every pinned thread in the lane — the lane is the threshold", () => {
+    const candidates = sweepCandidatesForPinnedColumn([
+      thread({ id: "a", isPinned: true }),
+      thread({ id: "b", isPinned: true }),
+    ]);
+    expect(candidates).toEqual(["a", "b"]);
+  });
+
+  it("keeps the lane's own order (rank or recency, whatever the column shows)", () => {
+    const candidates = sweepCandidatesForPinnedColumn([
+      thread({ id: "second", isPinned: true }),
+      thread({ id: "first", isPinned: true }),
+    ]);
+    expect(candidates).toEqual(["second", "first"]);
+  });
+
+  it("skips a thread that is not pinned (frozen column overrides can park one here)", () => {
+    const candidates = sweepCandidatesForPinnedColumn([
+      thread({ id: "pinned", isPinned: true }),
+      thread({ id: "frozen", isPinned: false }),
+    ]);
+    expect(candidates).toEqual(["pinned"]);
+  });
+
+  it("the sweep-family contract does not apply — unpinning never archives", () => {
+    // A live-child parent swept out of Pinned stays live; only its pin ends.
+    const candidates = sweepCandidatesForPinnedColumn(
+      [thread({ id: "parent", isPinned: true })],
+      new Set(["parent"]),
+    );
+    expect(candidates).toEqual(["parent"]);
+  });
+});
+
+describe("sweepCandidatesForUnreadColumn", () => {
+  it("pre-selects every unread thread in the lane — the lane is the threshold", () => {
+    const candidates = sweepCandidatesForUnreadColumn([
+      thread({ id: "a", isUnread: true }),
+      thread({ id: "b", isUnread: true }),
+    ]);
+    expect(candidates).toEqual(["a", "b"]);
+  });
+
+  it("keeps the lane's own order", () => {
+    const candidates = sweepCandidatesForUnreadColumn([
+      thread({ id: "second", isUnread: true }),
+      thread({ id: "first", isUnread: true }),
+    ]);
+    expect(candidates).toEqual(["second", "first"]);
+  });
+
+  it("skips an already-read thread frozen into the lane", () => {
+    const candidates = sweepCandidatesForUnreadColumn([
+      thread({ id: "unread", isUnread: true }),
+      thread({ id: "frozen", isUnread: false }),
+    ]);
+    expect(candidates).toEqual(["unread"]);
+  });
+
+  it("the sweep-family contract does not apply — marking read keeps the thread live", () => {
+    const candidates = sweepCandidatesForUnreadColumn(
+      [thread({ id: "parent", isUnread: true })],
+      new Set(["parent"]),
+    );
+    expect(candidates).toEqual(["parent"]);
   });
 });
 
