@@ -70,20 +70,21 @@ import {
 /**
  * The plugin's own brand mark (assets/icon.svg — the "lane + pupil"):
  * two dim side lanes, the bold middle lane, and the pupil watching what
- * needs you. Mirrored here as an inline IconSvgElement so in-app
+ * needs you. Lanes are filled shapes and the pupil is an evenodd hole in
+ * the bold lane, matching the asset's solid alpha geometry — the earlier
+ * stroked-outline cut hollowed and its interior read as dark breaks at
+ * icon sizes. Mirrored here as an inline IconSvgElement so in-app
  * `Icon name="FocusBoard"` renders the exact artwork the manifest's
  * branding.icon shows (HugeiconsIcon passes opacity through as-is — these
  * are alpha-mask friendly), independent of the asset pipeline.
  */
-const FocusBoardLaneEyeIcon: IconSvgElement = [
+export const FocusBoardLaneEyeIcon: IconSvgElement = [
   [
     "path",
     {
       d: "M3.25 4.5H7.25V19.5H3.25Z",
       opacity: "0.55",
-      stroke: "currentColor",
-      strokeWidth: "2.5",
-      strokeLinecap: "round",
+      fill: "currentColor",
       key: "0",
     },
   ],
@@ -92,31 +93,18 @@ const FocusBoardLaneEyeIcon: IconSvgElement = [
     {
       d: "M16.75 4.5H20.75V19.5H16.75Z",
       opacity: "0.55",
-      stroke: "currentColor",
-      strokeWidth: "2.5",
-      strokeLinecap: "round",
+      fill: "currentColor",
       key: "1",
     },
   ],
   [
     "path",
     {
-      d: "M9.25 4.5H14.75V19.5H9.25Z",
-      stroke: "currentColor",
-      strokeWidth: "2.5",
-      strokeLinecap: "round",
-      key: "2",
-    },
-  ],
-  [
-    "circle",
-    {
-      cx: "12",
-      cy: "12",
-      r: "3.4",
+      d: "M9.25 4.5H14.75V19.5H9.25Z M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 1 0 0-6.8Z",
       fill: "currentColor",
-      stroke: "none",
-      key: "3",
+      fillRule: "evenodd",
+      clipRule: "evenodd",
+      key: "2",
     },
   ],
 ];
