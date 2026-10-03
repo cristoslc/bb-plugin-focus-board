@@ -87,10 +87,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   archive keeps its card highlighted for a one-click retry and says so in a
   dismissible banner.
 
-- **The pane's click-jump guard no longer cements an upward displacement.**
-  It now does not arm for 3 seconds after any single scroll move of
-  ≥300px, so the host shell's own corrections land undisturbed (shipped in
-  0.5.19; `docs/chat-click-jump-2026-09-29.md`).
+- **Clicking in the pane's chat no longer yanks the transcript to the
+  newest message while the reader is scrolled up.** The pane's click-jump
+  guard now arms on the position recorded at the gesture's pointerdown —
+  captured before the host shell's pending-capture clamp commits — and
+  restores it when a click lands the transcript pinned at the bottom
+  within ~200ms. Armed on the click-time read, the guard never fired at
+  all: the clamp lands during the pointerdown edge, so the fresh read was
+  already past the write and the reader stayed clamped (exposed by a live
+  adversarial run inside the guard's own design band). The settled-view
+  refusals of the previous fix survive only for clicks with no pointer
+  event (programmatic flows); reader gestures in the window still disarm
+  it, and pill and composer clicks never arm it
+  (`docs/chat-click-jump-2026-09-29.md`).
 
 - **A pinned family with a member that needs you now calls attention from
   inside Pinned.** A pinned family cannot relocate to a Needs-you lane
