@@ -14,7 +14,8 @@
  * version, is the "seen" state). The release finalize commit strips the
  * suffix; the published entry then exists already, derived from the renamed
  * section. No feed entry is hand-written anymore: WHATS_NEW is scraped from
- * CHANGELOG.md (each bullet's opening sentence at test/build time) merged
+ * CHANGELOG.md (each bullet's opening sentence, with its sub-bullets as
+ * children, at test/build time) merged
  * with the frozen LEGACY_WHATS_NEW hand-written records for versions the
  * changelog predates. A test pins APP_VERSION to package.json's version so
  * they cannot drift apart.
@@ -24,61 +25,73 @@ import { UNRELEASED_ITEMS } from "./unreleased-changelog.generated";
 import { DERIVED_WHATS_NEW } from "./whats-new.generated";
 import { leadFromBullet } from "./changelog-markdown";
 
-export const APP_VERSION = "0.6.0-dev";
+export const APP_VERSION = "0.7.0-dev";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 export const LAST_SEEN_UNRELEASED_KEY = "focus-board:lastSeenUnreleased";
+
+export interface WhatsNewItem {
+  /** The condensed opening sentence shown at top level. */
+  lead: string;
+  /** The condensations of the bullet's sub-bullets, when it groups any. */
+  children?: readonly string[];
+}
 
 export interface WhatsNewEntry {
   version: string;
   /** Marks the dev build's [Unreleased] group; the modal heads it without "Version ". */
   unreleased?: boolean;
-  items: readonly string[];
+  items: readonly WhatsNewItem[];
 }
 
-/** Newest first; condensed highlights, not the full CHANGELOG. */
+/** Newest first; condensed highlights, not the full CHANGELOG.
+ *
+ * Frozen — it only shrinks if those versions ever gain real changelog
+ * sections. Items are structured like every other entry's: a lead sentence
+ * and (for grouped bullets) condensed sub-bullet children.
+ */
 const LEGACY_WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     version: "0.5.12",
     items: [
-      "The sweep now refuses a parent thread that still has live children, and the CLI sweep mirrors the board's quiet-thread rule: running turns and unseen-activity threads are never archive-eligible. Both certification findings are closed.",
+      { lead: "The sweep now refuses a parent thread that still has live children, and the CLI sweep mirrors the board's quiet-thread rule: running turns and unseen-activity threads are never archive-eligible. Both certification findings are closed." },
     ],
   },
   {
     version: "0.5.11",
     items: [
-      "The What's-new log now includes the 0.5.9 line that shipped without one; no board behavior changes in this version.",
+      { lead: "The What's-new log now includes the 0.5.9 line that shipped without one; no board behavior changes in this version." },
     ],
   },
   {
     version: "0.5.10",
     items: [
-      "Threads that pause to ask you for something (like a secrets form) now show in the Needs you column instead of In Progress while they wait.",
+      { lead: "Threads that pause to ask you for something (like a secrets form) now show in the Needs you column instead of In Progress while they wait." },
     ],
   },
   {
     version: "0.5.9",
     items: [
-      "Threads asking you for input (like a secrets form) now wait in the Needs you column instead of In Progress.",
+      { lead: "Threads asking you for input (like a secrets form) now wait in the Needs you column instead of In Progress." },
     ],
   },
   {
     version: "0.5.8",
     items: [
-      "Security hardening: an opened thread window can no longer reach back into the board, and the board's stored column orders reject malformed keys. No visible board behavior changes.",
+      { lead: "Security hardening: an opened thread window can no longer reach back into the board, and the board's stored column orders reject malformed keys. No visible board behavior changes." },
     ],
   },
   {
     version: "0.5.7",
     items: [
-      "Urgent child threads now float to the top of the rows nested under a parent card, so a child that needs you can't get buried under quieter siblings.",
+      { lead: "Urgent child threads now float to the top of the rows nested under a parent card, so a child that needs you can't get buried under quieter siblings." },
     ],
   },
   {
     version: "0.5.6",
     items: [
-      "Child threads now nest as one family: the family's card sits in the column of its most attention-requiring member, with urgent children rendered as rows under the parent card instead of floating away as standalone cards.",
-      "A pinned parent keeps its whole family in the Pinned column — an active child no longer detaches into its own column.",
+      { lead: "Child threads now nest as one family: the family's card sits in the column of its most attention-requiring member, with urgent children rendered as rows under the parent card instead of floating away as standalone cards." },
+      { lead: "A pinned parent keeps its whole family in the Pinned column — an active child no longer detaches into its own column." },
     ],
   },
 ];
@@ -186,10 +199,10 @@ export function writeLastSeenUnreleased(fingerprint: string): void {
   }
 }
 
-/** FNV-1a 32-bit over the joined items: cheap, stable, no dependency. */
-export function unreleasedFingerprint(items: readonly string[]): string {
+/** FNV-1a 32-bit over the joined texts: cheap, stable, no dependency. */
+export function unreleasedFingerprint(texts: readonly string[]): string {
   let hash = 0x811c9dc5;
-  const source = `\n${items.join("\n")}\n`;
+  const source = `\n${texts.join("\n")}\n`;
   for (let i = 0; i < source.length; i += 1) {
     hash ^= source.charCodeAt(i);
     hash = Math.imul(hash, 0x01000193) >>> 0;
@@ -197,8 +210,22 @@ export function unreleasedFingerprint(items: readonly string[]): string {
   return hash.toString(16).padStart(8, "0");
 }
 
+/**
+ * The [Unreleased] group's condensed items: one lead sentence per top-level
+ * bullet, each of its sub-bullets condensed the same way as a child. The
+ * single seam stays `leadFromBullet`, exactly like the published feed.
+ */
+function unreleasedWhatsNewItems(): readonly WhatsNewItem[] {
+  return UNRELEASED_ITEMS.map((item) => ({
+    lead: leadFromBullet(item.text),
+    children: item.children.map(leadFromBullet).filter(Boolean),
+  }));
+}
+
 /** Fingerprint of the unreleased group embedded in this build. */
-export const CURRENT_UNRELEASED_FINGERPRINT = unreleasedFingerprint(UNRELEASED_ITEMS);
+export const CURRENT_UNRELEASED_FINGERPRINT = unreleasedFingerprint(
+  UNRELEASED_ITEMS.flatMap((item) => [item.text, ...item.children]),
+);
 
 /** Fingerprint of a group with no bullets: dev builds holding one never pulse. */
 export const EMPTY_UNRELEASED_FINGERPRINT = unreleasedFingerprint([]);
@@ -251,7 +278,7 @@ export function whatsNewEntriesFor(
 ): readonly WhatsNewEntry[] {
   if (isPrereleaseVersion(runningVersion)) {
     const unreleased: WhatsNewEntry | null = UNRELEASED_ITEMS.length
-      ? { version: runningVersion, unreleased: true, items: UNRELEASED_ITEMS.map(leadFromBullet) }
+      ? { version: runningVersion, unreleased: true, items: unreleasedWhatsNewItems() }
       : null;
     const published = unseen
       ? entriesSince(lastSeenVersion)

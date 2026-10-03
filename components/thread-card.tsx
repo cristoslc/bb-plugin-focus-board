@@ -102,6 +102,12 @@ const STATUS_DOT_CLASS: Record<string, string> = {
   CLOSED: "bg-muted-foreground/50",
 };
 
+/**
+ * More nested child rows than this and the list caps its height and scrolls
+ * instead of stretching the family card (and its whole lane) toward the sky.
+ */
+export const NESTED_ROWS_SCROLL_THRESHOLD = 5;
+
 /** Small clickable ticket chip; inert (span) when the ref has no href. */
 function TicketChip({
   ticket,
@@ -426,7 +432,15 @@ export function ThreadCard({
         ) : null}
       </div>
       {hasRows && !collapsed && onOpenThread !== undefined ? (
-        <div className="ml-3 mt-1 border-l border-border/70 pl-2">
+        <div
+          data-nested-rows=""
+          className={cn(
+            "ml-3 mt-1 border-l border-border/70 pl-2",
+            // A big family scrolls its rows inside the card; a small one
+            // renders at natural height.
+            children.length > NESTED_ROWS_SCROLL_THRESHOLD && "max-h-64 overflow-y-auto",
+          )}
+        >
           <ul className="flex flex-col gap-1">
             {children.map((child) => {
               const childDone = doneIds?.has(child.id) ?? false;

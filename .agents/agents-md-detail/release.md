@@ -4,7 +4,8 @@ How to ship a new Focus Board version. The pipeline has a fixed shape: user
 work appends bullets to the changelog's `[Unreleased]` group when it merges
 into `dev`; releasing is a finalize commit on the dev lineage (name the
 version, strip `-dev`), a fast-forward of `main`, a signed tag on that
-commit, and a dev-only prep commit that re-arms the next cycle. Release-time
+commit, a GitHub Release page on that tag, and a dev-only prep commit that
+re-arms the next cycle. Release-time
 changelog writing is gone — read this spoke whenever a turn involves
 merging into `dev`, releasing, changelog writing, or tagging.
 
@@ -106,7 +107,7 @@ entry below):
 This commit is what gets tagged and fast-forwarded onto main — nothing
 else should ride in it.
 
-## 4. Promote `main`, tag, push
+## 4. Promote `main`, tag, push, publish
 
 - From a temp worktree: `git worktree add /tmp/release-main main`, then
   `git merge --ff-only dev`. `--ff-only` must succeed: if it refuses, main
@@ -119,6 +120,14 @@ else should ride in it.
   retag. Tag signing is automatic (section 7a).
 - Push `dev`, `main`, and the tag to `origin` — a pushed tag is the
   distribution surface (users install semver ranges like `git:...@^X.Y`).
+- Publish the matching GitHub Release for the tag:
+  `gh release create vX.Y.Z --title "Focus Board X.Y.Z" --notes-file <file>`.
+  The notes file is the release's changelog section verbatim — retitle its
+  heading to `## Focus Board X.Y.Z (date)` — closed by a
+  `**Full changelog**: .../compare/v<PREVIOUS>...vX.Y.Z` compare link
+  against the previous tag (v0.5.21's release is the pattern). No binary
+  assets: the tag itself is the package, since bb installs it by semver
+  range. Confirm with `gh release view vX.Y.Z`.
 - Remove the temp worktree.
 
 ## 5. What's-new derivation (`WHATS_NEW` in `lib/whats-new.ts`)
@@ -213,3 +222,7 @@ fingerprint says which key era produced it).
   distribution history; release notes for a version are recoverable from
   `git log vX.Y-prev..vX.Y`, the `WHATS_NEW` entry, and the CHANGELOG
   section.
+- GitHub Releases are the announcement surface: one public release per
+  version, created in section 4, notes identical to the version's
+  changelog section. A pushed tag without its release page is a
+  half-finished release.

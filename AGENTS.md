@@ -24,7 +24,11 @@ each such merge appends bullets to `CHANGELOG.md`'s `[Unreleased]` group.
 by fast-forward. Releasing = one finalize commit on the dev lineage (name
 the version, strip `-dev`, rename `[Unreleased]` to `[X.Y.Z]`, add the
 condensed WHATS_NEW entry), then fast-forward main in a temporary
-worktree, tag annotated (SSH-signed) `vX.Y.Z` on that commit, push, then a
+worktree, tag annotated (SSH-signed) `vX.Y.Z` on that commit, push,
+publish the matching GitHub Release page — title `Focus Board X.Y.Z`, notes
+are that release's changelog section verbatim plus a Full-changelog compare
+link, no binary assets (the tag itself is the package; bb installs it by
+semver range) — then a
 dev-only prep commit bumps to the next `-dev`. Never commit to main
 main-side; never back-edit published changelog sections; never move a
 tag. Full reference:

@@ -63,6 +63,7 @@ function renderBoard(threads: PluginSidebarThread[], overrides: Partial<BoardPro
     doneIds: merged.doneIds,
     nestedChildrenByParent: new Map<string, readonly PluginSidebarThread[]>(),
     childCountByParent: new Map<string, number>(),
+    doneChildrenByParent: new Map<string, readonly PluginSidebarThread[]>(),
     dimmedIds: new Set<string>(),
     projectNameFor: () => "One",
     repoBaseFor: () => null,

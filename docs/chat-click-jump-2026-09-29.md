@@ -224,3 +224,29 @@ What stands and where the report now goes:
   at-bottom reader leaves it inert. It remains in place as a defense for
   the captured clamp-down variant until this investigation closes or bb
   ships the fix; this section supersedes the mechanism summary above.
+
+## Update 2026-10-02 — adversarial review round (child `thr_cexdxfbnaj`)
+
+Tried to disprove the report; verdicts:
+
+- **Mechanism survived everything, and is stronger than stated**: natural
+  gestures alone reproduce the yank (nat1–nat4, no staging): the pending
+  capture arises on EVERY older-rows load, success included — survival is
+  the norm. Direction: on natural runs the consume lands as a big
+  downward yank (or clamps at the bottom); the operator's upward-from-
+  pinned-bottom shape requires a no-intent descent that natural input
+  does not produce (wheel/touch/keys/scrollbar/pill all carry scroll
+  intent and refresh the pending capture; an ambient repin consumes at
+  arrival) — reproduced only under staging (frozen capture), labeled a
+  mechanism probe.
+- **The shipped guard never fires in any reproduced shape** — including
+  its own design band, where its arm-time read is already past the
+  pointerdown-commit write (nat4: 187px in-band, guard silent). The
+  race-proof build (e58b232, pointerdown-capture settlement gate) is
+  verified live (writes nothing; the shell's re-clamp sticks; non-misfire
+  verified on pill/composer) — but the guard is not a working mitigation
+  for the defect. It stops here.
+- **#2427's capture behavior is in-flight-only design**; an outliving
+  capture is an unhandled edge (their test covers prepend + continued
+  gesture only). The re-scoped report is review-ready; upstream filing
+  decision stays with the operator.

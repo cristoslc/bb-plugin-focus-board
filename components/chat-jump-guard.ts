@@ -11,10 +11,15 @@
 //
 // `ThreadChat` is a host runtime component and the SDK exposes no way to
 // inspect or clear that pending capture, so this module paints over the
-// symptom from the plugin side: when a left click passes through the
-// transcript body while the reader is meaningfully scrolled up, it
-// snapshots the scroll position and, if the transcript ends up pinned at
-// the bottom within the guard window, restores the snapshot.
+// symptom from the plugin side: the reader's position is recorded at each
+// gesture's pointerdown (before any commit in the sequence can write), and
+// when a left click later passes through the transcript body, the guard
+// arms on that pre-jump position and — if the transcript ends up pinned at
+// the bottom within the guard window — restores it. Arming on the
+// pointerdown record instead of the click-time read is what makes the
+// guard work at all: the shell's clamp commits during the pointerdown
+// edge, so by the click the fresh read is already past the write
+// (adversarial round thr_cexdxfbnaj, run nat4).
 //
 // Deliberately NOT guarded (those scrolls on click are intended):
 // - the host's "Scroll to latest event" pill;
@@ -118,10 +123,10 @@ export function createChatClickJumpGuard(
 	let armed: Armed | null = null;
 	/** The scroller's position recorded when the CURRENT input sequence
 	 * started: a window-level pointerdown capture runs before any commit
-	 * can write, so this value is the race-proof pre-displacement point
-	 * (the shell's jump fires in this sequence's commit, and its scroll
-	 * event is delivered after the arming handler — see the probe runs
-	 * d11/d12/d14/d15). */
+	 * can write, so this value is the race-proof pre-jump position and the
+	 * click's protected baseline (the shell's jump fires in this sequence's
+	 * commit, and its scroll event is delivered after the arming handler —
+	 * see the probe runs d11/d12/d14/d15 and the nat4 refutation run). */
 	let startedAt: { el: HTMLElement; top: number } | null = null;
 	const pointerDownListener = (event: Event) => {
 		const root = getChatRoot();
@@ -141,12 +146,15 @@ export function createChatClickJumpGuard(
 	if (typeof window !== "undefined" && typeof document !== "undefined") {
 		window.addEventListener("pointerdown", pointerDownListener, { capture: true, passive: true });
 	}
-	/** Settled-position observer: an always-on passive scroll listener (per
-	 * scroller, re-attached when the pane remounts) that records the last
-	 * seen position and, when the position moves >=300px in one event,
-	 * suppresses arming for a window (a yank, or the shell's own
-	 * self-correction, is in flight; reverting through either would fight
-	 * the shell or cement a displacement — bug seen live in run d10). */
+	/** Settled-position observer for the degraded fallback (clicks with no
+	 * pointer event, which have no pointerdown baseline): a passive scroll
+	 * listener (per scroller, re-attached when the pane remounts) that
+	 * records the last seen position and, when the position moves >=300px
+	 * in one event, suppresses arming for a window (a yank, or the shell's
+	 * own self-correction, is in flight; reverting through either would
+	 * fight the shell or cement a displacement — bug seen live in run
+	 * d10). Real clicks never reach this: their pointerdown baseline is
+	 * race-proof on its own, so no always-on listener runs in production. */
 	let tracker: { scroller: HTMLElement; top: number | null; suppressUntil: number; remove: () => void } | null = null;
 
 	const ensureTracker = (scroller: HTMLElement) => {
@@ -217,47 +225,18 @@ export function createChatClickJumpGuard(
 		const top = el.scrollTop;
 		disarm();
 		// The bug's write clamps to the bottom, so it shows up as a move
-		// *down* from the click-time position landing effectively at max.
+		// *down* from the protected baseline landing effectively at max.
 		// Reader scrolls that never reached the bottom are left alone.
 		if (top > baseline && top >= max - AT_BOTTOM_SLACK) {
 			restore({ el, baseline });
 		}
 	};
 
-	const onChatClickCapture = (event: { button: number; target: EventTarget | null }) => {
-		if (event.button !== 0) return;
-		const target = event.target;
-		if (!(target instanceof Element)) return;
-		// Intended scroll-clicks (scroll pill, composer submit) are not the bug.
-		if (
-			target.closest(SCROLL_PILL_SELECTOR) !== null ||
-			target.closest(COMPOSER_SELECTOR) !== null
-		) {
-			return;
-		}
-		const root = getChatRoot();
-		if (root === null) return;
-		const state = readScroller(root, event.target);
-		if (state === null) return;
-		// No scroll-back means the bug has nothing to yank past; arm only
-		// when the reader is meaningfully scrolled up.
-		if (state.max - state.top < MIN_PROTECTED_OFFSET) return;
-		// And only when the view is SETTLED: a jump (displacement yank, or
-		// the shell correcting one) inside the suppression window means the
-		// imminent automatic re-pin is the reader's place coming back —
-		// reverting it would cement a displacement.
-		ensureTracker(state.el);
-		if (tracker !== null && performance.now() < tracker.suppressUntil) return;
-		// Settled-start gate: if this input sequence's own pointerdown saw a
-		// different position than the fresh read, the view moved under the
-		// sequence (the shell's jump, or its correction) — arming here would
-		// revert the shell's imminent self-correction and cement a
-		// displacement.
-		if (startedAt !== null && startedAt.el === state.el && Math.abs(state.top - startedAt.top) >= JUMP_SUPPRESS_THRESHOLD) {
-			return;
-		}
+	/** Open the guard window on `el`: snapshot `baseline` (the position a
+	 * bogus clamp-to-bottom would be reverted to) and check across the
+	 * window's ticks. */
+	const arm = (el: HTMLElement, baseline: number) => {
 		disarm();
-		const { el, top: baseline } = state;
 		const removeListeners: Array<() => void> = [];
 		for (const type of ["wheel", "touchstart"] as const) {
 			const listener = () => disarm();
@@ -284,6 +263,50 @@ export function createChatClickJumpGuard(
 				window.setTimeout(() => check(el, baseline), CHECK_DELAY_MS * i),
 			);
 		}
+	};
+
+	const onChatClickCapture = (event: { button: number; target: EventTarget | null }) => {
+		if (event.button !== 0) return;
+		const target = event.target;
+		if (!(target instanceof Element)) return;
+		// Intended scroll-clicks (scroll pill, composer submit) are not the bug.
+		if (
+			target.closest(SCROLL_PILL_SELECTOR) !== null ||
+			target.closest(COMPOSER_SELECTOR) !== null
+		) {
+			return;
+		}
+		const root = getChatRoot();
+		if (root === null) return;
+		const state = readScroller(root, event.target);
+		if (state === null) return;
+		// The protected baseline is this input sequence's pointerdown record
+		// when the click belongs to one: the record was taken at the
+		// gesture's first event, before any commit in the sequence could
+		// write, so it is the reader's true position at gesture start even
+		// when the shell's jump has already clamped the view by arm time.
+		if (startedAt !== null && startedAt.el === state.el) {
+			// Arm on the record's scroll-back: the bug's write moves the
+			// view DOWN from the recorded position to the bottom. The fresh
+			// read plays no part — it is already past the write (nat4).
+			if (state.max - startedAt.top < MIN_PROTECTED_OFFSET) return;
+			arm(state.el, startedAt.top);
+			return;
+		}
+		// Degraded fallback for clicks with no pointer event for this
+		// scroller (synthetic/programmatic clicks, or a pane remounted
+		// mid-sequence): arm on the fresh read, gated by the settled-view
+		// refusals. Those refusals cannot see through an in-sequence jump
+		// (the fresh read may already be past the write — why the fallback
+		// never fires for real clicks), but they keep the guard off the
+		// shell's own corrections in flows that never produced a
+		// pointerdown record. The old pointerdown-divergence refusal is not
+		// reproduced here: it required a matching pointerdown record, and
+		// such a record routes to the baseline branch above.
+		if (state.max - state.top < MIN_PROTECTED_OFFSET) return;
+		ensureTracker(state.el);
+		if (tracker !== null && performance.now() < tracker.suppressUntil) return;
+		arm(state.el, state.top);
 	};
 
 	return { onChatClickCapture, dispose: () => { disarm(); disposeListenerCleanup(); } };

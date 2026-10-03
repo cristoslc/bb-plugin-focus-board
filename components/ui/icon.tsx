@@ -68,55 +68,45 @@ import {
 } from "./icon-registry";
 
 /**
- * The plugin's own brand mark (assets/icon.svg — the "lane + pupil"):
- * two dim side lanes, the bold middle lane, and the pupil watching what
- * needs you. Mirrored here as an inline IconSvgElement so in-app
- * `Icon name="FocusBoard"` renders the exact artwork the manifest's
- * branding.icon shows (HugeiconsIcon passes opacity through as-is — these
- * are alpha-mask friendly), independent of the asset pipeline.
+ * The plugin's own brand mark (assets/icon.svg — the "inverted lane,
+ * one card"): the kanban chassis flush at the top, the right lane riding
+ * short. The two side lanes are dim solid fills (55% alpha, no outline
+ * strokes); the middle lane is INVERTED — filled solid with the theme
+ * ink, so on light surfaces it reads as a black lane among light lanes —
+ * with one card punched through as a true evenodd hole (the light
+ * surface shows through). No pupil, no eye, no card stack. Mirrored here
+ * as an inline IconSvgElement so in-app `Icon name="FocusBoard"` renders
+ * the exact artwork the manifest's branding.icon shows (HugeiconsIcon
+ * passes opacity through as-is — these are alpha-mask friendly),
+ * independent of the asset pipeline.
  */
-const FocusBoardLaneEyeIcon: IconSvgElement = [
+export const FocusBoardLaneEyeIcon: IconSvgElement = [
   [
     "path",
     {
-      d: "M3.25 4.5H7.25V19.5H3.25Z",
+      d: "M2 3H6.5V21H2Z",
       opacity: "0.55",
-      stroke: "currentColor",
-      strokeWidth: "2.5",
-      strokeLinecap: "round",
+      fill: "currentColor",
       key: "0",
     },
   ],
   [
     "path",
     {
-      d: "M16.75 4.5H20.75V19.5H16.75Z",
+      d: "M17.5 3H22V17.5H17.5Z",
       opacity: "0.55",
-      stroke: "currentColor",
-      strokeWidth: "2.5",
-      strokeLinecap: "round",
+      fill: "currentColor",
       key: "1",
     },
   ],
   [
     "path",
     {
-      d: "M9.25 4.5H14.75V19.5H9.25Z",
-      stroke: "currentColor",
-      strokeWidth: "2.5",
-      strokeLinecap: "round",
-      key: "2",
-    },
-  ],
-  [
-    "circle",
-    {
-      cx: "12",
-      cy: "12",
-      r: "3.4",
+      d: "M8.75 3H15.25V21H8.75Z M11.15 9H12.85A1 1 0 0 1 13.85 10V14A1 1 0 0 1 12.85 15H11.15A1 1 0 0 1 10.15 14V10A1 1 0 0 1 11.15 9Z",
       fill: "currentColor",
-      stroke: "none",
-      key: "3",
+      fillRule: "evenodd",
+      clipRule: "evenodd",
+      key: "2",
     },
   ],
 ];
@@ -311,6 +301,24 @@ const IconAncestors = createContext<readonly string[]>([]);
 
 export function isBuiltinIconName(name: string): name is BuiltinIconName {
   return ICON_NAME_SET.has(name);
+}
+
+/**
+ * The brand mark as a host-registrable app icon component. Registered via
+ * `app.experimental_icons.register` in app.tsx under the name "FocusBoard",
+ * which makes the mark usable anywhere the host takes a `BbIconName` — the
+ * sidebar nav row and the pane's title-bar tab included — instead of the
+ * built-in placeholder glyph the navPanel registration used to carry.
+ */
+export function FocusBoardAppIcon({ className }: { className?: string }) {
+  return (
+    <HugeiconsIcon
+      icon={FocusBoardLaneEyeIcon}
+      className={cn(className)}
+      data-icon="FocusBoard"
+      data-icon-root=""
+    />
+  );
 }
 
 class IconErrorBoundary extends Component<

@@ -64,14 +64,6 @@ export interface ThreadPaneThread {
   displayTitle: string;
   status: PluginSidebarThread["status"];
   isUnread: boolean;
-  /**
-   * Header context: the project (and branch) this thread runs on. Null
-   * project suppresses the context line — archived rows keep only the
-   * title shape and render no line. `branchName` is the branch, or the
-   * host name when there is no branch (matching the board card).
-   */
-  projectName: string | null;
-  branchName: string | null;
 }
 
 interface ThreadPaneProps {
@@ -681,23 +673,6 @@ export function ThreadPane({
       >
         <ThreadChat threadId={thread.id} variant="compact" layout="contained" />
       </div>
-      {/* Which project (and branch) this pane works on: a project's own
-          checkout environment is just named "Project Checkout", so the
-          project label is the only way to tell panes apart. Sits in the
-          footer, under the composer, and is omitted for archived rows. */}
-      {thread.projectName === null ? null : (
-        <footer
-          aria-label="Thread project"
-          className="shrink-0 border-t border-border px-3 py-1.5"
-        >
-          <span className="block truncate text-[11px] leading-tight text-muted-foreground/70">
-            {thread.projectName}
-            {thread.branchName === null || thread.branchName === "" ? null : (
-              <span className="text-muted-foreground/40"> · {thread.branchName}</span>
-            )}
-          </span>
-        </footer>
-      )}
     </aside>
   );
 }
