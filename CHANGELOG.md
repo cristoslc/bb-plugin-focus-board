@@ -7,6 +7,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Filter dropdowns with a search bar gain a select-all checkbox.** The
+  checkbox sits left of the search bar and covers the rows the search
+  currently shows: click selects every visible option in one commit (the
+  menu stays open), clicking again deselects them, and a partial selection
+  shows mixed. Applies to the Project and Provider dropdowns; the State
+  dropdown has no search bar and the Group control is single-choice, so
+  neither grows one.
+
 - **Developer toggle: pane chat scroll instrumentation.** A new off-by-default
   Focus Board setting logs the thread pane transcript's scroll activity
   while enabled — programmatic `scrollTop` writes with stacks, the gesture
