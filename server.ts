@@ -6,7 +6,10 @@
 // { doneAt: ISO-8601, keep? }), exposed over RPC and broadcast over realtime
 // so every open board updates; (2) per-thread sweep keep flags in their own
 // KV store (a long-idle thread that was never marked Done can be protected
-// too); (3) the sweep thresholds, from plugin settings.
+// too); (3) the sweep thresholds, one value+unit pair per arm, stored as a
+// single KV row and edited through a plugin-rendered settings section (bb's
+// host settings form draws one control per declared setting — no composite
+// row — so a `[number] [unit]` pair cannot be a declared setting).
 //
 // Plugin metadata writes emit no thread realtime event, so the explicit
 // done-changed publish stays.
@@ -26,10 +29,16 @@ import {
 } from "./lib/done-metadata";
 import {
   ARCHIVE_UNITS,
-  DEFAULT_ARCHIVE_UNIT,
-  DEFAULT_ARCHIVE_VALUE,
   archiveThresholdMs,
 } from "./lib/duration";
+import {
+  DEFAULT_SWEEP_CONFIG,
+  DONE_ARCHIVE_VALUE_CAP,
+  IDLE_ARCHIVE_VALUE_CAP,
+  parseSweepConfigRow,
+  type SweepConfig,
+  type SweepConfigPatch,
+} from "./lib/sweep-config";
 import {
   PIN_PARK_METADATA_KEY,
   parsePinParkRecord,
@@ -68,6 +77,28 @@ const COLUMN_KEY_SCHEMA = z
   .min(1)
   .max(200)
   .regex(/^(?!__proto__$)[^\x00-\x1f\x7f]+$/, "not a column key");
+
+/**
+ * The unit select's stored value is typed plain `string`; the enum schema
+ * guarantees membership at every write boundary (RPC input, CLI check) —
+ * re-parse to narrow the type (and to fail loud if a foreign value ever
+ * lands in the store).
+ */
+const ARCHIVE_UNIT_SCHEMA = z.enum(ARCHIVE_UNITS);
+
+/**
+ * The sweep threshold config as it crosses the RPC boundary: one value+unit
+ * pair per arm. Shared by the read (sweep_settings_get) and the write
+ * (sweep_settings_set returns the whole effective config) so the settings
+ * section always renders exactly what the server stored. Declared before
+ * the contract object, which evaluates at module load.
+ */
+const sweepSettingsSchema = z.object({
+  doneArchiveValue: z.number().int().min(1).max(DONE_ARCHIVE_VALUE_CAP),
+  doneArchiveUnit: ARCHIVE_UNIT_SCHEMA,
+  idleArchiveValue: z.number().int().min(1).max(IDLE_ARCHIVE_VALUE_CAP),
+  idleArchiveUnit: ARCHIVE_UNIT_SCHEMA,
+});
 
 export const rpcContract = defineRpcContract({
   done_list: {
@@ -131,13 +162,24 @@ export const rpcContract = defineRpcContract({
     input: z.null(),
     /**
      * Thresholds resolved to exact epoch ms from the operator's value+unit
-     * settings (lib/duration owns the conversion). The board stays
-     * unit-ignorant; the CLI reads the raw settings for display.
+     * config (lib/duration owns the conversion). The board stays
+     * unit-ignorant; the CLI reads the raw config for display.
      */
     output: z.object({
       doneArchiveMs: z.number().int().min(1),
       idleArchiveMs: z.number().int().min(1),
     }),
+  },
+  sweep_settings_get: {
+    input: z.null(),
+    /** The raw value+unit config the settings section renders. */
+    output: sweepSettingsSchema,
+  },
+  sweep_settings_set: {
+    /** A partial write: any subset of the four fields; the rest keep their
+     *  stored (or default) values. */
+    input: sweepSettingsSchema.partial(),
+    output: sweepSettingsSchema,
   },
   sweep_keep_set: {
     input: z.object({ threadId: z.string().min(1), keep: z.boolean() }),
@@ -173,13 +215,6 @@ export const rpcContract = defineRpcContract({
   },
 });
 
-/**
- * The unit select's stored value is typed plain `string`; the descriptor's
- * enum schema guarantees membership at write time — re-parse to narrow the
- * type (and to fail loud if a foreign value ever lands in the store).
- */
-const ARCHIVE_UNIT_SCHEMA = z.enum(ARCHIVE_UNITS);
-
 /** Realtime signal after every done/keep write. Payload is { threadId, done }
  *  (was { count } before the metadata migration); consumers refetch on the
  *  event rather than reading the payload. */
@@ -191,6 +226,13 @@ const RANK_CHANGED = "rank-changed";
 const LEGACY_DONE_KEY = "done-thread-ids";
 /** Per-thread sweep keep flags, independent of Done marks. */
 const KEEP_KEY = "sweep-keep-flags";
+/**
+ * The sweep threshold config: one row, two value+unit pairs (the
+ * Done-archive arm and the long-idle arm; lib/sweep-config owns the shape).
+ * Formerly four declared settings — moved out of the host settings form so
+ * the settings page can render each pair as a single `[number] [unit]` row.
+ */
+const SWEEP_CONFIG_KV_KEY = "sweep-config";
 /**
  * Best-effort index of thread ids the board believes carry its `done`
  * metadata. The SDK has no metadata scan, so `bb focus-board done list`
@@ -237,42 +279,13 @@ export function keptFromRow(row: unknown): KeepStore | null {
 export default async function plugin(bb: BbPluginApi) {
   bb.log.info("loaded");
 
+  // Declared settings still render on the plugin detail page's host form
+  // (the sweep thresholds deliberately are NOT here anymore — they moved to
+  // the KV-backed config below, edited through the plugin's own settings
+  // section, so each value+unit pair can draw as one row). The binding is
+  // the declaration; the board reads these two reactively through
+  // `useSettings()` on the frontend.
   const settings = bb.settings.define({
-    // Each sweep threshold is a value+unit pair: the number is a count of
-    // the unit setting next to it (hours | days | weeks). Both arms
-    // default to 2 days — the operator-tuned aggressive default. The
-    // integer caps keep the old per-arm ranges as a garbage rail (365 for
-    // Done, 3650 for idle) in whatever unit is configured.
-    doneArchiveValue: {
-      type: "number",
-      label: "Sweep: archive Done threads after",
-      description:
-        "How long a thread stays Done before the sweep offers to archive it — a count of the unit chosen below. Default 2 days.",
-      experimental_schema: z.number().int().min(1).max(365),
-      default: DEFAULT_ARCHIVE_VALUE,
-    },
-    doneArchiveUnit: {
-      type: "select",
-      label: "Sweep: Done archive unit",
-      options: [...ARCHIVE_UNITS],
-      experimental_schema: ARCHIVE_UNIT_SCHEMA,
-      default: DEFAULT_ARCHIVE_UNIT,
-    },
-    idleArchiveValue: {
-      type: "number",
-      label: "Sweep: mark long-idle threads Done after",
-      description:
-        "How long a thread stays quiet before the sweep offers to mark it Done — a count of the unit chosen below. Default 2 days.",
-      experimental_schema: z.number().int().min(1).max(3650),
-      default: DEFAULT_ARCHIVE_VALUE,
-    },
-    idleArchiveUnit: {
-      type: "select",
-      label: "Sweep: idle threshold unit",
-      options: [...ARCHIVE_UNITS],
-      experimental_schema: ARCHIVE_UNIT_SCHEMA,
-      default: DEFAULT_ARCHIVE_UNIT,
-    },
     // The thread pane's Escape behavior. Rendered as a toggle in the
     // plugin detail page's configuration panel; the board reads it
     // reactively through the frontend `useSettings()` hook (explicit
@@ -505,6 +518,39 @@ export default async function plugin(bb: BbPluginApi) {
     await bb.storage.kv.set(RANK_KV_KEY, rankRowFromStore(store));
   }
 
+  /**
+   * The sweep threshold config. Missing row → the defaults (the shipped
+   * 2-days-per-arm); a row that fails parseSweepConfigRow → throw, not
+   * warn-and-reset: the config decides what the sweep archives, and a
+   * silent default reset would change that behavior without a trace (the
+   * keep store's lower-stakes reset is deliberately not mirrored here).
+   */
+  async function readSweepConfig(): Promise<SweepConfig> {
+    const raw: unknown = await bb.storage.kv.get<unknown>(SWEEP_CONFIG_KV_KEY);
+    if (raw === undefined) return { ...DEFAULT_SWEEP_CONFIG };
+    const config = parseSweepConfigRow(raw);
+    if (config === null) {
+      throw new Error(
+        `Sweep config under "${SWEEP_CONFIG_KV_KEY}" failed validation; refusing to fall back to defaults.`,
+      );
+    }
+    return config;
+  }
+
+  /** Validate-then-persist a partial config write; resolves with the whole
+   *  effective config so writers (RPC, CLI) echo what is now stored. */
+  async function writeSweepConfig(patch: SweepConfigPatch): Promise<SweepConfig> {
+    const current = await readSweepConfig();
+    const merged = parseSweepConfigRow({ ...current, ...patch });
+    if (merged === null) {
+      // Unreachable through validated callers (RPC zod schema, CLI checks);
+      // the guard keeps writeSweepConfig the single persistence choke point.
+      throw new Error("Sweep config patch produced an invalid row; nothing written.");
+    }
+    await bb.storage.kv.set(SWEEP_CONFIG_KV_KEY, merged);
+    return merged;
+  }
+
   bb.rpc.register(rpcContract, {
     done_list: async () => {
       const [{ doneIds, records }, kept] = await Promise.all([
@@ -585,17 +631,17 @@ export default async function plugin(bb: BbPluginApi) {
       return { existence: out };
     },
     sweep_config_get: async () => {
-      const values = await settings.get();
+      const config = await readSweepConfig();
       return {
-        doneArchiveMs: archiveThresholdMs(
-          values.doneArchiveValue,
-          ARCHIVE_UNIT_SCHEMA.parse(values.doneArchiveUnit),
-        ),
-        idleArchiveMs: archiveThresholdMs(
-          values.idleArchiveValue,
-          ARCHIVE_UNIT_SCHEMA.parse(values.idleArchiveUnit),
-        ),
+        doneArchiveMs: archiveThresholdMs(config.doneArchiveValue, config.doneArchiveUnit),
+        idleArchiveMs: archiveThresholdMs(config.idleArchiveValue, config.idleArchiveUnit),
       };
+    },
+    sweep_settings_get: async () => {
+      return readSweepConfig();
+    },
+    sweep_settings_set: async (patch) => {
+      return writeSweepConfig(patch);
     },
     sweep_keep_set: async ({ threadId, keep }) => {
       // The keep flag applies to BOTH sweep arms (Done and long-idle), so it
@@ -652,10 +698,12 @@ export default async function plugin(bb: BbPluginApi) {
     "idleArchiveValue",
     "idleArchiveUnit",
   ] as const;
-  /** Count caps mirror the descriptor schemas (in the configured unit). */
+  /** Count caps per arm, in the configured unit (lib/sweep-config owns the
+   *  numbers; they mirror the RPC schemas so every write path rejects the
+   *  same values). */
   const settingsCaps = {
-    doneArchiveValue: 365,
-    idleArchiveValue: 3650,
+    doneArchiveValue: DONE_ARCHIVE_VALUE_CAP,
+    idleArchiveValue: IDLE_ARCHIVE_VALUE_CAP,
   } as const;
 
   /** The SDK's thread row shape, as returned by `threads.list`. */
@@ -838,16 +886,10 @@ export default async function plugin(bb: BbPluginApi) {
       await importLegacyDone();
       const confirm = input.options.confirm === true;
       const ids = input.options.ids ?? [];
-      const values = await settings.get();
+      const config = await readSweepConfig();
       const thresholds = {
-        doneArchiveMs: archiveThresholdMs(
-          values.doneArchiveValue,
-          ARCHIVE_UNIT_SCHEMA.parse(values.doneArchiveUnit),
-        ),
-        idleArchiveMs: archiveThresholdMs(
-          values.idleArchiveValue,
-          ARCHIVE_UNIT_SCHEMA.parse(values.idleArchiveUnit),
-        ),
+        doneArchiveMs: archiveThresholdMs(config.doneArchiveValue, config.doneArchiveUnit),
+        idleArchiveMs: archiveThresholdMs(config.idleArchiveValue, config.idleArchiveUnit),
       };
       const { rows: candidates, liveIds } = await listCandidateThreads();
       const byId = new Map(candidates.map((row) => [row.id, row]));
@@ -904,8 +946,8 @@ export default async function plugin(bb: BbPluginApi) {
 
       const describe = (entry: SweepEligible): string =>
         entry.reason === "done"
-          ? `done longer than ${values.doneArchiveValue} ${values.doneArchiveUnit}`
-          : `idle longer than ${values.idleArchiveValue} ${values.idleArchiveUnit}`;
+          ? `done longer than ${config.doneArchiveValue} ${config.doneArchiveUnit}`
+          : `idle longer than ${config.idleArchiveValue} ${config.idleArchiveUnit}`;
       const titleOf = (id: string): string | null => {
         const thread = byId.get(id);
         return thread?.title ?? thread?.titleFallback ?? null;
@@ -986,19 +1028,14 @@ export default async function plugin(bb: BbPluginApi) {
       json: { type: "boolean", description: "Emit machine-readable JSON" },
     },
     async run(input) {
-      const values = await settings.get();
-      const defaults: Record<(typeof settingsKeys)[number], number | string> = {
-        doneArchiveValue: DEFAULT_ARCHIVE_VALUE,
-        doneArchiveUnit: DEFAULT_ARCHIVE_UNIT,
-        idleArchiveValue: DEFAULT_ARCHIVE_VALUE,
-        idleArchiveUnit: DEFAULT_ARCHIVE_UNIT,
-      };
+      const config = await readSweepConfig();
+      const defaults = DEFAULT_SWEEP_CONFIG;
       const rows = (Object.keys(defaults) as Array<keyof typeof defaults>).map(
         (key) => ({
           key,
-          value: values[key],
+          value: config[key],
           default: defaults[key],
-          overridden: values[key] !== defaults[key],
+          overridden: config[key] !== defaults[key],
         }),
       );
       const stdout = input.options.json
@@ -1061,11 +1098,11 @@ export default async function plugin(bb: BbPluginApi) {
         }
         value = parsed;
       }
-      // The key is one of the four declared settings and `value` matches
-      // that key's type (branch above), so the computed write is shape-safe.
-      const next = await settings.experimental_set({
+      // The key is one of the four config fields and `value` matches that
+      // key's type (branch above), so the computed write is shape-safe.
+      const next = await writeSweepConfig({
         [key]: value,
-      } as Parameters<typeof settings.experimental_set>[0]);
+      } as SweepConfigPatch);
       const effective = next[key as (typeof settingsKeys)[number]];
       const stdout = input.options.json
         ? JSON.stringify({ key, value: effective }, null, 2) + "\n"

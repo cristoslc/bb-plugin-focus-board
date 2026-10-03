@@ -14,6 +14,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Sweep thresholds draw as one `[number] [unit]` row per arm.** The two
+  count+unit pairs moved out of the host-rendered settings form (which
+  draws one control per setting and stranded each unit on its own row)
+  into a plugin-rendered "Sweep thresholds" section on the settings page:
+  the count sits immediately left of its unit select, right-aligned with
+  the digits against the unit, with inline validation and the same
+  `bb focus-board config` CLI underneath. The thresholds now live in the
+  plugin's own KV store (`sweep-config`) instead of declared settings —
+  values set before this release revert to the defaults (2 days per arm)
+  on upgrade; re-set them on the settings page or with `config set`.
+
 - **The long-idle sweep now marks threads Done instead of archiving them.**
   Confirming a sweep on the Idle · A-while-ago column sends its quiet threads
   to the Done column — the same mark-dragging a card there performs — instead

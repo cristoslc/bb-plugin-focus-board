@@ -64,6 +64,8 @@ import {
   type SweepRunView,
 } from "./lib/sweep";
 import { useSweepClickAway } from "./components/board";
+import { SweepThresholdsSettings } from "./components/sweep-thresholds-settings";
+import type { SweepConfig, SweepConfigPatch } from "./lib/sweep-config";
 import {
   GROUP_BY_KEY,
   NEST_CHILDREN_KEY,
@@ -1663,6 +1665,48 @@ function BoardPage({ subPath }: { subPath: string }) {
   );
 }
 
+/**
+ * The sweep thresholds section on the plugin's settings detail page: loads
+ * the stored config over RPC and persists edits back through it. Kept as a
+ * thin wiring wrapper — the section itself takes dependencies as props so
+ * tests render it without SDK hooks (components/sweep-thresholds-settings).
+ */
+function SweepThresholdsSection() {
+  const rpc = useRpc<typeof rpcContract>();
+  const [config, setConfig] = useState<SweepConfig | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  useEffect(() => {
+    let disposed = false;
+    rpc.call("sweep_settings_get").then(
+      (next) => {
+        if (disposed) return;
+        setConfig(next);
+        setLoadError(null);
+      },
+      (error: unknown) => {
+        if (disposed) return;
+        setLoadError(
+          error instanceof Error ? error.message : "Could not load the sweep thresholds.",
+        );
+      },
+    );
+    return () => {
+      disposed = true;
+    };
+  }, [rpc]);
+  const onSave = useCallback(
+    async (patch: SweepConfigPatch): Promise<SweepConfig> => {
+      const next = await rpc.call("sweep_settings_set", patch);
+      setConfig(next);
+      return next;
+    },
+    [rpc],
+  );
+  return (
+    <SweepThresholdsSettings config={config} loadError={loadError} onSave={onSave} />
+  );
+}
+
 export default definePluginApp((app) => {
   app.slots.navPanel({
     id: "board",
@@ -1673,6 +1717,16 @@ export default definePluginApp((app) => {
     // the open pane participates in browser history — bb's back arrow
     // reopens the pane state the user left, and deep links restore it.
     component: BoardPage,
+  });
+  // The sweep thresholds live on the plugin detail page below the
+  // host-rendered settings form. The form draws one control per declared
+  // setting, so each threshold's number+unit pair renders here instead —
+  // `[number] [unit]` side by side, right-aligned, digits against the unit.
+  app.slots.settingsSection({
+    id: "sweep-thresholds",
+    title: "Sweep thresholds",
+    description: "How long threads wait before the sweep offers to retire them.",
+    component: SweepThresholdsSection,
   });
   // A gear icon in the sidebar footer (beside the built-in Settings and
   // bug-report buttons) that jumps to this plugin's detail page in Tools,

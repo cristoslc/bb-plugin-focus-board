@@ -328,12 +328,28 @@ describe("bb focus-board CLI (done + config)", () => {
 
     it("flags overridden keys in the human output", async () => {
       await load();
-      await harness.behavior.setSettings({ doneArchiveValue: 14 });
+      // Seed the KV row the way the settings section / config set write it:
+      // one row, both arms (lib/sweep-config owns the shape).
+      await bb.storage.kv.set("sweep-config", {
+        doneArchiveValue: 14,
+        doneArchiveUnit: "days",
+        idleArchiveValue: 2,
+        idleArchiveUnit: "days",
+      });
       const result = await harness.behavior.runCli(["config", "show"]);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain("doneArchiveValue=14");
       expect(result.stdout).toContain("overridden");
       expect(result.stdout).toContain("idleArchiveValue=2");
+    });
+
+    it("fails loud on a stored row that fails validation", async () => {
+      await load();
+      await bb.storage.kv.set("sweep-config", { doneArchiveValue: "lots" });
+      const result = await harness.behavior.runCli(["config", "show"]);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("sweep-config");
+      expect(result.stderr).toContain("failed validation");
     });
   });
 
