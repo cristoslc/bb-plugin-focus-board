@@ -39,28 +39,33 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-function renderPane(
+function paneElement(
   thread: Parameters<typeof ThreadPane>[0]["thread"],
   { escStopsRunningThread = true }: { escStopsRunningThread?: boolean } = {},
 ) {
-  return render(
-    createElement(
-      CompactViewportOverrideProvider,
-      { isCompactViewport: false },
-      createElement(ThreadPane, {
-        thread,
-        isArchived: false,
-        isDone: false,
-        onToggleDone: noop,
-        onToggleArchived: noop,
-        onToggleUnread: noop,
-        onRename: async () => {},
-        onMaximize: noop,
-        onClose,
-        escStopsRunningThread,
-      }),
-    ),
+  return createElement(
+    CompactViewportOverrideProvider,
+    { isCompactViewport: false },
+    createElement(ThreadPane, {
+      thread,
+      isArchived: false,
+      isDone: false,
+      onToggleDone: noop,
+      onToggleArchived: noop,
+      onToggleUnread: noop,
+      onRename: async () => {},
+      onMaximize: noop,
+      onClose,
+      escStopsRunningThread,
+    }),
   );
+}
+
+function renderPane(
+  thread: Parameters<typeof ThreadPane>[0]["thread"],
+  opts: { escStopsRunningThread?: boolean } = {},
+) {
+  return render(paneElement(thread, opts));
 }
 
 const pressEscape = () => {
@@ -142,6 +147,96 @@ describe("Escape closes the pane regardless of status (toggle OFF)", () => {
     );
     pressEscape();
     expect(stop).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Escape double-tap debounce", () => {
+  // The double-tap guard: after the pane acts on an Escape (stop or close),
+  // further Escapes inside a short window are swallowed, so a double-tap
+  // meant to stop a running thread never cascades into closing the pane.
+  const threadWith = (status: "active" | "stopping" | "idle") => ({
+    id: "thr_test",
+    displayTitle: "Test thread",
+    status,
+    isUnread: false,
+    projectName: null,
+    branchName: null,
+  });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("swallows a second Escape right after stopping the thread", () => {
+    renderPane(threadWith("active"));
+    pressEscape();
+    vi.advanceTimersByTime(100);
+    pressEscape();
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("does not close the pane when a double-tap lands after the stop settled", () => {
+    const view = renderPane(threadWith("active"));
+    pressEscape();
+    vi.advanceTimersByTime(100);
+    // The stop settled between the two taps; the second tap used to close.
+    view.rerender(paneElement(threadWith("idle")));
+    pressEscape();
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("closes only once when a double-tap lands on an idle thread", () => {
+    renderPane(threadWith("idle"));
+    pressEscape();
+    vi.advanceTimersByTime(100);
+    pressEscape();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("acts again once the debounce window has passed", () => {
+    const view = renderPane(threadWith("active"));
+    pressEscape();
+    vi.advanceTimersByTime(100);
+    view.rerender(paneElement(threadWith("idle")));
+    vi.advanceTimersByTime(600);
+    pressEscape();
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops again on a deliberate second press after the window", () => {
+    renderPane(threadWith("active"));
+    pressEscape();
+    vi.advanceTimersByTime(600);
+    pressEscape();
+    expect(stop).toHaveBeenCalledTimes(2);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("never acts on held-key auto-repeat", () => {
+    renderPane(threadWith("active"));
+    fireEvent.keyDown(document, { key: "Escape", repeat: true });
+    expect(stop).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("a swallowed Escape does not extend the debounce window", () => {
+    const view = renderPane(threadWith("active"));
+    pressEscape(); // t=0: stops, arms the window
+    vi.advanceTimersByTime(400);
+    view.rerender(paneElement(threadWith("idle")));
+    pressEscape(); // t=400: inside the window, swallowed
+    expect(onClose).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(400);
+    pressEscape(); // t=800: 800ms since the stop, past the window — closes
+    expect(stop).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

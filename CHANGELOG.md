@@ -14,6 +14,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **A double-tap of Escape no longer closes the thread pane.** After the pane
+  acts on an Escape — stopping a running thread or closing itself — further
+  Escapes inside a short double-click-sized window are swallowed, so the
+  second tap of a stop double-tap (which often lands right after the stop
+  has settled) cannot cascade into closing the pane. Held-key auto-repeat is
+  ignored outright.
+
 - **The long-idle sweep now marks threads Done instead of archiving them.**
   Confirming a sweep on the Idle · A-while-ago column sends its quiet threads
   to the Done column — the same mark-dragging a card there performs — instead
