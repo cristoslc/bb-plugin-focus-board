@@ -79,7 +79,7 @@ export function NewThreadModal({
         <DialogHeader>
           <DialogTitle>New thread</DialogTitle>
           <DialogDescription>
-            Compose and start a thread without leaving the board.
+            Your draft is saved as you type, even if you close and come back later.
           </DialogDescription>
         </DialogHeader>
         {spawnFailed ? (
