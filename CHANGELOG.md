@@ -7,6 +7,38 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **A family's done work now renders as a projection card in the Done
+  column.** Done children no longer nest under the family's active card —
+  they move to the Done column under a projection of the parent's card
+  (dimmed, with the done children nested beneath it), so a family can live in
+  both spaces at once: the live portion in its attention lane, the done
+  portion in Done. A done parent keeps its single Done card with its done
+  children nested. Each card's child-count chip counts its own space, and a
+  projection card refuses sweep selection (it is not a done thread).
+  - **Big families scroll inside their card.** When a family card nests more
+    than five child rows, the list caps its height and scrolls; five or fewer
+    render at natural height as before. The collapse chevron still hides the
+    whole list.
+  - **Archived children are now hidden outright, everywhere.** They no
+    longer render as dimmed rows under the family card on the Attention
+    board or as riders under the family header in the Parent-thread view —
+    archiving a thread removes it from the board completely, matching bb's
+    sidebar. Child chips count only visible children, and the children of an
+    archived parent now render as standalone cards instead of vanishing
+    under a card that never renders.
+
+- **Filter dropdowns with a search bar gain a select-all checkbox.** The
+  checkbox sits left of the search bar and covers the rows the search
+  currently shows: click selects every visible option in one commit (the
+  menu stays open), clicking again deselects them, and a partial selection
+  shows mixed. Applies to the Project and Provider dropdowns; the State
+  dropdown has no search bar and the Group control is single-choice, so
+  neither grows one.
+  - **Enter applies a sole dropdown search match.** When a filter dropdown's
+    search has narrowed the list to one row, pressing Enter selects it and
+    closes the menu like clicking the row; with more matches or none, Enter
+    stays inert.
+
 - **Developer toggle: pane chat scroll instrumentation.** A new off-by-default
   Focus Board setting logs the thread pane transcript's scroll activity
   while enabled — programmatic `scrollTop` writes with stacks, the gesture
@@ -68,17 +100,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     Pinned lane (above manual ranks, like urgent child rows do); the signal
     vanishes when the question is answered.
 
-- **Enter applies a sole dropdown search match.** When a filter dropdown's
-  search has narrowed the list to one row, pressing Enter selects it and
-  closes the menu like clicking the row; with more matches or none, Enter
-  stays inert.
-
 ### Fixed
 
-- **The pane's click-jump guard no longer cements an upward displacement.**
-  It now does not arm for 3 seconds after any single scroll move of
-  ≥300px, so the host shell's own corrections land undisturbed (shipped in
-  0.5.19; `docs/chat-click-jump-2026-09-29.md`).
+- **Menu moves bring the destination lane into view.** The keep-in-view
+  contract followed the pane's active card on relocation, but a right-click
+  menu move relocates a card the pane never opened — "Pin thread" sends a
+  parent's whole nested family into the far-left Pinned lane — and in a
+  scrolled board the destination could sit offscreen: the action read as the
+  card silently vanishing. Every menu action that relocates a card (Pin,
+  Unpin, Mark Done/Not Done, Mark Read/Unread) now issues a one-shot reveal
+  that brings the card's new lane into view; it lands in the same commit as
+  the relocation (async host actions included), a visible destination scrolls
+  nothing, and passive changes still never move your scroll.
+
+- **The pane's click-jump guard now arms on the position recorded at the
+  gesture's pointerdown** — captured before the host shell's
+  pending-capture clamp commits — and restores it when a click lands the
+  transcript pinned at the bottom within ~200ms. Armed on the click-time
+  read, the guard never fired at all: the clamp lands during the pointerdown
+  edge, so the fresh read was already past the write and the reader stayed
+  clamped (exposed by a live adversarial run inside the guard's own design
+  band). The settled-view refusals of the previous fix survive only for
+  clicks with no pointer event (programmatic flows); reader gestures in the
+  window still disarm it, and pill and composer clicks never arm it
+  (`docs/chat-click-jump-2026-09-29.md`).
+
 
 ## [0.5.21] - 2026-09-30
 

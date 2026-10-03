@@ -31,6 +31,7 @@ function renderFamilyBoard(threads: PluginSidebarThread[]) {
     doneIds: new Set<string>(),
     nestedChildrenByParent: assembly.nestedChildrenByParent,
     childCountByParent: assembly.childCountByParent,
+    doneChildrenByParent: assembly.doneChildrenByParent,
     dimmedIds: new Set<string>(),
     projectNameFor: () => "Alpha",
     repoBaseFor: () => null,

@@ -632,10 +632,11 @@ function BoardPage({ subPath }: { subPath: string }) {
   // additionally fires on host-side changes so cards never sit stale.
   useRealtime("thread-list-changed", () => {});
 
-  // R2: the family pipeline runs on the NON-HIDDEN set — archived threads
-  // are included so an archived child stays under its parent. Archived
-  // threads never render standalone; `assembleBoard` keeps them out of the
-  // columns in both modes.
+  // The family pipeline runs on the NON-HIDDEN set. Archived threads are
+  // included here but are hidden by the pipeline itself: buildFamilyIndex —
+  // the single authoritative hide — drops them, so an archived child renders
+  // nowhere (in either board view) and a child of an archived parent
+  // re-roots. assembleBoard keeps them out of the columns in both modes.
   const nonHiddenThreads = useMemo(
     () => threads.filter((thread) => !thread.isHidden),
     [threads],
@@ -657,7 +658,8 @@ function BoardPage({ subPath }: { subPath: string }) {
 
   // Family-aware filtering replaces per-thread filtering when nesting is ON:
   // a family passes when any member matches, non-matching members render
-  // dimmed (archived riders always dim; they never contribute a match).
+  // dimmed (archived members are hidden outright by the family index, so
+  // they never appear here at all).
   // Nesting OFF means a fully flat board — per-thread filtering again. The
   // "parent" grouping overrides that (D11): the nesting toggle is inert
   // there, and lane mode always filters family-first (D10 keep-and-dim).
@@ -687,9 +689,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Single assembly: buildColumns → nestUnderParents. The nesting result's
   // map (not the raw family index) drives which children render as nested
   // rows, so a promoted or cross-axis child appears only as its standalone
-  // card — never both standalone AND nested. The raw index's counts drive the
-  // parent card's child-count chip, which counts every child (archived
-  // included). With nesting OFF the board is flat: no rows, no chips.
+  // card — never both standalone AND nested. `doneChildrenByParent` drives
+  // the Done projection cards. The chip counts come from the assembly too,
+  // counted per card's own space (live children on a live card; done rows on
+  // a Done card). With nesting OFF the board is flat: no rows, no chips.
   const isParentGroupBy = groupBy === "parent";
   const parentLanes = useMemo(
     () => (isParentGroupBy ? buildParentLanes(searched, doneIds, Date.now(), doneTimes) : null),
@@ -752,6 +755,17 @@ function BoardPage({ subPath }: { subPath: string }) {
           );
     },
     [columns, doneIds, doneAgeSource, idleKept, liveChildParentIds, sweepConfig],
+  );
+
+  // A Done-column projection card (a live family's Done card) cannot join a
+  // sweep either: it is a rendering of a live parent, not a done thread.
+  const doneProjectionParentIds = useMemo(
+    () => new Set(assembly?.doneChildrenByParent.keys() ?? []),
+    [assembly],
+  );
+  const sweepBlockedIds = useMemo(
+    () => new Set([...liveChildParentIds, ...doneProjectionParentIds]),
+    [liveChildParentIds, doneProjectionParentIds],
   );
 
   const armSweepFor = useCallback(
@@ -1113,6 +1127,50 @@ function BoardPage({ subPath }: { subPath: string }) {
     [sdk],
   );
 
+  // One-shot lane-reveal claims (menu moves). Every menu action that
+  // relocates a card — Pin/Unpin, Mark Done/Not Done, Mark Read/Unread —
+  // moves a card the pane never opened, and the destination lane (Pinned
+  // far left, Done far right) can sit offscreen in a scrolled board: the
+  // action reads as the card silently vanishing from where it was.
+  //
+  // The board only follows the OPEN card (its keep-in-view effect), and it
+  // must not follow the DATA (passive status flips and host-side changes
+  // would yank the user's place) — so the board gets an intent CLAIM
+  // instead. Pin/Read ride the host bridge: the state (with it, the
+  // relocation) lands in a later render than the click, so rather than fire
+  // the reveal at click time, the run arms a pending claim that the effect
+  // below consumes the moment the thread's observable state matches — landing
+  // the reveal request in the same commit the card relocates. Done/Unread
+  // are local and optimistic: their runs fire the reveal directly, batched
+  // with the state change (Board processes it post-relocation).
+  //
+  // A claim that outlives its action (the host never applies the requested
+  // state) fires later, on the next state match — still the user's intent.
+  const [revealRequest, setRevealRequest] = useState<{
+    threadId: string;
+    seq: number;
+  } | null>(null);
+  const revealSeqRef = useRef(0);
+  const requestReveal = useCallback((threadId: string) => {
+    revealSeqRef.current += 1;
+    setRevealRequest({ threadId, seq: revealSeqRef.current });
+  }, []);
+  const pendingStateClaimsRef = useRef<
+    Map<string, { field: "isPinned" | "isUnread"; value: boolean }>
+  >(new Map());
+  useEffect(() => {
+    const claims = pendingStateClaimsRef.current;
+    if (claims.size === 0) return;
+    for (const [threadId, claim] of claims) {
+      const thread = threads.find((candidate) => candidate.id === threadId);
+      if (thread === undefined || thread[claim.field] !== claim.value) continue;
+      claims.delete(threadId);
+      requestReveal(threadId);
+    }
+    // Consumes per threads update while claims are armed; the deletion (and
+    // requestReveal's own setState) is the re-run trigger.
+  }, [threads, requestReveal]);
+
   // The Pinned lane-exit rule. A pinned card leaving the Pinned lane (a
   // cross-column drop or the menu's Mark Done) un-pins as part of the
   // gesture — column placement derives from the pin, so the pin must go
@@ -1166,7 +1224,15 @@ function BoardPage({ subPath }: { subPath: string }) {
         clearParkPin(threadId);
         return;
       }
-      // The restore itself, then the park dies — one gesture, once.
+      // The restore itself, then the park dies — one gesture, once. The
+      // reveal claim rides along: the card moves back to Pinned (far left,
+      // offscreen in a scrolled board) when the write lands, not when this
+      // function runs, so the consumed-when-applied claim is what keeps the
+      // board following it.
+      pendingStateClaimsRef.current.set(threadId, {
+        field: "isPinned",
+        value: true,
+      });
       void actions.setPinned(threadId, true);
       clearParkPin(threadId);
     },
@@ -1350,6 +1416,14 @@ function BoardPage({ subPath }: { subPath: string }) {
             // write supersedes must not resurrect on a later Mark Not Done
             // or Mark Unread.
             clearParkPin(thread.id);
+            // Arm the reveal claim first, then ask the host: the applied
+            // pin (and the card's relocation into or out of the Pinned
+            // lane) lands in a later commit, so the claim's consumption
+            // effect timing is what makes the reveal land AFTER the move.
+            pendingStateClaimsRef.current.set(thread.id, {
+              field: "isPinned",
+              value: !thread.isPinned,
+            });
             void actions.setPinned(thread.id, !thread.isPinned);
           },
         },
@@ -1358,6 +1432,14 @@ function BoardPage({ subPath }: { subPath: string }) {
           label: thread.isUnread ? "Mark Read" : "Mark Unread",
           icon: thread.isUnread ? "MailOpen" : "Mail",
           run: () => {
+            // Arm the reveal claim first — setRead also rides the host
+            // bridge, and the requested observable state is the toggle's
+            // flipped value (the applied result), not the arg passed
+            // through.
+            pendingStateClaimsRef.current.set(thread.id, {
+              field: "isUnread",
+              value: !thread.isUnread,
+            });
             // Marking unread carries the state-truth effects (a parked pin
             // returns; a Done card un-does); marking read leaves the park in
             // place — a card read now that the operator marks unread later
@@ -1382,6 +1464,12 @@ function BoardPage({ subPath }: { subPath: string }) {
               return next;
             });
             rpc.call("done_set", { threadId: thread.id, done: !isThreadDone }).catch(() => {});
+            // Local and optimistic: the card relocates to the Done lane (or
+            // back out of it) in the same commit as this batch, so the
+            // one-shot reveal can fire now — Board's layout effect
+            // processes it after the move, minimally (an already-visible
+            // destination lane scrolls nothing).
+            requestReveal(thread.id);
             if (!isThreadDone) {
               // Done implies read: a Done card must not still claim unread
               // (and a later Mark Not Done hands the card back read).
@@ -1443,7 +1531,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         },
       ];
     },
-    [actions, applyUnreadStateEffects, clearParkPin, doneAgeSource, doneIds, exitPinnedLane, restoreParkedPin, rpc, setDoneExtras, setDoneIds, sdk],
+    [actions, applyUnreadStateEffects, clearParkPin, doneAgeSource, doneIds, exitPinnedLane, requestReveal, restoreParkedPin, rpc, setDoneExtras, setDoneIds, sdk],
   );
 
   if (status === "loading" && threads.length === 0) {
@@ -1522,6 +1610,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             doneIds={doneIds}
             nestedChildrenByParent={assembly?.nestedChildrenByParent ?? new Map()}
             childCountByParent={assembly?.childCountByParent ?? new Map()}
+            doneChildrenByParent={assembly?.doneChildrenByParent ?? new Map()}
             dimmedIds={dimmedIds}
             projectNameFor={projectNameFor}
             repoBaseFor={repoBaseFor}
@@ -1536,7 +1625,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             onDismissSweepNotice={clearSweepNotice}
             onSweepUndo={undoSweepFor}
             onSweepToggle={toggleSweepSelectionFor}
-            sweepBlockedIds={liveChildParentIds}
+            sweepBlockedIds={sweepBlockedIds}
             onSweepArm={armSweepFor}
             onSweepDisarm={disarmSweep}
             onSweepConfirm={confirmSweepFor}
@@ -1610,6 +1699,7 @@ function BoardPage({ subPath }: { subPath: string }) {
                 .catch(() => refetchRanks());
             }}
             menuActionsFor={menuActionsFor}
+            reveal={revealRequest}
           />
         )}
       </div>

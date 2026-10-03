@@ -1,0 +1,95 @@
+# Lane reveal: a menu action that relocates a card must keep the board legible.
+#
+# The board follows the OPEN card on relocation (keep-in-view), but the
+# right-click menu moves cards the pane never opened, and every destination
+# that matters sits at the ends of the board: Pin lands in the far-left
+# Pinned lane, Mark Done in the far-right Done lane, and a plain card's own
+# destination column can be any of them. With the board scrolled, the action
+# reads as the card silently vanishing. The app issues a one-shot reveal
+# claim when the menu act fires; the board brings the card's new lane into
+# view — for a parent, its whole nested family rides along — and passive
+# changes (host pins, status flips) never scroll anything.
+#
+# Run: npm run uat -- tests/manual/uat-lane-reveal.yaml
+#
+# The 720px viewport is deliberate: at scroll position 0 only the first two
+# columns are visible and the working column clips at its right edge — wide
+# enough to make every reveal bite, narrow enough that the scrolled-out
+# destinations really are offscreen.
+defaults:
+  viewport: { width: 720, height: 800 }
+  groupBy: status
+  theme: dark
+
+suite: lane-reveal
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5173
+
+steps:
+  - id: menu-pin-scrolls-pinned-lane-into-view
+    title: Pinning from the right-click menu brings the offscreen Pinned lane into view
+    # Scroll the board hard right first, so the far-left Pinned lane is fully
+    # outside the viewport when the gesture fires.
+    goto: "?groupBy=status"
+    assert_before_drag:
+      - column: pinned
+        ordered: [thr_ship_release, thr_roadmap]
+    scroll: { dx: 2000, target: columns }
+    menu: { card: thr_review_pr, item: "Pin" }
+    assert:
+      - column: pinned
+        ordered: [thr_ship_release, thr_review_pr, thr_roadmap]
+      - column_card_visible: thr_review_pr
+
+  - id: menu-pin-parent-family-scrolls-pinned-lane-into-view
+    title: Pinning a parent with nested children brings the Pinned lane into view
+    # The reported case: a parent's whole family relocates with it.
+    goto: "?groupBy=status"
+    assert_before_drag:
+      - column: pinned
+        ordered: [thr_ship_release, thr_roadmap]
+    scroll: { dx: 2000, target: columns }
+    menu: { card: thr_parent_lane, item: "Pin" }
+    assert:
+      # The pinned parent keeps its whole family: the child nests inside the
+      # parent card in the Pinned lane (the column assertion reads top-level
+      # cards only, so the family stays one card).
+      - column: pinned
+        ordered: [thr_ship_release, thr_roadmap, thr_parent_lane]
+      - column_card_visible: thr_parent_lane
+
+  - id: menu-done-scrolls-done-lane-into-view
+    title: Marking a card Done from its right-click menu brings the Done lane into view
+    # Done is far right, offscreen at this viewport: the card must not read
+    # as vanishing. Done order: stamped members first (recency of the stamp
+    # — the harness seeds stamps on the done fixtures), then the fresh, not
+    # yet stamped card; the projection card rides with the stamped ones (the
+    # family's done work renders as its own card in Done).
+    goto: "?groupBy=status"
+    assert_before_drag:
+      - column: done
+        ordered: [thr_pane_padding, thr_license, thr_proj_family]
+    menu: { card: thr_rpc_auth, item: "Mark Done" }
+    assert:
+      - rpc_called_method: done_set
+      - column: done
+        ordered: [thr_pane_padding, thr_license, thr_proj_family, thr_rpc_auth]
+      - column_card_visible: thr_rpc_auth
+
+  - id: menu-unpin-scrolls-destination-lane-into-view
+    title: Unpinning from the right-click menu brings the card's new lane into view
+    # At scroll 0 the Pinned lane is visible but the third column (Working,
+    # where this card lands once unpin applies) clips at the right edge —
+    # the unpin must slide the card into full view too.
+    goto: "?groupBy=status"
+    assert_before_drag:
+      - column: pinned
+        ordered: [thr_ship_release, thr_roadmap]
+    menu: { card: thr_ship_release, item: "Unpin" }
+    assert:
+      - column: pinned
+        ordered: [thr_roadmap]
+      - column: working
+        ordered: [thr_column_sort, thr_ship_release, thr_drag_done, thr_sweep_parent]
+      - column_card_visible: thr_ship_release

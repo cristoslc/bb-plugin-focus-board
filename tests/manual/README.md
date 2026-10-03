@@ -40,6 +40,11 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   reports `dropped: false` with a reason when the source card carries no rank
   key, which is how a cross-lane or unranked drag is exercised.
 - `key` presses Alt+Arrow on a card, the keyboard path to the same move.
+- `menu` right-clicks a card (`{ card: thr_x, item: "Pin" }`) — a real
+  contextmenu event on the card, then the item click — the path the card's
+  state-changing menu actions travel (the pane never opens, so the moved
+  card is not the active card and the keep-in-view effect does not follow
+  it).
 - `back` performs the browser's own history back; `press_escape` sends a real
   Escape keydown from the body (the path the pane's close handler listens
   on); `click` left-clicks a card's anchor (`{ card: thr_x }`); `click_aria`
@@ -50,7 +55,11 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   can sequence pushes and backs deliberately.
 - `pane` (`{ threadId: thr_x }`, `{ open: false }`) reads the pane aside's
   aria-label; `active_card` reads the board's own `aria-current` marker plus
-  whether the card is in view; `url` (`{ suffix: "…" }`) asserts the browser
+  whether the card is in view; `column_card_visible` (`thr_x`) asserts the
+  card sits fully inside the columns board's own scroll viewport — the
+  assertion for relocations that follow no active thread (the Pinned lane is
+  far-left, and `card_visible`, the parent-lane board's rule, measures there)
+  ; `url` (`{ suffix: "…" }`) asserts the browser
   URL's suffix — the honest record of pane-history behavior (do NOT assert
   `history.length`: Chrome reads it stale after a back-then-push sequence,
   the entry is added but the count lags); `whats_new` (`{ icon, unseen,
@@ -85,6 +94,10 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
 - Suite-level `defaults.viewport` (`{ width, height }`) overrides the default
   1920×1080 — a short viewport is what gives the vertical scroll assertions
   real bite.
+- `scroll` also accepts `target: "columns"` to scroll the grouped column
+  board (the default targets the parent-lane board's `[data-parent-board]`),
+  for setups where the far end of the column board must sit offscreen before
+  a gesture (e.g. pinning a card into the far-left Pinned lane).
 
 ## Current suites
 
@@ -100,6 +113,11 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   deep links open the pane directly (and a malformed one degrades to the
   plain board), and the active card is kept in view — on restore and when it
   relocates to another lane (drop-to-Done).
+- `uat-lane-reveal.yaml` — a menu action that relocates a card keeps the
+  board legible: right-click Pin (plain card and a parent with nested
+  children, whose whole family rides along), Mark Done, and Unpin — each from
+  a scrolled view where the destination lane sits offscreen — all bring the
+  relocated card into view once, while passive changes scroll nothing.
 - `uat-whats-new.yaml` — the toolbar's gift button: an upgrade pulses it,
   opening the modal lists the delta and marks the version seen (the button
   stays), the quiet button still opens the full recent list, Escape closes
