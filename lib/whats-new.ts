@@ -25,7 +25,7 @@ import { UNRELEASED_ITEMS } from "./unreleased-changelog.generated";
 import { DERIVED_WHATS_NEW } from "./whats-new.generated";
 import { leadFromBullet } from "./changelog-markdown";
 
-export const APP_VERSION = "0.6.0-dev";
+export const APP_VERSION = "0.6.0";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 export const LAST_SEEN_UNRELEASED_KEY = "focus-board:lastSeenUnreleased";
