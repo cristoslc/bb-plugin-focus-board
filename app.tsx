@@ -18,6 +18,8 @@ import { Board } from "./components/board";
 import { BoardToolbar } from "./components/board-toolbar";
 import { ThreadPane } from "./components/thread-pane";
 import type { ThreadPaneThread } from "./components/thread-pane";
+import { NewThreadModal } from "./components/new-thread-modal";
+import type { SpawnedThread } from "./components/new-thread-modal";
 import type { CardMenuAction } from "./components/thread-card-menu";
 import type { FilterState, GroupBy, ThreadState } from "./components/grouping";
 import {
@@ -951,6 +953,33 @@ function BoardPage({ subPath }: { subPath: string }) {
     const projectId = [...filter.projects][0];
     return projects.some((project) => project.id === projectId) ? projectId : undefined;
   }, [filter.projects, projects]);
+  // The board's own new-thread composer: a modal over the board and pane, so
+  // composing never leaves the surface and bb's new-thread window stays out
+  // of the way. The nonce re-focuses the composer editor on every open.
+  const [newThreadOpen, setNewThreadOpen] = useState(false);
+  const [composerFocusRequest, setComposerFocusRequest] = useState(0);
+  const openNewThread = useCallback(() => {
+    setComposerFocusRequest((nonce) => nonce + 1);
+    setNewThreadOpen(true);
+  }, []);
+  // A freshly spawned thread is not in the sidebar cache on the tick the
+  // pane route opens, and the pane only renders for a resolvable thread.
+  // The spawn result stands in until the cache carries the thread (this row
+  // then clears and the cached thread — with live status — wins).
+  const [provisionalSpawn, setProvisionalSpawn] = useState<{
+    id: string;
+    displayTitle: string;
+    status: ThreadPaneThread["status"];
+    projectId: string;
+  } | null>(null);
+  useEffect(() => {
+    if (
+      provisionalSpawn !== null &&
+      sidebarThreads.some((thread) => thread.id === provisionalSpawn.id)
+    ) {
+      setProvisionalSpawn(null);
+    }
+  }, [sidebarThreads, provisionalSpawn]);
   // "Personal" is the board card's label for a thread whose project is not in
   // the sidebar's project list (bb's default personal project); the pane
   // header uses the same resolution so the two surfaces agree.
@@ -959,12 +988,6 @@ function BoardPage({ subPath }: { subPath: string }) {
       projects.find((project) => project.id === projectId)?.name ?? "Personal",
     [projects],
   );
-  const openNewThread = useCallback(() => {
-    actions.openNewThread({
-      ...(newThreadProjectId === undefined ? {} : { projectId: newThreadProjectId }),
-      focusPrompt: true,
-    });
-  }, [actions, newThreadProjectId]);
   // Archived riders sit in `searched` when nesting is ON (they stay under
   // their parent); board-level counts stay live-thread counts.
   const boardCount = useMemo(
@@ -1007,7 +1030,16 @@ function BoardPage({ subPath }: { subPath: string }) {
             projectName: null,
             branchName: null,
           }
-        : null;
+        : provisionalSpawn !== null && provisionalSpawn.id === openThreadId
+          ? {
+              id: provisionalSpawn.id,
+              displayTitle: provisionalSpawn.displayTitle,
+              status: provisionalSpawn.status,
+              isUnread: false,
+              projectName: projectNameFor(provisionalSpawn.projectId),
+              branchName: null,
+            }
+          : null;
 
   const openThreadIsArchived =
     openThreadId === null
@@ -1048,6 +1080,21 @@ function BoardPage({ subPath }: { subPath: string }) {
       }
     },
     [navigate, openThreadId, threads, groupBy, projects, providers],
+  );
+
+  // The composer modal resolved a spawn: file the provisional row, then open
+  // the new thread in the pane (route push + frozen column as usual).
+  const handleSpawnedThread = useCallback(
+    (thread: SpawnedThread) => {
+      setProvisionalSpawn({
+        id: thread.id,
+        displayTitle: thread.title ?? thread.titleFallback ?? thread.id,
+        status: thread.status,
+        projectId: thread.projectId,
+      });
+      openThreadCard(thread.id);
+    },
+    [openThreadCard],
   );
 
   const closeThreadPane = useCallback(() => {
@@ -1650,10 +1697,18 @@ function BoardPage({ subPath }: { subPath: string }) {
           onRename={(title) => actions.rename(openThread.id, title)}
           onMaximize={() => navigate.toThread(openThread.id)}
           onClose={closeThreadPane}
+          escapeSuppressed={newThreadOpen}
           escStopsRunningThread={escStopsRunningThread}
           scrollDebug={scrollDebug}
         />
       )}
+      <NewThreadModal
+        open={newThreadOpen}
+        onOpenChange={setNewThreadOpen}
+        defaultProjectId={newThreadProjectId}
+        focusRequest={composerFocusRequest}
+        onSpawned={handleSpawnedThread}
+      />
       <WhatsNewModal
         open={whatsNewOpen}
         onOpenChange={setWhatsNewOpen}

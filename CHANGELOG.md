@@ -14,6 +14,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **New threads compose inside the board.** The toolbar, column, and
+  parent-lane new-thread buttons now open bb's full compose surface in a
+  modal over the board and pane instead of bb's new-thread window: a
+  single-project filter still seeds the project picker, submit spawns the
+  thread and opens it in the pane, a failed create keeps the draft with an
+  on-screen error, and Escape inside the modal closes only the modal.
+
 - **The long-idle sweep now marks threads Done instead of archiving them.**
   Confirming a sweep on the Idle · A-while-ago column sends its quiet threads
   to the Done column — the same mark-dragging a card there performs — instead

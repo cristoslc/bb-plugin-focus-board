@@ -90,6 +90,13 @@ interface ThreadPaneProps {
    * thread is not running; when false, Escape always closes the pane.
    */
   escStopsRunningThread: boolean;
+  /**
+   * True while an overlay above the pane (the new-thread composer modal)
+   * owns Escape. This pane's Escape listener is a capture-phase document
+   * listener, so it would otherwise win the race against the overlay's own
+   * handling and close the pane — or stop the thread — underneath the modal.
+   */
+  escapeSuppressed?: boolean;
   /** Debug: attach the scroll-instrumentation session to this pane's transcript (ships off). */
   scrollDebug?: boolean;
 }
@@ -232,6 +239,7 @@ export function ThreadPane({
   onMaximize,
   onClose,
   escStopsRunningThread,
+  escapeSuppressed = false,
 }: ThreadPaneProps) {
   const [width, setWidth] = useState(readStoredPaneWidth);
   const isCompact = useIsCompactViewport();
@@ -351,6 +359,8 @@ export function ThreadPane({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) {
+        // An overlay above the pane owns Escape (see escapeSuppressed).
+        if (escapeSuppressed) return;
         // Inline editors (rename) consume Escape to cancel the edit; let them.
         const target = event.target;
         if (
@@ -383,7 +393,7 @@ export function ThreadPane({
     };
     document.addEventListener("keydown", onKeyDown, { capture: true });
     return () => document.removeEventListener("keydown", onKeyDown, { capture: true });
-  }, [onClose, escStopsRunningThread, thread.status, thread.id, sdk]);
+  }, [onClose, escStopsRunningThread, escapeSuppressed, thread.status, thread.id, sdk]);
 
   // Existence checks for the inline-code file links (see
   // decorate-inline-code.ts): a path verdict comes from the plugin
