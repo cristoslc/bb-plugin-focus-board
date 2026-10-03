@@ -46,8 +46,6 @@ function renderPane({ compact }: { compact: boolean }) {
           displayTitle: "Test thread",
           status: "idle",
           isUnread: false,
-          projectName: null,
-          branchName: null,
         },
         isArchived: false,
         isDone: false,

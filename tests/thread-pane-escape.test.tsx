@@ -76,8 +76,6 @@ describe("Escape stops a running thread (toggle ON)", () => {
       displayTitle: "Test thread",
       status: "active",
       isUnread: false,
-      projectName: null,
-      branchName: null,
     });
     pressEscape();
     expect(stop).toHaveBeenCalledWith({ threadId: "thr_test" });
@@ -90,8 +88,6 @@ describe("Escape stops a running thread (toggle ON)", () => {
       displayTitle: "Test thread",
       status: "starting",
       isUnread: false,
-      projectName: null,
-      branchName: null,
     });
     pressEscape();
     expect(stop).toHaveBeenCalledTimes(1);
@@ -104,8 +100,6 @@ describe("Escape stops a running thread (toggle ON)", () => {
       displayTitle: "Test thread",
       status: "stopping",
       isUnread: false,
-      projectName: null,
-      branchName: null,
     });
     pressEscape();
     expect(stop).not.toHaveBeenCalled();
@@ -118,8 +112,6 @@ describe("Escape stops a running thread (toggle ON)", () => {
       displayTitle: "Test thread",
       status: "idle",
       isUnread: false,
-      projectName: null,
-      branchName: null,
     });
     pressEscape();
     expect(stop).not.toHaveBeenCalled();
@@ -135,8 +127,6 @@ describe("Escape closes the pane regardless of status (toggle OFF)", () => {
         displayTitle: "Test thread",
         status: "active",
         isUnread: false,
-        projectName: null,
-        branchName: null,
       },
       { escStopsRunningThread: false },
     );

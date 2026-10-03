@@ -84,6 +84,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   or a drop onto the Unread lane — and clears a contradicting Done mark;
   ambient thread noise never moves cards.
 
+### Removed
+
+- **The thread pane's project/branch footer line is gone.** A recent bb
+  composer build shows the working context in the composer itself, so the
+  plugin no longer repeats project and branch under the pane's composer; the
+  pane ends with the transcript.
+
 ### Fixed
 
 - **Menu moves bring the destination lane into view.** The keep-in-view

@@ -966,8 +966,7 @@ function BoardPage({ subPath }: { subPath: string }) {
     return projects.some((project) => project.id === projectId) ? projectId : undefined;
   }, [filter.projects, projects]);
   // "Personal" is the board card's label for a thread whose project is not in
-  // the sidebar's project list (bb's default personal project); the pane
-  // header uses the same resolution so the two surfaces agree.
+  // the sidebar's project list (bb's default personal project).
   const projectNameFor = useCallback(
     (projectId: string) =>
       projects.find((project) => project.id === projectId)?.name ?? "Personal",
@@ -1006,10 +1005,6 @@ function BoardPage({ subPath }: { subPath: string }) {
           displayTitle: openThreadActive.displayTitle,
           status: openThreadActive.status,
           isUnread: openThreadActive.isUnread,
-          projectName:
-            projectNameFor(openThreadActive.projectId),
-          branchName:
-            openThreadActive.environment?.branchName ?? openThreadActive.host?.name ?? null,
         }
       : openThreadArchived !== null
         ? {
@@ -1018,8 +1013,6 @@ function BoardPage({ subPath }: { subPath: string }) {
               openThreadArchived.title ?? openThreadArchived.titleFallback ?? openThreadArchived.id,
             status: "idle",
             isUnread: false,
-            projectName: null,
-            branchName: null,
           }
         : null;
 
