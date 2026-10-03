@@ -14,70 +14,71 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **The long-idle sweep now marks threads Done instead of archiving them.**
-  Confirming a sweep on the Idle · A-while-ago column sends its quiet threads
-  to the Done column — the same mark-dragging a card there performs — instead
-  of straight to the archive; the fresh done stamp starts the Done-arm clock,
-  so they resurface in the Done sweep and archive only after aging there. The
-  Done column's own sweep still archives. A cancelled sweep's Undo unmarks
-  Done for these threads instead of unarchiving. The CLI sweep mirrors this:
-  with `--confirm`, Done-age threads archive and long-idle threads are marked
-  Done (`sweep --json` now reports `archived` and `markedDone` separately).
+- **The sweep is rebuilt around choosing exactly what gets archived, and
+  idle threads now resurface instead of vanishing.** The Done and
+  A-while-ago columns' sweep grew a manual selection flow, a mid-run stop,
+  and a gentler fate for quiet threads:
+  - **Sweep mode is now manual: enter it any time and click cards to choose
+    exactly what gets archived.** The sweep button stays visible on the Done
+    and A-while-ago columns even when nothing is past the threshold; entering
+    sweep mode pre-selects the past-threshold threads, clicking a card
+    toggles it in or out (clicking away or Escape exits), and a thread that
+    still has live children refuses with an on-screen note instead of
+    silently doing nothing.
+  - **The long-idle sweep now marks threads Done instead of archiving them.**
+    Confirming a sweep on the Idle · A-while-ago column sends its quiet threads
+    to the Done column — the same mark-dragging a card there performs — instead
+    of straight to the archive; the fresh done stamp starts the Done-arm clock,
+    so they resurface in the Done sweep and archive only after aging there. The
+    Done column's own sweep still archives. A cancelled sweep's Undo unmarks
+    Done for these threads instead of unarchiving. The CLI sweep mirrors this:
+    with `--confirm`, Done-age threads archive and long-idle threads are marked
+    Done (`sweep --json` now reports `archived` and `markedDone` separately).
+  - **A sweep can be cancelled, not only confirmed.** An X beside the sweep
+    pill exits sweep mode, and during a run it stops the loop: the archive in
+    flight finishes, nothing else is swept, and the untouched cards stay
+    selected for inspection or a retry. When the stop landed after threads
+    had already archived, the notice offers an explicit Undo that restores
+    exactly the ids the run archived.
+  - **Selecting cards for a sweep no longer reshuffles the column.** Selected
+    cards highlight where they sit and the list never reorders, so
+    deselecting cannot jump cards around mid-gesture; scroll to see the full
+    blast radius.
+  - **Confirming a sweep now archives every highlighted candidate, not just
+    one.** bb's sidebar archive aborts the previous in-flight archive when a
+    new one starts, so the sweep's confirm loop was losing all but the last
+    candidate; each archive is now awaited in turn, the running sweep shows a
+    throbber on the card being archived, keeps the highlight on the rest, and
+    reads "Sweeping N of M" on its button until the loop finishes. A failed
+    archive keeps its card highlighted for a one-click retry and says so in a
+    dismissible banner.
 
-- **Sweep mode is now manual: enter it any time and click cards to choose
-  exactly what gets archived.** The sweep button stays visible on the Done
-  and A-while-ago columns even when nothing is past the threshold; entering
-  sweep mode pre-selects the past-threshold threads, clicking a card
-  toggles it in or out (clicking away or Escape exits), and a thread that
-  still has live children refuses with an on-screen note instead of
-  silently doing nothing.
-
-- **Selecting cards for a sweep no longer reshuffles the column.** Selected
-  cards highlight where they sit and the list never reorders, so
-  deselecting cannot jump cards around mid-gesture; scroll to see the full
-  blast radius.
-
-- **A sweep can be cancelled, not only confirmed.** An X beside the sweep
-  pill exits sweep mode, and during a run it stops the loop: the archive in
-  flight finishes, nothing else is swept, and the untouched cards stay
-  selected for inspection or a retry. When the stop landed after threads
-  had already archived, the notice offers an explicit Undo that restores
-  exactly the ids the run archived.
+- **Pinned cards now carry their thread's state both ways: read state and
+  needs-you.**
+  - **Marking a card unread sends a parked card back to Pinned from any
+    surface** — bb's native thread menu, the board's menu, the pane toggle,
+    or a drop onto the Unread lane — and clears a contradicting Done mark;
+    ambient thread noise never moves cards.
+  - **A pinned family with a member that needs you now calls attention from
+    inside Pinned.** A pinned family cannot relocate to a Needs-you lane
+    (pinned threads split out before the family-column overrides read), so a
+    child thread's question used to sit silent inside a card that read idle.
+    Now the pinned parent card pulses — an amber border, the changelog gift's
+    pulse language — shows its question icon, and rises to the top of the
+    Pinned lane (above manual ranks, like urgent child rows do); the signal
+    vanishes when the question is answered.
 
 - **Enter applies a sole dropdown search match.** When a filter dropdown's
   search has narrowed the list to one row, pressing Enter selects it and
   closes the menu like clicking the row; with more matches or none, Enter
   stays inert.
 
-- **Marking a card unread sends a parked card back to Pinned from any
-  surface** — bb's native thread menu, the board's menu, the pane toggle,
-  or a drop onto the Unread lane — and clears a contradicting Done mark;
-  ambient thread noise never moves cards.
-
 ### Fixed
-
-- **Confirming a sweep now archives every highlighted candidate, not just
-  one.** bb's sidebar archive aborts the previous in-flight archive when a
-  new one starts, so the sweep's confirm loop was losing all but the last
-  candidate; each archive is now awaited in turn, the running sweep shows a
-  throbber on the card being archived, keeps the highlight on the rest, and
-  reads "Sweeping N of M" on its button until the loop finishes. A failed
-  archive keeps its card highlighted for a one-click retry and says so in a
-  dismissible banner.
 
 - **The pane's click-jump guard no longer cements an upward displacement.**
   It now does not arm for 3 seconds after any single scroll move of
   ≥300px, so the host shell's own corrections land undisturbed (shipped in
   0.5.19; `docs/chat-click-jump-2026-09-29.md`).
-
-- **A pinned family with a member that needs you now calls attention from
-  inside Pinned.** A pinned family cannot relocate to a Needs-you lane
-  (pinned threads split out before the family-column overrides read), so a
-  child thread's question used to sit silent inside a card that read idle.
-  Now the pinned parent card pulses — an amber border, the changelog gift's
-  pulse language — shows its question icon, and rises to the top of the
-  Pinned lane (above manual ranks, like urgent child rows do); the signal
-  vanishes when the question is answered.
 
 ## [0.5.21] - 2026-09-30
 
