@@ -68,12 +68,12 @@ import {
 } from "./icon-registry";
 
 /**
- * The plugin's own brand mark (assets/icon.svg — the "lane + pupil"):
- * two dim side lanes, the bold middle lane, and the pupil watching what
- * needs you. Lanes are filled shapes and the pupil is an evenodd hole in
- * the bold lane, matching the asset's solid alpha geometry — the earlier
- * stroked-outline cut hollowed and its interior read as dark breaks at
- * icon sizes. Mirrored here as an inline IconSvgElement so in-app
+ * The plugin's own brand mark (assets/icon.svg — the "focal card
+ * triptych"): the plain kanban chassis — three outlined columns, all
+ * flush at the top, the right one riding short — with a single solid
+ * card sitting in the middle column, tall and near the top. The card is
+ * the only solid form ("the card that needs you"); no pupil, no punched
+ * holes. Mirrored here as an inline IconSvgElement so in-app
  * `Icon name="FocusBoard"` renders the exact artwork the manifest's
  * branding.icon shows (HugeiconsIcon passes opacity through as-is — these
  * are alpha-mask friendly), independent of the asset pipeline.
@@ -83,28 +83,35 @@ export const FocusBoardLaneEyeIcon: IconSvgElement = [
     "path",
     {
       d: "M3.25 4.5H7.25V19.5H3.25Z",
-      opacity: "0.55",
-      fill: "currentColor",
+      stroke: "currentColor",
+      strokeWidth: "2.5",
       key: "0",
     },
   ],
   [
     "path",
     {
-      d: "M16.75 4.5H20.75V19.5H16.75Z",
-      opacity: "0.55",
-      fill: "currentColor",
+      d: "M16.75 4.5H20.75V16.5H16.75Z",
+      stroke: "currentColor",
+      strokeWidth: "2.5",
       key: "1",
     },
   ],
   [
     "path",
     {
-      d: "M9.25 4.5H14.75V19.5H9.25Z M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 1 0 0-6.8Z",
-      fill: "currentColor",
-      fillRule: "evenodd",
-      clipRule: "evenodd",
+      d: "M9.25 4.5H14.75V19.5H9.25Z",
+      stroke: "currentColor",
+      strokeWidth: "2.5",
       key: "2",
+    },
+  ],
+  [
+    "path",
+    {
+      d: "M11.8 6.4H12.2A1.3 1.3 0 0 1 13.5 7.7V12.1A1.3 1.3 0 0 1 12.2 13.4H11.8A1.3 1.3 0 0 1 10.5 12.1V7.7A1.3 1.3 0 0 1 11.8 6.4Z",
+      fill: "currentColor",
+      key: "3",
     },
   ],
 ];
