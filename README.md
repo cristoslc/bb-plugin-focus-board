@@ -19,11 +19,12 @@
   </a>
 </p>
 
+> [!NOTE]
+> **What is bb?** An open-source, local-first IDE for coding agents — Claude Code, Codex, Cursor, Pi, OpenCode, and more — where work runs in *threads*: live agent conversations you can follow, steer mid-run, or hand off. Focus Board is a bb *plugin* that turns those threads into a kanban board. Learn more at [getbb.app](https://getbb.app) or [github.com/get-bb/bb](https://github.com/get-bb/bb).
+
 ## What it does
 
-The default grouping reads left to right in order of attention: **Pinned,
-Needs you, Unread, Working**, then idle threads bucketed by how long
-they've been quiet.
+The board lives in bb's sidebar as a nav panel and updates in real time as your threads change. Lanes read left to right in order of attention: **Pinned, Needs you, Unread, Working**, then idle threads bucketed by how long they've been quiet.
 
 - **Group by** Attention, Last activity, Project, Provider, Machine, or Parent thread. In Parent-thread mode lanes sort by family recency (most recently touched family at left) and can optionally group by project.
 - **Filter and search** by state, project, provider, or title
@@ -46,13 +47,8 @@ they've been quiet.
   across sessions in localStorage and are deliberately not replayed by the
   back arrow (see
   [ADR 0001](docs/adr/0001-pane-history-in-url-preferences-in-localstorage.md)).
-- The board keeps the active card in view when its lane changes (pin, done,
-  grouping) and when a pane is restored from history. A right-click menu move
-  relocates a card the pane never opened — "Pin thread" sends a parent's
-  whole nested family to the far-left Pinned lane — so the board follows that
-  too: a one-shot reveal brings the card's new lane into whatever part of the
-  scrolled viewport it left.
-  Passive changes (host pins, status flips) never move your scroll.
+  The board keeps the active card in view when its lane changes (pin, done,
+  grouping) and when a pane is restored from history.
 - **What's new**: a 🎁 button in the toolbar lists recent changes after an
   update. It pulses until opened; the button never disappears, so the
   changelog stays reachable.
@@ -63,9 +59,15 @@ they've been quiet.
   interactions (answered through `interactions.resolve`) and plugin forms
   (answered through `interactions.respond`). Unsupported plugin forms get an
   "Open in main view" fallback.
+=======
+- **Group and filter** — lanes by Attention, Last activity, Project, Provider, Machine, or Parent thread; filter and search by state, project, provider, or title.
+- **Drag to act** — hand-order a column, or drop a card on Pinned, Unread, or Done to change its state in the same drag. Subthreads nest under their parent card.
+- **Thread pane** — open a card to read and reply beside the board; full screen on phone. Agent questions are answered right from the pane.
+- **Sweep** stale Done threads to Archive and long-idle threads to Done, in two clicks; swept idle threads resurface in Done and archive later.
+- **Ticket chips** with GitHub status dots when the official GitHub plugin is installed.
+- **What's new** — a 🎁 toolbar button lists recent changes after an update.
 
-It lives in the sidebar as a nav panel and updates in real time through
-the plugin SDK.
+Finer behavior notes (hand-ordering rules, Escape handling, pin behavior, pane history) live in [docs/features.md](docs/features.md).
 
 ## Screenshots
 
@@ -114,12 +116,16 @@ bb plugin install git:https://github.com/cristoslc/bb-plugin-focus-board@v0.3.1
 
 ## Configuration
 
-Set sweep thresholds in Settings → Installed plugins or with the CLI:
+Set sweep thresholds in Settings → Installed plugins or with the CLI. Each
+threshold is a count plus a unit (hours, days, or weeks); both default to
+2 days:
 
 | Setting | Default | Effect |
 |---|---|---|
-| `doneArchiveDays` | 7 | Done threads older than this become sweep-eligible |
-| `idleArchiveDays` | 30 | Threads idle longer than this become sweep-eligible |
+| `doneArchiveValue` | 2 | Done threads older than this (in `doneArchiveUnit`) become sweep-eligible |
+| `doneArchiveUnit` | days | Unit for the Done threshold: `hours`, `days`, or `weeks` |
+| `idleArchiveValue` | 2 | Threads idle longer than this (in `idleArchiveUnit`) become sweep-eligible |
+| `idleArchiveUnit` | days | Unit for the idle threshold: `hours`, `days`, or `weeks` |
 
 Any thread can be exempted from both sweeps with the card-menu
 "Keep from sweep" override.
@@ -134,7 +140,7 @@ bb focus-board done mark <thread-id>...
 bb focus-board done clear <thread-id>...
 bb focus-board sweep [--ids <id>...] [--confirm]
 bb focus-board config show
-bb focus-board config set <doneArchiveDays|idleArchiveDays> <days>
+bb focus-board config set <doneArchiveValue|doneArchiveUnit|idleArchiveValue|idleArchiveUnit> <count|hours|days|weeks>
 ```
 
 All commands accept `--json`. The sweep never archives without `--confirm`;

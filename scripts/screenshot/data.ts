@@ -46,7 +46,20 @@ export const SIM_PROVIDERS: readonly { id: string; displayName: string }[] = [
 ];
 
 /** Thread ids marked Done on the simulated board. */
-export const SIM_DONE_IDS: readonly string[] = ["thr_pane_padding", "thr_license"];
+export const SIM_DONE_IDS: readonly string[] = ["thr_pane_padding", "thr_license", "thr_proj_done"];
+
+/**
+ * Done records for the Done fixtures, stamped past the default 7-day sweep
+ * threshold so the Done column's sweep button is eligible (and the armed
+ * state is reachable) in screenshots and UAT.
+ */
+export const SIM_DONE_RECORDS: Record<string, { doneAt: string }> = {
+  thr_pane_padding: { doneAt: new Date(SIM_NOW - 9 * DAY).toISOString() },
+  thr_license: { doneAt: new Date(SIM_NOW - 12 * DAY).toISOString() },
+  // Stamped past the 7-day sweep threshold like the other Done fixtures, so
+  // the projection card's row reads as a settled, sweepable done thread.
+  thr_proj_done: { doneAt: new Date(SIM_NOW - 13 * DAY).toISOString() },
+};
 
 type SimThread = Record<string, unknown> & {
   id: string;
@@ -320,6 +333,51 @@ export const SIM_THREADS: readonly SimThread[] = [
     lastReadAt: SIM_NOW - 14 * MINUTE,
     environment: boardEnv("dev"),
   }),
+
+  // Done-projection fixture: a live family with one done child. The done
+  // child renders in a second family card (the projection) in the Done
+  // column while the live card keeps the live child. Older than the
+  // parent-lane UAT families so lane recency order (and the fixed-pan
+  // assertions in tests/manual/uat-parent-lanes.yaml) stays put.
+  thread({
+    id: "thr_proj_family",
+    displayTitle: "Migration runner phase two",
+    updatedAt: SIM_NOW - 16 * DAY,
+    lastReadAt: SIM_NOW - 16 * DAY,
+  }),
+  thread({
+    id: "thr_proj_live",
+    displayTitle: "Dry-run the cutover checklist",
+    parentThreadId: "thr_proj_family",
+    updatedAt: SIM_NOW - 15 * DAY,
+    lastReadAt: SIM_NOW - 15 * DAY,
+  }),
+  thread({
+    id: "thr_proj_done",
+    displayTitle: "Backfill the legacy rows",
+    parentThreadId: "thr_proj_family",
+    updatedAt: SIM_NOW - 15 * DAY,
+    lastReadAt: SIM_NOW - 15 * DAY,
+  }),
+
+  // Big-family fixture: nine nested children — past the scroll threshold,
+  // the family card's child list caps and scrolls inside the card. Older
+  // than the parent-lane UAT families (see above).
+  thread({
+    id: "thr_big_family",
+    displayTitle: "Import sweep: fifty-two legacy boards",
+    updatedAt: SIM_NOW - 17 * DAY,
+    lastReadAt: SIM_NOW - 17 * DAY,
+  }),
+  ...Array.from({ length: 9 }, (_, index) =>
+    thread({
+      id: `thr_big_c${index}`,
+      displayTitle: `Legacy board ${index + 1}: migrate rows and links`,
+      parentThreadId: "thr_big_family",
+      updatedAt: SIM_NOW - 16 * DAY + index * MINUTE,
+      lastReadAt: SIM_NOW - 16 * DAY,
+    }),
+  ),
 
   // Done
   thread({

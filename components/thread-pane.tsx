@@ -32,6 +32,7 @@ import {
   createChatClickJumpGuard,
   type ChatClickJumpGuard,
 } from "@/components/chat-jump-guard";
+import { attachScrollDebug } from "@/components/scroll-debug";
 
 // Shared header-button classes: a 28px ghost icon button that grows to a
 // 36px touch target on coarse pointers (phones), matching bb's own headers.
@@ -83,6 +84,14 @@ interface ThreadPaneProps {
   onRename: (title: string) => Promise<void>;
   onMaximize: () => void;
   onClose: () => void;
+  /**
+   * Escape behavior (the "Esc stops running thread" toolbar toggle): when
+   * true, Escape stops a running thread and only closes the pane when the
+   * thread is not running; when false, Escape always closes the pane.
+   */
+  escStopsRunningThread: boolean;
+  /** Debug: attach the scroll-instrumentation session to this pane's transcript (ships off). */
+  scrollDebug?: boolean;
 }
 
 interface ActionMenuItem {
@@ -215,12 +224,14 @@ export function ThreadPane({
   thread,
   isArchived,
   isDone,
+  scrollDebug = false,
   onToggleDone,
   onToggleArchived,
   onToggleUnread,
   onRename,
   onMaximize,
   onClose,
+  escStopsRunningThread,
 }: ThreadPaneProps) {
   const [width, setWidth] = useState(readStoredPaneWidth);
   const isCompact = useIsCompactViewport();
@@ -349,13 +360,30 @@ export function ThreadPane({
         ) {
           return;
         }
+        if (escStopsRunningThread) {
+          // bb sorts "starting", "active", and "stopping" as busy threads.
+          // Escape interrupts the running turn first — closing the pane
+          // while the agent still runs would feel like the stop did
+          // nothing — and only closes once nothing is running. "stopping"
+          // means a stop is already in flight; keep the pane open until it
+          // settles so the result stays visible.
+          if (thread.status === "active" || thread.status === "starting") {
+            event.preventDefault();
+            void sdk.threads.stop({ threadId: thread.id }).catch(() => {});
+            return;
+          }
+          if (thread.status === "stopping") {
+            event.preventDefault();
+            return;
+          }
+        }
         event.preventDefault();
         onClose();
       }
     };
     document.addEventListener("keydown", onKeyDown, { capture: true });
     return () => document.removeEventListener("keydown", onKeyDown, { capture: true });
-  }, [onClose]);
+  }, [onClose, escStopsRunningThread, thread.status, thread.id, sdk]);
 
   // Existence checks for the inline-code file links (see
   // decorate-inline-code.ts): a path verdict comes from the plugin
@@ -385,6 +413,7 @@ export function ThreadPane({
   // docs/chat-click-jump-2026-09-29.md, where this module is covered too).
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const chatJumpGuardRef = useRef<ChatClickJumpGuard | null>(null);
+  const scrollDebugSessionRef = useRef<ReturnType<typeof attachScrollDebug> | null>(null);
   const onChatBodyClickCapture = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
       chatJumpGuardRef.current?.onChatClickCapture(event);
@@ -400,6 +429,39 @@ export function ThreadPane({
       if (chatJumpGuardRef.current === guard) chatJumpGuardRef.current = null;
     };
   }, []);
+
+  // Developer-only scroll instrumentation (setting "Developer: instrument
+  // pane chat scrolling (debug)"), shipped off everywhere and enabled
+  // through the config panel in a developer environment. This is the
+  // persistent version of the ad-hoc probe instrumentation: every scroll
+  // write with its stack, event stream, and 1 Hz geometry samples in a
+  // bounded log, with a copy affordance in the header and a window
+  // handle for automation to read. Detach restores everything.
+  useEffect(() => {
+    if (!scrollDebug) return;
+    const root = chatBodyRef.current;
+    if (root === null) return;
+    const aside = document.querySelector('aside[aria-label^="Thread:"]');
+    const marked = root.querySelector<HTMLElement>(".thread-scrollbar");
+    const scroller = marked ?? Array.from(root.querySelectorAll<HTMLElement>("*"))
+      .filter((el) => (el.style?.overflowY ?? "") === "auto" && el.scrollHeight > el.clientHeight)
+      .reduce<HTMLElement | null>((best, el) => (best === null || el.scrollHeight > best.scrollHeight ? el : best), null);
+    if (scroller === null) return;
+    const session = attachScrollDebug(scroller, `thread ${thread.id} (pane)`, window);
+    const view = root.ownerDocument.defaultView;
+    if (view !== null) {
+      (view as Record<string, unknown> & typeof view)["__focusBoardScrollDebug"] = session;
+    }
+    // Expose a copy affordance for the operator: the header button gets a
+    // fresher copy from this ref each click.
+    scrollDebugSessionRef.current = session;
+    return () => {
+      session.detach();
+      if (view !== null) delete (view as Record<string, unknown> & typeof view)["__focusBoardScrollDebug"];
+      scrollDebugSessionRef.current = null;
+    };
+  }, [scrollDebug, thread.id, isCompact]);
+
   useEffect(() => {
     const root = chatBodyRef.current;
     if (root === null) return;
@@ -556,6 +618,32 @@ export function ThreadPane({
             <Icon name="Maximize2" className="size-4" />
           </Button>
         ) : null}
+        {(() => {
+          // Debug-mode affordance: copying the bounded instrumentation log
+          // (setting "Developer: instrument pane chat scrolling"). Rendered
+          // only while the debug session may be attached.
+          if (!scrollDebug) return null;
+          return (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={HEADER_ICON_BUTTON_CLASS}
+              aria-label="Copy pane scroll debug log"
+              onClick={() => {
+                const session = scrollDebugSessionRef.current;
+                if (session === null) return;
+                void navigator.clipboard
+                  ?.writeText(session.dump())
+                  .catch(() => {
+                    console.debug("[focus-board:scroll-debug dump]");
+                    console.debug(session.dump());
+                  });
+              }}
+            >
+              <Icon name="Bug" className="size-4" />
+            </Button>
+          );
+        })()}
         <Button
           variant="ghost"
           size="icon"

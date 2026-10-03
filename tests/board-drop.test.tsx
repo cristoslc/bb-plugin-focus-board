@@ -63,6 +63,7 @@ function renderBoard(threads: PluginSidebarThread[], overrides: Partial<BoardPro
     doneIds: merged.doneIds,
     nestedChildrenByParent: new Map<string, readonly PluginSidebarThread[]>(),
     childCountByParent: new Map<string, number>(),
+    doneChildrenByParent: new Map<string, readonly PluginSidebarThread[]>(),
     dimmedIds: new Set<string>(),
     projectNameFor: () => "One",
     repoBaseFor: () => null,
@@ -221,6 +222,21 @@ describe("Board cross-column drops to Pinned", () => {
     expect(props.onRankMove).not.toHaveBeenCalled();
     expect(props.onDropDone).not.toHaveBeenCalled();
     expect(props.onDropPinned).not.toHaveBeenCalled();
+  });
+
+  it("dragging a Pinned card onto the Unread column reaches the unread handler, not a reorder", () => {
+    // The Pinned lane is a ranked lane, so the drag leaves the lane in the
+    // drag TYPE name; the target column must not mistake it for a lane
+    // drag — a pinned card dropped on Unread is a state change, whatever
+    // order its source lane keeps.
+    const { props } = renderBoard([
+      thread({ id: "thr_pinned_in", isPinned: true, updatedAt: NOW - 5000 }),
+      thread({ id: "thr_bug", isUnread: true, updatedAt: NOW - 1000 }),
+    ]);
+    const { dropAllowed } = dragFromCardToColumn("thr_pinned_in", "unread");
+    expect(dropAllowed).toBe(true);
+    expect(props.onDropUnread).toHaveBeenCalledWith("thr_pinned_in");
+    expect(props.onRankMove).not.toHaveBeenCalled();
   });
 
   it("a drop on Done still marks done, unchanged by the new target", () => {

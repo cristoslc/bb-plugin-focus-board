@@ -1,102 +1,175 @@
 # Release Spoke — bb-plugin-focus-board
 
-How to ship a new Focus Board version: coordinate with main, bump, verify,
-commit, merge, tag, push, reload. Read this spoke whenever a turn involves
-releasing, version bumping, changelog writing, or tagging.
+How to ship a new Focus Board version. The pipeline has a fixed shape: user
+work appends bullets to the changelog's `[Unreleased]` group when it merges
+into `dev`; releasing is a finalize commit on the dev lineage (name the
+version, strip `-dev`), a fast-forward of `main`, a signed tag on that
+commit, and a dev-only prep commit that re-arms the next cycle. Release-time
+changelog writing is gone — read this spoke whenever a turn involves
+merging into `dev`, releasing, changelog writing, or tagging.
 
 ## 0. Branch model and coordination
 
 - This repo is public, so it runs a two-branch model:
-  - `main` is the stable public branch. It moves only by release merges
-    from `dev` and is never worked on directly.
-  - `dev` is the integration branch. Thread branches are based on `dev`
-    and merge into `dev`. Public installs resolve git tags, which ride on
-    release commits, so the dev/main split does not change distribution.
-- The **main checkout** (`/Users/cristos/Documents/code/bb-plugin-focus-board`)
-  is checked out on `dev` — that registered path is what the running bb
-  serves, so dev is what bb points at. `main` has no permanent local
-  checkout; release merges create a temporary one (section 5).
-- Concurrent threads release independently; `dev` may have advanced past
-  this branch's base. Merge `dev` into the working branch (or rebase)
-  before touching any version, and resolve conflicts before proceeding.
-- Read the version from **`origin/dev`** (or the main checkout on `dev`),
-  not from the working branch. Concurrent releases have double-bumped
-  before (two "Release 0.5.3" commits exist in history) because branches
-  bumped from a stale base. The next version is always dev's current
-  version + one patch bump unless the change warrants a minor or major
-  bump.
+  - `main` is the stable public branch. It moves **only by fast-forwarding
+    to a commit on the `dev` lineage**. A main-side commit (a merge commit,
+    a docs landing) makes the next fast-forward impossible and reintroduces
+    the release-merge conflicts this model exists to kill — if something
+    must land, it lands on `dev` first and main follows. Git-tag
+    distribution means main's tip being slightly stale between releases is
+    harmless; divergent history is not.
+  - `dev` is the integration branch: thread branches base on it and merge
+    into it. While unreleased, `dev` carries a provisional prerelease
+    version — the next release candidate + `-dev` (e.g. `0.6.0-dev`) — in
+    `package.json` and `APP_VERSION`. The `-dev` suffix marks the number as
+    a guess; the finalize commit makes it real.
+- The **main checkout**
+  (`/Users/cristos/Documents/code/bb-plugin-focus-board`) is checked out on
+  `dev` — that registered path is what the running bb serves, so dev is
+  what bb points at. `main` has no permanent local checkout; releases
+  create a temporary one (section 4).
+- Only one thread should be finalizing at a time. Read the current version
+  from **`origin/dev`** (or the main checkout on `dev`), not from your
+  working branch, before finalizing — concurrent finals have double-bumped
+  before (two "Release 0.5.3" commits exist in history).
 
-## 1. Bump the version in three places
+## 1. Merging work into `dev` — the changelog happens here
 
-A release bumps exactly these, in one commit:
+- Every merge into `dev` that lands user-facing behavior appends bullets to
+  the `[Unreleased]` group at the top of `CHANGELOG.md`, under the matching
+  Keep-a-Changelog subsection: **Added** = new capability, **Changed** =
+  behavior change to an existing surface, **Fixed** = bug fix.
+- One bullet per *behavior*, not per merge or branch. The bullet's OPENING
+  SENTENCE is its What's-new item (section 5), so start the bullet with a
+  bold lead that reads standalone: surface first, then behavior, what a
+  user can now do or see — all the modal ever shows of the bullet. A bare
+  noun phrase ("Parent thread lanes.") is the failure to avoid; the elaboration after the lead is free to run full-record length. Mechanism,
+  root-cause forensics, a workaround's removal condition, and test counts
+  belong there or in `docs/*.md` (linked), never in the lead sentence.
+- Tests-only, refactor, and docs-only landings add nothing.
+- Published sections are never back-edited. If a later merge revises
+  behavior a published version already described, it gets fresh
+  `[Unreleased]` bullets saying what the behavior is *now* (the parked-pin
+  model revising 0.5.21's lane-exit unpin is the example to remember).
+- `lib/whats-new.ts`'s WHATS_NEW array is not maintained by hand anywhere —
+  no entries, no churn; the prerelease branch in the whats-new entry test
+  keeps the suite green without a placeholder. On dev the modal leads with
+  CHANGELOG.md's `[Unreleased]` group's lead sentences:
+  `scripts/generate-unreleased.mjs` (wired into `test` and `build`)
+  embeds the current group into the bundle, so CHANGELOG.md is the single
+  source of truth and no sentence is written twice. Published entries
+  derive the same way at finalize time (section 5). The group also carries
+  a parse contract — bullets open with `- ` at column zero and wrap with
+  two-space continuation lines — exercised in its tests; a bullet that
+  violates it simply stops appearing in the dev What's-new modal. That gives the group a
+  parse contract — bullets open with `- ` at column zero and wrap with
+  two-space continuation lines — exercised in its tests; a bullet that
+  violates it simply stops appearing in the dev What's-new modal.
+- The gift button's pulse on dev keys to the group's CONTENT, not the
+  version: the fingerprint is written only when the modal opens, so an
+  unopened dev build pulses its standing group (if it has bullets) and
+  pulses again every time a merge lands new ones. Empty groups never
+  pulse. Stable builds keep the classic version-based pulse; a prerelease
+  running version pulses only on changelog change, so it never advertises
+  already-published entries to the person who wrote them.
+- The modal stays reachable from the quiet gift button.
 
-1. `package.json` → `"version": "X.Y.Z"`.
-2. `APP_VERSION` in `lib/whats-new.ts` → `"X.Y.Z"`. A test
-   (`tests/whats-new.test.ts`) pins `APP_VERSION` to the package version, so
-   a missed bump fails the suite.
-3. A new `WHATS_NEW` entry at the top of the array (newest first) for `X.Y.Z`.
+## 2. Verify, always
 
-## 2. Changelog formatting standards (`WHATS_NEW` entries)
-
-- One entry per release, inserted at the top of the array. The array holds
-  condensed highlights, not a full changelog; older entries are never
-  back-edited.
-- Each item is one user-facing sentence (at most two), written in the style
-  "surface first, then the behavior": name the board surface the change is
-  on, then state what the user can now do or see.
-- Describe behavior, never implementation. "Child threads now nest as one
-  family" is right; "childNests now consults familyColumnOverrides" is not.
-- No jargon, no internal ticket numbers, no code identifiers in items unless
-  the identifier is itself the user-visible surface (a command name, a key).
-- One to three items per release. A release with nothing user-visible still
-  gets an entry — an update whose modal cannot describe itself is a silent
-  update, and the test suite rejects that.
-- The release commit subject repeats the entry's lead item, condensed:
-  `Release X.Y.Z: <user-facing summary>`.
-
-## 3. Verify before committing
-
-- `npm test` — the full suite must pass, including the version-lockstep and
+- `npm test` — the full suite, including the version-lockstep and
   whats-new tests.
 - `npm run build` — the plugin must build into `dist/`. `dist/` is
   gitignored; it is never committed.
 
-## 4. Release commit
+## 3. Finalize commit (on the dev lineage)
 
-One commit on the working branch containing the version bump, the
-`WHATS_NEW` entry, and any release documentation:
+If your branch doesn't contain `origin/dev` yet, merge `dev` in first. One
+commit, subject `Release X.Y.Z: <user-facing summary>` (the summary
+condenses the changelog's lead item — same wording rules as the What's-new
+entry below):
 
-- Subject: `Release X.Y.Z: <user-facing summary>` (matches the changelog lead).
-- No "WIP" prefixes; a release commit is final for that version.
+1. **Decide the number**: strip the `-dev` suffix and that is the version —
+   correct it first if the unreleased work warrants a different bump than
+   the suffix guessed (per semver: user-visible additions may take a minor;
+   the historic cadence is per-release judgment).
+2. `CHANGELOG.md`: rename `[Unreleased]` → `[X.Y.Z] - <date>`, and add a
+   fresh empty `[Unreleased]` group above it in the same commit. The
+   renamed section may be elaborated to full record prose freely — its
+   bullets' opening sentences become the version's What's-new items
+   automatically at the next test/build (section 5).
+3. `package.json` (and the root `version` in `package-lock.json`): strip
+   the suffix.
+4. `APP_VERSION` in `lib/whats-new.ts`: strip the suffix.
+5. Nothing more: the version's What's-new entry already exists, derived
+   from the section renamed in step 2 (section 5).
 
-## 5. Merge to main and tag
+This commit is what gets tagged and fast-forwarded onto main — nothing
+else should ride in it.
 
-- Merge the branch into main from the main checkout:
-  `git -C /Users/cristos/Documents/code/bb-plugin-focus-board merge --no-ff <branch>`,
-  subject `Merge branch '<branch>' into main`.
-- Tag the **release commit** (the `Release X.Y.Z:` commit), not the merge:
-  `git tag -a vX.Y.Z <release-commit> -m "Release X.Y.Z: <summary>"`.
-  Tags are annotated. Never move a tag: bb records the tag plus the commit
-  it pointed at and refuses the plugin if a tag is ever retargeted. A fix
-  after tagging is a new version, not a retag.
-- Single-plugin repository, so tags are bare `vX.Y.Z` (no prefix).
+## 4. Promote `main`, tag, push
 
-## 6. Push
+- From a temp worktree: `git worktree add /tmp/release-main main`, then
+  `git merge --ff-only dev`. `--ff-only` must succeed: if it refuses, main
+  and dev have diverged — stop and reconcile instead of papering over it
+  with a merge commit.
+- Tag the finalize commit (which is now main's tip):
+  `git tag -a vX.Y.Z -m "Release X.Y.Z: <summary>"`. Never move a tag: bb
+  records the tag plus the commit it pointed at and refuses the plugin if a
+  tag is ever retargeted. A fix after tagging is a new version, not a
+  retag. Tag signing is automatic (section 7a).
+- Push `dev`, `main`, and the tag to `origin` — a pushed tag is the
+  distribution surface (users install semver ranges like `git:...@^X.Y`).
+- Remove the temp worktree.
 
-- Push `dev`, the working branch, `main`, and tags to `origin` (the public
-  repository). Git-tag releases let users install semver ranges
-  (`git:...@^X.Y`), so a pushed tag is the actual distribution surface.
+## 5. What's-new derivation (`WHATS_NEW` in `lib/whats-new.ts`)
+
+- The published feed is scraped from CHANGELOG.md by
+  `scripts/generate-whats-new.mjs` (wired into `test` and `build`): every
+  `## [version]` heading yields one entry and every bullet one item — the
+  bullet's opening sentence (`lib/changelog-markdown.ts`,
+  `leadFromBullet`: the bold lead when it closes a sentence, else the
+  first full sentence running through it; "(#N)" references stripped,
+  terminal punctuation ensured). Nothing about a new release is
+  hand-written: the finalize commit's changelog section IS the entry.
+- The item rules are therefore just the rules for writing a section's
+  first sentences: one user-facing sentence (at most two), "surface first,
+  then the behavior"; behavior, never implementation — "Child threads now
+  nest as one family" is right, "childNests now consults
+  familyColumnOverrides" is not; no jargon or code identifiers unless the
+  identifier is the user-visible surface; don't rely on the mechanical
+  "(#N)" strip as permission to write ticket numbers in.
+- One to three bullets per release. A release with nothing user-visible
+  still gets a section (0.5.16's restatement is the standing example) —
+  an update whose modal cannot describe itself is a silent update.
+- `LEGACY_WHATS_NEW` in `lib/whats-new.ts` holds the hand-written entries
+  for 0.5.6–0.5.12, versions the published record predates; frozen — it
+  only shrinks if those versions ever gain real changelog sections.
+- Old entries are never back-edited — the published-sections rule in
+  section 1 covers them, since the feed derives from those sections.
+
+## 6. Post-release prep commit (dev-only)
+
+Immediately after promoting, one commit on the dev lineage, subject like
+`Prepare 0.7.0-dev: re-arm the cycle`:
+
+- `package.json`, root `package-lock.json`, and `APP_VERSION` bumped to the
+  next release candidate + `-dev`. The guess defaults to one patch bump
+  past the release unless the direction of current work suggests a minor.
+- Nothing else: the primed `[Unreleased]` group from the finalize commit is
+  already there, and no `WHATS_NEW` entry exists for a `-dev` version —
+  that is by design.
 
 ## 7. Reload the running plugin
 
-bb runs focus-board from the main checkout (its registered plugin path), and
-that checkout sits on `dev`, so the running plugin serves dev:
+bb runs focus-board from the main checkout (its registered plugin path),
+and that checkout sits on `dev`, so the running plugin serves dev:
 
 1. `npm run build` in the main checkout (on `dev`).
 2. `bb plugin reload focus-board`.
-3. Confirm with `bb plugin list` (version reads `X.Y.Z`, status `running`)
-   and open the board; the What's-new gift button should pulse for the new
-   version.
+3. Confirm with `bb plugin list` (version reads `X.Y.Z` right after a
+   release, or the `-dev` candidate once §6 lands) and open the board; the
+   What's-new gift button should pulse for the new version after a release
+   and stay quiet once the prep commit lands.
 
 `bb plugin dev` is the watch-mode alternative for iterating, not for
 releases.
@@ -125,12 +198,18 @@ fingerprint says which key era produced it).
 
 ## 8. Release ledger
 
-- `lib/whats-new.ts` is the user-facing What's-new modal feed: one
-  condensed, behavior-first entry per release, newest first.
-- `CHANGELOG.md` is the full Keep-a-Changelog record; every release commit
-  also adds its version's section there, ordered newest first. Both surfaces
-  must name the same version at the top. Git tags (`git tag -v vX.Y.Z`) plus
-  release commits serve as the distribution history.
-- Release notes for what shipped in each version are recoverable from
-  `git log --oneline vX.Y-1..vX.Y`, the `WHATS_NEW` entry, and the
-  CHANGELOG.md section.
+- `CHANGELOG.md` is the full Keep-a-Changelog record. The `[Unreleased]`
+  group is written during merges into dev; the finalize commit renames it
+  to its version. Public sections, newest first, never back-edited. The
+  group also embeds into dev builds (scripts/generate-unreleased.mjs) as
+  the What's-new modal's headline entry — keep its bullets' opening
+  sentences modal-readable.
+- `lib/whats-new.ts` is the user-facing What's-new modal feed, derived
+  from CHANGELOG.md at build time (each version's items are its bullets'
+  opening sentences), newest first. Both surfaces must name the same
+  version at the top after a finalize commit — the feed's entry exists
+  the moment the section does.
+- Git tags (`git tag -v vX.Y.Z`) plus finalize commits serve as the
+  distribution history; release notes for a version are recoverable from
+  `git log vX.Y-prev..vX.Y`, the `WHATS_NEW` entry, and the CHANGELOG
+  section.

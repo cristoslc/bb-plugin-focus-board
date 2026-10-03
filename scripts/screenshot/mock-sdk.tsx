@@ -9,8 +9,11 @@
  */
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
-import { SIM_DONE_IDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES } from "./data";
+import { SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES } from "./data";
 import { applyMoveVisible } from "../../lib/rank";
+// Pure constants only — lib/sweep would drag components/grouping into the
+// mock, whose SDK-app import this file itself stands in for (cycle).
+import { DAY_MS } from "../../lib/duration";
 
 export const registeredNavPanel: {
   path?: string;
@@ -37,6 +40,9 @@ export function definePluginApp(setup: (app: unknown) => void): unknown {
         registeredNavPanel.path = config.path;
         registeredNavPanel.component = config.component;
       },
+      // The sidebar-footer settings gear (0.5.21): no sidebar is rendered in
+      // the harness, so the registration just has to be accepted.
+      sidebarFooterAction: (_config: { id: string }) => undefined,
     },
   });
   return { id: "screenshot-mock" };
@@ -196,6 +202,13 @@ const mockSdk = {
       return { environmentId: environment?.id ?? null };
     },
     unarchive: async () => {},
+    // The awaited archive the sweep runner uses; the mock drops the thread
+    // from the simulated sidebar so the harness sweep visibly empties.
+    archive: async ({ threadId }: { threadId: string }) => {
+      simThreads = simThreads.filter((candidate) => candidate.id !== threadId);
+      mockRender();
+      return { ok: true as const, archivedThreadIds: [threadId] };
+    },
     interactions: {
       list: async () => [],
       respond: async () => ({}),
@@ -240,9 +253,15 @@ const uatCalls: { method: string; args?: unknown }[] = [];
 
 const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   uatCalls.push({ method, args });
-  if (method === "done_list") return { doneIds: SIM_DONE_IDS, records: {} };
+  if (method === "done_list") {
+    return { doneIds: SIM_DONE_IDS, records: structuredClone(SIM_DONE_RECORDS) };
+  }
   if (method === "sweep_config_get") {
-    return { doneArchiveDays: 7, idleArchiveDays: 30 };
+    // Resolved ms, mirroring the real server: defaults are 2 days per arm.
+    return {
+      doneArchiveMs: 2 * DAY_MS,
+      idleArchiveMs: 2 * DAY_MS,
+    };
   }
   if (method === "rank_list") return { orders: structuredClone(simRanks) };
   if (method === "workspace_files_exist") {
@@ -286,6 +305,15 @@ export function useRpc(): { call: (method: string, args?: unknown) => Promise<un
 
 export function useRealtime(_channel: string, _handler: (payload: unknown) => void): void {
   // No realtime traffic in the harness.
+}
+
+/**
+ * Stub for the SDK's reactive plugin-settings hook (0.5.21): the harness has
+ * no host settings surface, so values stay null — the app treats null
+ * settings as the documented default (escape-stops-running stays ON).
+ */
+export function useSettings(): { values: Record<string, unknown> | null } {
+  return { values: null };
 }
 
 interface MockMessage {

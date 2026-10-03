@@ -108,12 +108,12 @@ describe("ParentLaneBoard rendering", () => {
     expect(openThread).toHaveBeenCalledWith("c");
   });
 
-  it("renders archived children as dimmed riders under the family header", () => {
+  it("hides archived children (no riders under the family header)", () => {
     const parent = thread({ id: "p" });
     const archived = thread({ id: "a", parentThreadId: "p", displayTitle: "Archived task", isArchived: true });
     renderBoard([parent, archived]);
-    expect(screen.getByText("Archived task")).toBeTruthy();
-    expect(screen.getByText("archived")).toBeTruthy();
+    expect(screen.queryByText("Archived task")).toBeNull();
+    expect(screen.queryByText("archived")).toBeNull();
   });
 
   it("renders the row rail with every row label", () => {

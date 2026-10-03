@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { NEST_CHILDREN_KEY, nestStoredValue, parseNestStored } from "../components/preferences";
+import {
+  NEST_CHILDREN_KEY,
+  escStopsRunningFromSetting,
+  nestStoredValue,
+  parseNestStored,
+} from "../components/preferences";
 
 describe("nesting toggle persistence (R3)", () => {
   it("exposes the localStorage key", () => {
@@ -22,5 +27,21 @@ describe("nesting toggle persistence (R3)", () => {
     expect(parseNestStored("")).toBe(true);
     expect(parseNestStored("OFF")).toBe(true); // case-sensitive allow-list
     expect(parseNestStored("0")).toBe(true);
+  });
+});
+
+describe("Esc-stops-thread setting read side", () => {
+  // The server-declared boolean renders in the plugin detail page's config
+  // panel; the board reads it reactively through `useSettings()` and
+  // narrows the value through this helper.
+  it("is off only for an explicit stored false", () => {
+    expect(escStopsRunningFromSetting(false)).toBe(false);
+  });
+
+  it("defaults to ON for unset, loading, and unexpected values", () => {
+    expect(escStopsRunningFromSetting(undefined)).toBe(true); // loading / unset
+    expect(escStopsRunningFromSetting(true)).toBe(true);
+    expect(escStopsRunningFromSetting(0)).toBe(true);
+    expect(escStopsRunningFromSetting("off")).toBe(true); // wrong type
   });
 });

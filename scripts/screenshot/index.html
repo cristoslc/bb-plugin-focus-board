@@ -71,33 +71,40 @@
         -webkit-font-smoothing: antialiased;
       }
       /* Minimal preflight: the plugin's compiled CSS ships without one because
-         the bb host app already resets elements; the harness must stand in. */
-      #root *,
-      #root *::before,
-      #root *::after {
-        box-sizing: border-box;
-        border: 0 solid;
-      }
-      #root a {
-        color: inherit;
-        text-decoration: inherit;
-      }
-      #root ul,
-      #root ol {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-      }
-      #root h1,
-      #root h2,
-      #root h3,
-      #root p {
-        margin: 0;
-      }
-      #root button {
-        background: none;
-        font: inherit;
-        color: inherit;
+         the bb host app already resets elements; the harness must stand in.
+         Layered `base`, not unlayered: the plugin's utilities live in
+         `@layer utilities`, and unlayered author styles beat EVERY layer —
+         an unlayered reset would clobber all of them (border utilities lost
+         their width/color here until this was layered, e.g. the reset's
+         `border: 0 solid` overrode `border-2` whatever the specificity). */
+      @layer base {
+        :where(#root) *,
+        :where(#root) *::before,
+        :where(#root) *::after {
+          box-sizing: border-box;
+          border: 0 solid;
+        }
+        :where(#root) a {
+          color: inherit;
+          text-decoration: inherit;
+        }
+        :where(#root) ul,
+        :where(#root) ol {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+        }
+        :where(#root) h1,
+        :where(#root) h2,
+        :where(#root) h3,
+        :where(#root) p {
+          margin: 0;
+        }
+        :where(#root) button {
+          background: none;
+          font: inherit;
+          color: inherit;
+        }
       }
     </style>
   </head>
