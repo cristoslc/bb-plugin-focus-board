@@ -46,8 +46,13 @@ they've been quiet.
   across sessions in localStorage and are deliberately not replayed by the
   back arrow (see
   [ADR 0001](docs/adr/0001-pane-history-in-url-preferences-in-localstorage.md)).
-  The board keeps the active card in view when its lane changes (pin, done,
-  grouping) and when a pane is restored from history.
+- The board keeps the active card in view when its lane changes (pin, done,
+  grouping) and when a pane is restored from history. A right-click menu move
+  relocates a card the pane never opened — "Pin thread" sends a parent's
+  whole nested family to the far-left Pinned lane — so the board follows that
+  too: a one-shot reveal brings the card's new lane into whatever part of the
+  scrolled viewport it left.
+  Passive changes (host pins, status flips) never move your scroll.
 - **What's new**: a 🎁 button in the toolbar lists recent changes after an
   update. It pulses until opened; the button never disappears, so the
   changelog stays reachable.

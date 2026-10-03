@@ -3,6 +3,21 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- **Menu moves bring the destination lane into view.** The keep-in-view
+  contract followed the pane's active card on relocation, but a right-click
+  menu move relocates a card the pane never opened — "Pin thread" sends a
+  parent's whole nested family into the far-left Pinned lane — and in a
+  scrolled board the destination could sit offscreen: the action read as the
+  card silently vanishing. Every menu action that relocates a card (Pin,
+  Unpin, Mark Done/Not Done, Mark Read/Unread) now issues a one-shot reveal
+  that brings the card's new lane into view; it lands in the same commit as
+  the relocation (async host actions included), a visible destination scrolls
+  nothing, and passive changes still never move your scroll.
+
 ## [0.5.20] - 2026-09-30
 
 ### Changed

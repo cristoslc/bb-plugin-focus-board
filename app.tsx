@@ -897,6 +897,50 @@ function BoardPage({ subPath }: { subPath: string }) {
     [sdk],
   );
 
+  // One-shot lane-reveal claims (menu moves). Every menu action that
+  // relocates a card — Pin/Unpin, Mark Done/Not Done, Mark Read/Unread —
+  // moves a card the pane never opened, and the destination lane (Pinned
+  // far left, Done far right) can sit offscreen in a scrolled board: the
+  // action reads as the card silently vanishing from where it was.
+  //
+  // The board only follows the OPEN card (its keep-in-view effect), and it
+  // must not follow the DATA (passive status flips and host-side changes
+  // would yank the user's place) — so the board gets an intent CLAIM
+  // instead. Pin/Read ride the host bridge: the state (with it, the
+  // relocation) lands in a later render than the click, so rather than fire
+  // the reveal at click time, the run arms a pending claim that the effect
+  // below consumes the moment the thread's observable state matches — landing
+  // the reveal request in the same commit the card relocates. Done/Unread
+  // are local and optimistic: their runs fire the reveal directly, batched
+  // with the state change (Board processes it post-relocation).
+  //
+  // A claim that outlives its action (the host never applies the requested
+  // state) fires later, on the next state match — still the user's intent.
+  const [revealRequest, setRevealRequest] = useState<{
+    threadId: string;
+    seq: number;
+  } | null>(null);
+  const revealSeqRef = useRef(0);
+  const requestReveal = useCallback((threadId: string) => {
+    revealSeqRef.current += 1;
+    setRevealRequest({ threadId, seq: revealSeqRef.current });
+  }, []);
+  const pendingStateClaimsRef = useRef<
+    Map<string, { field: "isPinned" | "isUnread"; value: boolean }>
+  >(new Map());
+  useEffect(() => {
+    const claims = pendingStateClaimsRef.current;
+    if (claims.size === 0) return;
+    for (const [threadId, claim] of claims) {
+      const thread = threads.find((candidate) => candidate.id === threadId);
+      if (thread === undefined || thread[claim.field] !== claim.value) continue;
+      claims.delete(threadId);
+      requestReveal(threadId);
+    }
+    // Consumes per threads update while claims are armed; the deletion (and
+    // requestReveal's own setState) is the re-run trigger.
+  }, [threads, requestReveal]);
+
   const menuActionsFor = useCallback(
     (thread: PluginSidebarThread): CardMenuAction[] => {
       const isThreadDone = doneIds.has(thread.id);
@@ -919,13 +963,33 @@ function BoardPage({ subPath }: { subPath: string }) {
           id: "pin",
           label: thread.isPinned ? "Unpin" : "Pin",
           icon: thread.isPinned ? "PinOff" : "Pin",
-          run: () => void actions.setPinned(thread.id, !thread.isPinned),
+          run: () => {
+            // Arm the reveal claim first, then ask the host: the applied
+            // pin (and the card's relocation into or out of the Pinned
+            // lane) lands in a later commit, so the claim's consumption
+            // effect timing is what makes the reveal land AFTER the move.
+            pendingStateClaimsRef.current.set(thread.id, {
+              field: "isPinned",
+              value: !thread.isPinned,
+            });
+            void actions.setPinned(thread.id, !thread.isPinned);
+          },
         },
         {
           id: "read",
           label: thread.isUnread ? "Mark Read" : "Mark Unread",
           icon: thread.isUnread ? "MailOpen" : "Mail",
-          run: () => void actions.setRead(thread.id, thread.isUnread),
+          run: () => {
+            // Same claim-first path as Pin: setRead also rides the host
+            // bridge; the requested observable state is the toggle's
+            // flipped value (the applied result of setRead), not the arg
+            // passed through.
+            pendingStateClaimsRef.current.set(thread.id, {
+              field: "isUnread",
+              value: !thread.isUnread,
+            });
+            void actions.setRead(thread.id, thread.isUnread);
+          },
         },
         {
           id: "done",
@@ -939,6 +1003,12 @@ function BoardPage({ subPath }: { subPath: string }) {
               return next;
             });
             rpc.call("done_set", { threadId: thread.id, done: !isThreadDone }).catch(() => {});
+            // Local and optimistic: the card relocates to the Done lane (or
+            // back out of it) in the same commit as this batch, so the
+            // one-shot reveal can fire now — Board's layout effect
+            // processes it after the move, minimally (an already-visible
+            // destination lane scrolls nothing).
+            requestReveal(thread.id);
           },
         },
         {
@@ -986,7 +1056,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         },
       ];
     },
-    [actions, doneAgeSource, doneIds, rpc, setDoneExtras, setDoneIds, sdk],
+    [actions, doneAgeSource, doneIds, rpc, requestReveal, setDoneExtras, setDoneIds, sdk],
   );
 
   if (status === "loading" && threads.length === 0) {
@@ -1124,6 +1194,7 @@ function BoardPage({ subPath }: { subPath: string }) {
                 .catch(() => refetchRanks());
             }}
             menuActionsFor={menuActionsFor}
+            reveal={revealRequest}
           />
         )}
       </div>
