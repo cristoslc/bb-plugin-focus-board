@@ -7,6 +7,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Collapsible nested children on family cards.** The chevron on a card with
+  nested child threads now folds the rows into a "N child threads" pill that
+  re-opens them, and collapsed families persist across sessions. A folded card
+  opens by itself when one of its nested children turns unread or needs you; a
+  family collapsed while a child was already unread stays folded.
+
 - **Developer toggle: pane chat scroll instrumentation.** A new off-by-default
   Focus Board setting logs the thread pane transcript's scroll activity
   while enabled — programmatic `scrollTop` writes with stacks, the gesture

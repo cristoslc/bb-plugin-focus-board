@@ -78,6 +78,13 @@ interface BoardProps {
   childCountByParent: ReadonlyMap<string, number>;
   /** Family members that did not match the active filters; rendered dimmed. */
   dimmedIds: ReadonlySet<string>;
+  /**
+   * Parent ids whose nested rows are collapsed, persisted by the caller.
+   * Absent → each card holds its own unpersisted collapse state.
+   */
+  collapsedFamilyIds?: ReadonlySet<string>;
+  /** Reports a family card's collapse/expand gesture (parent id, new state). */
+  onFamilyCollapsedChange?: (parentId: string, collapsed: boolean) => void;
   projectNameFor: (projectId: string) => string;
   /** GitHub repo base per project ("https://github.com/owner/repo"), when known. */
   repoBaseFor: (projectId: string) => string | null;
@@ -279,6 +286,8 @@ export function Board({
   nestedChildrenByParent,
   childCountByParent,
   dimmedIds,
+  collapsedFamilyIds,
+  onFamilyCollapsedChange,
   projectNameFor,
   repoBaseFor,
   statusFor,
@@ -927,6 +936,10 @@ export function Board({
                           menuActions={menuActionsFor(thread)}
                           childThreads={nestedChildrenByParent.get(thread.id)}
                           childCount={childCountByParent.get(thread.id) ?? 0}
+                          isCollapsed={collapsedFamilyIds?.has(thread.id)}
+                          onCollapsedChange={(collapsed) =>
+                            onFamilyCollapsedChange?.(thread.id, collapsed)
+                          }
                           doneIds={doneIds}
                           activeThreadId={activeThreadId}
                           dimmed={dimmedIds.has(thread.id)}

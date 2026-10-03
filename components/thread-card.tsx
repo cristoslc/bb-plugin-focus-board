@@ -87,6 +87,15 @@ interface ThreadCardProps {
   onOpenThread?: (threadId: string) => void;
   /** Right-click menu actions for a nested child thread. */
   childMenuActions?: (thread: PluginSidebarThread) => readonly CardMenuAction[];
+  /**
+   * Controlled collapsed state for the nested rows: true hides the rows and
+   * shows the collapsed "N child threads" summary in their place. Absent →
+   * uncontrolled local state, so callers that do not persist still get a
+   * working toggle.
+   */
+  isCollapsed?: boolean;
+  /** Reports a collapse/expand gesture. Paired with `isCollapsed`. */
+  onCollapsedChange?: (collapsed: boolean) => void;
   /** GitHub repo base for the thread's project, when it has one. */
   repoHrefBase?: string;
   /** GitHub cache status lookup (repo slug + number), when wired. */
@@ -237,11 +246,20 @@ export function ThreadCard({
   activeThreadId,
   onOpenThread,
   childMenuActions,
+  isCollapsed,
+  onCollapsedChange,
   // Ruler+wrap mini cards: tighter padding and type, no ticket chips.
   compact = false,
 }: ThreadCardProps) {
   const now = Date.now();
-  const [collapsed, setCollapsed] = useState(false);
+  // Controlled when `isCollapsed` is supplied (the app persists the set);
+  // otherwise local state preserves the pre-persistence toggle behavior.
+  const [localCollapsed, setLocalCollapsed] = useState(false);
+  const collapsed = isCollapsed ?? localCollapsed;
+  const toggleCollapsed = () => {
+    if (isCollapsed === undefined) setLocalCollapsed(!collapsed);
+    else onCollapsedChange?.(!collapsed);
+  };
   const branch = thread.environment?.branchName ?? thread.host?.name ?? "";
   const repo = repoHrefBase === undefined ? null : resolveRepoSlug(repoHrefBase);
   const ticketRefs = findTicketRefs(thread.displayTitle, {
@@ -404,7 +422,7 @@ export function ThreadCard({
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
-                  setCollapsed((value) => !value);
+                  toggleCollapsed();
                 }}
                 className={cn(
                   "flex items-center gap-0.5 rounded-sm text-muted-foreground/70",
@@ -425,7 +443,30 @@ export function ThreadCard({
           </div>
         ) : null}
       </div>
-      {hasRows && !collapsed && onOpenThread !== undefined ? (
+      {hasRows && collapsed ? (
+        // The collapsed rows' only trace: a labeled, clickable count that
+        // re-opens the family — a bare number chip reads as metadata, not as
+        // a control, so the summary names what clicking it reveals.
+        <button
+          type="button"
+          data-child-threads-summary=""
+          aria-expanded="false"
+          aria-label={`Expand ${children.length} nested child ${children.length === 1 ? "thread" : "threads"}`}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleCollapsed();
+          }}
+          className={cn(
+            "ml-3 mt-1 flex items-center gap-1 rounded-sm px-1 py-0.5 text-[11px] text-muted-foreground/70",
+            "transition-colors hover:bg-accent/60 hover:text-foreground",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          )}
+        >
+          <Icon name="ChevronRight" className="size-3" aria-hidden />
+          {children.length} {children.length === 1 ? "child thread" : "child threads"}
+        </button>
+      ) : hasRows && !collapsed && onOpenThread !== undefined ? (
         <div className="ml-3 mt-1 border-l border-border/70 pl-2">
           <ul className="flex flex-col gap-1">
             {children.map((child) => {

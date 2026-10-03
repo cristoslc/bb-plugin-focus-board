@@ -27,6 +27,8 @@ import {
 } from "./components/grouping";
 import {
   buildFamilyIndex,
+  familiesToAutoExpand,
+  familiesWithUrgentChildren,
   filterFamilies,
   filterIndividually,
   assembleBoard,
@@ -65,11 +67,14 @@ import {
 } from "./lib/sweep";
 import { useSweepClickAway } from "./components/board";
 import {
+  COLLAPSED_FAMILIES_KEY,
   GROUP_BY_KEY,
   NEST_CHILDREN_KEY,
   PARENT_LANE_ORDER_KEY,
+  collapsedFamiliesStoredValue,
   escStopsRunningFromSetting,
   nestStoredValue,
+  parseCollapsedFamiliesStored,
   parseNestStored,
   parseGroupStored,
   parseParentLaneOrderStored,
@@ -93,6 +98,10 @@ const FILTER_KEY = "focus-board:filter";
 const SEARCH_KEY = "focus-board:search";
 /** This panel's own registered route path, for pane-history pushes. */
 const PANEL_PATH = "board";
+
+/** The nesting map when there is none (flat board, parent grouping): a stable
+ *  empty, so the auto-expand effect's inputs never churn identity per render. */
+const EMPTY_NESTED: ReadonlyMap<string, readonly PluginSidebarThread[]> = new Map();
 
 /**
  * `toPluginPanel` is typed `void`, but the host may return `false` when it
@@ -462,6 +471,13 @@ function BoardPage({ subPath }: { subPath: string }) {
   const [parentLaneOrder, setParentLaneOrder] = useState<ParentLaneOrder>(() =>
     parseParentLaneOrderStored(readStored(PARENT_LANE_ORDER_KEY, ["recency", "project"], "recency")),
   );
+  // Collapsed family cards: the parent ids whose nested rows are collapsed,
+  // persisted like every other board preference. Anything absent renders
+  // expanded — the stored list only ever records deliberate collapses, so a
+  // reload re-opens exactly the families the operator folded.
+  const [collapsedFamilies, setCollapsedFamilies] = useState<ReadonlySet<string>>(() =>
+    parseCollapsedFamiliesStored(readStoredText(COLLAPSED_FAMILIES_KEY, "")),
+  );
   // The open pane lives in the panel's URL subPath (`t/<threadId>`), not in
   // component state, so bb's back arrow, a reload, and deep links all land on
   // the pane the user left. The ref mirrors the last pushed thread id; sync
@@ -627,6 +643,20 @@ function BoardPage({ subPath }: { subPath: string }) {
     setParentLaneOrder(value);
     writeStored(PARENT_LANE_ORDER_KEY, value);
   }, []);
+  // Single writer for the collapsed set: every mutation lands in state, this
+  // effect serializes it. The mount run writes the parsed value back — a
+  // harmless round-trip that also repairs a corrupt stored list.
+  useEffect(() => {
+    writeStored(COLLAPSED_FAMILIES_KEY, collapsedFamiliesStoredValue(collapsedFamilies));
+  }, [collapsedFamilies]);
+  const setFamilyCollapsed = useCallback((parentId: string, collapsed: boolean) => {
+    setCollapsedFamilies((current) => {
+      const next = new Set(current);
+      if (collapsed) next.add(parentId);
+      else next.delete(parentId);
+      return next;
+    });
+  }, []);
 
   // The sidebar view pushes fresh thread data continuously; this signal
   // additionally fires on host-side changes so cards never sit stale.
@@ -711,6 +741,34 @@ function BoardPage({ subPath }: { subPath: string }) {
     [isParentGroupBy, searched, groupBy, projects, providers, frozenColumns, doneIds, nestChildren, ranks, doneTimes],
   );
   const columns = assembly?.columns ?? [];
+  // The map that actually renders as nested rows (nesting rules applied, so a
+  // promoted or cross-axis child is absent — expanding the card could never
+  // reveal it). Stable across renders: the auto-expand effect keys on it.
+  const nestedChildrenByParent = assembly?.nestedChildrenByParent ?? EMPTY_NESTED;
+
+  // Collapsed-family auto-expand: a folded card must open when one of its
+  // nested children enters an "unread+" state — unread activity, or needs-you
+  // (components/nesting.ts `familiesWithUrgentChildren` for the exact member
+  // rule). The decision is a TRANSITION, not a state: the first snapshot
+  // after load is a seed pass only, so a family collapsed while a child was
+  // already unread stays collapsed across reloads, and the rule answers live
+  // changes ("a child just went unread under a folded card") without fighting
+  // the operator's collapse gesture on every refresh. Expanding clears the
+  // persisted collapsed id: the opened state is the state that persists.
+  const urgentFamiliesRef = useRef<ReadonlySet<string> | null>(null);
+  useEffect(() => {
+    const current = familiesWithUrgentChildren(nestedChildrenByParent, doneIds);
+    const previous = urgentFamiliesRef.current;
+    urgentFamiliesRef.current = current;
+    if (previous === null) return; // seed pass: observe, never act
+    const toExpand = familiesToAutoExpand(previous, current, collapsedFamilies);
+    if (toExpand.length === 0) return;
+    setCollapsedFamilies((currentCollapsed) => {
+      const next = new Set(currentCollapsed);
+      for (const id of toExpand) next.delete(id);
+      return next;
+    });
+  }, [nestedChildrenByParent, doneIds, collapsedFamilies]);
 
   // Sweep eligibility per sweepable column, computed from the current board
   // data. Arming (in armSweepFor) captures this list at arm time; while a
@@ -1520,8 +1578,10 @@ function BoardPage({ subPath }: { subPath: string }) {
             groupBy={groupBy}
             activeThreadId={openThreadId}
             doneIds={doneIds}
-            nestedChildrenByParent={assembly?.nestedChildrenByParent ?? new Map()}
+            nestedChildrenByParent={nestedChildrenByParent}
             childCountByParent={assembly?.childCountByParent ?? new Map()}
+            collapsedFamilyIds={collapsedFamilies}
+            onFamilyCollapsedChange={setFamilyCollapsed}
             dimmedIds={dimmedIds}
             projectNameFor={projectNameFor}
             repoBaseFor={repoBaseFor}

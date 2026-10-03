@@ -16,6 +16,8 @@ Fine-grained notes that don't belong in the README's feature list.
 ## Nesting
 
 - A column drained to zero by nesting hides until a card returns to it.
+- A family card's nested rows can be collapsed: the chevron folds the rows into a "N child threads" pill that re-opens them, and the collapsed families persist across sessions (localStorage).
+- A collapsed card opens by itself when one of its nested children turns unread or needs you; a family collapsed while a child was already unread stays folded.
 
 ## Escape
 

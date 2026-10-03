@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  COLLAPSED_FAMILIES_KEY,
   NEST_CHILDREN_KEY,
+  collapsedFamiliesStoredValue,
   escStopsRunningFromSetting,
   nestStoredValue,
+  parseCollapsedFamiliesStored,
   parseNestStored,
 } from "../components/preferences";
 
@@ -27,6 +30,39 @@ describe("nesting toggle persistence (R3)", () => {
     expect(parseNestStored("")).toBe(true);
     expect(parseNestStored("OFF")).toBe(true); // case-sensitive allow-list
     expect(parseNestStored("0")).toBe(true);
+  });
+});
+
+describe("collapsed family persistence", () => {
+  it("exposes the localStorage key", () => {
+    expect(COLLAPSED_FAMILIES_KEY).toBe("focus-board:collapsedFamilies");
+  });
+
+  it("round-trips a set of parent ids", () => {
+    const ids = new Set(["thr_a", "thr_b"]);
+    expect([...parseCollapsedFamiliesStored(collapsedFamiliesStoredValue(ids))].sort()).toEqual([
+      "thr_a",
+      "thr_b",
+    ]);
+  });
+
+  it("defaults to an empty set for null — first visit, everything expanded", () => {
+    expect(parseCollapsedFamiliesStored(null).size).toBe(0);
+  });
+
+  it("falls back to an empty set on corrupt JSON", () => {
+    expect(parseCollapsedFamiliesStored("{not json").size).toBe(0);
+    expect(parseCollapsedFamiliesStored("").size).toBe(0);
+  });
+
+  it("falls back to an empty set when the stored value is not an array", () => {
+    expect(parseCollapsedFamiliesStored(JSON.stringify({ thr_a: true })).size).toBe(0);
+    expect(parseCollapsedFamiliesStored(JSON.stringify("thr_a")).size).toBe(0);
+  });
+
+  it("drops non-string entries instead of admitting them", () => {
+    const parsed = parseCollapsedFamiliesStored(JSON.stringify(["thr_a", 7, null, {}]));
+    expect([...parsed]).toEqual(["thr_a"]);
   });
 });
 

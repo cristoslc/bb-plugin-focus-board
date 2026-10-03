@@ -524,6 +524,59 @@ function withAttentionFirst(
 }
 
 /**
+ * The collapsed-family auto-expand source set: parents whose nested rows
+ * currently hold a live child in an "unread+" state — threadState "unread"
+ * (unread activity) or "attention" (a pending interaction or an unread
+ * error), the states at or above Unread in the status column order. Done and
+ * archived members never count, the same rule `pinnedAttentionIds` applies:
+ * completed or stale state must not demand attention.
+ *
+ * Collapsed families key their auto-expand on the TRANSITION into this set
+ * (see `familiesToAutoExpand`), so the map that feeds the nested rows — the
+ * assembly's `nestedChildrenByParent`, not the raw family index — is the
+ * right input: expanding a card can only ever reveal rows this map holds.
+ */
+export function familiesWithUrgentChildren(
+  nestedChildrenByParent: ReadonlyMap<string, readonly PluginSidebarThread[]>,
+  doneIds: ReadonlySet<string>,
+): ReadonlySet<string> {
+  const ids = new Set<string>();
+  for (const [parentId, children] of nestedChildrenByParent) {
+    if (
+      children.some(
+        (child) =>
+          !child.isArchived &&
+          !doneIds.has(child.id) &&
+          (threadState(child) === "unread" || threadState(child) === "attention"),
+      )
+    ) {
+      ids.add(parentId);
+    }
+  }
+  return ids;
+}
+
+/**
+ * Which collapsed families must expand because a nested child NEWLY entered
+ * the urgent set. A child that was already unread+ does not re-fire: the
+ * operator who collapsed a family while a child sat unread has stated the
+ * rows may stay folded, and the rule answers live changes ("a child just
+ * went unread under a folded card"), not a standing condition that would
+ * fight that gesture on every refresh.
+ */
+export function familiesToAutoExpand(
+  previousUrgent: ReadonlySet<string>,
+  currentUrgent: ReadonlySet<string>,
+  collapsedIds: ReadonlySet<string>,
+): string[] {
+  const out: string[] = [];
+  for (const id of currentUrgent) {
+    if (!previousUrgent.has(id) && collapsedIds.has(id)) out.push(id);
+  }
+  return out;
+}
+
+/**
  * Sort each parent's nested children in the order of the column the PARENT
  * sits in. The family moves as one unit: a child's stored rank is an id in
  * that column's list, and the parent is the card the operator actually drags,
