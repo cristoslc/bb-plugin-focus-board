@@ -18,7 +18,11 @@ if it is not in the default place. Run a single suite with
 
 Releasing a new plugin version: work merges into `dev` (the integration
 branch; the main checkout sits on it and that is what bb serves) and
-each such merge appends bullets to `CHANGELOG.md`'s `[Unreleased]` group.
+each such merge appends bullets to `CHANGELOG.md`'s `[Unreleased]` group,
+then rebuilds in the main checkout and runs `bb plugin reload focus-board` —
+bb keeps serving the previously loaded bundle otherwise, so an unreloaded
+merge looks unshipped (no new behavior, silent What's-new gift); also check
+the merge did not misfile new bullets into a renamed published section.
 `dev` carries a provisional prerelease version (`next + "-dev"`, e.g.
 `0.6.0-dev`) in package.json/APP_VERSION; `main` is stable and moves only
 by fast-forward. Releasing = one finalize commit on the dev lineage (name
