@@ -41,7 +41,10 @@ afterEach(cleanup);
 
 function renderPane(
   thread: Parameters<typeof ThreadPane>[0]["thread"],
-  { escStopsRunningThread = true }: { escStopsRunningThread?: boolean } = {},
+  {
+    escStopsRunningThread = true,
+    escapeSuppressed = false,
+  }: { escStopsRunningThread?: boolean; escapeSuppressed?: boolean } = {},
 ) {
   return render(
     createElement(
@@ -58,6 +61,7 @@ function renderPane(
         onMaximize: noop,
         onClose,
         escStopsRunningThread,
+        escapeSuppressed,
       }),
     ),
   );
@@ -133,5 +137,40 @@ describe("Escape closes the pane regardless of status (toggle OFF)", () => {
     pressEscape();
     expect(stop).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Escape stands down while an overlay owns the key (composer modal open)", () => {
+  it("neither stops a running thread nor closes the pane", () => {
+    renderPane(
+      {
+        id: "thr_test",
+        displayTitle: "Test thread",
+        status: "active",
+        isUnread: false,
+        projectName: null,
+        branchName: null,
+      },
+      { escapeSuppressed: true },
+    );
+    pressEscape();
+    expect(stop).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("does not close an idle thread's pane either", () => {
+    renderPane(
+      {
+        id: "thr_test",
+        displayTitle: "Test thread",
+        status: "idle",
+        isUnread: false,
+        projectName: null,
+        branchName: null,
+      },
+      { escStopsRunningThread: false, escapeSuppressed: true },
+    );
+    pressEscape();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });
