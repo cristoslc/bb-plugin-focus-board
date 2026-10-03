@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-09-30T03:47:09.678Z by `npm run uat`._
+_Generated 2026-10-03T03:39:47.513Z by `npm run uat`._
 
 ## lane-reveal
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_43cxs84tg3-1/bb-plugin-focus-board/tests/manual/uat-lane-reveal.yaml` · theme dark
+Source: `tests/manual/uat-lane-reveal.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
