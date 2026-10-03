@@ -64,9 +64,19 @@ function makeScroller({
 	};
 }
 
-function leftClickOn(el: Element) {
-	el.dispatchEvent(new MouseEvent("click", { button: 0, bubbles: true }));
-}
+	/**
+	 * The guard's baseline is the pointerdown record: dispatch the gesture's
+	 * first event on the scroller so it bubbles to the window capture
+	 * listener (dispatching on window itself never reaches the locate code —
+	 * event.target must be an Element).
+	 */
+	function pointerDownOn(el: Element) {
+		el.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+	}
+
+	function leftClickOn(el: Element) {
+		el.dispatchEvent(new MouseEvent("click", { button: 0, bubbles: true }));
+	}
 
 describe("chat click-jump guard", () => {
 	let container: HTMLDivElement;
@@ -235,6 +245,21 @@ describe("chat click-jump guard", () => {
 		expect(wheelEvents).toHaveLength(0);
 	});
 
+	it("dispose removes the window pointerdown listener, so a later gesture records no baseline", () => {
+		moveTo(2813);
+		guard.dispose();
+		// A leaked listener would record 2813 here, and the click below
+		// would arm on it (pointerdown gap 187 ≥ 96) and revert the clamp.
+		// With the listener gone the click falls back to the fresh read
+		// (gap 0 at the clamped bottom) and must refuse.
+		pointerDownOn(scroller.el);
+		scroller.scrollTo(3000);
+		leftClickOn(scroller.el);
+		vi.advanceTimersByTime(200);
+		expect(scroller.el.scrollTop).toBe(3000);
+		expect(wheelEvents).toHaveLength(0);
+	});
+
 	it("stops cementing an upward yank: a click at the displaced position does not arm, so the shell's self-re-pin sticks", async () => {
 		vi.useFakeTimers();
 		// Epoch 0: reader pinned at the bottom; a click attaches the position
@@ -256,19 +281,39 @@ describe("chat click-jump guard", () => {
 		expect(wheelEvents).toHaveLength(0);
 	});
 
+	it("protects the pointerdown position: a click-clamp inside the guard's small band reverts to the pre-click position", () => {
+		// The nat4 live shape (adversarial round, thr_cexdxfbnaj): the reader
+		// sits 187px above the bottom — inside the guard's 96–300px design
+		// band — and the shell's clamp commits during the pointerdown edge,
+		// so by the click the fresh read is already past the write (fresh
+		// gap 0). Only the pointerdown-recorded position can arm the guard.
+		moveTo(2813); // 187px above max 3000, client 500
+		pointerDownOn(scroller.el);
+		// The shell's clamp lands mid-sequence, without a scroll event.
+		scroller.scrollTo(3000);
+		leftClickOn(scroller.el);
+		vi.advanceTimersByTime(200);
+		// The reader's reading position comes back.
+		expect(scroller.el.scrollTop).toBe(2813);
+		expect(wheelEvents).toHaveLength(1);
+		expect(wheelEvents[0].deltaY).toBeLessThan(0);
+	});
+
 	it("does not arm when the click's input sequence itself displaced the view (async scroll delivery loses the race)", () => {
-		// The operator's gesture, with the real DOM's event delivery: the
-		// window pointerdown handler sees the pre-commit position (3000),
-		// the shell's no-dep effect displaces the view to ~16 during the
-		// SAME input sequence, and the displacement's scroll event is
-		// delivered only after the click (it never reaches the arming
-		// handler). The stub emulates the async part by moving state
-		// without dispatching scroll events.
-		scroller.el.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+		// The upward-cement shape: the reader is pinned at the bottom when
+		// the gesture starts, the shell's no-dep effect displaces the view
+		// to ~16px during the SAME input sequence (the displacement's scroll
+		// event, if any, is delivered only after the click — the stub
+		// emulates that by moving state without dispatching scroll events).
+		// The pointerdown record is the bottom (gap 0), so the guard must
+		// not arm: reverting the shell's imminent self-correction would
+		// cement the displacement.
+		moveTo(3000);
+		pointerDownOn(scroller.el);
 		scroller.scrollTo(16); // displaced mid-sequence; no scroll event delivered
 		leftClickOn(scroller.el);
 		// The shell's automatic self-correction re-pins to the bottom; with
-		// the guard refusing to arm at a displaced read, it must stick.
+		// the guard refusing to arm on a zero pointerdown gap, it must stick.
 		moveTo(3000);
 		vi.advanceTimersByTime(1000);
 		expect(scroller.el.scrollTop).toBe(3000);
