@@ -8,7 +8,9 @@
  * draft. The 2026-10-02 destination map covers every lane: Pinned sweeps to
  * Unpinned (the lane exit: unpin, pin parked), Unread sweeps to Read (the
  * catch-up gesture), every Idle bucket marks Done, and Needs You and Working
- * never sweep at all.
+ * never sweep at all. The 2026-10-03 arming decision: only the aged-out
+ * arms (Done, A-while-ago) pre-select their candidates — Pinned, Unread,
+ * and the fresher idle buckets arm empty and are curated by clicking cards.
  */
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { threadState } from "../components/grouping";
@@ -109,38 +111,29 @@ export function sweepCandidatesForIdleColumn(
 }
 
 /**
- * Pinned-arm candidates: every pinned thread in the lane. The lane itself is
- * the threshold — a pin is a standing keep, and sweeping the lane is the
- * explicit "I'm caught up on these" gesture, so there is no age gate and no
- * keep flag here. The sweep-family contract does not apply: unpinning never
- * archives, so a parent with live children may sweep freely (its pin ends,
- * the thread stays live). Order follows the lane's own order.
+ * Pinned-arm and Unread-arm candidates: none. The 2026-10-03 operator
+ * decision made those arms manual-only — arming enters sweep mode with
+ * nothing selected and the operator curates the sweep by clicking cards,
+ * so the pill never proposes a bulk unpin or bulk read-mark the operator
+ * did not build by hand. There is deliberately no candidate function for
+ * these arms: the dispatch returns an empty pre-selection for them.
+ *
+ * The same decision demoted the idle buckets fresher than A-while-ago
+ * (`idle-earlier`, `idle-today`, `idle-recent`) to manual-only arming; the
+ * predicate below, not a candidate function, carries that split.
  */
-export function sweepCandidatesForPinnedColumn(
-  threads: readonly PluginSidebarThread[],
-  _liveChildParents: ReadonlySet<string> = new Set(),
-): string[] {
-  return threads
-    .filter((thread) => thread.isPinned)
-    .map((thread) => thread.id);
-}
 
 /**
- * Unread-arm candidates: every unread thread in the lane. The lane itself is
- * the threshold — sweeping it is the catch-up gesture ("I've read these"),
- * with no age gate. A read thread frozen into the lane (the open pane holds
- * its column) is skipped: pre-selection marks only what is actually unread,
- * though the operator may still toggle any card in manually. The
- * sweep-family contract does not apply — marking read keeps the thread live.
- * Order follows the lane's own order.
+ * Whether arming this column's sweep pre-selects its candidates. Only the
+ * arms whose whole point is "these aged out" start selected: the Done arm
+ * (past the archive threshold) and the A-while-ago arms (past the idle
+ * threshold, both groupings' twins). Every other sweepable arm — Pinned,
+ * Unread, the fresher idle buckets — enters sweep mode empty; the operator
+ * clicks cards to build the sweep. Non-sweepable columns return false.
  */
-export function sweepCandidatesForUnreadColumn(
-  threads: readonly PluginSidebarThread[],
-  _liveChildParents: ReadonlySet<string> = new Set(),
-): string[] {
-  return threads
-    .filter((thread) => thread.isUnread)
-    .map((thread) => thread.id);
+export function sweepArmPreselects(columnId: string): boolean {
+  if (columnId === "done") return true;
+  return columnId === "idle-awhile" || columnId === "awhile";
 }
 
 export type SweepColumnKind = "done" | "idle-bucket" | "pinned" | "unread";

@@ -22,7 +22,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   lanes that can — arming a non-sweepable column is refused instead of
   falling back to archive. A cancelled sweep's Undo reverses each
   destination: unarchive, unmark Done, re-pin (consuming the park), or
-  mark unread again.
+  mark unread again. Arming pre-selects only on the aged-out arms (Done
+  and A while ago); Pinned, Unread, and the fresher Idle buckets enter
+  sweep mode with nothing selected — the sweep is built by clicking cards.
 
 - **The sweep pill drops the word "Sweep."** The word repeated on every
   column header read as noise, so the pill is a broom glyph plus the

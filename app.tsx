@@ -53,10 +53,9 @@ import {
   armSweep,
   confirmSweep,
   runSweep,
+  sweepArmPreselects,
   sweepCandidatesForDoneColumn,
   sweepCandidatesForIdleColumn,
-  sweepCandidatesForPinnedColumn,
-  sweepCandidatesForUnreadColumn,
   sweepColumnKind,
   sweepDestination,
   toggleSweepSelection,
@@ -678,10 +677,13 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Sweep eligibility per sweepable column, computed from the current board
   // data. Arming (in armSweepFor) captures this list at arm time; while a
   // sweep is armed the FROZEN list is what Board displays and what confirm
-  // archives — the live recompute is only for the next arm.
+  // applies — the live recompute is only for the next arm. Only the
+  // aged-out arms (Done, A-while-ago) pre-select their past-threshold
+  // candidates; Pinned, Unread, and the fresher idle buckets arm empty
+  // (sweepArmPreselects) and the operator curates by clicking cards.
   //
   // Sweep-family contract: a thread with ≥1 live (non-archived) child is
-  // never sweep-eligible in either arm; children stay eligible
+  // never sweep-eligible in either aged-out arm; children stay eligible
   // independently. The parent set comes from the full live list, not the
   // column, so cross-column and flat-mode families are covered alike.
   const liveChildParentIds = useMemo(() => {
@@ -709,17 +711,20 @@ function BoardPage({ subPath }: { subPath: string }) {
             liveChildParentIds,
           );
         case "idle-bucket":
-          return sweepCandidatesForIdleColumn(
-            column.threads,
-            doneIds,
-            { idleArchiveMs: sweepConfig.idleArchiveMs, kept: idleKept },
-            now,
-            liveChildParentIds,
-          );
+          return sweepArmPreselects(columnId)
+            ? sweepCandidatesForIdleColumn(
+                column.threads,
+                doneIds,
+                { idleArchiveMs: sweepConfig.idleArchiveMs, kept: idleKept },
+                now,
+                liveChildParentIds,
+              )
+            : [];
+        // Manual arms: arming enters sweep mode with nothing selected; the
+        // operator curates the sweep by clicking cards.
         case "pinned":
-          return sweepCandidatesForPinnedColumn(column.threads);
         case "unread":
-          return sweepCandidatesForUnreadColumn(column.threads);
+          return [];
         default:
           return [];
       }

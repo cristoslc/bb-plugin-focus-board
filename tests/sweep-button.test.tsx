@@ -191,6 +191,31 @@ describe("sweep pill copy", () => {
     );
     expect(sweepButton().textContent).toBe("1 → Read");
   });
+
+  it("manual arms show the broom alone while unarmed, even with cards in the lane", () => {
+    // 2026-10-03 arming decision: Pinned, Unread, and the fresher idle
+    // buckets arm with nothing selected, so their unarmed pill proposes no
+    // count — the lane size already sits in the column header, and the
+    // sweep is built by clicking cards, not by bulk pre-selection.
+    render(
+      <Board
+        {...baseProps({
+          columns: buildColumns(
+            [pinnedThread],
+            "status",
+            context,
+            new Map(),
+            new Set<string>(),
+            NOW,
+            {},
+          ),
+          doneIds: new Set<string>(),
+          sweepCandidatesFor: () => [],
+        })}
+      />,
+    );
+    expect(sweepButton().textContent).toBe("");
+  });
 });
 
 describe("where the pill may exist", () => {
