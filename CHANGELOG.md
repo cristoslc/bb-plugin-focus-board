@@ -39,12 +39,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     closes the menu like clicking the row; with more matches or none, Enter
     stays inert.
 
+### Changed
+
 - **Developer toggle: pane chat scroll instrumentation.** A new off-by-default
   Focus Board setting logs the thread pane transcript's scroll activity
   while enabled — programmatic `scrollTop` writes with stacks, the gesture
   stream, a copyable log in the pane header (`docs/chat-click-jump-2026-09-29.md`).
 
-### Changed
+- **Brand icon restored: the lane + pupil now renders as drawn.** bb masks
+  plugin icon assets off alpha coverage, and the E1 stroked-outline cut
+  hollowed at icon sizes — the bold lane's hollow interior read as dark
+  breaks around the solid pupil, so the served mark looked glitched
+  ("clobbered"). The asset and the inline `FocusBoard` element are now
+  solid alpha geometry: filled dim side lanes, an opaque bold lane, and
+  the pupil carved as an evenodd hole, renderer-proof at any size and
+  theme. A `tests/brand-icon.test.ts` coverage matrix pins the asset and
+  the inline element to the same mask-safe rules.
 
 - **The sweep is rebuilt around choosing exactly what gets archived, and
   idle threads now resurface instead of vanishing.** The Done and
@@ -100,6 +110,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     Pinned lane (above manual ranks, like urgent child rows do); the signal
     vanishes when the question is answered.
 
+### Removed
+
+- **The thread pane's project/branch footer line is gone.** A recent bb
+  composer build shows the working context in the composer itself, so the
+  plugin no longer repeats project and branch under the pane's composer; the
+  pane ends with the transcript.
+
 ### Fixed
 
 - **Menu moves bring the destination lane into view.** The keep-in-view
@@ -113,19 +130,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the relocation (async host actions included), a visible destination scrolls
   nothing, and passive changes still never move your scroll.
 
-- **The pane's click-jump guard now arms on the position recorded at the
-  gesture's pointerdown** — captured before the host shell's
-  pending-capture clamp commits — and restores it when a click lands the
-  transcript pinned at the bottom within ~200ms. Armed on the click-time
-  read, the guard never fired at all: the clamp lands during the pointerdown
-  edge, so the fresh read was already past the write and the reader stayed
-  clamped (exposed by a live adversarial run inside the guard's own design
-  band). The settled-view refusals of the previous fix survive only for
-  clicks with no pointer event (programmatic flows); reader gestures in the
-  window still disarm it, and pill and composer clicks never arm it
+- **Clicking in the pane's chat no longer yanks the transcript to the
+  newest message while the reader is scrolled up.** The pane's click-jump
+  guard now arms on the position recorded at the gesture's pointerdown —
+  captured before the host shell's pending-capture clamp commits — and
+  restores it when a click lands the transcript pinned at the bottom
+  within ~200ms. Armed on the click-time read, the guard never fired at
+  all: the clamp lands during the pointerdown edge, so the fresh read was
+  already past the write and the reader stayed clamped (exposed by a live
+  adversarial run inside the guard's own design band). The settled-view
+  refusals of the previous fix survive only for clicks with no pointer
+  event (programmatic flows); reader gestures in the window still disarm
+  it, and pill and composer clicks never arm it
   (`docs/chat-click-jump-2026-09-29.md`).
-
-
 ## [0.5.21] - 2026-09-30
 
 ### Added

@@ -18,6 +18,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
+    "text": "**Brand icon restored: the lane + pupil now renders as drawn.** bb masks plugin icon assets off alpha coverage, and the E1 stroked-outline cut hollowed at icon sizes — the bold lane's hollow interior read as dark breaks around the solid pupil, so the served mark looked glitched (\"clobbered\"). The asset and the inline `FocusBoard` element are now solid alpha geometry: filled dim side lanes, an opaque bold lane, and the pupil carved as an evenodd hole, renderer-proof at any size and theme. A `tests/brand-icon.test.ts` coverage matrix pins the asset and the inline element to the same mask-safe rules.",
+    "children": []
+  },
+  {
     "text": "**The sweep is rebuilt around choosing exactly what gets archived, and idle threads now resurface instead of vanishing.** The Done and A-while-ago columns' sweep grew a manual selection flow, a mid-run stop, and a gentler fate for quiet threads:",
     "children": [
       "**Sweep mode is now manual: enter it any time and click cards to choose exactly what gets archived.** The sweep button stays visible on the Done and A-while-ago columns even when nothing is past the threshold; entering sweep mode pre-selects the past-threshold threads, clicking a card toggles it in or out (clicking away or Escape exits), and a thread that still has live children refuses with an on-screen note instead of silently doing nothing.",
@@ -35,11 +39,15 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     ]
   },
   {
+    "text": "**The thread pane's project/branch footer line is gone.** A recent bb composer build shows the working context in the composer itself, so the plugin no longer repeats project and branch under the pane's composer; the pane ends with the transcript.",
+    "children": []
+  },
+  {
     "text": "**Menu moves bring the destination lane into view.** The keep-in-view contract followed the pane's active card on relocation, but a right-click menu move relocates a card the pane never opened — \"Pin thread\" sends a parent's whole nested family into the far-left Pinned lane — and in a scrolled board the destination could sit offscreen: the action read as the card silently vanishing. Every menu action that relocates a card (Pin, Unpin, Mark Done/Not Done, Mark Read/Unread) now issues a one-shot reveal that brings the card's new lane into view; it lands in the same commit as the relocation (async host actions included), a visible destination scrolls nothing, and passive changes still never move your scroll.",
     "children": []
   },
   {
-    "text": "**The pane's click-jump guard now arms on the position recorded at the gesture's pointerdown** — captured before the host shell's pending-capture clamp commits — and restores it when a click lands the transcript pinned at the bottom within ~200ms. Armed on the click-time read, the guard never fired at all: the clamp lands during the pointerdown edge, so the fresh read was already past the write and the reader stayed clamped (exposed by a live adversarial run inside the guard's own design band). The settled-view refusals of the previous fix survive only for clicks with no pointer event (programmatic flows); reader gestures in the window still disarm it, and pill and composer clicks never arm it (`docs/chat-click-jump-2026-09-29.md`).",
+    "text": "**Clicking in the pane's chat no longer yanks the transcript to the newest message while the reader is scrolled up.** The pane's click-jump guard now arms on the position recorded at the gesture's pointerdown — captured before the host shell's pending-capture clamp commits — and restores it when a click lands the transcript pinned at the bottom within ~200ms. Armed on the click-time read, the guard never fired at all: the clamp lands during the pointerdown edge, so the fresh read was already past the write and the reader stayed clamped (exposed by a live adversarial run inside the guard's own design band). The settled-view refusals of the previous fix survive only for clicks with no pointer event (programmatic flows); reader gestures in the window still disarm it, and pill and composer clicks never arm it (`docs/chat-click-jump-2026-09-29.md`).",
     "children": []
   }
 ];
