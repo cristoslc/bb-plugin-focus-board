@@ -13,6 +13,7 @@ import {
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { findTicketRefs, resolveRepoSlug } from "./lib/tickets";
 import { installHostLinkGlue } from "./components/host-link-glue";
+import { FocusBoardAppIcon } from "./components/ui/icon";
 import type { rpcContract } from "./server";
 import { Board } from "./components/board";
 import { BoardToolbar } from "./components/board-toolbar";
@@ -1664,10 +1665,19 @@ function BoardPage({ subPath }: { subPath: string }) {
 }
 
 export default definePluginApp((app) => {
+  // The brand mark joins the host's app-wide icon registry under the name
+  // "FocusBoard", so every host-rendered surface that takes a `BbIconName`
+  // — the sidebar nav row and the pane's title-bar tab — can draw the same
+  // mark the manifest's branding.icon shows on the Tools pages, instead of
+  // the Columns2 placeholder this registration used to hardcode.
+  app.experimental_icons.register({
+    name: "FocusBoard",
+    component: FocusBoardAppIcon,
+  });
   app.slots.navPanel({
     id: "board",
     title: "Focus Board",
-    icon: "Columns2",
+    icon: "FocusBoard",
     path: PANEL_PATH,
     // The pane's thread arrives through the `subPath` prop (`t/<id>`), so
     // the open pane participates in browser history — bb's back arrow
