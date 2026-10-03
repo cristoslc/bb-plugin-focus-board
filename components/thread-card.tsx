@@ -7,6 +7,7 @@ import { findTicketRefs, resolveRepoSlug, type TicketRef } from "@/lib/tickets";
 import type { GitHubItemStatus } from "@/lib/tracker-status";
 
 import { rankDragType } from "../lib/rank";
+import { describeWakeAt } from "../lib/snooze";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
 
 function relativeTime(timestamp: number, now: number): string {
@@ -78,6 +79,14 @@ interface ThreadCardProps {
    * only moment it can authorise the drop.
    */
   rankKey?: string;
+  /**
+   * Snooze wake lookup (lib/snooze): the wake epoch-ms for a snoozed thread,
+   * null when it is not snoozed. A snoozed card dims in place, carries a
+   * "Snoozed · wakes …" chip, and refuses drag so it cannot join the very
+   * sweeps and lane moves its sleep is meant to skip. Applies to nested
+   * child rows too, via the same lookup.
+   */
+  snoozeFor?: (threadId: string) => number | null;
   /** Reports the card a drag started on, so the board can hold it. */
   onRankDragStart?: (threadId: string | null) => void;
   onOpen: () => void;
@@ -161,6 +170,7 @@ function ChildRow({
   isActive,
   onOpenThread,
   menuActions,
+  snoozeFor,
 }: {
   child: PluginSidebarThread;
   /** A done child row dims, as does any child of a done parent. */
@@ -169,12 +179,16 @@ function ChildRow({
   isActive?: boolean;
   onOpenThread: (threadId: string) => void;
   menuActions?: readonly CardMenuAction[];
+  /** Snooze wake lookup, for the row's little clock marker. */
+  snoozeFor?: (threadId: string) => number | null;
 }) {
   const now = Date.now();
+  const childSnoozeWakeAt = snoozeFor?.(child.id) ?? null;
   const row = (
     <a
       href={child.href}
       data-thread-card={child.id}
+      data-snoozed={childSnoozeWakeAt !== null ? "" : undefined}
       draggable={false}
       aria-current={isActive ? "true" : undefined}
       onClick={(event) => {
@@ -192,6 +206,7 @@ function ChildRow({
         "opacity-70 hover:opacity-100",
         child.isArchived && "saturate-50",
         dimmed && "opacity-50",
+        childSnoozeWakeAt !== null && "saturate-50",
         isActive && "ring-2 ring-ring",
       )}
     >
@@ -207,6 +222,16 @@ function ChildRow({
           <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/70">
             <Icon name="Archive" className="size-3" aria-hidden />
             archived
+          </span>
+        ) : null}
+        {childSnoozeWakeAt !== null ? (
+          <span
+            data-snooze-chip
+            title={`Wakes ${describeWakeAt(childSnoozeWakeAt, now)}`}
+            className="inline-flex shrink-0 items-center gap-0.5 text-[10px] text-muted-foreground/80"
+          >
+            <Icon name="Clock" className="size-3" aria-hidden />
+            snoozed
           </span>
         ) : null}
         <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground/60">
@@ -248,6 +273,7 @@ export function ThreadCard({
   dimmed,
   rankKey,
   onRankDragStart,
+  snoozeFor,
   onOpen,
   activeThreadId,
   onOpenThread,
@@ -296,6 +322,11 @@ export function ThreadCard({
         !(doneIds?.has(child.id) ?? false),
     );
 
+  // Snoozed state: the wake epoch-ms (null when not snoozed) drives the dim,
+  // the chip, and the drag refusal all at once — one rule, no drift.
+  const snoozeWakeAt = snoozeFor?.(thread.id) ?? null;
+  const snoozed = snoozeWakeAt !== null;
+
   // The card is a container; the anchor (title/body) and the collapse toggle
   // are siblings inside it — a button inside an anchor would be invalid HTML.
   const card = (
@@ -303,6 +334,7 @@ export function ThreadCard({
       data-thread-card={thread.id}
       data-sweep-highlighted={isSweepHighlighted ? "" : undefined}
       data-sweep-active={isSweeping ? "" : undefined}
+      data-snoozed={snoozed ? "" : undefined}
       className={cn(
         "relative overflow-hidden rounded-md bg-card transition-colors",
         "hover:bg-accent/50",
@@ -311,6 +343,7 @@ export function ThreadCard({
           : "ring-1 ring-transparent hover:ring-border",
         isDone && "opacity-50 saturate-50",
         dimmed && "opacity-50",
+        snoozed && "opacity-50",
         isSweepHighlighted &&
           "ring-2 ring-amber-500 bg-amber-500/10 saturate-100 opacity-100",
         isSweepSelectable && "ring-1 ring-amber-500/40",
@@ -338,8 +371,16 @@ export function ThreadCard({
         <a
           href={thread.href}
           aria-current={isActive ? "true" : undefined}
-          draggable
+          draggable={!snoozed}
           onDragStart={(event) => {
+            // A snoozed card refuses drag (`draggable={!snoozed}` above);
+            // this guard keeps the refusal true even where the attribute
+            // is not enforced, so nothing can drag a sleeping card into a
+            // lane move its sleep is meant to skip.
+            if (snoozed) {
+              event.preventDefault();
+              return;
+            }
             event.dataTransfer.setData("text/focus-board-id", thread.id);
             if (rankKey !== undefined) {
               // The lane rides in the drag TYPE, not a payload value: the
@@ -399,6 +440,16 @@ export function ThreadCard({
                   className="size-3 animate-spin text-amber-600"
                   aria-hidden
                 />
+              </span>
+            ) : null}
+            {snoozed ? (
+              <span
+                data-snooze-chip
+                title={`Wakes ${describeWakeAt(snoozeWakeAt, now)}`}
+                className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[10px] text-muted-foreground"
+              >
+                <Icon name="Clock" className="size-3" aria-hidden />
+                {compact ? "" : `Snoozed · wakes ${describeWakeAt(snoozeWakeAt, now)}`}
               </span>
             ) : null}
             <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground/60">
@@ -493,6 +544,7 @@ export function ThreadCard({
                     isActive={child.id === activeThreadId}
                     onOpenThread={onOpenThread}
                     menuActions={childMenuActions?.(child)}
+                    snoozeFor={snoozeFor}
                   />
                 </li>
               );

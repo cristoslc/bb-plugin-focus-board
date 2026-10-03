@@ -155,6 +155,12 @@ interface BoardProps {
   /** Right-click menu actions for one thread, sidebar-menu style. */
   menuActionsFor: (thread: PluginSidebarThread) => readonly CardMenuAction[];
   /**
+   * Snooze wake lookup (lib/snooze): the wake epoch-ms for a snoozed thread,
+   * null otherwise. Wired through to cards — dim in place, the wake chip,
+   * and the card-level drag refusal.
+   */
+  snoozeFor?: (threadId: string) => number | null;
+  /**
    * Sweep wiring: eligibility per column (empty when nothing is eligible),
    * and the armed lifecycle. Arming pre-selects the past-threshold
    * candidates; from there `armedSweep`'s list is LIVE — card clicks toggle
@@ -326,6 +332,7 @@ export function Board({
   onDropPinned,
   reveal = null,
   menuActionsFor,
+  snoozeFor,
   sweepCandidatesFor,
   armedSweep = null,
   sweepRun = null,
@@ -1028,6 +1035,7 @@ export function Board({
                           onCollapsedChange={(collapsed) =>
                             onFamilyCollapsedChange?.(thread.id, collapsed)
                           }
+                          snoozeFor={snoozeFor}
                           doneIds={doneIds}
                           activeThreadId={activeThreadId}
                           dimmed={dimmedIds.has(thread.id)}

@@ -22,6 +22,14 @@ Fine-grained notes that don't belong in the README's feature list.
 - A family card's nested rows can be collapsed: the chevron folds the rows into a "N child threads" pill that re-opens them, and the collapsed families persist across sessions (localStorage).
 - A collapsed card opens by itself when one of its nested children turns unread or needs you; a family collapsed while a child was already unread stays folded.
 
+## Snooze
+
+- Snoozing a thread reads it now and makes it unread again at the target time: the set gesture marks the thread read, so it leaves the Unread column; the wake stamps mark-unread at the target time, so the card returns to Unread like fresh mail. The board's existing wake handling (pin restore, un-done) applies with no snooze-specific wiring.
+- A snoozed card stays in its column, dimmed, with a "Snoozed · wakes …" chip. Presets in the card menu: 1 hour, 4 hours, tomorrow 9am, 1 week, plus "Pick a time…" with a date-time picker.
+- The snooze beats the sweep: snoozed cards are not sweep candidates on the board and are skipped by the server-side sweep while their sleep lasts. A snoozed card also refuses drag, so it cannot be dropped into a lane move its sleep is meant to skip.
+- Any state-changing gesture lifts the snooze first — pin, read toggle, done toggle, archive, or Unsnooze from the menu. If the thread is genuinely read by hand while snoozed, the wake consumes the snooze without re-alerting.
+- Wake timers live server-side: they are re-armed on plugin load (a past-due snooze wakes immediately) and cleared on dispose. Full CLI parity: `bb focus-board snooze list|set|clear`.
+
 ## Escape
 
 - While a pane's thread is running, Escape interrupts the turn instead of closing the pane; the pane closes with Escape once nothing is running (toggle in the plugin's settings).

@@ -5,6 +5,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
+    "text": "**Snooze: read now, unread again at a target time.** Snoozing a thread marks it read so it leaves the Unread column, then the board marks it unread again at the wake time — presets (1 hour, 4 hours, tomorrow 9am, 1 week) or a picked date-time from the card menu. A snoozed card dims in place with a \"Snoozed · wakes …\" chip and cannot be dragged; it sleeps through every lane's sweep. Any pin/read/done/archive gesture lifts the snooze first, and a wake on a thread read by hand since snoozing stays silent. The clock is server-side: timers re-arm on plugin load (past-due wakes fire immediately) and full CLI parity lands as `bb focus-board snooze list|set|clear`.",
+    "children": []
+  },
+  {
     "text": "**Every lane now has its sweep, each with its own destination.** Pinned sweeps to Unpinned — the lane exit, so the pin is parked and returns the next time the thread calls for attention; Unread sweeps to Read, the catch-up gesture; and every Idle bucket (not just A while ago) sweeps to Done. Needs You and Working never sweep, and the pill exists only on lanes that can — arming a non-sweepable column is refused instead of falling back to archive. A cancelled sweep's Undo reverses each destination: unarchive, unmark Done, re-pin (consuming the park), or mark unread again. Arming pre-selects only on the aged-out arms (Done and A while ago); Pinned, Unread, and the fresher Idle buckets enter sweep mode with nothing selected — the sweep is built by clicking cards.",
     "children": []
   },

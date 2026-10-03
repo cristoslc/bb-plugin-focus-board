@@ -39,6 +39,15 @@ import {
 import { buildParentLanes } from "./components/parent-lanes";
 import { ParentLaneBoard } from "./components/parent-lane-board";
 import { doneAtToEpochMs } from "./lib/done-metadata";
+import { SnoozeDialog } from "./components/snooze-dialog";
+import {
+  presetWakeAt,
+  snoozeMenuActions,
+  snoozeWakeAtMs,
+  type SnoozeMenuAction,
+  type SnoozePreset,
+  type SnoozeRecord,
+} from "./lib/snooze";
 import {
   applyInteractionFlags,
   interactionFlagChangeFromEvent,
@@ -348,6 +357,66 @@ function BoardPage({ subPath }: { subPath: string }) {
     }
     return times;
   }, [doneExtras]);
+
+  // Snoozed threads: per-thread plugin metadata ({ wakeAt, setAt }) surfaced
+  // through the snooze RPCs. The board only mirrors the records — dimming,
+  // the wake chip, menu entries, and sweep skipping all derive from them;
+  // the wake itself (markUnread at the target time) is server-side.
+  const [snoozeRecords, setSnoozeRecords] = useState<Record<string, SnoozeRecord>>({});
+  const refetchSnoozes = useCallback(() => {
+    rpc.call("snooze_list").then(
+      (result) => setSnoozeRecords(result.snoozes),
+      () => {}, // Snoozing is optional state; the board works without it.
+    );
+  }, [rpc]);
+  useEffect(() => {
+    refetchSnoozes();
+  }, [refetchSnoozes]);
+  useRealtime("snooze-changed", refetchSnoozes);
+  const snoozedIds = useMemo(
+    () => new Set(Object.keys(snoozeRecords)),
+    [snoozeRecords],
+  );
+  /** Wake epoch-ms for a thread, null when it is not snoozed. */
+  const snoozeFor = useCallback(
+    (threadId: string): number | null => {
+      const record = snoozeRecords[threadId];
+      return record === undefined ? null : snoozeWakeAtMs(record);
+    },
+    [snoozeRecords],
+  );
+  // A snooze set by any surface (this panel's menu, the CLI, another panel)
+  // lands here through the snooze-changed refetch; the optimistic write
+  // below only smooths this panel's own gesture.
+  const snoozeUntil = useCallback(
+    (threadId: string, wakeAt: Date) => {
+      const wakeAtIso = wakeAt.toISOString();
+      setSnoozeRecords((current) => ({
+        ...current,
+        [threadId]: { wakeAt: wakeAtIso, setAt: new Date().toISOString() },
+      }));
+      rpc.call("snooze_set", { threadId, wakeAt: wakeAtIso }).catch(() => refetchSnoozes());
+    },
+    [rpc, refetchSnoozes],
+  );
+  // Current-intent: lifting a snooze explicitly (Unsnooze, or any later
+  // state-changing gesture on the card). Optimistic removal; a rejected
+  // write settles the truth back through a refetch.
+  const clearSnooze = useCallback(
+    (threadId: string) => {
+      setSnoozeRecords((current) => {
+        if (current[threadId] === undefined) return current;
+        const next = { ...current };
+        delete next[threadId];
+        return next;
+      });
+      rpc.call("snooze_clear", { threadId }).catch(() => refetchSnoozes());
+    },
+    [rpc, refetchSnoozes],
+  );
+  // "Pick a time…" dialog target: the thread id waiting on a custom wake
+  // time, null when no dialog is open.
+  const [snoozeDialogFor, setSnoozeDialogFor] = useState<string | null>(null);
 
   // Manual column orders, keyed by columnRankKey. A column with no stored
   // order stays in the derived order and shows no drag affordance, so the
@@ -763,11 +832,18 @@ function BoardPage({ subPath }: { subPath: string }) {
       const column = columns.find((candidate) => candidate.id === columnId);
       if (column === undefined || sweepColumnKind(columnId) === null) return [];
       const now = Date.now();
+      // A snoozed thread sleeps through sweeps too: the wake is the whole
+      // point of the snooze, so its card is not a sweep candidate — on any
+      // arm, aged-out or manually curated (the server-side sweep skips
+      // snoozed facts the same way).
+      const sweepable = column.threads.filter(
+        (candidate) => !snoozedIds.has(candidate.id),
+      );
       const kind = sweepColumnKind(columnId);
       switch (kind) {
         case "done":
           return sweepCandidatesForDoneColumn(
-            column.threads,
+            sweepable,
             doneIds,
             doneAgeSource,
             { doneArchiveMs: sweepConfig.doneArchiveMs },
@@ -777,7 +853,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         case "idle-bucket":
           return sweepArmPreselects(columnId)
             ? sweepCandidatesForIdleColumn(
-                column.threads,
+                sweepable,
                 doneIds,
                 { idleArchiveMs: sweepConfig.idleArchiveMs, kept: idleKept },
                 now,
@@ -793,7 +869,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           return [];
       }
     },
-    [columns, doneIds, doneAgeSource, idleKept, liveChildParentIds, sweepConfig],
+    [columns, doneIds, doneAgeSource, idleKept, liveChildParentIds, snoozedIds, sweepConfig],
   );
 
   // A Done-column projection card (a live family's Done card) cannot join a
@@ -1539,6 +1615,19 @@ function BoardPage({ subPath }: { subPath: string }) {
   const menuActionsFor = useCallback(
     (thread: PluginSidebarThread): CardMenuAction[] => {
       const isThreadDone = doneIds.has(thread.id);
+      // Current intent: any state-changing gesture on a snoozed card lifts
+      // the snooze first — the wake recipe (read → unread later) would fire
+      // under a read/pin/done/archive write that has already superseded it.
+      const liftSnooze = () => {
+        if (snoozedIds.has(thread.id)) clearSnooze(thread.id);
+      };
+      const snoozeEntries: SnoozeMenuAction[] = snoozeMenuActions({
+        snoozed: snoozedIds.has(thread.id),
+        snoozeWith: (kind: SnoozePreset) =>
+          snoozeUntil(thread.id, presetWakeAt(kind, new Date())),
+        clearSnooze: () => clearSnooze(thread.id),
+        pickCustom: () => setSnoozeDialogFor(thread.id),
+      });
       return [
         {
           id: "open-new-window",
@@ -1559,6 +1648,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           label: thread.isPinned ? "Unpin" : "Pin",
           icon: thread.isPinned ? "PinOff" : "Pin",
           run: () => {
+            liftSnooze();
             // Live intent beats the parked value: a park this gesture's
             // write supersedes must not resurrect on a later Mark Not Done
             // or Mark Unread.
@@ -1579,6 +1669,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           label: thread.isUnread ? "Mark Read" : "Mark Unread",
           icon: thread.isUnread ? "MailOpen" : "Mail",
           run: () => {
+            liftSnooze();
             // Arm the reveal claim first — setRead also rides the host
             // bridge, and the requested observable state is the toggle's
             // flipped value (the applied result), not the arg passed
@@ -1604,6 +1695,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           label: isThreadDone ? "Mark Not Done" : "Mark Done",
           icon: isThreadDone ? "CircleCheck" : "Check",
           run: () => {
+            liftSnooze();
             setDoneIds((current) => {
               const next = new Set(current);
               if (isThreadDone) next.delete(thread.id);
@@ -1633,6 +1725,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             }
           },
         },
+        ...snoozeEntries,
         {
           id: "sweep-keep",
           label: doneAgeSource.kept(thread.id) ? "Allow sweep" : "Keep from sweep",
@@ -1662,6 +1755,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           icon: thread.isArchived ? "ArchiveRestore" : "Archive",
           dividerAbove: true,
           run: () => {
+            liftSnooze();
             if (thread.isArchived) {
               sdk.threads.unarchive({ threadId: thread.id }).catch(() => {});
             } else {
@@ -1678,7 +1772,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         },
       ];
     },
-    [actions, applyUnreadStateEffects, clearParkPin, doneAgeSource, doneIds, exitPinnedLane, requestReveal, restoreParkedPin, rpc, setDoneExtras, setDoneIds, sdk],
+    [actions, applyUnreadStateEffects, clearParkPin, clearSnooze, doneAgeSource, doneIds, exitPinnedLane, requestReveal, restoreParkedPin, rpc, setDoneExtras, setDoneIds, setSnoozeDialogFor, snoozeUntil, snoozedIds, sdk],
   );
 
   if (status === "loading" && threads.length === 0) {
@@ -1859,6 +1953,8 @@ function BoardPage({ subPath }: { subPath: string }) {
           isDone={doneIds.has(openThreadId ?? "")}
           onToggleDone={(done) => {
             if (openThreadId === null) return;
+            // Current intent: a state change lifts any snooze first.
+            if (snoozedIds.has(openThreadId)) clearSnooze(openThreadId);
             setDoneIds((current) => {
               const next = new Set(current);
               if (done) next.add(openThreadId);
@@ -1877,6 +1973,8 @@ function BoardPage({ subPath }: { subPath: string }) {
           }}
           onToggleUnread={() => {
             if (openThreadId === null || openThreadActive === null) return;
+            // Current intent: a state change lifts any snooze first.
+            if (snoozedIds.has(openThreadId)) clearSnooze(openThreadId);
             if (openThreadActive.isUnread) {
               void actions.setRead(openThreadId, true);
             } else {
@@ -1906,6 +2004,24 @@ function BoardPage({ subPath }: { subPath: string }) {
         onOpenChange={setWhatsNewOpen}
         entries={whatsNewEntries}
       />
+      {snoozeDialogFor === null ? null : (() => {
+        const dialogThread = threads.find((candidate) => candidate.id === snoozeDialogFor);
+        if (dialogThread === undefined) {
+          // The thread left the board while the picker was open: close quietly.
+          setSnoozeDialogFor(null);
+          return null;
+        }
+        return (
+          <SnoozeDialog
+            threadTitle={dialogThread.displayTitle}
+            onConfirm={(wakeAt) => {
+              snoozeUntil(dialogThread.id, wakeAt);
+              setSnoozeDialogFor(null);
+            }}
+            onCancel={() => setSnoozeDialogFor(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
