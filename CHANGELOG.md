@@ -46,15 +46,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   while enabled — programmatic `scrollTop` writes with stacks, the gesture
   stream, a copyable log in the pane header (`docs/chat-click-jump-2026-09-29.md`).
 
-- **Brand icon restored: the lane + pupil now renders as drawn.** bb masks
-  plugin icon assets off alpha coverage, and the E1 stroked-outline cut
-  hollowed at icon sizes — the bold lane's hollow interior read as dark
+- **Brand icon restored as the lane + card mark and now renders as drawn.**
+  bb masks plugin icon assets off alpha coverage, and the E1 stroked-outline
+  cut hollowed at icon sizes — the bold lane's hollow interior read as dark
   breaks around the solid pupil, so the served mark looked glitched
-  ("clobbered"). The asset and the inline `FocusBoard` element are now
-  solid alpha geometry: filled dim side lanes, an opaque bold lane, and
-  the pupil carved as an evenodd hole, renderer-proof at any size and
-  theme. A `tests/brand-icon.test.ts` coverage matrix pins the asset and
-  the inline element to the same mask-safe rules.
+  ("clobbered"). The asset and inline `FocusBoard` element are now solid
+  alpha geometry: three flush-top columns whose side lanes ride as dim
+  fills (the right one short of the others), an opaque inverted middle
+  lane, and a card punched through that lane as an evenodd hole — one
+  `currentColor` asset that themes itself on light and dark surfaces,
+  renderer-proof at any size. A `tests/brand-icon.test.ts` coverage matrix
+  pins the asset and the inline element to the same mask-safe rules.
   - **The sidebar row and pane title bar now draw the mark too.** Their
     registration hardcoded a `Columns2` placeholder since the plugin's first
     commit - the manifest `branding.icon` only covers Settings surfaces, and
