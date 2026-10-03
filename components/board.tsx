@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { BoardColumn, GroupBy } from "./grouping";
 import { threadState } from "./grouping";
@@ -11,6 +18,7 @@ import {
   type SweepRunView,
 } from "../lib/sweep";
 import { ThreadCard } from "./thread-card";
+import { containerSlideX, listScrollY } from "./board-scroll";
 import type { CardMenuAction } from "./thread-card-menu";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
@@ -127,6 +135,13 @@ interface BoardProps {
    * exactly as before this prop existed.
    */
   onDropPinned?: (threadId: string) => void;
+  /**
+   * One-shot lane-reveal request from a menu action that relocates a card
+   * (see the reveal effect inside `Board`). Seq-numbered so the board can
+   * consume each request exactly once; optional because only app.tsx issues
+   * them today.
+   */
+  reveal?: { threadId: string; seq: number } | null;
   /** Right-click menu actions for one thread, sidebar-menu style. */
   menuActionsFor: (thread: PluginSidebarThread) => readonly CardMenuAction[];
   /**
@@ -298,6 +313,7 @@ export function Board({
   onDropDone,
   onDropUnread,
   onDropPinned,
+  reveal = null,
   menuActionsFor,
   sweepCandidatesFor,
   armedSweep = null,
@@ -345,28 +361,17 @@ export function Board({
     const keepActiveCardInView = () => {
       const card = container.querySelector(`[data-thread-card="${CSS.escape(activeThreadId)}"]`);
       if (!(card instanceof HTMLElement)) return;
-      const cardRect = card.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
       // Horizontal: the pane opening (or a drag resize) narrows the visible
-      // range; slide the card back inside it.
-      if (cardRect.left < containerRect.left) {
-        container.scrollLeft -= containerRect.left - cardRect.left;
-      } else if (cardRect.right > containerRect.right) {
-        container.scrollLeft += cardRect.right - containerRect.right;
-      }
-      // Vertical: a lane taller than the board scrolls its own list, and a
-      // card that history just restored (deep link, back/forward — no click
-      // preceded it) can sit below the fold. scrollIntoView would scroll
-      // every ancestor including the host page, so adjust the lane list
-      // directly, the same way the horizontal case does.
+      // range; slide the card back inside it. Vertical: a lane taller than
+      // the board scrolls its own list, and a card that history just restored
+      // (deep link, back/forward — no click preceded it) can sit below the
+      // fold; the list is adjusted directly — never scrollIntoView, which
+      // would scroll every ancestor including the host page.
+      const cardRect = card.getBoundingClientRect();
+      container.scrollLeft += containerSlideX(container.getBoundingClientRect(), cardRect);
       const list = card.closest("[data-card-list]");
       if (list instanceof HTMLElement) {
-        const listRect = list.getBoundingClientRect();
-        if (cardRect.top < listRect.top) {
-          list.scrollTop -= listRect.top - cardRect.top;
-        } else if (cardRect.bottom > listRect.bottom) {
-          list.scrollTop += cardRect.bottom - listRect.bottom;
-        }
+        list.scrollTop += listScrollY(list.getBoundingClientRect(), cardRect);
       }
     };
     keepActiveCardInView();
@@ -378,6 +383,48 @@ export function Board({
     // activeCardLaneId re-fits when the active card relocates (pin, done,
     // archive, grouping change) without firing on same-lane data refreshes.
   }, [activeThreadId, activeCardLaneId]);
+
+  // One-shot, intent-scoped bring-into-view (`revealRequest` from app.tsx):
+  // every menu action that relocates a card — Pin/Unpin into or out of the
+  // far-left Pinned lane, Mark Done/Not Done into or out of the far-right
+  // Done lane, Mark Read/Unread out of the Unread column — moves a card the
+  // pane never opened, so the keep-in-view effect above (which follows the
+  // ACTIVE card) has no key on it, and in a scrolled board the destination
+  // lane can be offscreen: the menu action reads as the card silently
+  // vanishing from where it was.
+  //
+  // The request is a CLAIM, not a scroll order. The relocation of an async
+  // action (Pin/Unpin/Read go through the host bridge) lands in a LATER
+  // render than the click, so a reveal fired at click time would scroll to
+  // the card's OLD lane — or, worse, race the data. So the claim survives
+  // renders until this effect first sees the card and can bring it into
+  // view; app.tsx only issues the claim at the commit the relocation rides
+  // (or when the host-applied state it was waiting on lands). Consumed
+  // exactly once (seq-gated, key = last-seen seq), so data refreshes and
+  // passive state changes never yank the user's scroll.
+  const revealClaimRef = useRef<{ seq: number; threadId: string } | null>(null);
+  useLayoutEffect(() => {
+    if (reveal !== null && reveal.seq !== revealClaimRef.current?.seq) {
+      revealClaimRef.current = { seq: reveal.seq, threadId: reveal.threadId };
+    }
+    const claim = revealClaimRef.current;
+    const container = scrollRef.current;
+    if (claim === null || container === null) return;
+    const card = container.querySelector(`[data-thread-card="${CSS.escape(claim.threadId)}"]`);
+    if (!(card instanceof HTMLElement)) {
+      // Not on the board in this commit (a filter may hide the card, or the
+      // host state has not landed yet): keep the claim and re-check on the
+      // next board change, so the intent is honoured late rather than lost.
+      return;
+    }
+    const cardRect = card.getBoundingClientRect();
+    container.scrollLeft += containerSlideX(container.getBoundingClientRect(), cardRect);
+    const list = card.closest("[data-card-list]");
+    if (list instanceof HTMLElement) {
+      list.scrollTop += listScrollY(list.getBoundingClientRect(), cardRect);
+    }
+    revealClaimRef.current = null;
+  }, [reveal, columns]);
 
   const sweepActive = sweepCandidatesFor !== undefined && onSweepArm !== undefined;
   // Clicking empty board area (anything that is not a card, control, or link)
@@ -512,6 +559,7 @@ export function Board({
     <div
       ref={scrollRef}
       onClick={handleBackgroundClick}
+      data-columns-board
       className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-3 pb-3 pt-2"
     >
       {/* The insertion line is the only visual feedback a reorder gives, so

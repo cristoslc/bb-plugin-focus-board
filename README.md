@@ -26,6 +26,40 @@
 
 The board lives in bb's sidebar as a nav panel and updates in real time as your threads change. Lanes read left to right in order of attention: **Pinned, Needs you, Unread, Working**, then idle threads bucketed by how long they've been quiet.
 
+- **Group by** Attention, Last activity, Project, Provider, Machine, or Parent thread. In Parent-thread mode lanes sort by family recency (most recently touched family at left) and can optionally group by project.
+- **Filter and search** by state, project, provider, or title
+- **Reorder a column** by dragging cards into your own order instead of the
+  board's recency order. The order belongs to the column, not the thread, so
+  a card that leaves a column and comes back returns to the slot it left.
+  Dropping a card on a card in a new column (Pinned, Done, Unread) places it
+  at that spot in the same drop — state change and position in one drag.
+  Alt+ArrowUp / Alt+ArrowDown does the same from the keyboard, and a lane
+  with a hand-set order says so in its header.
+- **Nest** subthreads under their parent card
+- **Sweep** stale Done and long-idle threads to Archive in two clicks
+- **Ticket chips** with GitHub status dots, linking to the tracker
+- **Thread pane** slides in beside the board; works on phone. The open pane
+  is part of the panel's URL (`…/board/t/<threadId>`), so bb's back arrow
+  returns you to the pane you left after following a link out to a full
+  thread in main bb — and walks back through cards you lost track of, one
+  pane per step. A deep link opens the board with that pane directly.
+  Grouping, filters, and search are preferences, not history: they persist
+  across sessions in localStorage and are deliberately not replayed by the
+  back arrow (see
+  [ADR 0001](docs/adr/0001-pane-history-in-url-preferences-in-localstorage.md)).
+  The board keeps the active card in view when its lane changes (pin, done,
+  grouping) and when a pane is restored from history.
+- **What's new**: a 🎁 button in the toolbar lists recent changes after an
+  update. It pulses until opened; the button never disappears, so the
+  changelog stays reachable.
+- **Answer questions in the pane**: when an agent asks a question (the
+  ask-user-question tool), the pane renders the form and submits the answer
+  from the board — the host's embedded chat only shows these in the main
+  thread view. Both payload shapes are handled: provider `user_question`
+  interactions (answered through `interactions.resolve`) and plugin forms
+  (answered through `interactions.respond`). Unsupported plugin forms get an
+  "Open in main view" fallback.
+=======
 - **Group and filter** — lanes by Attention, Last activity, Project, Provider, Machine, or Parent thread; filter and search by state, project, provider, or title.
 - **Drag to act** — hand-order a column, or drop a card on Pinned, Unread, or Done to change its state in the same drag. Subthreads nest under their parent card.
 - **Thread pane** — open a card to read and reply beside the board; full screen on phone. Agent questions are answered right from the pane.

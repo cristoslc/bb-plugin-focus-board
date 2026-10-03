@@ -317,6 +317,66 @@ const pageClickAria = ({ label }) => {
 };
 
 /**
+ * A card's right-click menu: dispatch a real contextmenu event on the card
+ * (the menu handler lives on ThreadCardMenu's wrapper and the card's anchor
+ * contextmenu bubbles up to it), wait for the menu to open, then click the
+ * item whose text matches the label exactly. Dispatching and clicking in one
+ * page.evaluate is safe: the open and the menuitem are both committed by
+ * React's synchronous discrete-event flush by the time the search retries
+ * land — the retry only covers React scheduling jitter, it never clicks a
+ * stale item.
+ */
+const pageMenu = async ({ card, item }) => {
+  const host = document.querySelector(`[data-thread-card="${CSS.escape(card)}"]`);
+  if (!host) throw new Error(`menu: no card ${card}`);
+  const rect = host.getBoundingClientRect();
+  host.dispatchEvent(
+    new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2,
+    }),
+  );
+  const deadline = window.performance.now() + 2000;
+  while (window.performance.now() < deadline) {
+    const target = [...document.querySelectorAll('[role="menuitem"]')].find(
+      (button) => button.textContent?.trim() === item,
+    );
+    if (target !== undefined) {
+      target.click();
+      return { ok: true, items: document.querySelectorAll('[role="menuitem"]').length };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error(`menu: no item ${item} offered (menu never opened)`);
+};
+
+/**
+ * Is a card fully inside the columns board's scroll viewport? Unlike the
+ * active-card probe (window-level, pane-open threads), this measures against
+ * the board itself — the viewport a keep-in-view gesture must reach, e.g. the
+ * far-left Pinned lane after a right-click pin. (`card_visible`, the
+ * parent-lane board's rule, measures against `[data-parent-board]` instead.)
+ */
+const pageColumnCardVisible = (threadId) => {
+  const board = document.querySelector("[data-columns-board]");
+  if (!board) return { ok: false, reason: "no columns board on the page" };
+  const host = document.querySelector(`[data-thread-card="${CSS.escape(threadId)}"]`);
+  if (!host) return { ok: false, reason: `no card ${threadId}` };
+  const b = board.getBoundingClientRect();
+  const c = host.getBoundingClientRect();
+  if (c.width === 0) return { ok: false, reason: `card ${threadId} rendered with no size` };
+  if (c.left < b.left || c.right > b.right) {
+    return {
+      ok: false,
+      reason: `card ${Math.round(c.left)}…${Math.round(c.right)} sits outside the board's visible range ${Math.round(b.left)}…${Math.round(b.right)}`,
+    };
+  }
+  return { ok: true, reason: `card ${threadId} fully within the board's visible range` };
+};
+
+/**
  * The what's-new surface: the gift button is always present; the pulse and
  * the modal are the state. Read via aria-label so the assertion sees what
  * the operator sees.
@@ -341,14 +401,15 @@ const pageTextVisible = (needle) =>
   document.body.textContent?.includes(needle) ?? false;
 
 /**
- * Horizontal pan over the parent-lane board: a programmatic scrollLeft delta.
- * The board's scroll manager treats any horizontal delta as a pan the same
- * way it treats a real wheel gesture (release lock, settle, re-lock), and a
- * programmatic assignment is trusted enough to fire a real scroll event.
+ * Horizontal pan over a board: a programmatic scrollLeft delta, which fires a
+ * real scroll event. `target` picks the board: "lanes" (default — the
+ * parent-lane board) or "columns" (the grouped column board, for scrolled
+ * viewport setup before a keep-in-view gesture).
  */
-const pageBoardScroll = ({ dx, dy }) => {
-  const board = document.querySelector("[data-parent-board]");
-  if (!board) throw new Error("scroll: no [data-parent-board] on the page");
+const pageBoardScroll = ({ dx, dy, target = "lanes" }) => {
+  const selector = target === "columns" ? "[data-columns-board]" : "[data-parent-board]";
+  const board = document.querySelector(selector);
+  if (!board) throw new Error(`scroll: no ${selector} on the page`);
   if (dx !== undefined) board.scrollLeft += dx;
   if (dy !== undefined) board.scrollTop += dy;
   return { scrollLeft: board.scrollLeft, scrollTop: board.scrollTop };
@@ -730,6 +791,14 @@ async function check(step, page, gestureResults = []) {
       );
       expect("no refusal banner", text === "", `banner said ${JSON.stringify(text)}`);
     }
+    if (rule.column_card_visible !== undefined) {
+      const got = await page.evaluate(pageColumnCardVisible, rule.column_card_visible);
+      expect(
+        `card ${rule.column_card_visible} in the columns board's view`,
+        got.ok === true,
+        got.reason,
+      );
+    }
     if (rule.pane !== undefined) {
       const got = await page.evaluate(pagePaneState);
       const want = rule.pane;
@@ -988,106 +1057,129 @@ async function runSuite(file, { port, browser }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "scroll", "wheel_pan", "resize", "sleep", "press_escape", "push_url"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "menu", "scroll", "wheel_pan", "resize", "sleep", "press_escape", "push_url"];
       let gestureFailed = false;
-      for (const gesture of Object.keys(step).filter((key) => GESTURE_ORDER.includes(key))) {
-        if (gesture === "drag") {
-          const outcome = await page.evaluate(pageDrag, step.drag);
-          if (outcome.dropped === false) {
-            gestureFailed = true;
-            report.steps.push({ id: step.id, title: step.title, ok: false, results: [
-              { name: "drag gesture", ok: false, detail: outcome.reason },
-            ] });
-          } else {
-            // The rule a real browser enforces and a bare DataTransfer does
-            // not: some dragover handler must call preventDefault or the
-            // browser refuses the drop. `false` here means the reorder
-            // "works" in this harness and does nothing at all for the
-            // operator.
-            gestureResults.push({
-              name: "drop permitted during drag",
-              ok: outcome.dropAllowed !== false,
-              detail: "no dragover handler called preventDefault — a real browser would refuse this drop",
+      // A gesture that cannot even run (its own element is absent — a
+      // regression deleted what the step targets) records the step and
+      // moves on; a hard crash here would take the whole suite down
+      // instead of naming the one step that broke.
+      try {
+        for (const gesture of Object.keys(step).filter((key) => GESTURE_ORDER.includes(key))) {
+          if (gesture === "drag") {
+            const outcome = await page.evaluate(pageDrag, step.drag);
+            if (outcome.dropped === false) {
+              gestureFailed = true;
+              report.steps.push({ id: step.id, title: step.title, ok: false, results: [
+                { name: "drag gesture", ok: false, detail: outcome.reason },
+              ] });
+            } else {
+              // The rule a real browser enforces and a bare DataTransfer does
+              // not: some dragover handler must call preventDefault or the
+              // browser refuses the drop. `false` here means the reorder
+              // "works" in this harness and does nothing at all for the
+              // operator.
+              gestureResults.push({
+                name: "drop permitted during drag",
+                ok: outcome.dropAllowed !== false,
+                detail: "no dragover handler called preventDefault — a real browser would refuse this drop",
+              });
+              await sleep(200);
+            }
+          } else if (gesture === "drag_unidentified") {
+            await page.evaluate(pageDragUnidentified, step.drag_unidentified);
+            await sleep(200);
+          } else if (gesture === "drag_to_column") {
+            await page.evaluate(pageDragToColumn, step.drag_to_column);
+            await sleep(200);
+          } else if (gesture === "hover") {
+            // A hover with a board y-fraction moves the real mouse into that
+            // swimlane band (used by the band_hover assertion); other hovers
+            // carry their own assertion-side evaluation already.
+            if (step.hover && step.hover.board_y !== undefined) {
+              const rect = await page.evaluate(() => {
+                const board = document.querySelector("[data-parent-board]");
+                if (!board) return null;
+                const box = board.getBoundingClientRect();
+                return { top: box.top, height: box.height, left: box.left + box.width / 2 };
+              });
+              if (rect === null) throw new Error("no [data-parent-board] to hover");
+              const y = rect.top + rect.height * Number(step.hover.board_y);
+              await page.mouse.move(rect.left, y);
+              await sleep(120);
+            }
+          } else if (gesture === "key") {
+            await page.evaluate(pageKey, step.key);
+            await sleep(200);
+          } else if (gesture === "back") {
+            // A popstate re-renders React, and the pane effect runs after the
+            // commit; settle before assertions sample the DOM.
+            await page.evaluate(pageGoBack);
+            await sleep(300);
+          } else if (gesture === "click") {
+            await page.evaluate(pageClickCard, step.click);
+            await sleep(300);
+          } else if (gesture === "click_aria") {
+            await page.evaluate(pageClickAria, step.click_aria);
+            await sleep(300);
+          } else if (gesture === "menu") {
+            // Right-click a card and choose an item (e.g. "Pin"): the menu is
+            // the same surface a live operator uses, and the state change that
+            // follows (setPinned → board re-render → keep/reveal scroll) needs
+            // the mock's async settle before assertions sample the DOM.
+            await page.evaluate(pageMenu, step.menu);
+            await sleep(500);
+          } else if (gesture === "scroll") {
+            await page.evaluate(pageBoardScroll, step.scroll);
+            // The board settles on a 200ms quiet-period debounce plus a smooth
+            // pin glide before it re-locks; give it room before assertions.
+            // settle_ms: 0 skips the wait so a following click lands while the
+            // glide is in flight (the click-during-glide adversarial step).
+            await sleep(Math.max(0, Number(step.scroll.settle_ms ?? 1200)));
+          } else if (gesture === "wheel_pan") {
+            // A real wheel pan through the input pipeline (the same path the
+            // operator's trackpad uses), then a settle wait.
+            await wheelPan(page, step.wheel_pan.dx ?? 130);
+            await sleep(Math.max(0, Number(step.wheel_pan.settle_ms ?? 2500)));
+          } else if (gesture === "resize") {
+            // A viewport change while the lock is held re-runs the layout; let
+            // the resize observer commit before assertions sample the DOM.
+            await page.setViewport({ width: step.resize.width, height: step.resize.height });
+            await sleep(800);
+          } else if (gesture === "sleep") {
+            // A wait between gestures, for multi-phase board reactions (pin
+            // glide, recut, post-recut corrections) that no single event
+            // boundary covers.
+            await sleep(Math.max(0, Number(step.sleep) || 0));
+          } else if (gesture === "press_escape") {
+            // The pane listens on document capture, so a bubbling keydown from
+            // the body reaches it — the same path a real Escape takes.
+            await page.evaluate(() => {
+              document.body.dispatchEvent(
+                new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+              );
             });
+            await sleep(300);
+          } else if (gesture === "push_url") {
+            // A push to a surface the mock router does not own — the shape of
+            // a link-out to main bb. The app's own state is untouched by it.
+            await page.evaluate(
+              (url) => history.pushState(null, "", url),
+              step.push_url,
+            );
             await sleep(200);
           }
-        } else if (gesture === "drag_unidentified") {
-          await page.evaluate(pageDragUnidentified, step.drag_unidentified);
-          await sleep(200);
-        } else if (gesture === "drag_to_column") {
-          await page.evaluate(pageDragToColumn, step.drag_to_column);
-          await sleep(200);
-        } else if (gesture === "hover") {
-          // A hover with a board y-fraction moves the real mouse into that
-          // swimlane band (used by the band_hover assertion); other hovers
-          // carry their own assertion-side evaluation already.
-          if (step.hover && step.hover.board_y !== undefined) {
-            const rect = await page.evaluate(() => {
-              const board = document.querySelector("[data-parent-board]");
-              if (!board) return null;
-              const box = board.getBoundingClientRect();
-              return { top: box.top, height: box.height, left: box.left + box.width / 2 };
-            });
-            if (rect === null) throw new Error("no [data-parent-board] to hover");
-            const y = rect.top + rect.height * Number(step.hover.board_y);
-            await page.mouse.move(rect.left, y);
-            await sleep(120);
-          }
-        } else if (gesture === "key") {
-          await page.evaluate(pageKey, step.key);
-          await sleep(200);
-        } else if (gesture === "back") {
-          // A popstate re-renders React, and the pane effect runs after the
-          // commit; settle before assertions sample the DOM.
-          await page.evaluate(pageGoBack);
-          await sleep(300);
-        } else if (gesture === "click") {
-          await page.evaluate(pageClickCard, step.click);
-          await sleep(300);
-        } else if (gesture === "click_aria") {
-          await page.evaluate(pageClickAria, step.click_aria);
-          await sleep(300);
-        } else if (gesture === "scroll") {
-          await page.evaluate(pageBoardScroll, step.scroll);
-          // The board settles on a 200ms quiet-period debounce plus a smooth
-          // pin glide before it re-locks; give it room before assertions.
-          // settle_ms: 0 skips the wait so a following click lands while the
-          // glide is in flight (the click-during-glide adversarial step).
-          await sleep(Math.max(0, Number(step.scroll.settle_ms ?? 1200)));
-        } else if (gesture === "wheel_pan") {
-          // A real wheel pan through the input pipeline (the same path the
-          // operator's trackpad uses), then a settle wait.
-          await wheelPan(page, step.wheel_pan.dx ?? 130);
-          await sleep(Math.max(0, Number(step.wheel_pan.settle_ms ?? 2500)));
-        } else if (gesture === "resize") {
-          // A viewport change while the lock is held re-runs the layout; let
-          // the resize observer commit before assertions sample the DOM.
-          await page.setViewport({ width: step.resize.width, height: step.resize.height });
-          await sleep(800);
-        } else if (gesture === "sleep") {
-          // A wait between gestures, for multi-phase board reactions (pin
-          // glide, recut, post-recut corrections) that no single event
-          // boundary covers.
-          await sleep(Math.max(0, Number(step.sleep) || 0));
-        } else if (gesture === "press_escape") {
-          // The pane listens on document capture, so a bubbling keydown from
-          // the body reaches it — the same path a real Escape takes.
-          await page.evaluate(() => {
-            document.body.dispatchEvent(
-              new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
-            );
-          });
-          await sleep(300);
-        } else if (gesture === "push_url") {
-          // A push to a surface the mock router does not own — the shape of
-          // a link-out to main bb. The app's own state is untouched by it.
-          await page.evaluate(
-            (url) => history.pushState(null, "", url),
-            step.push_url,
-          );
-          await sleep(200);
+          if (gestureFailed) break;
         }
-        if (gestureFailed) break;
+      } catch (error) {
+        gestureFailed = true;
+        report.steps.push({
+          id: step.id,
+          title: step.title,
+          ok: false,
+          results: [
+            { name: "gesture failed to run", ok: false, detail: String(error?.message ?? error) },
+          ],
+        });
       }
       // A drag that cannot start records itself and skips the step's own
       // assertions, as before the gesture loop existed.
