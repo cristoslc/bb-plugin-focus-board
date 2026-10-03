@@ -1,11 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <!-- Focus Board brand mark ("E1 lane + pupil"): the kanban's middle lane
-       watching what needs you. The two side lanes ride at 55% opacity — bb
-       renders plugin icons as CSS masks keyed off alpha coverage, so the
-       reduced alpha reads as the dimmer tint, same trick as gen-1's faint
-       strokes that was only a failure at stroke-idiom sizes. -->
-  <path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55" stroke="currentColor" stroke-width="2.5"/>
-  <path d="M16.75 4.5H20.75V19.5H16.75Z" opacity=".55" stroke="currentColor" stroke-width="2.5"/>
-  <path d="M9.25 4.5H14.75V19.5H9.25Z" stroke="currentColor" stroke-width="2.5"/>
-  <circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Focus Board brand mark ("E1 lane + pupil", solid-form restore): the
+       kanban's middle lane watching what needs you. Lanes are FILLED
+       shapes, not stroked outlines, and side lanes ride at 55% alpha: bb
+       renders plugin icons as CSS masks keyed off alpha coverage, and the
+       E1 stroked cut's hollow bold-lane interior read as dark breaks
+       around the pupil — the mark rendered as glitched brackets. Solid
+       alpha geometry is renderer-proof; the pupil is an evenodd hole in
+       the bold lane so it reads as the watching dot on any theme. -->
+  <path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55"/>
+  <path d="M16.75 4.5H20.75V19.5H16.75Z" opacity=".55"/>
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M9.25 4.5H14.75V19.5H9.25Z M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 1 0 0-6.8Z"/>
 </svg>

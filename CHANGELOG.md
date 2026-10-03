@@ -14,6 +14,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Brand icon restored: the lane + pupil now renders as drawn.** bb masks
+  plugin icon assets off alpha coverage, and the E1 stroked-outline cut
+  hollowed at icon sizes — the bold lane's hollow interior read as dark
+  breaks around the solid pupil, so the served mark looked glitched
+  ("clobbered"). The asset and the inline `FocusBoard` element are now
+  solid alpha geometry: filled dim side lanes, an opaque bold lane, and
+  the pupil carved as an evenodd hole, renderer-proof at any size and
+  theme. A `tests/brand-icon.test.ts` coverage matrix pins the asset and
+  the inline element to the same mask-safe rules.
+
 - **The long-idle sweep now marks threads Done instead of archiving them.**
   Confirming a sweep on the Idle · A-while-ago column sends its quiet threads
   to the Done column — the same mark-dragging a card there performs — instead
