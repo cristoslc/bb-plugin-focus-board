@@ -19,7 +19,9 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
   },
   {
     "text": "**Brand icon restored: the lane + pupil now renders as drawn.** bb masks plugin icon assets off alpha coverage, and the E1 stroked-outline cut hollowed at icon sizes — the bold lane's hollow interior read as dark breaks around the solid pupil, so the served mark looked glitched (\"clobbered\"). The asset and the inline `FocusBoard` element are now solid alpha geometry: filled dim side lanes, an opaque bold lane, and the pupil carved as an evenodd hole, renderer-proof at any size and theme. A `tests/brand-icon.test.ts` coverage matrix pins the asset and the inline element to the same mask-safe rules.",
-    "children": []
+    "children": [
+      "**The sidebar row and pane title bar now draw the mark too.** Their registration hardcoded a `Columns2` placeholder since the plugin's first commit - the manifest `branding.icon` only covers Settings surfaces, and an earlier bb build that preferred the manifest mark on the nav surfaces had quietly hidden the placeholder. After the Oct 2 bb app update that preference went away and the placeholder came back. The nav panel now registers the brand mark in bb's app-wide icon registry (`FocusBoard`) and draws it on both surfaces, tinted and mask-safe like every other plugin glyph."
+    ]
   },
   {
     "text": "**The sweep is rebuilt around choosing exactly what gets archived, and idle threads now resurface instead of vanishing.** The Done and A-while-ago columns' sweep grew a manual selection flow, a mid-run stop, and a gentler fate for quiet threads:",

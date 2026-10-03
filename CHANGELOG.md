@@ -55,6 +55,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the pupil carved as an evenodd hole, renderer-proof at any size and
   theme. A `tests/brand-icon.test.ts` coverage matrix pins the asset and
   the inline element to the same mask-safe rules.
+  - **The sidebar row and pane title bar now draw the mark too.** Their
+    registration hardcoded a `Columns2` placeholder since the plugin's first
+    commit - the manifest `branding.icon` only covers Settings surfaces, and
+    an earlier bb build that preferred the manifest mark on the nav surfaces
+    had quietly hidden the placeholder. After the Oct 2 bb app update that
+    preference went away and the placeholder came back. The nav panel now
+    registers the brand mark in bb's app-wide icon registry (`FocusBoard`)
+    and draws it on both surfaces, tinted and mask-safe like every other
+    plugin glyph.
 
 - **The sweep is rebuilt around choosing exactly what gets archived, and
   idle threads now resurface instead of vanishing.** The Done and
