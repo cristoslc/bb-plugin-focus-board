@@ -84,7 +84,7 @@ export const FocusBoardLaneEyeIcon: IconSvgElement = [
   [
     "path",
     {
-      d: "M3.25 4.5H7.25V19.5H3.25Z",
+      d: "M2 3H6.5V21H2Z",
       opacity: "0.55",
       fill: "currentColor",
       key: "0",
@@ -93,7 +93,7 @@ export const FocusBoardLaneEyeIcon: IconSvgElement = [
   [
     "path",
     {
-      d: "M16.75 4.5H20.75V16.5H16.75Z",
+      d: "M17.5 3H22V17.5H17.5Z",
       opacity: "0.55",
       fill: "currentColor",
       key: "1",
@@ -102,7 +102,7 @@ export const FocusBoardLaneEyeIcon: IconSvgElement = [
   [
     "path",
     {
-      d: "M9.25 4.5H14.75V19.5H9.25Z M11.45 9.5H12.55A1 1 0 0 1 13.55 10.5V13.5A1 1 0 0 1 12.55 14.5H11.45A1 1 0 0 1 10.45 13.5V10.5A1 1 0 0 1 11.45 9.5Z",
+      d: "M8.75 3H15.25V21H8.75Z M11.15 9H12.85A1 1 0 0 1 13.85 10V14A1 1 0 0 1 12.85 15H11.15A1 1 0 0 1 10.15 14V10A1 1 0 0 1 11.15 9Z",
       fill: "currentColor",
       fillRule: "evenodd",
       clipRule: "evenodd",
