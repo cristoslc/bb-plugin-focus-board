@@ -68,23 +68,25 @@ import {
 } from "./icon-registry";
 
 /**
- * The plugin's own brand mark (assets/icon.svg — the "focal card
- * triptych"): the plain kanban chassis — three outlined columns, all
- * flush at the top, the right one riding short — with a single solid
- * card sitting in the middle column, tall and near the top. The card is
- * the only solid form ("the card that needs you"); no pupil, no punched
- * holes. Mirrored here as an inline IconSvgElement so in-app
- * `Icon name="FocusBoard"` renders the exact artwork the manifest's
- * branding.icon shows (HugeiconsIcon passes opacity through as-is — these
- * are alpha-mask friendly), independent of the asset pipeline.
+ * The plugin's own brand mark (assets/icon.svg — the "inverted lane,
+ * one card"): the kanban chassis flush at the top, the right lane riding
+ * short. The two side lanes are dim solid fills (55% alpha, no outline
+ * strokes); the middle lane is INVERTED — filled solid with the theme
+ * ink, so on light surfaces it reads as a black lane among light lanes —
+ * with one card punched through as a true evenodd hole (the light
+ * surface shows through). No pupil, no eye, no card stack. Mirrored here
+ * as an inline IconSvgElement so in-app `Icon name="FocusBoard"` renders
+ * the exact artwork the manifest's branding.icon shows (HugeiconsIcon
+ * passes opacity through as-is — these are alpha-mask friendly),
+ * independent of the asset pipeline.
  */
 export const FocusBoardLaneEyeIcon: IconSvgElement = [
   [
     "path",
     {
       d: "M3.25 4.5H7.25V19.5H3.25Z",
-      stroke: "currentColor",
-      strokeWidth: "2.5",
+      opacity: "0.55",
+      fill: "currentColor",
       key: "0",
     },
   ],
@@ -92,26 +94,19 @@ export const FocusBoardLaneEyeIcon: IconSvgElement = [
     "path",
     {
       d: "M16.75 4.5H20.75V16.5H16.75Z",
-      stroke: "currentColor",
-      strokeWidth: "2.5",
+      opacity: "0.55",
+      fill: "currentColor",
       key: "1",
     },
   ],
   [
     "path",
     {
-      d: "M9.25 4.5H14.75V19.5H9.25Z",
-      stroke: "currentColor",
-      strokeWidth: "2.5",
-      key: "2",
-    },
-  ],
-  [
-    "path",
-    {
-      d: "M11.8 6.4H12.2A1.3 1.3 0 0 1 13.5 7.7V12.1A1.3 1.3 0 0 1 12.2 13.4H11.8A1.3 1.3 0 0 1 10.5 12.1V7.7A1.3 1.3 0 0 1 11.8 6.4Z",
+      d: "M9.25 4.5H14.75V19.5H9.25Z M11.45 9.5H12.55A1 1 0 0 1 13.55 10.5V13.5A1 1 0 0 1 12.55 14.5H11.45A1 1 0 0 1 10.45 13.5V10.5A1 1 0 0 1 11.45 9.5Z",
       fill: "currentColor",
-      key: "3",
+      fillRule: "evenodd",
+      clipRule: "evenodd",
+      key: "2",
     },
   ],
 ];
