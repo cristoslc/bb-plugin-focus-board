@@ -301,6 +301,24 @@ export function isBuiltinIconName(name: string): name is BuiltinIconName {
   return ICON_NAME_SET.has(name);
 }
 
+/**
+ * The brand mark as a host-registrable app icon component. Registered via
+ * `app.experimental_icons.register` in app.tsx under the name "FocusBoard",
+ * which makes the mark usable anywhere the host takes a `BbIconName` — the
+ * sidebar nav row and the pane's title-bar tab included — instead of the
+ * built-in placeholder glyph the navPanel registration used to carry.
+ */
+export function FocusBoardAppIcon({ className }: { className?: string }) {
+  return (
+    <HugeiconsIcon
+      icon={FocusBoardLaneEyeIcon}
+      className={cn(className)}
+      data-icon="FocusBoard"
+      data-icon-root=""
+    />
+  );
+}
+
 class IconErrorBoundary extends Component<
   { children: ReactNode; fallback: ReactNode },
   { failed: boolean }
