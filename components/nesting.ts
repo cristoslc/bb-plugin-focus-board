@@ -66,12 +66,6 @@ export interface NestingOptions {
    */
   ranks?: RankStore;
   /**
-   * Thread id → epoch-ms done stamp, for the Done column's default sort
-   * (newest done first). Absent for a thread, or an absent map entirely,
-   * leaves that card on the board's derived order.
-   */
-  doneTimes?: ReadonlyMap<string, number>;
-  /**
    * Threads marked Done. `childNests` needs them: a Done parent stays in the
    * Done lane, so its live children still promote (raw-state comparison);
    * a live parent always nests its children (R4).
@@ -109,7 +103,6 @@ export function assembleBoard(
 ): BoardAssembly {
   const nestingEnabled = options.nestingEnabled ?? true;
   const ranks = options.ranks ?? {};
-  const doneTimes = options.doneTimes ?? new Map<string, number>();
   // Archived threads never take a column slot in either mode; when nesting
   // is OFF they render nowhere at all (matching bb's sidebar, where
   // archiving removes the thread from the list).
@@ -124,7 +117,6 @@ export function assembleBoard(
         doneIds,
         now,
         ranks,
-        doneTimes,
       ),
       nestedChildrenByParent: new Map(),
       childCountByParent: new Map(),
@@ -153,7 +145,6 @@ export function assembleBoard(
       doneIds,
       now,
       ranks,
-      doneTimes,
       columnOverrides,
     ),
     threads,

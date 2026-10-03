@@ -14,6 +14,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **The Done column sorts by activity recency again: the most recently active card sits at the top.** The done-stamp order is retired — the idle sweep's fresh stamps no longer vault long-idle threads above recently active ones. A stored drag order still wins, and the parent-lane board's Done row keeps its newest-done-first order.
+
 - **The long-idle sweep now marks threads Done instead of archiving them.**
   Confirming a sweep on the Idle · A-while-ago column sends its quiet threads
   to the Done column — the same mark-dragging a card there performs — instead

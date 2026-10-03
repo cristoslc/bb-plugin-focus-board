@@ -324,9 +324,10 @@ function BoardPage({ subPath }: { subPath: string }) {
     (threadId: string) => doneExtras[threadId]?.keep === true,
     [doneExtras],
   );
-  // Thread id → epoch-ms done stamp, feeding the Done column's default sort
-  // (newest done first). Threads without a record (or the whole map, if
-  // done_list never answered) fall back to the board's derived order.
+  // Thread id → epoch-ms done stamp, feeding the parent-lane board's Done
+  // row sort (newest done first, D9). The main board's Done column ignores
+  // stamps and sorts by activity recency; the idle sweep's fresh stamps must
+  // not vault long-idle threads to the top of that column.
   const doneTimes = useMemo(() => {
     const times = new Map<string, number>();
     for (const [threadId, extra] of Object.entries(doneExtras)) {
@@ -706,9 +707,8 @@ function BoardPage({ subPath }: { subPath: string }) {
         : assembleBoard(searched, groupBy, { projects, providers }, frozenColumns, doneIds, Date.now(), {
             nestingEnabled: nestChildren,
             ranks,
-            doneTimes,
           }),
-    [isParentGroupBy, searched, groupBy, projects, providers, frozenColumns, doneIds, nestChildren, ranks, doneTimes],
+    [isParentGroupBy, searched, groupBy, projects, providers, frozenColumns, doneIds, nestChildren, ranks],
   );
   const columns = assembly?.columns ?? [];
 
