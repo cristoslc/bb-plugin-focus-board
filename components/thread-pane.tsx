@@ -36,6 +36,11 @@ import {
   type ChatClickJumpGuard,
 } from "@/components/chat-jump-guard";
 import { attachScrollDebug } from "@/components/scroll-debug";
+import { AutotitleFallbackModal } from "@/components/autotitle-fallback-modal";
+import type {
+  AutotitleFallbackState,
+  AutotitleTarget,
+} from "@/lib/autotitle";
 
 // Shared header-button classes: a 28px ghost icon button that grows to a
 // 36px touch target on coarse pointers (phones), matching bb's own headers.
@@ -127,6 +132,7 @@ export function EditableTitle({
   title,
   onRename,
   onAutotitle,
+  loadFallbackServices,
 }: {
   title: string;
   onRename: (title: string) => Promise<void>;
@@ -135,7 +141,13 @@ export function EditableTitle({
    * and commit the rename with it. Absent on surfaces without the bridge —
    * the SDK type is what carries it; the button only renders when wired.
    */
-  onAutotitle?: () => Promise<string>;
+  onAutotitle?: (target?: AutotitleTarget) => Promise<string>;
+  /**
+   * The fallback modal's menu (server.ts thread_autotitle_services): the
+   * registered thread-title services plus the current selection. Optional —
+   * the modal still names the failure and takes a manual rename without it.
+   */
+  loadFallbackServices?: () => Promise<AutotitleFallbackState>;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
@@ -147,6 +159,8 @@ export function EditableTitle({
   const [autotitle, setAutotitle] = useState<
     { phase: "idle" } | { phase: "running" } | { phase: "failed"; message: string }
   >({ phase: "idle" });
+  /** The fallback modal: auto-opens on a failed generation, ⚠️ reopens it. */
+  const [fallbackOpen, setFallbackOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   /** Set by cancel/commit so a late ✨ reply cannot rename a closed editor. */
   const sessionDoneRef = useRef(false);
@@ -157,6 +171,7 @@ export function EditableTitle({
       inputRef.current?.select();
       sessionDoneRef.current = false;
       setAutotitle({ phase: "idle" });
+      setFallbackOpen(false);
     }
   }, [editing]);
 
@@ -179,24 +194,39 @@ export function EditableTitle({
     setEditing(false);
   }, [title]);
 
-  const runAutotitle = useCallback(() => {
-    if (onAutotitle === undefined || autotitle.phase === "running") return;
-    sessionDoneRef.current = false;
-    setAutotitle({ phase: "running" });
-    onAutotitle()
-      .then((generated) => {
-        if (sessionDoneRef.current) return;
-        setDraft(generated);
-        commit(generated);
-      })
-      .catch((error: unknown) => {
-        if (sessionDoneRef.current) return;
-        setAutotitle({
-          phase: "failed",
-          message: error instanceof Error ? error.message : String(error),
+  const runAutotitle = useCallback(
+    (target?: AutotitleTarget) => {
+      if (onAutotitle === undefined || autotitle.phase === "running") return;
+      sessionDoneRef.current = false;
+      setAutotitle({ phase: "running" });
+      onAutotitle(target)
+        .then((generated) => {
+          if (sessionDoneRef.current) return;
+          setDraft(generated);
+          commit(generated);
+        })
+        .catch((error: unknown) => {
+          if (sessionDoneRef.current) return;
+          setAutotitle({
+            phase: "failed",
+            message: error instanceof Error ? error.message : String(error),
+          });
+          // A failure must not be a silent ⚠️: the modal names the reason
+          // and offers the ways out (other services, manual rename).
+          setFallbackOpen(true);
         });
-      });
-  }, [onAutotitle, autotitle.phase, commit]);
+    },
+    [onAutotitle, autotitle.phase, commit],
+  );
+
+  /** Manual title from the fallback modal — same commit path as typing. */
+  const renameManually = useCallback(
+    (value: string) => {
+      setFallbackOpen(false);
+      commit(value);
+    },
+    [commit],
+  );
 
   if (!editing) {
     return (
@@ -222,8 +252,13 @@ export function EditableTitle({
         onChange={(event) => setDraft(event.target.value)}
         // Blur commits, except when the blur is the ✨ click: the button
         // prevents default on mousedown, so the input keeps focus and the
-        // generated rename is the only commit the gesture produces.
-        onBlur={() => commit()}
+        // generated rename is the only commit the gesture produces. While
+        // the fallback modal is open the modal itself owns the gesture, so
+        // the blur it causes must not close the editor out from under it.
+        onBlur={() => {
+          if (fallbackOpen) return;
+          commit();
+        }}
         onKeyDown={(event) => {
           event.stopPropagation();
           if (event.key === "Enter" && !event.nativeEvent.isComposing) {
@@ -235,7 +270,7 @@ export function EditableTitle({
             cancel();
           }
         }}
-        className="min-w-0 flex-1 rounded-sm border border-border bg-background px-1.5 pr-7 py-0.5 text-sm font-medium outline-none focus:ring-1 focus:ring-ring"
+        className="w-full min-w-0 flex-1 rounded-sm border border-border bg-background px-1.5 pr-7 py-0.5 text-sm font-medium outline-none focus:ring-1 focus:ring-ring"
         aria-label="Thread title"
       />
       {onAutotitle !== undefined ? (
@@ -244,18 +279,20 @@ export function EditableTitle({
           disabled={autotitle.phase === "running"}
           aria-label={
             autotitle.phase === "failed"
-              ? `Auto-rename failed, click to retry: ${autotitle.message}`
+              ? `Auto-rename failed, click for options: ${autotitle.message}`
               : "Auto-rename from the thread prompt"
           }
           title={
             autotitle.phase === "failed"
-              ? `Auto-rename failed, click to retry: ${autotitle.message}`
+              ? `Auto-rename failed, click for options: ${autotitle.message}`
               : "Auto-rename from the thread prompt"
           }
           onMouseDown={(event) => event.preventDefault()}
           onClick={(event) => {
             event.stopPropagation();
-            runAutotitle();
+            // A failed generation is the modal's job now; ✨ regenerates.
+            if (autotitle.phase === "failed") setFallbackOpen(true);
+            else runAutotitle();
           }}
           className="absolute right-1 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-sm leading-none hover:bg-accent disabled:opacity-60"
         >
@@ -267,6 +304,19 @@ export function EditableTitle({
             <span aria-hidden>✨</span>
           )}
         </button>
+      ) : null}
+      {fallbackOpen ? (
+        <AutotitleFallbackModal
+          open={fallbackOpen}
+          onOpenChange={setFallbackOpen}
+          message={autotitle.phase === "failed" ? autotitle.message : ""}
+          load={loadFallbackServices}
+          onPick={(target) => {
+            setFallbackOpen(false);
+            runAutotitle(target);
+          }}
+          onManualTitle={renameManually}
+        />
       ) : null}
     </div>
   );
@@ -682,12 +732,27 @@ export function ThreadPane({
         <EditableTitle
           title={thread.displayTitle}
           onRename={onRename}
-          onAutotitle={() =>
+          onAutotitle={(target) =>
             // ✨ auto-rename (server.ts thread_autotitle): the title comes
-            // back already cleaned; commit it immediately.
+            // back already cleaned; commit it immediately. A target names an
+            // alternative service the fallback modal picked.
             rpc
-              .call("thread_autotitle", { threadId: thread.id })
+              .call(
+                "thread_autotitle",
+                target === undefined
+                  ? { threadId: thread.id }
+                  : {
+                      threadId: thread.id,
+                      pluginId: target.pluginId,
+                      serviceId: target.serviceId,
+                    },
+              )
               .then((result) => result.title)
+          }
+          loadFallbackServices={() =>
+            rpc
+              .call("thread_autotitle_services", {})
+              .then((result) => result as unknown as AutotitleFallbackState)
           }
         />
         {snoozeWakeAt !== null ? (

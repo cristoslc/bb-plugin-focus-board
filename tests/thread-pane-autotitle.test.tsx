@@ -19,8 +19,19 @@ afterEach(cleanup);
 
 function renderEditor({
   onAutotitle,
+  loadFallbackServices,
 }: {
-  onAutotitle: () => Promise<string>;
+  onAutotitle: (target?: { pluginId: string; serviceId: string }) => Promise<string>;
+  loadFallbackServices?: () => Promise<{
+    selected: { pluginId: string; serviceId: string } | null;
+    services: Array<{
+      pluginId: string;
+      serviceId: string;
+      displayName: string;
+      ready: boolean;
+      message: string | null;
+    }>;
+  }>;
 }) {
   const onRename = vi.fn(async () => {});
   render(
@@ -28,6 +39,7 @@ function renderEditor({
       title: "Old title",
       onRename,
       onAutotitle,
+      loadFallbackServices,
     }),
   );
   // Enter edit mode first.
@@ -85,12 +97,136 @@ describe("title editor auto-rename button", () => {
     const onAutotitle = vi.fn(async () => {
       throw new Error("OpenRouter: 401 invalid key");
     });
-    renderEditor({ onAutotitle });
+    // A loader with an empty menu is the no-bridge-degrades shape: the modal
+    // still opens, so the background (editor included) is aria-hidden while
+    // it is up — query the editor by label, the button by attribute.
+    renderEditor({
+      onAutotitle,
+      loadFallbackServices: async () => ({ selected: null, services: [] }),
+    });
     fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /401 invalid key/ })).toBeTruthy(),
+      expect(
+        document.querySelector(`[aria-label*="401 invalid key"]`),
+      ).not.toBeNull(),
     );
-    // The editor never self-committed a rename off the failed attempt.
+    expect(screen.getByLabelText("Thread title")).toBeTruthy();
+  });
+});
+describe("title editor width", () => {
+  it("spans the editor wrapper so no dead space sits between box and ✨", () => {
+    renderEditor({ onAutotitle: async () => "New title" });
+    const input = screen.getByRole("textbox", { name: "Thread title" });
+    // The wrapper hosts the absolutely-placed ✨; an input without w-full
+    // keeps its intrinsic ~20ch width and leaves the gap the width bug was.
+    expect(input.className).toMatch(/\bw-full\b/);
+  });
+});
+
+describe("auto-rename fallback modal", () => {
+  const FALLBACK = {
+    selected: { pluginId: "openrouter-inference", serviceId: "default" },
+    services: [
+      { pluginId: "openrouter-inference", serviceId: "default", displayName: "OpenRouter", ready: true, message: null },
+      { pluginId: "other-plugin", serviceId: "alt", displayName: "Other service", ready: true, message: null },
+      { pluginId: "bb-ai", serviceId: "cloud", displayName: "bb cloud", ready: false, message: "Sign in to your bb account" },
+    ],
+  };
+
+  function failingRender(overrides?: {
+    onAutotitle?: (target?: { pluginId: string; serviceId: string }) => Promise<string>;
+  }) {
+    return renderEditor({
+      onAutotitle:
+        overrides?.onAutotitle ??
+        (async () => {
+          throw new Error("OpenRouter: 401 invalid key");
+        }),
+      loadFallbackServices: async () => FALLBACK,
+    });
+  }
+
+  it("a failed generation auto-opens a modal naming the reason", async () => {
+    failingRender();
+    fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
+    const modal = await screen.findByRole("dialog");
+    expect(modal).toBeTruthy();
+    expect(screen.getByText(/401 invalid key/)).toBeTruthy();
+  });
+
+  it("offers ready alternatives and routes the pick through the override", async () => {
+    const onAutotitle = vi.fn(
+      async (target?: { pluginId: string; serviceId: string }) => {
+        if (target === undefined) throw new Error("OpenRouter: 401 invalid key");
+        expect(target).toEqual({ pluginId: "other-plugin", serviceId: "alt" });
+        return "Other title";
+      },
+    );
+    const { onRename } = failingRender({ onAutotitle });
+    fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
+    const option = await screen.findByRole("button", { name: /Other service/ });
+    fireEvent.click(option);
+    await waitFor(() => expect(onRename).toHaveBeenCalledWith("Other title"));
+    // Success closes editor and modal.
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("textbox", { name: "Thread title" }),
+      ).toBeNull(),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(onAutotitle).toHaveBeenCalledTimes(2);
+  });
+
+  it("lists not-ready services as disabled rows naming their blocker", async () => {
+    failingRender();
+    fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
+    const row = await screen.findByRole("button", { name: /bb cloud/ });
+    expect(row.disabled).toBe(true);
+    expect(screen.getByText(/Sign in to your bb account/)).toBeTruthy();
+  });
+
+  it("excludes the failed selected service from the alternatives", async () => {
+    failingRender();
+    fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
+    await screen.findByRole("dialog");
+    expect(screen.queryByRole("button", { name: /^OpenRouter$/ })).toBeNull();
+  });
+
+  it("names why the thread's active model is not offered", async () => {
+    failingRender();
+    fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
+    await screen.findByRole("dialog");
+    const row = screen.getByRole("button", { name: /active model/i });
+    expect(row.disabled).toBe(true);
+    expect(screen.getByText(/cannot invoke/i)).toBeTruthy();
+  });
+
+  it("lets the user rename manually from the modal", async () => {
+    const onAutotitle = vi.fn(
+      async () => {
+        throw new Error("OpenRouter: 401 invalid key");
+      },
+    );
+    const { onRename } = failingRender({ onAutotitle });
+    fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
+    const manual = await screen.findByRole("textbox", { name: "Manual title" });
+    fireEvent.change(manual, { target: { value: "Manual title" } });
+    fireEvent.click(screen.getByRole("button", { name: /use this title/i }));
+    await waitFor(() => expect(onRename).toHaveBeenCalledWith("Manual title"));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("textbox", { name: "Thread title" }),
+      ).toBeNull(),
+    );
+  });
+
+  it("closes the modal without closing the editor", async () => {
+    failingRender();
+    fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
+    await screen.findByRole("dialog");
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    // The editor stays open so the rename attempt is not lost.
     expect(screen.getByRole("textbox", { name: "Thread title" })).toBeTruthy();
   });
 });

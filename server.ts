@@ -61,10 +61,12 @@ import { readGitHubStatuses } from "./lib/tracker-status";
 import { resolveRepoSlug } from "./lib/tickets";
 import { resolveWithinRoot } from "./lib/workspace-paths";
 import {
+  autotitleTargets,
   buildAutotitlePrompt,
   cleanGeneratedTitle,
   promptTextFromHistory,
   resolveTitleSelection,
+  resolveTitleTarget,
   type AutotitleHistoryEntry,
 } from "./lib/autotitle";
 import type { JsonValue } from "@get-bb/plugin-sdk";
@@ -164,8 +166,36 @@ export const rpcContract = defineRpcContract({
   // the title rides the cross-plugin RPC bridge into the selected service's
   // own `complete` method; lib/autotitle.ts owns the pure pieces.
   thread_autotitle: {
-    input: z.object({ threadId: z.string().min(1) }),
+    input: z.object({
+      threadId: z.string().min(1),
+      // Override target from the fallback modal: generate with an
+      // alternative service instead of the failing selected one. Both or
+      // neither — a half-given pair is refused in the handler.
+      pluginId: z.string().min(1).optional(),
+      serviceId: z.string().min(1).optional(),
+    }),
     output: z.object({ title: z.string() }),
+  },
+
+  // The fallback modal's menu: every registered service that can serve a
+  // thread title (with readiness) plus the current selection, so the pane
+  // can offer alternatives when the selected service fails.
+  thread_autotitle_services: {
+    input: z.object({}),
+    output: z.object({
+      selected: z
+        .object({ pluginId: z.string(), serviceId: z.string() })
+        .nullable(),
+      services: z.array(
+        z.object({
+          pluginId: z.string(),
+          serviceId: z.string(),
+          displayName: z.string(),
+          ready: z.boolean(),
+          message: z.string().nullable(),
+        }),
+      ),
+    }),
   },
 
   // Existence check behind the thread pane's inline-code file links: the
@@ -801,13 +831,20 @@ export default async function plugin(bb: BbPluginApi) {
       const cleared = await clearSnooze(threadId);
       return { threadId, cleared };
     },
-    thread_autotitle: async ({ threadId }) => {
-      const selection = resolveTitleSelection(
-        (await bb.sdk.system.aiServices()) as Parameters<
-          typeof resolveTitleSelection
-        >[0],
+    thread_autotitle: async ({ threadId, pluginId, serviceId }) => {
+      const servicesState = (await bb.sdk.system.aiServices()) as Parameters<
+        typeof resolveTitleTarget
+      >[0];
+      const resolved = resolveTitleTarget(
+        servicesState,
+        pluginId === undefined && serviceId === undefined
+          ? undefined
+          : { pluginId, serviceId },
       );
-      if (!selection.ok) throw new Error(selection.reason);
+      // Selection reason (not set to a plugin service) or override refusal
+      // (unregistered, wrong task, not ready) both fail loud with the fix.
+      if (!resolved.ok) throw new Error(resolved.reason);
+      const selection = resolved;
       const history = (await bb.sdk.threads.promptHistory({
         threadId,
       })) as unknown as readonly AutotitleHistoryEntry[];
@@ -838,6 +875,18 @@ export default async function plugin(bb: BbPluginApi) {
         );
       }
       return { title };
+    },
+    thread_autotitle_services: async () => {
+      const state = (await bb.sdk.system.aiServices()) as Parameters<
+        typeof resolveTitleTarget
+      >[0];
+      const selected = resolveTitleSelection(state);
+      return {
+        selected: selected.ok
+          ? { pluginId: selected.pluginId, serviceId: selected.serviceId }
+          : null,
+        services: [...autotitleTargets(state)],
+      };
     },
     tracker_status: async ({ repo, numbers }) => {
       const home = process.env.HOME ?? "";
