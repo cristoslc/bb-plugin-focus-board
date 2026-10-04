@@ -202,6 +202,10 @@ export const rpcContract = defineRpcContract({
           displayName: z.string(),
           ready: z.boolean(),
           message: z.string().nullable(),
+          // ✨ bridge classification: whether the service's plugin answers
+          // the `complete` RPC at all (probed with invalid input, cached).
+          bridge: z.boolean(),
+          bridgeReason: z.string().nullable(),
         }),
       ),
       threadModel: z.object({
@@ -787,6 +791,56 @@ export default async function plugin(bb: BbPluginApi) {
   const probeDelay = (ms: number) =>
     new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+  // ---- ✨ bridge classification (thread_autotitle_services) ----
+  // Only plugins implementing a `complete` RPC method can serve the ✨ at
+  // all (the openrouter-inference fork does; bb's builtin cloud and
+  // provider-codex do not — ready-but-unbridged services 404 on pick, the
+  // "errors on all providers" shape). The capability probe calls `complete`
+  // with a deliberately invalid prompt: without the method bb answers 404;
+  // with it, the target contract's own validation rejects the input — and a
+  // non-string prompt can never reach a model, so the probe is free.
+  const BRIDGE_TTL_MS = 60_000;
+  const bridgeStatus = new Map<string, { at: number; ok: boolean; reason: string | null }>();
+
+  async function probeCompleteBridge(
+    pluginId: string,
+  ): Promise<{ ok: boolean; reason: string | null }> {
+    try {
+      await bb.sdk.plugins.callRpc({
+        pluginId,
+        method: "complete",
+        input: { prompt: 1 } as never,
+        outputSchema: z.object({ text: z.string() }).passthrough(),
+        signal: AbortSignal.timeout(5_000),
+      });
+      return { ok: true, reason: null };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      // This exact shape is what bb answers for a method the plugin lacks;
+      // anything else is the target contract refusing the bad prompt —
+      // proof the method exists.
+      if (/no rpc method|\b404\b|not found/i.test(message)) {
+        return {
+          ok: false,
+          reason: `${pluginId} does not expose the complete bridge focus-board calls (only plugins implementing one can serve the ✨)`,
+        };
+      }
+      return { ok: true, reason: null };
+    }
+  }
+
+  async function serviceBridgeState(
+    pluginId: string,
+  ): Promise<{ ok: boolean; reason: string | null }> {
+    const cached = bridgeStatus.get(pluginId);
+    if (cached !== undefined && Date.now() - cached.at < BRIDGE_TTL_MS) {
+      return cached;
+    }
+    const fresh = await probeCompleteBridge(pluginId);
+    bridgeStatus.set(pluginId, { at: Date.now(), ...fresh });
+    return fresh;
+  }
+
   /** Can this thread's own model generate a title? Used by the fallback modal's menu. */
   async function threadModelAvailability(
     threadId: string,
@@ -1097,7 +1151,17 @@ export default async function plugin(bb: BbPluginApi) {
         selected: selected.ok
           ? { pluginId: selected.pluginId, serviceId: selected.serviceId }
           : null,
-        services: [...autotitleTargets(state)],
+        services: await Promise.all(
+          autotitleTargets(state).map(async (target) => {
+            if (!target.ready) {
+              // A not-ready service is already blocked by its own message;
+              // no need to spend a probe on it.
+              return { ...target, bridge: false, bridgeReason: null };
+            }
+            const bridge = await serviceBridgeState(target.pluginId);
+            return { ...target, bridge: bridge.ok, bridgeReason: bridge.reason };
+          }),
+        ),
         threadModel,
       };
     },

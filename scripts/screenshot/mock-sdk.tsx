@@ -291,9 +291,9 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     return {
       selected: { pluginId: "openrouter-inference", serviceId: "default" },
       services: [
-        { pluginId: "openrouter-inference", serviceId: "default", displayName: "OpenRouter", ready: true, message: null },
-        { pluginId: "sim-alternative", serviceId: "other", displayName: "Simulated other service", ready: true, message: null },
-        { pluginId: "sim-offline", serviceId: "down", displayName: "Simulated offline service", ready: false, message: "Simulated sign-in needed" },
+        { pluginId: "openrouter-inference", serviceId: "default", displayName: "OpenRouter", ready: true, message: null, bridge: true, bridgeReason: null },
+        { pluginId: "sim-alternative", serviceId: "other", displayName: "Simulated other service", ready: true, message: null, bridge: true, bridgeReason: null },
+        { pluginId: "sim-offline", serviceId: "down", displayName: "Simulated offline service", ready: false, message: "Simulated sign-in needed", bridge: false, bridgeReason: null },
       ],
       threadModel: { available: true, reason: null },
     };

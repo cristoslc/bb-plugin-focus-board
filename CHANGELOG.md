@@ -13,7 +13,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   on the provider/model bb resolved for the source thread, reads the title
   off its timeline, and deletes the probe in every path. The probe runs a
   no-tools instruction, so it never touches the workspace; the row names
-  what's missing when the thread has no resolved model or project.
+  what's missing when the thread has no resolved model or project. The
+  modal's other-services list also learned honesty: each ready service is
+  probed for the `complete` bridge focus-board calls (cached 60s — a
+  deliberately invalid probe input can never trigger a model call), and a
+  service whose plugin lacks the bridge (bb cloud, Codex) renders disabled
+  with its reason instead of a click that 404s.
 
 ### Changed
 

@@ -116,11 +116,21 @@ export function AutotitleFallbackModal({
                 Generate with another AI service
               </p>
               <ul className="mt-1 space-y-1">
-                {alternatives.map((service) => (
+                {alternatives.map((service) => {
+                  // Clickable only when ready AND bridged: a ready service
+                  // whose plugin lacks the `complete` RPC 404s on pick —
+                  // the "everything errors" trap — so it renders blocked.
+                  const bridged = service.ready && service.bridge !== false;
+                  const blocker = !service.ready
+                    ? service.message
+                    : service.bridge === false
+                      ? service.bridgeReason
+                      : null;
+                  return (
                   <li key={`${service.pluginId}/${service.serviceId}`}>
                     <button
                       type="button"
-                      disabled={!service.ready}
+                      disabled={!bridged}
                       onClick={(event) => {
                         event.stopPropagation();
                         onPick({
@@ -132,20 +142,21 @@ export function AutotitleFallbackModal({
                     >
                       <span>
                         {service.displayName}
-                        {!service.ready && service.message !== null ? (
+                        {blocker !== null && blocker !== undefined ? (
                           <span className="ml-2 text-xs text-muted-foreground">
-                            {service.message}
+                            {blocker}
                           </span>
                         ) : null}
                       </span>
-                      {service.ready ? (
+                      {bridged ? (
                         <span aria-hidden>✨</span>
                       ) : (
                         <span aria-hidden>—</span>
                       )}
                     </button>
                   </li>
-                ))}
+                  );
+                })}
                 {alternatives.length === 0 ? (
                   <li className="text-muted-foreground">
                     No other AI services are registered in bb.

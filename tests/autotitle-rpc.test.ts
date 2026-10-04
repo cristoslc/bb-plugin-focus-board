@@ -90,14 +90,14 @@ describe("thread_autotitle_services contract", () => {
       rpcContract.thread_autotitle_services.output.parse({
         selected: { pluginId: "p", serviceId: "s" },
         services: [
-          { pluginId: "p", serviceId: "s", displayName: "D", ready: true, message: null },
+          { pluginId: "p", serviceId: "s", displayName: "D", ready: true, message: null, bridge: true, bridgeReason: null },
         ],
         threadModel: { available: true, reason: null },
       }),
     ).toEqual({
       selected: { pluginId: "p", serviceId: "s" },
       services: [
-        { pluginId: "p", serviceId: "s", displayName: "D", ready: true, message: null },
+        { pluginId: "p", serviceId: "s", displayName: "D", ready: true, message: null, bridge: true, bridgeReason: null },
       ],
       threadModel: { available: true, reason: null },
     });
@@ -156,6 +156,8 @@ describe("thread_autotitle_services against the fake host", () => {
         displayName: string;
         ready: boolean;
         message: string | null;
+        bridge: boolean;
+        bridgeReason: string | null;
       }>;
     };
     expect(out.selected).toEqual({
@@ -163,8 +165,11 @@ describe("thread_autotitle_services against the fake host", () => {
       serviceId: "default",
     });
     expect(out.services).toEqual([
-      { pluginId: "openrouter-inference", serviceId: "default", displayName: "OpenRouter", ready: true, message: null },
-      { pluginId: "bb-ai", serviceId: "cloud", displayName: "bb cloud", ready: false, message: "Sign in to your bb account" },
+      // The ready OpenRouter row gets bridge-verified via the invalid-input
+      // probe (fake host answers → true); the not-ready bb cloud row skips
+      // the probe and reports bridge:false with its own message carrying.
+      { pluginId: "openrouter-inference", serviceId: "default", displayName: "OpenRouter", ready: true, message: null, bridge: true, bridgeReason: null },
+      { pluginId: "bb-ai", serviceId: "cloud", displayName: "bb cloud", ready: false, message: "Sign in to your bb account", bridge: false, bridgeReason: null },
     ]);
   });
 
@@ -378,5 +383,97 @@ describe("thread_autotitle_services thread-model availability", () => {
     })) as { threadModel: { available: boolean; reason: string | null } };
     expect(out.threadModel.available).toBe(false);
     expect(out.threadModel.reason).not.toBeNull();
+  });
+});
+
+describe("thread_autotitle_services bridge classification", () => {
+  // Distinct plugin ids per test: the bridge-status cache is process-wide
+  // and keying by plugin id means one test's classification must never
+  // leak into another's.
+  const SERVICES = (ids: string[]) =>
+    ids.map((id) => ({
+      pluginId: id,
+      id: "default",
+      displayName: `${id} service`,
+      automaticRank: null,
+      status: { ready: true },
+      tasks: ["thread-title", "commit-message"],
+    }));
+
+  it("reports bridge:true for a service whose plugin takes the complete call", async () => {
+    const { callRpc } = await setup({
+      selection: { mode: "off" },
+      services: SERVICES(["svc-ok"]),
+    });
+    const out = (await callRpc("thread_autotitle_services", { threadId: "thr_x" })) as {
+      services: Array<{ bridge: boolean; bridgeReason: string | null }>;
+    };
+    expect(out.services[0]).toMatchObject({ bridge: true, bridgeReason: null });
+  });
+
+  it("reports bridge:false for a plugin without the complete method, the 404 shape", async () => {
+    const { callRpc } = await setup({
+      selection: { mode: "off" },
+      services: SERVICES(["svc-404"]),
+      rpcErrorByPluginId: {
+        "svc-404": 'HTTP 404: plugin "svc-404" has no rpc method "complete"',
+      },
+    });
+    const out = (await callRpc("thread_autotitle_services", { threadId: "thr_x" })) as {
+      services: Array<{ bridge: boolean; bridgeReason: string | null }>;
+    };
+    expect(out.services[0].bridge).toBe(false);
+    expect(out.services[0].bridgeReason).toMatch(/bridge|complete/i);
+  });
+
+  it("the capability probe can never trigger a model call: the prompt is not a string", async () => {
+    const { callRpc, lastServiceCall } = await setup({
+      selection: { mode: "off" },
+      services: SERVICES(["svc-probe"]),
+    });
+    await callRpc("thread_autotitle_services", { threadId: "thr_x" });
+    const call = lastServiceCall();
+    expect(call?.method).toBe("complete");
+    // A non-string prompt fails the target contract's own validation in
+    // the plugin that HAS the bridge, and a 404 in one that has not —
+    // either way no model is ever billed.
+    expect(call?.input).toMatchObject({ prompt: 1 });
+  });
+
+  it("caches the classification: repeated menus probe a plugin only once", async () => {
+    const { callRpc, allServiceCalls } = await setup({
+      selection: { mode: "off" },
+      services: SERVICES(["svc-cached"]),
+    });
+    await callRpc("thread_autotitle_services", { threadId: "thr_x" });
+    await callRpc("thread_autotitle_services", { threadId: "thr_x" });
+    expect(
+      allServiceCalls().filter((call) => call.pluginId === "svc-cached"),
+    ).toHaveLength(1);
+  });
+
+  it("the contract requires the bridge fields on every service entry", () => {
+    const entry = {
+      pluginId: "p",
+      serviceId: "s",
+      displayName: "D",
+      ready: true,
+      message: null,
+      bridge: true,
+      bridgeReason: null,
+    };
+    expect(rpcContract.thread_autotitle_services.output.parse({
+      selected: null,
+      services: [entry],
+      threadModel: { available: true, reason: null },
+    })).toEqual({ selected: null, services: [entry], threadModel: { available: true, reason: null } });
+    expect(() =>
+      rpcContract.thread_autotitle_services.output.parse({
+        selected: null,
+        // Missing bridge fields: the modal cannot classify without them.
+        services: [{ ...entry, bridge: undefined, bridgeReason: undefined }],
+        threadModel: { available: true, reason: null },
+      }),
+    ).toThrow(z.ZodError);
   });
 });

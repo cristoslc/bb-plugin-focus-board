@@ -13,6 +13,8 @@ export type AutotitleTestHost = {
   callRpc: (method: string, input?: unknown) => Promise<unknown>;
   /** The latest plugins.callRpc invocation, or null when none happened. */
   lastServiceCall: () => { pluginId: string; method: string; input: unknown } | null;
+  /** Every plugins.callRpc invocation, oldest first — the bridge probe shows up here. */
+  allServiceCalls: () => Array<{ pluginId: string; method: string; input: unknown }>;
   /** The threads.spawn args of the latest probe spawn, or null when none. */
   lastSpawn: () => Record<string, unknown> | null;
   /** Thread ids threads.delete was called with, in order. */
@@ -30,6 +32,12 @@ export type AutotitleSetupOptions = {
   history?: unknown[];
   /** What the stubbed service plugin answers with; a throw simulates failure. */
   serviceReply?: unknown | (() => never);
+  /**
+   * Error message thrown by plugins.callRpc for the given pluginId — the
+   * "HTTP 404: plugin X has no rpc method complete" shape bb answers for
+   * plugins without the bridge.
+   */
+  rpcErrorByPluginId?: Record<string, string>;
   /** threads.defaultExecutionOptions result; undefined = a usable pair, null = unavailable. */
   executionOptions?: unknown;
   /** threads.get result for the source thread; defaults to a proj/env row. */
@@ -74,6 +82,11 @@ export async function setup(
   let lastCall:
     | { pluginId: string; method: string; input: unknown }
     | null = null;
+  const allServiceCalls: Array<{
+    pluginId: string;
+    method: string;
+    input: unknown;
+  }> = [];
   let spawnArgs: Record<string, unknown> | null = null;
   let probeId: string | null = null;
   let probeCounter = 0;
@@ -139,6 +152,13 @@ export async function setup(
       },
       plugins: {
         callRpc: async (args: { pluginId: string; method: string; input?: unknown }) => {
+          const rpcError = opts.rpcErrorByPluginId?.[args.pluginId];
+          if (rpcError !== undefined) throw new Error(rpcError);
+          allServiceCalls.push({
+            pluginId: args.pluginId,
+            method: args.method,
+            input: args.input,
+          });
           lastCall = { pluginId: args.pluginId, method: args.method, input: args.input };
           if (opts.serviceReply instanceof Function) return opts.serviceReply();
           if (opts.serviceReply !== undefined) return opts.serviceReply;
@@ -153,6 +173,8 @@ export async function setup(
     harness: host.harness,
     callRpc: (method, input) => host.harness.callRpc(method, input) as Promise<unknown>,
     lastServiceCall: () => lastCall,
+    /** Every plugins.callRpc invocation, oldest first (probe calls included). */
+    allServiceCalls: () => [...allServiceCalls],
     lastSpawn: () => spawnArgs,
     deletedProbes: () => deleted,
     stoppedProbes: () => stopped,

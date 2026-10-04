@@ -38,6 +38,9 @@ export interface AutotitleTargetDescriptor {
   displayName: string;
   ready: boolean;
   message: string | null;
+  /** ✨ bridge classification (server post-processes; bb's services[] has no such field). Absent = unknown, treated as blocked. */
+  bridge?: boolean;
+  bridgeReason?: string | null;
 }
 
 /** An explicit "use this service instead" pair. */

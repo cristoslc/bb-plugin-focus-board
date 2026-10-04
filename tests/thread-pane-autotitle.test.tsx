@@ -30,6 +30,8 @@ function renderEditor({
       displayName: string;
       ready: boolean;
       message: string | null;
+      bridge?: boolean;
+      bridgeReason?: string | null;
     }>;
     threadModel: { available: boolean; reason: string | null };
   }>;
@@ -294,5 +296,54 @@ describe("fallback modal thread-model row", () => {
     const row = await screen.findByRole("button", { name: /active model/i });
     expect(row.disabled).toBe(true);
     expect(screen.getByText(/no resolved model/i)).toBeTruthy();
+  });
+});
+
+describe("bridge capability in the fallback modal", () => {
+  const BRIDGE_FIXTURE = {
+    selected: { pluginId: "openrouter-inference", serviceId: "default" },
+    services: [
+      { pluginId: "other-plugin", serviceId: "alt", displayName: "Other service", ready: true, message: null, bridge: true, bridgeReason: null },
+      {
+        pluginId: "provider-codex",
+        serviceId: "codex",
+        displayName: "Codex",
+        ready: true,
+        message: null,
+        bridge: false,
+        bridgeReason:
+          "its plugin does not expose the complete bridge focus-board calls",
+      },
+    ],
+    threadModel: { available: false, reason: "This thread has no resolved model" },
+  };
+
+  it("a ready service without the bridge renders disabled, naming the blocker", async () => {
+    // All three ✨-capable providers failing live looked like "errors on all
+    // providers": ready-but-unbridged services were clickable and 404'd.
+    renderEditor({
+      onAutotitle: async () => {
+        throw new Error("OpenRouter: 401 invalid key");
+      },
+      loadFallbackServices: async () => BRIDGE_FIXTURE,
+    });
+    fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
+    const codex = await screen.findByRole("button", { name: /^Codex/ });
+    expect(codex.disabled).toBe(true);
+    expect(
+      screen.getByText(/does not expose the complete bridge/i),
+    ).toBeTruthy();
+  });
+
+  it("a ready bridged service stays clickable", async () => {
+    renderEditor({
+      onAutotitle: async () => {
+        throw new Error("OpenRouter: 401 invalid key");
+      },
+      loadFallbackServices: async () => BRIDGE_FIXTURE,
+    });
+    fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
+    const other = await screen.findByRole("button", { name: /Other service/ });
+    expect(other.disabled).toBe(false);
   });
 });
