@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-03
+
 ### Changed
 
 - **New threads compose inside the board.** The toolbar, column, and
