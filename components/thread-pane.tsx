@@ -624,8 +624,14 @@ export function ThreadPane({
         </Button>
         {(() => {
           const actionItems: (ActionMenuItem | SnoozeMenuAction)[] = [
-            // Pin rides at the menu's head, like the card menu. An archived
-            // row pins nothing: its only way out is Unarchive.
+            {
+              id: "done",
+              label: isDone ? "Mark Not Done" : "Mark Done",
+              icon: isDone ? "CircleCheck" : "Check",
+              run: () => onToggleDone(!isDone),
+            },
+            // Pin sits after the done toggle. An archived row pins nothing:
+            // its only way out is Unarchive.
             ...(isArchived
               ? []
               : [
@@ -636,12 +642,6 @@ export function ThreadPane({
                     run: onTogglePinned,
                   },
                 ]),
-            {
-              id: "done",
-              label: isDone ? "Mark Not Done" : "Mark Done",
-              icon: isDone ? "CircleCheck" : "Check",
-              run: () => onToggleDone(!isDone),
-            },
             // The single snooze entry (Snooze… / Edit snooze…), then archive.
             ...(snoozeMenuItems ?? []),
             {

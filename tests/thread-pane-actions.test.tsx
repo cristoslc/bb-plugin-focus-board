@@ -150,7 +150,7 @@ describe("snooze entries in the actions menu", () => {
     );
     openActionsMenu();
     const item = screen.getByRole("menuitem", { name: "Snooze…" });
-    expect(screen.getAllByRole("menuitem")).toHaveLength(4); // Pin, Done, Snooze…, Archive
+    expect(screen.getAllByRole("menuitem")).toHaveLength(4); // Done, Pin, Snooze…, Archive
     fireEvent.click(item);
     expect(openPicker).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("menuitem", { name: "Snooze…" })).toBeNull();
@@ -186,7 +186,7 @@ describe("snooze entries in the actions menu", () => {
     const labels = Array.from(menu.querySelectorAll("[role='menuitem']")).map(
       (item) => item.textContent,
     );
-    expect(labels).toEqual(["Pin", "Mark Done", "Snooze…", "Archive"]);
+    expect(labels).toEqual(["Mark Done", "Pin", "Snooze…", "Archive"]);
     const head = Array.from(menu.querySelectorAll("[role='menuitem']")).find(
       (item) => item.textContent === "Snooze…",
     );

@@ -29,10 +29,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `bb focus-board snooze list|set|clear`.
 
 - **The thread pane's actions menu pins again.** The opened pane's more-actions
-  menu carries a Pin/Unpin entry at its head (an archived row's menu keeps
-  just its Unarchive), with the card menu's semantics: the gesture lifts a
-  snooze and clears a parked pin, the reveal claim arms before the write, and
-  the card's lane move reveals after the pin lands.
+  menu carries a Pin/Unpin entry between Mark Done and the snooze entry (an
+  archived row's menu keeps just its Unarchive), with the card menu's
+  semantics: the gesture lifts a snooze and clears a parked pin, the reveal
+  claim arms before the write, and the card's lane move reveals after the pin
+  lands.
 
 ### Changed
 
