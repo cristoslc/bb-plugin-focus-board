@@ -19,6 +19,8 @@ Fine-grained notes that don't belong in the README's feature list.
 - Archived children are hidden outright: they render nowhere on either board view, child chips count only visible children, and the children of an archived parent render standalone instead of vanishing.
 - A family card that nests more than five child rows caps the list and scrolls inside the card; the collapse chevron still hides the whole list.
 - A column drained to zero by nesting hides until a card returns to it.
+- A family card's nested rows can be collapsed: the chevron folds the rows into a "N child threads" pill that re-opens them, and the collapsed families persist across sessions (localStorage).
+- A collapsed card opens by itself when one of its nested children turns unread or needs you; a family collapsed while a child was already unread stays folded.
 
 ## Escape
 

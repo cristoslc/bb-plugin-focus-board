@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Collapsible nested children on family cards.** The chevron on a card with
+  nested child threads now folds the rows into a "N child threads" pill that
+  re-opens them, and collapsed families persist across sessions. A folded card
+  opens by itself when one of its nested children turns unread or needs you; a
+  family collapsed while a child was already unread stays folded.
+
 ### Changed
 
 - **Every lane now has its sweep, each with its own destination.** Pinned
