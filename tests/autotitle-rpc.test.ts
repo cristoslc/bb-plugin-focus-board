@@ -562,3 +562,57 @@ describe("thread_autotitle_services bridge classification", () => {
     ).toThrow(z.ZodError);
   });
 });
+
+describe("promptHistory paging", () => {
+  it("requests a large limit so the thread's oldest rows survive page truncation", async () => {
+    const { callRpc, lastPromptHistoryArgs } = await setup({});
+    await callRpc("thread_autotitle", { threadId: "thr_x" });
+    // bb pages prompt history newest-first; a default-sized page drops the
+    // originating prompt on long threads (found live: the oldest visible
+    // row was mid-thread). Ask big, sort oldest-first locally.
+    expect(lastPromptHistoryArgs()).toMatchObject({ threadId: "thr_x", limit: "200" });
+  });
+});
+
+describe("the probe titles from the thread's originating prompt", () => {
+  // bb's prompt history misses spawn inputs entirely (composer turns only,
+  // found live via `bb thread history`), so the originating prompt is read
+  // from the source thread's timeline first; history is the fallback.
+  it("reads the source thread's first user timeline row", async () => {
+    const { callRpc, lastSpawn } = await setup({
+      sourceTimeline: {
+        rows: [
+          { kind: "conversation", role: "user", sourceSeqStart: 30, text: "so why is it still refused?" },
+          { kind: "conversation", role: "user", sourceSeqStart: 1, text: "When renaming a thread, I'd like an emoji button" },
+        ],
+      },
+    });
+    await callRpc("thread_autotitle", { threadId: "thr_x", useThreadModel: true });
+    const prompt = (lastSpawn() as { prompt: string }).prompt;
+    expect(prompt).toContain("emoji button");
+    expect(prompt).not.toContain("still refused");
+  });
+
+  it("falls back to prompt history when the source timeline has no user text", async () => {
+    const { callRpc, lastServiceCall } = await setup({ sourceTimeline: [] });
+    await callRpc("thread_autotitle", { threadId: "thr_x" });
+    expect((lastServiceCall()!.input as { prompt: string }).prompt).toContain(
+      "login redirect loop",
+    );
+  });
+
+  it("the selected-service path titles from the timeline too", async () => {
+    const { callRpc, lastServiceCall } = await setup({
+      sourceTimeline: {
+        rows: [
+          { kind: "conversation", role: "user", sourceSeqStart: 30, text: "a later follow-up" },
+          { kind: "conversation", role: "user", sourceSeqStart: 1, text: "The original task text" },
+        ],
+      },
+    });
+    await callRpc("thread_autotitle", { threadId: "thr_x" });
+    const prompt = (lastServiceCall()!.input as { prompt: string }).prompt;
+    expect(prompt).toContain("original task text");
+    expect(prompt).not.toContain("later follow-up");
+  });
+});

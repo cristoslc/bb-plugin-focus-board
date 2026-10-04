@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
   assistantTextFromTimeline,
   buildAutotitleProbePrompt,
+  firstUserPromptFromTimeline,
   probeSettled,
   type AutotitleTimelineRow,
 } from "../lib/autotitle-thread-model";
@@ -92,5 +93,45 @@ describe("probeSettled", () => {
     expect(probeSettled("active")).toBe(false);
     expect(probeSettled("stopping")).toBe(false);
     expect(probeSettled("mystery")).toBe(false);
+  });
+});
+describe("firstUserPromptFromTimeline", () => {
+  it("takes the oldest user row when bb returns rows newest-first", () => {
+    expect(
+      firstUserPromptFromTimeline([
+        { kind: "conversation", role: "user", sourceSeqStart: 30, text: "so why is it still refused?" },
+        { kind: "conversation", role: "user", sourceSeqStart: 1, text: "When renaming a thread, I'd like an emoji button" },
+      ]),
+    ).toBe("When renaming a thread, I'd like an emoji button");
+  });
+
+  it("falls through older rows that are not usable user text", () => {
+    expect(
+      firstUserPromptFromTimeline([
+        { kind: "conversation", role: "assistant", sourceSeqStart: 1, text: "an earlier reply" },
+        { kind: "system", sourceSeqStart: 2, text: "noise" },
+        { kind: "conversation", role: "user", sourceSeqStart: 3, text: "   " },
+        { kind: "conversation", role: "user", sourceSeqStart: 4, text: "First usable task" },
+      ]),
+    ).toBe("First usable task");
+  });
+
+  it("falls back to createdAt when rows carry no sequence stamp", () => {
+    expect(
+      firstUserPromptFromTimeline([
+        { kind: "conversation", role: "user", createdAt: 20, text: "newer task" },
+        { kind: "conversation", role: "user", createdAt: 10, text: "older task" },
+      ]),
+    ).toBe("older task");
+  });
+
+  it("returns null with no usable user text anywhere", () => {
+    expect(firstUserPromptFromTimeline([])).toBeNull();
+    expect(
+      firstUserPromptFromTimeline([
+        { kind: "conversation", role: "assistant", text: "only a reply" },
+        { kind: "system", text: "system rows say nothing" },
+      ]),
+    ).toBeNull();
   });
 });

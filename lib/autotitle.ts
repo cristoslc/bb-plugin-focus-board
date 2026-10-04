@@ -7,6 +7,7 @@
 
 /** The trimmed prompt history rows `bb.sdk.threads.promptHistory` returns. */
 export interface AutotitleHistoryEntry {
+  createdAt?: number;
   input: ReadonlyArray<{
     type: string;
     text?: string;
@@ -171,12 +172,20 @@ export const AUTOTITLE_TITLE_MAX_CHARS = 120;
 /**
  * The thread's originating prompt, text parts only: images/files say
  * nothing titling can use, and agent-only parts are injected scaffolding,
- * not user intent. bb titles from the first prompt the same way.
+ * not user intent. bb titles from the first prompt the same way — and bb's
+ * prompt-history queries return rows NEWEST-first (desc createdAt /
+ * requestSequence / id), so "first" means the chronologically OLDEST entry
+ * with visible text, not entries[0]. A stable ascending sort keeps ties in
+ * arrival order (bb tie-breaks equal stamps by requestSequence-desc
+ * internally, which the SDK rows do not expose).
  */
 export function promptTextFromHistory(
   entries: readonly AutotitleHistoryEntry[],
 ): string | null {
-  for (const entry of entries) {
+  const chronological = [...entries].sort(
+    (a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0),
+  );
+  for (const entry of chronological) {
     const text = entry.input
       .filter(
         (part) =>

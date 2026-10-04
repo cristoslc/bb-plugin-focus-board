@@ -321,3 +321,31 @@ describe("resolveTitleTarget", () => {
     if (!outcome.ok) expect(outcome.reason).toMatch(/Sign in first/);
   });
 });
+
+describe("promptTextFromHistory newest-first arrival", () => {
+  // bb's prompt-history queries order rows newest-first (start-server.js
+  // desc createdAt/requestSequence/id — found live when the ✨ probe titled
+  // the user's LATEST message instead of the thread's original task). The
+  // thread's originating prompt is the chronologically FIRST entry.
+  it("takes the oldest entry when bb returns history newest-first", () => {
+    expect(
+      promptTextFromHistory([
+        { createdAt: 20, input: [{ type: "text", text: "Why is it still refused?" }] },
+        {
+          createdAt: 10,
+          input: [{ type: "text", text: "When renaming a thread I'd like an emoji button" }],
+        },
+      ]),
+    ).toBe("When renaming a thread I'd like an emoji button");
+  });
+
+  it("falls through an unusable older entry to the next-oldest usable one", () => {
+    expect(
+      promptTextFromHistory([
+        { createdAt: 20, input: [{ type: "text", text: "Why is it still refused?" }] },
+        { createdAt: 15, input: [{ type: "localImage", path: "x.png" }] },
+        { createdAt: 10, input: [{ type: "text", text: "When renaming a thread I'd like an emoji button" }] },
+      ]),
+    ).toBe("When renaming a thread I'd like an emoji button");
+  });
+});

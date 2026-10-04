@@ -72,6 +72,7 @@ import {
 import {
   assistantTextFromTimeline,
   buildAutotitleProbePrompt,
+  firstUserPromptFromTimeline,
   probeSettled,
   type AutotitleTimelineRow,
 } from "./lib/autotitle-thread-model";
@@ -892,6 +893,32 @@ export default async function plugin(bb: BbPluginApi) {
     };
   }
 
+  /**
+   * The thread's ORIGINATING prompt, the input the title should summarize.
+   * Two live-found reasons make prompt history the FALLBACK, not the
+   * source: bb's history carries composer turns only (spawn inputs never
+   * land there) and pages newest-first. The source thread's timeline's
+   * oldest user conversation row is the honest first read.
+   */
+  async function threadOriginatingPrompt(threadId: string): Promise<string | null> {
+    const timeline = (await bb.sdk.threads.timeline({
+      threadId,
+    })) as { rows?: unknown };
+    const fromTimeline = firstUserPromptFromTimeline(
+      (timeline.rows ?? []) as readonly AutotitleTimelineRow[],
+    );
+    if (fromTimeline !== null) return fromTimeline;
+    const history = (await bb.sdk.threads.promptHistory({
+      threadId,
+      // bb pages prompt history newest-first and types limit as a string;
+      // the default page drops the thread's originating prompt on long
+      // threads, so ask big and sort oldest-first locally
+      // (promptTextFromHistory does).
+      limit: "200",
+    })) as unknown as readonly AutotitleHistoryEntry[];
+    return promptTextFromHistory(history);
+  }
+
   /** Can this thread's own model generate a title? Used by the fallback modal's menu. */
   async function threadModelAvailability(
     threadId: string,
@@ -950,10 +977,7 @@ export default async function plugin(bb: BbPluginApi) {
         `thread_autotitle: thread ${threadId} has no environment to spawn a title probe into`,
       );
     }
-    const history = (await bb.sdk.threads.promptHistory({
-      threadId,
-    })) as unknown as readonly AutotitleHistoryEntry[];
-    const threadPrompt = promptTextFromHistory(history);
+    const threadPrompt = await threadOriginatingPrompt(threadId);
     if (threadPrompt === null) {
       throw new Error(
         `thread_autotitle: thread ${threadId} has no prompt text to title from`,
@@ -1194,10 +1218,7 @@ export default async function plugin(bb: BbPluginApi) {
       // (unregistered, wrong task, not ready) both fail loud with the fix.
       if (!resolved.ok) throw new Error(resolved.reason);
       const selection = resolved;
-      const history = (await bb.sdk.threads.promptHistory({
-        threadId,
-      })) as unknown as readonly AutotitleHistoryEntry[];
-      const threadPrompt = promptTextFromHistory(history);
+      const threadPrompt = await threadOriginatingPrompt(threadId);
       if (threadPrompt === null) {
         throw new Error(
           `thread_autotitle: thread ${threadId} has no prompt text to title from`,

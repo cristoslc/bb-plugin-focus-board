@@ -46,6 +46,11 @@ export type AutotitleSetupOptions = {
   probeStatuses?: string[];
   /** threads.timeline result for the probe thread. Default: one assistant row with the canned title. */
   probeTimeline?: unknown;
+  /**
+   * threads.timeline result for the SOURCE thread (the first-user-row prompt
+   * read); default [] so the server falls back to the prompt-history fixture.
+   */
+  sourceTimeline?: unknown;
 };
 
 const SOURCE_THREAD_ID = "thr_x";
@@ -82,6 +87,7 @@ export async function setup(
   let lastCall:
     | { pluginId: string; method: string; input: unknown }
     | null = null;
+  let lastPromptHistoryArgs: { threadId?: string; limit?: number } | null = null;
   const allServiceCalls: Array<{
     pluginId: string;
     method: string;
@@ -116,14 +122,16 @@ export async function setup(
         }),
       },
       threads: {
-        promptHistory: async () =>
-          opts.history ?? [
+        promptHistory: async (args?: { threadId?: string; limit?: number }) => {
+          lastPromptHistoryArgs = args ?? null;
+          return opts.history ?? [
             {
               id: "h1",
               createdAt: 1,
               input: [{ type: "text", text: "Fix the login redirect loop" }],
             },
-          ],
+          ];
+        },
         defaultExecutionOptions: async (_args: { threadId: string }) =>
           opts.executionOptions !== undefined
             ? opts.executionOptions
@@ -139,8 +147,13 @@ export async function setup(
           const status = statuses[Math.min(statusIndex++, statuses.length - 1)];
           return { ...sourceRow, id: threadId, status };
         },
-        timeline: async (_args: { threadId: string }) =>
-          opts.probeTimeline ?? (DEFAULT_TIMELINE as unknown),
+        timeline: async ({ threadId }: { threadId: string }) => {
+          // The PROBE thread's reply; the SOURCE thread reads empty so the
+          // server falls back to prompt history unless a test wires a
+          // source timeline.
+          if (threadId !== probeId) return opts.sourceTimeline ?? [];
+          return opts.probeTimeline ?? (DEFAULT_TIMELINE as unknown);
+        },
         delete: async ({ threadId }: { threadId: string }) => {
           deleted.push(threadId);
           return { ok: true };
@@ -175,6 +188,8 @@ export async function setup(
     lastServiceCall: () => lastCall,
     /** Every plugins.callRpc invocation, oldest first (probe calls included). */
     allServiceCalls: () => [...allServiceCalls],
+    /** The latest threads.promptHistory args — the oldest-entry fetch needs a big limit. */
+    lastPromptHistoryArgs: () => lastPromptHistoryArgs,
     lastSpawn: () => spawnArgs,
     deletedProbes: () => deleted,
     stoppedProbes: () => stopped,

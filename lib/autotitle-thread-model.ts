@@ -23,6 +23,34 @@ export interface AutotitleTimelineRow {
   kind: string;
   role?: string;
   text?: string;
+  /** Source-thread conversation rows carry a sequence stamp (probe rows are stamped at read time). */
+  sourceSeqStart?: number;
+  createdAt?: number;
+}
+
+/**
+ * The thread's ORIGINATING prompt, read off the source thread's timeline:
+ * bb's own titling works from the spawn-time input, which prompt history
+ * does not even carry (its rows are composer turns only — found live), so
+ * the first usable user conversation row is the title source. Rows may
+ * arrive newest-first; the oldest wins, by sourceSeqStart when stamped and
+ * createdAt otherwise (stable sort keeps arrival order for ties). Null
+ * means nothing usable; the caller falls back or fails loud.
+ */
+export function firstUserPromptFromTimeline(
+  rows: readonly AutotitleTimelineRow[],
+): string | null {
+  const chronological = [...rows].sort(
+    (a, b) =>
+      (a.sourceSeqStart ?? a.createdAt ?? 0) -
+      (b.sourceSeqStart ?? b.createdAt ?? 0),
+  );
+  for (const row of chronological) {
+    if (row.kind !== "conversation" || row.role !== "user") continue;
+    if (typeof row.text !== "string" || row.text.trim() === "") continue;
+    return row.text;
+  }
+  return null;
 }
 
 /**

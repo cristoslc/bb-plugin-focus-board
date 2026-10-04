@@ -26,7 +26,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   with its reason instead of a click that 404s. `bb focus-board autotitle
   availability|probe --thread-id <id>` mirrors the menu and runs the probe
   end-to-end from the CLI, so the live verdict is observable without the
-  pane.
+  pane. The title also comes from the thread's true originating prompt:
+  the source timeline's oldest user row (its spawn input), with prompt
+  history as the fallback — bb's history turns out to be newest-first,
+  pages small, and composer turns only (spawn inputs never land there),
+  which had the ✨ titling the latest follow-up instead of the task.
 
 ### Changed
 
