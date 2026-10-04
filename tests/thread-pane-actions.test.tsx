@@ -36,7 +36,17 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-function renderPane({ compact }: { compact: boolean }) {
+function renderPane({
+  compact,
+  pinned = false,
+  archived = false,
+  onTogglePinned = noop,
+}: {
+  compact: boolean;
+  pinned?: boolean;
+  archived?: boolean;
+  onTogglePinned?: () => void;
+}) {
   return render(
     createElement(
       CompactViewportOverrideProvider,
@@ -47,11 +57,13 @@ function renderPane({ compact }: { compact: boolean }) {
           displayTitle: "Test thread",
           status: "idle",
           isUnread: false,
+          isPinned: pinned,
         },
-        isArchived: false,
+        isArchived: archived,
         isDone: false,
         onToggleDone: noop,
         onToggleArchived: noop,
+        onTogglePinned,
         onToggleUnread: noop,
         onRename: async () => {},
         onMaximize,
@@ -109,11 +121,13 @@ describe("snooze entries in the actions menu", () => {
             displayTitle: "Test thread",
             status: "idle",
             isUnread: false,
+            isPinned: false,
           },
           isArchived: false,
           isDone: false,
           onToggleDone: noop,
           onToggleArchived: noop,
+          onTogglePinned: noop,
           onToggleUnread: noop,
           snoozeMenuItems: items,
           onRename: async () => {},
@@ -136,7 +150,7 @@ describe("snooze entries in the actions menu", () => {
     );
     openActionsMenu();
     const item = screen.getByRole("menuitem", { name: "Snooze…" });
-    expect(screen.getAllByRole("menuitem")).toHaveLength(3); // Done, Snooze…, Archive
+    expect(screen.getAllByRole("menuitem")).toHaveLength(4); // Pin, Done, Snooze…, Archive
     fireEvent.click(item);
     expect(openPicker).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("menuitem", { name: "Snooze…" })).toBeNull();
@@ -153,7 +167,7 @@ describe("snooze entries in the actions menu", () => {
     );
     openActionsMenu();
     const item = screen.getByRole("menuitem", { name: "Edit snooze…" });
-    expect(screen.getAllByRole("menuitem")).toHaveLength(3); // Done, Edit snooze…, Archive
+    expect(screen.getAllByRole("menuitem")).toHaveLength(4); // Pin, Done, Edit snooze…, Archive
     expect(screen.queryByRole("menuitem", { name: "Snooze…" })).toBeNull();
     fireEvent.click(item);
     expect(openPicker).toHaveBeenCalledTimes(1);
@@ -172,7 +186,7 @@ describe("snooze entries in the actions menu", () => {
     const labels = Array.from(menu.querySelectorAll("[role='menuitem']")).map(
       (item) => item.textContent,
     );
-    expect(labels).toEqual(["Mark Done", "Snooze…", "Archive"]);
+    expect(labels).toEqual(["Pin", "Mark Done", "Snooze…", "Archive"]);
     const head = Array.from(menu.querySelectorAll("[role='menuitem']")).find(
       (item) => item.textContent === "Snooze…",
     );
@@ -186,5 +200,33 @@ describe("snooze entries in the actions menu", () => {
     openActionsMenu();
     expect(screen.queryByRole("menuitem", { name: "Snooze…" })).toBeNull();
     expect(screen.getByRole("menuitem", { name: "Mark Done" })).toBeTruthy();
+  });
+});
+
+describe("pin entry in the actions menu", () => {
+  it("an unpinned thread's pane pins from the actions menu", () => {
+    const onTogglePinned = vi.fn();
+    renderPane({ compact: false, onTogglePinned });
+    openActionsMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Pin" }));
+    expect(onTogglePinned).toHaveBeenCalledTimes(1);
+    // The menu closes on selection, leaving no stale overlay.
+    expect(screen.queryByRole("menuitem", { name: "Pin" })).toBeNull();
+  });
+
+  it("a pinned thread's pane unpins from the actions menu", () => {
+    const onTogglePinned = vi.fn();
+    renderPane({ compact: false, pinned: true, onTogglePinned });
+    openActionsMenu();
+    expect(screen.queryByRole("menuitem", { name: "Pin" })).toBeNull();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Unpin" }));
+    expect(onTogglePinned).toHaveBeenCalledTimes(1);
+  });
+
+  it("an archived thread's pane leaves pinning to the unarchive", () => {
+    renderPane({ compact: false, archived: true });
+    openActionsMenu();
+    expect(screen.queryByRole("menuitem", { name: "Pin" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Unpin" })).toBeNull();
   });
 });

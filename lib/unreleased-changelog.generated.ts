@@ -9,6 +9,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
+    "text": "**The thread pane's actions menu pins again.** The opened pane's more-actions menu carries a Pin/Unpin entry at its head (an archived row's menu keeps just its Unarchive), with the card menu's semantics: the gesture lifts a snooze and clears a parked pin, the reveal claim arms before the write, and the card's lane move reveals after the pin lands.",
+    "children": []
+  },
+  {
     "text": "**Every lane now has its sweep, each with its own destination.** Pinned sweeps to Unpinned, Unread to Read, and every Idle bucket to Done; Needs You and Working never sweep. A cancelled sweep's Undo reverses destination by destination.",
     "children": [
       "**The sweep pill drops the word \"Sweep.\"** Screen-reader labels keep the full sweep wording."

@@ -67,6 +67,8 @@ export interface ThreadPaneThread {
   displayTitle: string;
   status: PluginSidebarThread["status"];
   isUnread: boolean;
+  /** Drives the actions menu's Pin/Unpin entry, the card menu's wording. */
+  isPinned: boolean;
 }
 
 interface ThreadPaneProps {
@@ -75,6 +77,7 @@ interface ThreadPaneProps {
   isDone: boolean;
   onToggleDone: (done: boolean) => void;
   onToggleArchived: () => void;
+  onTogglePinned: () => void;
   onToggleUnread: () => void;
   onRename: (title: string) => Promise<void>;
   onMaximize: () => void;
@@ -248,6 +251,7 @@ export function ThreadPane({
   scrollDebug = false,
   onToggleDone,
   onToggleArchived,
+  onTogglePinned,
   onToggleUnread,
   snoozeMenuItems,
   snoozeWakeAt = null,
@@ -620,6 +624,18 @@ export function ThreadPane({
         </Button>
         {(() => {
           const actionItems: (ActionMenuItem | SnoozeMenuAction)[] = [
+            // Pin rides at the menu's head, like the card menu. An archived
+            // row pins nothing: its only way out is Unarchive.
+            ...(isArchived
+              ? []
+              : [
+                  {
+                    id: "pin",
+                    label: thread.isPinned ? "Unpin" : "Pin",
+                    icon: thread.isPinned ? "PinOff" : "Pin",
+                    run: onTogglePinned,
+                  },
+                ]),
             {
               id: "done",
               label: isDone ? "Mark Not Done" : "Mark Done",
