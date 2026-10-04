@@ -125,3 +125,26 @@ describe("bb focus-board autotitle probe", () => {
     expect(result.stderr).toMatch(/no resolved provider\/model to probe with/);
   });
 });
+describe("bb focus-board autotitle prompt", () => {
+  it("prints the resolved originating prompt (timeline row wins over history)", async () => {
+    const { harness } = await setup({
+      sourceTimeline: {
+        rows: [
+          { kind: "conversation", role: "user", sourceSeqStart: 30, text: "newer question" },
+          { kind: "conversation", role: "user", sourceSeqStart: 1, text: "When renaming a thread, I'd like an emoji button" },
+        ],
+      },
+    });
+    const out = await harness.behavior.runCli(["autotitle", "prompt", "thr_x"]);
+    expect(out.exitCode).toBe(0);
+    expect(out.stdout).toContain("When renaming a thread, I'd like an emoji button");
+    expect(out.stdout).not.toContain("newer question");
+  });
+
+  it("falls back to prompt history when the timeline carries no user row", async () => {
+    const { harness } = await setup({});
+    const out = await harness.behavior.runCli(["autotitle", "prompt", "thr_x", "--json"]);
+    expect(out.exitCode).toBe(0);
+    expect(JSON.parse(out.stdout)).toMatchObject({ prompt: "Fix the login redirect loop" });
+  });
+});

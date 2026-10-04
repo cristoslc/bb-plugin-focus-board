@@ -787,7 +787,9 @@ export default async function plugin(bb: BbPluginApi) {
   // reply off the timeline, and deletes. Helpers live here in `bb` scope.
 
   const PROBE_POLL_MS = 1000;
-  const PROBE_TIMEOUT_MS = 45_000;
+  // 120s: an acp-opencode provider turn can cold-start past 45s (observed
+  // live — the earlier cap turned healthy probes into timeouts).
+  const PROBE_TIMEOUT_MS = 120_000;
 
   const probeDelay = (ms: number) =>
     new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -1859,6 +1861,36 @@ export default async function plugin(bb: BbPluginApi) {
     },
   });
 
+  const autotitlePrompt = cliCommand({
+    summary: "Print the originating prompt an ✨ auto-rename would title from",
+    description:
+      "Diagnostic for the ✨ auto-rename: the oldest user timeline row (the thread's spawn input), falling back to paged prompt history. `--json` prints { prompt: string | null }.",
+    positionals: [
+      {
+        name: "thread-id",
+        description: "The thread to read the originating prompt from.",
+        required: true,
+      },
+    ],
+    options: {
+      json: { type: "boolean", description: "Print machine-readable JSON." },
+    },
+    async run(input) {
+      const threadId = input.positionals["thread-id"];
+      const prompt = await threadOriginatingPrompt(threadId);
+      if (input.options.json === true) {
+        return { exitCode: 0, stdout: `${JSON.stringify({ prompt })}\n` };
+      }
+      return {
+        exitCode: 0,
+        stdout:
+          prompt === null
+            ? "no originating prompt found (timeline and history both empty of user text)\n"
+            : `${prompt}\n`,
+      };
+    },
+  });
+
   const autotitleProbe = cliCommand({
     summary:
       "Run the ✨ thread-model probe end-to-end for a thread (spawns a hidden one-turn thread, prints the title, deletes it)",
@@ -1989,6 +2021,7 @@ export default async function plugin(bb: BbPluginApi) {
         "snooze set": snoozeSet,
         "snooze clear": snoozeClear,
         "autotitle availability": autotitleAvailability,
+        "autotitle prompt": autotitlePrompt,
         "autotitle probe": autotitleProbe,
         sweep,
         "config show": configShow,
