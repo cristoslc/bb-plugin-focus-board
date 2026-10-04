@@ -41,11 +41,18 @@ merging into `dev`, releasing, changelog writing, or tagging.
   Keep-a-Changelog subsection: **Added** = new capability, **Changed** =
   behavior change to an existing surface, **Fixed** = bug fix.
 - Every changelog write audits the whole `[Unreleased]` group in the same edit and never defers the fixes to release: only user-facing behavior earns bullets (tests-only, refactor, docs-only, build-plumbing, and internal-identifier landings are commit-message material; a mixed landing bullets only its user-facing part); every bullet lands under the matching subsection, and stray or bare bullets regroup right there — bare ones inherit into a published section at the finalize rename, and touching a published section is the forbidden back-edit.
-- One bullet per *behavior*, not per merge or branch. The bullet's OPENING
-  SENTENCE is its What's-new item (section 5), so start the bullet with a
-  bold lead that reads standalone: surface first, then behavior, what a
-  user can now do or see — all the modal ever shows of the bullet. A bare
-  noun phrase ("Parent thread lanes.") is the failure to avoid. After the lead, the body runs at most three short sentences; a slash-enumerated state list ("N → Archive" / "N → Done" / …) counts as a sentence per state — the one-time fold that kept the sweep pill's four-label chain (2026-10) shows the dodge to refuse. Mechanism, root-cause forensics, workaround details, and test counts belong in `docs/*.md` (linked), not in the body — the old "free to run full-record length" license produced 11-line bullets (the lane-sweep and snooze bullets, 2026-10). Bullets covering the same behavior fold into one bullet with facet sub-bullets (0.6.0's projection card is the shape); sibling top-level bullets for one surface are the failure to avoid (the then-unreleased sweep + sweep-pill pair, 2026-10).
+- One bullet per *behavior*, not per merge or branch. Bullets are Slack-style
+  release notes — slack.com/release-notes is the model: the behavior in one
+  short sentence, at most a second one for texture. A bullet's OPENING
+  SENTENCE is its What's-new item (section 5), so the bold lead carries the
+  whole behavior and reads standalone; a bare noun phrase ("Parent thread
+  lanes.") is the failure to avoid. Beyond the lead, at most two short
+  sentences; a third, or a state-list chain (the sweep pill's one-time
+  four-label "N → …" string, 2026-10), gets cut or moved to `docs/*.md`
+  (linked). The 2026-10 lane-sweep paragraph ran 11 wrapped lines before
+  this cap — the concrete failure. Bullets covering the same behavior fold
+  into one with facet sub-bullets (0.6.0's projection card is the shape);
+  sibling top-level bullets for one surface are the failure to avoid.
 - Published sections are never back-edited. If a later merge revises
   behavior a published version already described, it gets fresh
   `[Unreleased]` bullets saying what the behavior is *now* (the parked-pin

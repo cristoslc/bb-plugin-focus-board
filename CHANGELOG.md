@@ -7,43 +7,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **Collapsible nested children on family cards.** The chevron on a card with
-  nested child threads now folds the rows into a "N child threads" pill that
-  re-opens them, and collapsed families persist across sessions. A folded card
-  opens by itself when one of its nested children turns unread or needs you; a
-  family collapsed while a child was already unread stays folded.
+- **Collapsible nested children on family cards.** The chevron folds nested
+  rows into a "N child threads" pill that reopens them, and folds persist
+  across sessions. A folded card reopens itself when a nested child turns
+  unread or needs you.
 
-- **Snooze: read now, unread again at a target time.** Snoozing a thread
-  marks it read so it leaves the Unread column, then the board marks it
-  unread again at the wake time; one "Snooze…" entry (on cards and in the
-  thread pane's actions menu beside Mark Unread) opens a single picker
-  holding the presets (1 hour, 4 hours, tomorrow 9am, 1 week) or a picked
-  date-time, and a snoozed thread's menu shows "Edit snooze…", whose picker
-  confirms a changed wake time or removes the wake-up call. A snoozed card
-  dims in place with a "Snoozed · wakes …" chip (the open thread pane's
-  header carries the same one), sleeps through every lane's sweep, and
-  cannot be dragged; any pin/read/done/archive gesture lifts the snooze
-  first, and a wake on a thread read by hand since snoozing stays silent.
-  The clock is server-side — timers re-arm on plugin load, past-due wakes
-  fire immediately — and full CLI parity lands as
+- **Snooze: read now, unread again at a target time.** One "Snooze…" entry
+  (on cards and in the pane's actions menu) opens a presets-or-picked-time
+  picker, and the snoozed card dims until it wakes. Any pin/read/done/archive
+  gesture lifts the snooze first, and CLI parity lands as
   `bb focus-board snooze list|set|clear`.
 
 ### Changed
 
 - **Every lane now has its sweep, each with its own destination.** Pinned
-  sweeps to Unpinned (the pin parks and returns the next time the thread
-  calls for attention), Unread sweeps to Read, and every Idle bucket — not
-  just A while ago — sweeps to Done; Needs You and Working never sweep, and
-  the pill exists only on lanes that can. Arming a non-sweepable column is
-  refused instead of falling back to archive. A cancelled sweep's Undo
-  reverses each destination — unarchive, unmark Done, re-pin (consuming the
-  park), or mark unread again — and armed sweeps pre-select cards only on
-  the aged-out arms (Done and A while ago); the other arms enter sweep mode
-  with nothing selected, the sweep built by clicking cards.
-  - **The sweep pill drops the word "Sweep."** It read as noise on every
-    column header, so the pill is a broom glyph plus the eligible count:
-    armed it names its lane's destination ("N → Done"-style), running it
-    reads "N of M". Screen-reader labels keep the full sweep wording.
+  sweeps to Unpinned, Unread to Read, and every Idle bucket to Done; Needs
+  You and Working never sweep. A cancelled sweep's Undo reverses destination
+  by destination.
+  - **The sweep pill drops the word "Sweep."** Screen-reader labels keep the
+    full sweep wording.
 
 ## [0.7.0] - 2026-10-03
 
