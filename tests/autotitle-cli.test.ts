@@ -38,8 +38,13 @@ describe("bb focus-board autotitle availability", () => {
     expect(result.stdout).toContain("OpenRouter");
   });
 
-  it("names the blocker when the thread has no resolved model", async () => {
-    const { harness } = await setup({ executionOptions: null });
+  it("names the blocker only when no chain can spawn: no pair, provider, or project", async () => {
+    // executionOptions:null with a project is now the inherit chain
+    // (available); the genuine refusal needs a bare row.
+    const { harness } = await setup({
+      executionOptions: null,
+      threadRow: { id: "thr_x", status: "idle" },
+    });
     const result = await harness.behavior.runCli([
       "autotitle",
       "availability",
@@ -48,6 +53,17 @@ describe("bb focus-board autotitle availability", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("not available");
     expect(result.stdout).toMatch(/no resolved provider\/model/i);
+  });
+
+  it("the inherit chain reports available even without a resolved pair", async () => {
+    const { harness } = await setup({ executionOptions: null });
+    const result = await harness.behavior.runCli([
+      "autotitle",
+      "availability",
+      "thr_x",
+    ]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/thread model probe: available/);
   });
 
   it("emits the full machine-readable menu with --json", async () => {
@@ -92,8 +108,18 @@ describe("bb focus-board autotitle probe", () => {
     expect(result.stdout).toContain("Login redirect loop fix");
   });
 
-  it("fails loud with the availability reason when probing is impossible", async () => {
+  it("probes on the inherit chain when no pair resolves", async () => {
     const { harness } = await setup({ executionOptions: null });
+    const result = await harness.behavior.runCli(["autotitle", "probe", "thr_x"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Login redirect loop fix");
+  });
+
+  it("fails loud with the availability reason when no chain can spawn", async () => {
+    const { harness } = await setup({
+      executionOptions: null,
+      threadRow: { id: "thr_x", status: "idle" },
+    });
     const result = await harness.behavior.runCli(["autotitle", "probe", "thr_x"]);
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/no resolved provider\/model to probe with/);

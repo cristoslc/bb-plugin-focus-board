@@ -313,15 +313,26 @@ describe("thread_autotitle via the thread's own model (hidden probe thread)", ()
     expect(stoppedProbes()).toEqual([]);
   });
 
-  it("refuses up front when the source thread has no execution options", async () => {
-    const { callRpc, lastSpawn, deletedProbes } = await setup({
+  it("falls back to spawning without a provider/model when bb does not resolve a pair", async () => {
+    // bb's defaultExecutionOptions can return null live (empty-input
+    // capability validation) even for threads that run fine; a hidden child
+    // without a provider/model override inherits bb's own spawn default
+    // chain (project remembered default → global), exactly what a new
+    // thread in the project would get.
+    const { callRpc, lastSpawn, lastServiceCall, deletedProbes } = await setup({
       executionOptions: null,
     });
-    await expect(
-      callRpc("thread_autotitle", { threadId: "thr_x", useThreadModel: true }),
-    ).rejects.toThrow(/model/i);
-    expect(lastSpawn()).toBeNull();
-    expect(deletedProbes()).toEqual([]);
+    const out = (await callRpc("thread_autotitle", {
+      threadId: "thr_x",
+      useThreadModel: true,
+    })) as { title: string };
+    expect(out).toEqual({ title: "Login redirect loop fix" });
+    const spawn = lastSpawn() as Record<string, unknown> | null;
+    expect(spawn).not.toBeNull();
+    expect(spawn && "providerId" in spawn).toBe(false);
+    expect(spawn && "model" in spawn).toBe(false);
+    expect(lastServiceCall()).toBeNull();
+    expect(deletedProbes()).toHaveLength(1);
   });
 
   it("refuses with the named reason when the probe turn errors", async () => {
@@ -346,6 +357,65 @@ describe("thread_autotitle via the thread's own model (hidden probe thread)", ()
   });
 });
 
+describe("thread-model spawn fallback chain", () => {
+  it("spawns with the source thread's provider and no model when bb cannot resolve a pair", async () => {
+    // bb resolves missing-model spawns against the provider's own catalog
+    // default, so cloning just the provider keeps the probe on the same
+    // agent stack without guessing a model.
+    const { callRpc, lastSpawn, deletedProbes } = await setup({
+      executionOptions: null,
+      threadRow: {
+        id: "thr_x",
+        projectId: "proj_1",
+        environmentId: "env_1",
+        providerId: "acp-opencode",
+        status: "idle",
+        visibility: "visible",
+      },
+      probeTimeline: { rows: [{ kind: "conversation", role: "assistant", text: "Provider default title", id: "r2" }], maxSeq: 3 },
+    });
+    const out = (await callRpc("thread_autotitle", {
+      threadId: "thr_x",
+      useThreadModel: true,
+    })) as { title: string };
+    expect(out).toEqual({ title: "Provider default title" });
+    const spawn = lastSpawn() as Record<string, unknown> | null;
+    expect(spawn).toMatchObject({ providerId: "acp-opencode" });
+    expect("model" in spawn!).toBe(false);
+    expect(spawn?.executionInputSources).toEqual({ providerId: "explicit" });
+    expect(deletedProbes()).toHaveLength(1);
+  });
+
+  it("the services menu reports the provider chain as available", async () => {
+    const { callRpc } = await setup({
+      executionOptions: null,
+      threadRow: {
+        id: "thr_x",
+        projectId: "proj_1",
+        environmentId: "env_1",
+        providerId: "acp-opencode",
+        status: "idle",
+        visibility: "visible",
+      },
+    });
+    const out = (await callRpc("thread_autotitle_services", { threadId: "thr_x" })) as {
+      threadModel: { available: boolean; reason: string | null };
+    };
+    expect(out.threadModel.available).toBe(true);
+  });
+
+  it("refuses only when there is no resolved pair, no provider, and no project", async () => {
+    const { callRpc, lastSpawn } = await setup({
+      executionOptions: null,
+      threadRow: { id: "thr_x", status: "idle" },
+    });
+    await expect(
+      callRpc("thread_autotitle", { threadId: "thr_x", useThreadModel: true }),
+    ).rejects.toThrow(/no resolved provider\/model/i);
+    expect(lastSpawn()).toBeNull();
+  });
+});
+
 describe("thread_autotitle_services thread-model availability", () => {
   it("is part of the services menu shape", () => {
     const parsed = rpcContract.thread_autotitle_services.output.parse({
@@ -365,8 +435,23 @@ describe("thread_autotitle_services thread-model availability", () => {
     expect(out.threadModel.reason).toBeNull();
   });
 
-  it("reports unavailable with the reason when the thread has no model", async () => {
+  it("reports the inherit chain as available even when no pair resolves", async () => {
+    // The old behavior refused here; a hidden child without a provider/
+    // model override legitimately inherits bb's spawn default chain, and a
+    // failing spawn names itself in the probe error.
     const { callRpc } = await setup({ executionOptions: null });
+    const out = (await callRpc("thread_autotitle_services", {
+      threadId: "thr_x",
+    })) as { threadModel: { available: boolean; reason: string | null } };
+    expect(out.threadModel.available).toBe(true);
+    expect(out.threadModel.reason).toBeNull();
+  });
+
+  it("reports unavailable when there is no pair, provider, or project", async () => {
+    const { callRpc } = await setup({
+      executionOptions: null,
+      threadRow: { id: "thr_x", status: "idle" },
+    });
     const out = (await callRpc("thread_autotitle_services", {
       threadId: "thr_x",
     })) as { threadModel: { available: boolean; reason: string | null } };

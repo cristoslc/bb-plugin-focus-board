@@ -14,6 +14,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   off its timeline, and deletes the probe in every path. The probe runs a
   no-tools instruction, so it never touches the workspace; the row names
   what's missing when the thread has no resolved model or project. The
+  probe resolves what to run on through a 3-tier chain — bb's resolved
+  provider/model pair, else the source thread's provider (bb picks that
+  provider's catalog default), else a plain hidden child inheriting bb's
+  own spawn defaults — so a thread that runs fine no longer reports the
+  model unavailable just because an empty-input resolution refuses. The
   modal's other-services list also learned honesty: each ready service is
   probed for the `complete` bridge focus-board calls (cached 60s — a
   deliberately invalid probe input can never trigger a model call), and a

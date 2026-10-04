@@ -841,24 +841,64 @@ export default async function plugin(bb: BbPluginApi) {
     return fresh;
   }
 
+  /**
+   * How a title probe spawns, in a 3-tier fallback chain — bb's
+   * defaultExecutionOptions can return null live (its route fails
+   * capability validation on empty input) even for threads that run fine,
+   * so the chain keeps the probe meaningful:
+   * 1. a resolved provider/model pair → clone both explicitly;
+   * 2. the source row's providerId → clone that (bb resolves the
+   *    provider's catalog default model at spawn);
+   * 3. nothing → a plain hidden child inherits bb's own spawn default
+   *    chain (project remembered default → global), exactly what a new
+   *    thread in the project gets.
+   */
+  type ProbeSpawnPlan =
+    | { spawnable: true; kind: "pair"; providerId: string; model: string }
+    | { spawnable: true; kind: "provider"; providerId: string }
+    | { spawnable: true; kind: "inherit" }
+    | { spawnable: false; reason: string };
+
+  async function probeSpawnPlan(threadId: string): Promise<ProbeSpawnPlan> {
+    const execution = (await bb.sdk.threads.defaultExecutionOptions({
+      threadId,
+    })) as unknown as { providerId?: unknown; model?: unknown } | null;
+    if (
+      execution !== null &&
+      typeof execution.providerId === "string" &&
+      typeof execution.model === "string"
+    ) {
+      return {
+        spawnable: true,
+        kind: "pair",
+        providerId: execution.providerId,
+        model: execution.model,
+      };
+    }
+    const source = (await bb.sdk.threads.get({ threadId })) as unknown as {
+      projectId?: unknown;
+      environmentId?: unknown;
+      providerId?: unknown;
+    };
+    if (typeof source?.providerId === "string") {
+      return { spawnable: true, kind: "provider", providerId: source.providerId };
+    }
+    if (typeof source?.projectId === "string") {
+      return { spawnable: true, kind: "inherit" };
+    }
+    return {
+      spawnable: false,
+      reason: "This thread has no resolved provider/model to probe with",
+    };
+  }
+
   /** Can this thread's own model generate a title? Used by the fallback modal's menu. */
   async function threadModelAvailability(
     threadId: string,
   ): Promise<{ available: boolean; reason: string | null }> {
     try {
-      const execution = (await bb.sdk.threads.defaultExecutionOptions({
-        threadId,
-      })) as unknown as { providerId?: unknown; model?: unknown } | null;
-      if (
-        execution === null ||
-        typeof execution.providerId !== "string" ||
-        typeof execution.model !== "string"
-      ) {
-        return {
-          available: false,
-          reason: "This thread has no resolved provider/model to probe with",
-        };
-      }
+      const plan = await probeSpawnPlan(threadId);
+      if (!plan.spawnable) return { available: false, reason: plan.reason };
       const source = (await bb.sdk.threads.get({ threadId })) as unknown as {
         projectId?: unknown;
         environmentId?: unknown;
@@ -892,17 +932,9 @@ export default async function plugin(bb: BbPluginApi) {
    * only logged so it can never fail the rename itself.
    */
   async function probeThreadModelTitle(threadId: string): Promise<string> {
-    const execution = (await bb.sdk.threads.defaultExecutionOptions({
-      threadId,
-    })) as unknown as { providerId?: unknown; model?: unknown } | null;
-    if (
-      execution === null ||
-      typeof execution.providerId !== "string" ||
-      typeof execution.model !== "string"
-    ) {
-      throw new Error(
-        `thread_autotitle: thread ${threadId} has no resolved provider/model to probe with`,
-      );
+    const plan = await probeSpawnPlan(threadId);
+    if (!plan.spawnable) {
+      throw new Error(`thread_autotitle: ${plan.reason}`);
     }
     const source = (await bb.sdk.threads.get({ threadId })) as unknown as {
       projectId?: unknown;
@@ -927,15 +959,36 @@ export default async function plugin(bb: BbPluginApi) {
         `thread_autotitle: thread ${threadId} has no prompt text to title from`,
       );
     }
+    // Per-tier spawn args: the pair clones both fields explicitly, the
+    // provider tier names only the provider (bb resolves that provider's
+    // catalog default model at spawn), the inherit tier passes nothing and
+    // rides bb's own spawn default chain.
+    const executionArgs: Record<string, unknown> =
+      plan.kind === "pair"
+        ? {
+            providerId: plan.providerId,
+            model: plan.model,
+            executionInputSources: { providerId: "explicit", model: "explicit" },
+          }
+        : plan.kind === "provider"
+          ? {
+              providerId: plan.providerId,
+              executionInputSources: { providerId: "explicit" },
+            }
+          : {};
+    const execution =
+      plan.kind === "pair"
+        ? { providerId: plan.providerId, model: plan.model }
+        : plan.kind === "provider"
+          ? { providerId: plan.providerId, model: "provider default" }
+          : { providerId: "bb default chain", model: "bb default chain" };
     const probe = (await bb.sdk.threads.spawn({
       projectId: source.projectId,
       environment: {
         type: "reuse" as const,
         environmentId: source.environmentId,
       },
-      providerId: execution.providerId,
-      model: execution.model,
-      executionInputSources: { providerId: "explicit", model: "explicit" },
+      ...executionArgs,
       visibility: "hidden",
       title: "✨ title probe (auto-deleted)",
       prompt: buildAutotitleProbePrompt(threadPrompt),
