@@ -3,5 +3,9 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
   {
     "text": "**✨ auto-rename gains the thread's own model as a fallback.** When the pinned AI service fails, the fallback modal's \"Use the thread's active model\" row now works: focus-board spawns a hidden one-turn probe thread on the provider/model bb resolved for the source thread, reads the title off its timeline, and deletes the probe in every path. The probe runs a no-tools instruction, so it never touches the workspace; the row names what's missing when the thread has no resolved model or project.",
     "children": []
+  },
+  {
+    "text": "**A double-tap of Escape no longer closes the thread pane.** After the pane stops a running thread or closes, further Escapes inside a short double-click window are swallowed, so a stop double-tap can't cascade into closing the pane.",
+    "children": []
   }
 ];

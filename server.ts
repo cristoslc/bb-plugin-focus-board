@@ -383,7 +383,7 @@ export default async function plugin(bb: BbPluginApi) {
       type: "boolean",
       label: "Thread pane: Escape stops a running thread first",
       description:
-        "While a thread is running, Escape interrupts its turn instead of closing the pane; the pane closes with Escape once nothing is running.",
+        "While a thread is running, Escape interrupts its turn instead of closing the pane; the pane closes with Escape once nothing is running, and a rapid double-tap never closes it.",
       default: true,
     },
     // Debug-mode scroll instrumentation for the pane's embedded chat

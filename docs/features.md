@@ -33,6 +33,7 @@ Fine-grained notes that don't belong in the README's feature list.
 ## Escape
 
 - While a pane's thread is running, Escape interrupts the turn instead of closing the pane; the pane closes with Escape once nothing is running (toggle in the plugin's settings).
+- The pane debounces Escape: after it acts on an Escape (stopping the thread or closing), further Escapes inside a short double-click-sized window (~500 ms) are swallowed, so a double-tap stop never cascades into closing the pane; held-key auto-repeat is ignored outright.
 
 ## Thread pane and history
 

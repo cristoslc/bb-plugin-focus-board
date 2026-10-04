@@ -15,6 +15,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   no-tools instruction, so it never touches the workspace; the row names
   what's missing when the thread has no resolved model or project.
 
+### Changed
+
+- **A double-tap of Escape no longer closes the thread pane.** After the pane
+  stops a running thread or closes, further Escapes inside a short
+  double-click window are swallowed, so a stop double-tap can't cascade into
+  closing the pane.
+
 ## [0.8.0] - 2026-10-03
 
 ### Added
@@ -30,17 +37,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   gesture lifts the snooze first, and CLI parity lands as
   `bb focus-board snooze list|set|clear`.
 
-- **✨ auto-rename in the pane's title editor.** The title input carries a
-  ✨ button inside its own rectangle (the input spans the editor, no dead
-  space to the button); one click titles the thread from its first user
-  prompt with whatever AI service bb's thread-title task is set to
-  (Settings → AI services), via a cross-plugin `complete` bridge the
-  openrouter-inference plugin serves. The generated title renames and closes
-  the editor; failures keep it open, auto-open a fallback modal naming the
-  reason, and offer generating with another registered AI service, the
-  thread's active model explained as unavailable (bb plugins cannot reach
-  it), or a typed manual rename; automatic/bb-cloud selections refuse with
-  the fix named.
+- **✨ auto-rename in the pane's title editor.** One click on the title
+  editor's ✨ button titles the thread from its first user prompt, using
+  the AI service bb's thread-title task is set to (Settings → AI services)
+  via the openrouter-inference plugin's `complete` bridge. A generated
+  title renames and closes the editor; a failure keeps it open with a
+  fallback modal that names the reason and offers another service or a
+  manual rename.
 
 - **The thread pane's actions menu pins again.** The opened pane's more-actions
   menu carries a Pin/Unpin entry between Mark Done and the snooze entry (an

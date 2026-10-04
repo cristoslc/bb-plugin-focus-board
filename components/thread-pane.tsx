@@ -51,6 +51,15 @@ const PANE_MIN_WIDTH = 320;
 const PANE_MAX_WIDTH = 900;
 const PANE_DEFAULT_WIDTH = 480;
 
+/**
+ * Debounce window for the pane's Escape handling (see the keydown effect in
+ * ThreadPane). Matches the OS double-click convention (~500 ms): wide enough
+ * to cover a double-tap aimed at stopping a running thread, narrow enough
+ * that a deliberate "stop, read the result, then close" pair — pressed
+ * seconds apart — still goes through.
+ */
+const ESCAPE_DEBOUNCE_MS = 500;
+
 function readStoredPaneWidth(): number {
   try {
     const raw = window.localStorage.getItem(PANE_WIDTH_KEY);
@@ -506,6 +515,13 @@ export function ThreadPane({
     };
   }, [width, onPointerMove, endDrag]);
 
+  // Double-tap debounce state for the pane's Escape handling. A ref, not
+  // effect-local: the keydown effect re-runs whenever the thread's status
+  // flips (active → stopping → idle) and the window must survive those
+  // re-subscriptions; a remount (pane reopened) starts fresh. Only real
+  // actions — a stop or a close — arm it.
+  const lastEscapeActionAtRef = useRef(0);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) {
@@ -520,6 +536,19 @@ export function ThreadPane({
         ) {
           return;
         }
+        // Held-key auto-repeat is never a deliberate second gesture.
+        if (event.repeat) {
+          event.preventDefault();
+          return;
+        }
+        const now = Date.now();
+        if (now - lastEscapeActionAtRef.current < ESCAPE_DEBOUNCE_MS) {
+          // Inside the double-tap window: swallow the press — still claiming
+          // Escape so no other surface acts on the doubled key — without
+          // extending the window.
+          event.preventDefault();
+          return;
+        }
         if (escStopsRunningThread) {
           // bb sorts "starting", "active", and "stopping" as busy threads.
           // Escape interrupts the running turn first — closing the pane
@@ -529,15 +558,19 @@ export function ThreadPane({
           // settles so the result stays visible.
           if (thread.status === "active" || thread.status === "starting") {
             event.preventDefault();
+            lastEscapeActionAtRef.current = now;
             void sdk.threads.stop({ threadId: thread.id }).catch(() => {});
             return;
           }
           if (thread.status === "stopping") {
+            // Holding the pane open is not an action; it does not arm the
+            // debounce window.
             event.preventDefault();
             return;
           }
         }
         event.preventDefault();
+        lastEscapeActionAtRef.current = now;
         onClose();
       }
     };
