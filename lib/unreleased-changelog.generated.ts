@@ -9,7 +9,7 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
-    "text": "**Collapsed child rows now fold into a status-dot strip.** The strip replaces the plain \"N child threads\" pill — one colored dot per child, amber pulsing when a child needs you — and the fold toggle moved into the child section, directly above the rows it acts on.",
+    "text": "**Collapsed child rows fold into a status-dot strip below the count chip.** One colored dot per nested child (hover names it); the fold toggle sits in the child section, directly above the rows it acts on. A child that needs you no longer hides behind a fold: it un-nests into its own Needs-you card while the rest of the rows stay folded, and re-nests once answered.",
     "children": []
   }
 ];

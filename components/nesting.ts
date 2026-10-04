@@ -299,8 +299,13 @@ export function buildFamilyIndex(threads: readonly PluginSidebarThread[]): Famil
  *   family's projection card — regardless of grouping or axis. Done is its
  *   own space, and the family is a projection: its active card and its Done
  *   card can exist at once.
+ * - Attention children (a pending interaction or an unread error) never
+ *   nest, in any grouping: they stand alone as their own cards, so a
+ *   collapsed family card stays folded while the child that needs the
+ *   operator surfaces in its own right. When the attention resolves the
+ *   child returns to the nest — the rule reads live state, not history.
  * - R4 (status grouping): the live family moves as one unit into the column
- *   of its most attention-requiring live member (`familyColumnOverrides`
+ *   of its most attention-requiring nested member (`familyColumnOverrides`
  *   lifts the parent card there), so every live child of a live parent
  *   nests. The promotion rule survives only where the family cannot
  *   relocate: a Done parent keeps its Done-lane card, and a live child
@@ -321,6 +326,13 @@ function childPlacement(
 ): ChildPlacement {
   if (doneIds.has(child.id)) {
     return doneIds.has(parent.id) ? "nest" : "done";
+  }
+  // Attention children stand alone, ahead of every nesting rule: the family
+  // card may be collapsed (a persisted fold), and a child that needs the
+  // operator must surface as its own actionable card, not hide behind a
+  // fold. The rest of the rows stay collapsed under the parent.
+  if (threadState(child) === "attention") {
+    return "flat";
   }
   if (groupBy === "status") {
     if (doneIds.has(parent.id)) {
@@ -349,13 +361,16 @@ function stateRank(state: ThreadState): number {
 
 /**
  * R4: under the status grouping, where should each family land? The family
- * (a root and all its descendants) appears in the column of its most
- * attention-requiring LIVE member — the smallest state rank across members
- * that are neither archived (stale status must not demand attention) nor
- * done (the Done lane is a placement of its own). The returned map is keyed
- * by family ROOT id, so only roots — the cards that take column slots — read
- * it; promoted children of Done parents and axis-flat children keep their
- * own placements.
+ * (a root and its nested descendants) appears in the column of its most
+ * attention-requiring NESTED member — the smallest state rank across members
+ * that are neither archived (stale status must not demand attention), done
+ * (the Done lane is a placement of its own), nor attention (a child that
+ * needs the operator un-nests and demands it from its own card — it must not
+ * drag the quiet family out of its own lane with it). The root's OWN
+ * attention still lifts: the family belongs where the parent card already
+ * points. The returned map is keyed by family ROOT id, so only roots — the
+ * cards that take column slots — read it; promoted children of Done parents
+ * and axis-flat children keep their own placements.
  *
  * An all-idle family gets no entry: `threadState` collapses idle to one
  * value, so every idle member ties — the family keeps the parent's own
@@ -375,7 +390,8 @@ export function familyColumnOverrides(
   for (const rootId of familyIndex.rootIds) {
     const root = byId.get(rootId);
     if (root === undefined || root.isArchived || doneIds.has(rootId)) continue;
-    // Walk the whole family (root + descendants); only live members lift it.
+    // Walk the whole family (root + descendants); only members that stay in
+    // the nest lift it — the root's own attention included.
     const live: PluginSidebarThread[] = [];
     const stack = [rootId];
     const seen = new Set<string>();
@@ -385,7 +401,13 @@ export function familyColumnOverrides(
       seen.add(id);
       const member = byId.get(id);
       if (member === undefined) continue;
-      if (!member.isArchived && !doneIds.has(member.id)) live.push(member);
+      if (
+        !member.isArchived &&
+        !doneIds.has(member.id) &&
+        (member.id === rootId || threadState(member) !== "attention")
+      ) {
+        live.push(member);
+      }
       for (const grandchild of familyIndex.childrenByParent.get(id) ?? []) {
         stack.push(grandchild.id);
       }
@@ -491,12 +513,10 @@ export function nestUnderParents(
   for (const children of doneNested.values()) {
     children.sort(doneRecencyCompare(doneTimes));
   }
-  // Pinned-lane attention lift: a pinned family with a live member needing
-  // the operator cannot move out of Pinned (the family-column overrides apply
-  // to unpinned roots only), so within the lane it rises to the top instead
-  // — the same "urgent floats first" tier the nested rows use. See
-  // `pinnedAttentionIds` / `withAttentionFirst` below.
-  const pinnedAttention = pinnedAttentionIds(columns, nested, doneIds);
+  // Pinned-lane attention lift: a pinned card whose OWN state needs the
+  // operator rises to the top of the lane (a pinned attention child un-nests
+  // and surfaces in Needs you instead — see `pinnedAttentionIds`).
+  const pinnedAttention = pinnedAttentionIds(columns);
 
   // The Done projection: each live parent whose done children moved to the
   // Done space also renders a second card there — the family's projection
@@ -566,56 +586,32 @@ export function nestUnderParents(
 }
 
 /**
- * Which Pinned-lane cards represent a family that currently wants the
- * operator. A pinned family cannot relocate to a Needs-you lane — the state
- * column overrides apply to unpinned roots only (`buildColumns` splits pinned
- * threads out before the overrides are read) — so the attention must surface
- * where the family already sits. The set holds:
- *
- * - a pinned thread whose OWN live state is `attention` (a pinned thread with
- *   a pending interaction stays in Pinned too), and
- * - a pinned root whose nested family has an `attention` member.
- *
- * Done and archived members never count: completed or stale state must not
- * demand attention. The pinned card's pulse (`ThreadCard`'s
- * `familyNeedsAttention`) reads the same states from the same members, so
- * the lift and the border never disagree about who is urgent.
+ * Which Pinned-lane cards currently need the operator by their OWN state —
+ * a pending interaction or an unread error on the pinned thread itself. A
+ * pinned card cannot relocate to a Needs-you lane (the state column overrides
+ * apply to unpinned roots only), so the attention surfaces where the card
+ * already sits: the lane lifts these cards to the top (`withAttentionFirst`)
+ * and the card pulses (`ThreadCard`'s attention overlay reads the same
+ * state). An attention CHILD of a pinned family is not in this set — it
+ * un-nests (`childPlacement`) and demands attention from its own card in
+ * Needs you.
  */
 export function pinnedAttentionIds(
   columns: readonly BoardColumn[],
-  nested: ReadonlyMap<string, readonly PluginSidebarThread[]>,
-  doneIds: ReadonlySet<string>,
 ): ReadonlySet<string> {
   const pinned = columns.find((column) => column.id === "pinned");
   const ids = new Set<string>();
-  if (pinned !== undefined) {
-    for (const thread of pinned.threads) {
-      if (threadState(thread) === "attention") ids.add(thread.id);
-    }
-  } else {
-    return ids;
-  }
-  for (const [parentId, children] of nested) {
-    if (
-      pinned.threads.some((thread) => thread.id === parentId) &&
-      children.some(
-        (child) =>
-          threadState(child) === "attention" &&
-          !child.isArchived &&
-          !doneIds.has(child.id),
-      )
-    ) {
-      ids.add(parentId);
-    }
+  if (pinned === undefined) return ids;
+  for (const thread of pinned.threads) {
+    if (threadState(thread) === "attention") ids.add(thread.id);
   }
   return ids;
 }
 
 /**
  * Insert an attention tier above the Pinned lane's own order: attention
- * families lead; the rest keep their relative order (the stable sort
- * preserves manual ranks underneath, exactly as urgent nested children float
- * above every tier in `sortNestedByColumnRank`).
+ * cards lead; the rest keep their relative order (the stable sort preserves
+ * manual ranks underneath).
  */
 function withAttentionFirst(
   threads: readonly PluginSidebarThread[],
@@ -627,57 +623,11 @@ function withAttentionFirst(
 }
 
 /**
- * The collapsed-family auto-expand source set: parents whose nested rows
- * currently hold a live child in an "unread+" state — threadState "unread"
- * (unread activity) or "attention" (a pending interaction or an unread
- * error), the states at or above Unread in the status column order. Done and
- * archived members never count, the same rule `pinnedAttentionIds` applies:
- * completed or stale state must not demand attention.
- *
- * Collapsed families key their auto-expand on the TRANSITION into this set
- * (see `familiesToAutoExpand`), so the map that feeds the nested rows — the
- * assembly's `nestedChildrenByParent`, not the raw family index — is the
- * right input: expanding a card can only ever reveal rows this map holds.
+ * The collapsed-family auto-expand helpers were removed with the un-nest
+ * rule: an attention child now leaves the nest entirely (`childPlacement`)
+ * instead of expanding the card it hides in, so there is no source set to
+ * diff and no transition to fire.
  */
-export function familiesWithUrgentChildren(
-  nestedChildrenByParent: ReadonlyMap<string, readonly PluginSidebarThread[]>,
-  doneIds: ReadonlySet<string>,
-): ReadonlySet<string> {
-  const ids = new Set<string>();
-  for (const [parentId, children] of nestedChildrenByParent) {
-    if (
-      children.some(
-        (child) =>
-          !child.isArchived &&
-          !doneIds.has(child.id) &&
-          (threadState(child) === "unread" || threadState(child) === "attention"),
-      )
-    ) {
-      ids.add(parentId);
-    }
-  }
-  return ids;
-}
-
-/**
- * Which collapsed families must expand because a nested child NEWLY entered
- * the urgent set. A child that was already unread+ does not re-fire: the
- * operator who collapsed a family while a child sat unread has stated the
- * rows may stay folded, and the rule answers live changes ("a child just
- * went unread under a folded card"), not a standing condition that would
- * fight that gesture on every refresh.
- */
-export function familiesToAutoExpand(
-  previousUrgent: ReadonlySet<string>,
-  currentUrgent: ReadonlySet<string>,
-  collapsedIds: ReadonlySet<string>,
-): string[] {
-  const out: string[] = [];
-  for (const id of currentUrgent) {
-    if (!previousUrgent.has(id) && collapsedIds.has(id)) out.push(id);
-  }
-  return out;
-}
 
 /**
  * Sort each parent's nested children in the order of the column the PARENT
@@ -686,17 +636,14 @@ export function familiesToAutoExpand(
  * so the children follow the parent's column order rather than their own
  * (absent) ranks.
  *
- * Urgent children (state "attention": a pending interaction or an unread
- * error) float to the top of the rows regardless of ranks and recency — the
- * same attention signal that places the family in its column deserves the
- * first slot on the card it lands under. Within each tier (urgent, then the
- * rest) the parent column's own order applies unchanged, so a family with no
- * urgent member reads exactly as it did before. An unranked column (or a
- * parent not found in any column) sorts purely by the board's derived order.
+ * There is no urgent-first tier: an attention child un-nests
+ * (`childPlacement`) and never appears in these rows, so every nested child
+ * is quiet and the parent column's own order applies unchanged. An unranked
+ * column (or a parent not found in any column) sorts purely by the board's
+ * derived order.
  *
  * Rows under a card in the Done column (a done parent's card) read in the
- * Done column's own order instead: newest done first — urgent-first is an
- * active-space language, and a done child cannot demand attention.
+ * Done column's own order instead: newest done first.
  */
 function sortNestedByColumnRank(
   nested: Map<string, PluginSidebarThread[]>,
@@ -719,13 +666,7 @@ function sortNestedByColumnRank(
       columnId === undefined
         ? []
         : orderForColumn(ranks, columnRankKey(groupBy, columnId));
-    const rankCompare = compareByRank(order, derivedCompare);
-    children.sort((a, b) => {
-      const aUrgent = threadState(a) === "attention" ? 0 : 1;
-      const bUrgent = threadState(b) === "attention" ? 0 : 1;
-      if (aUrgent !== bUrgent) return aUrgent - bUrgent;
-      return rankCompare(a, b);
-    });
+    children.sort(compareByRank(order, derivedCompare));
   }
 }
 

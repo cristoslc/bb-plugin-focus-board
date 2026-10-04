@@ -50,7 +50,7 @@ function renderBoard(overrides: Partial<BoardProps> = {}) {
 
 function toggle(collapsed: boolean): HTMLElement {
   const button = document.querySelector(
-    `button[aria-label="${collapsed ? "Expand subthreads" : "Collapse subthreads"}"]`,
+    `button[data-child-threads-toggle][aria-label="${collapsed ? "Expand subthreads" : "Collapse subthreads"}"]`,
   );
   if (!(button instanceof HTMLElement)) throw new Error("missing child-section toggle");
   return button;
