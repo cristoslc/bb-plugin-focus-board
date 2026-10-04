@@ -1,11 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <!-- Focus Board brand mark ("E1 lane + pupil"): the kanban's middle lane
-       watching what needs you. The two side lanes ride at 55% opacity — bb
-       renders plugin icons as CSS masks keyed off alpha coverage, so the
-       reduced alpha reads as the dimmer tint, same trick as gen-1's faint
-       strokes that was only a failure at stroke-idiom sizes. -->
-  <path d="M3.25 4.5H7.25V19.5H3.25Z" opacity=".55" stroke="currentColor" stroke-width="2.5"/>
-  <path d="M16.75 4.5H20.75V19.5H16.75Z" opacity=".55" stroke="currentColor" stroke-width="2.5"/>
-  <path d="M9.25 4.5H14.75V19.5H9.25Z" stroke="currentColor" stroke-width="2.5"/>
-  <circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/>
+  <!-- Focus Board brand mark ("inverted lane, one card"): the kanban
+       chassis flush at the top, the right lane riding short. The two
+       side lanes are dim solid fills (55% alpha, no outline strokes);
+       the middle lane is INVERTED — filled solid so it reads as the lit
+       lane — with one card punched through as a true evenodd hole, so
+       the surface behind shows through on every theme with no fixed
+       hexes. The artwork fills the 24 grid to a ~2-unit margin: at the
+       old 3.25/4.5 margin the mark rendered small next to its neighbors.
+       bb renders plugin icons as CSS masks keyed off alpha coverage:
+       solid fills + one honest hole are exactly what the pipeline
+       survives, and the theme inversion rides the mask (currentColor
+       tints per row), so one asset serves light and dark. -->
+  <path d="M2 3H6.5V21H2Z" opacity=".55" fill="currentColor"/>
+  <path d="M17.5 3H22V17.5H17.5Z" opacity=".55" fill="currentColor"/>
+  <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M8.75 3H15.25V21H8.75Z M11.15 9H12.85A1 1 0 0 1 13.85 10V14A1 1 0 0 1 12.85 15H11.15A1 1 0 0 1 10.15 14V10A1 1 0 0 1 11.15 9Z"/>
 </svg>

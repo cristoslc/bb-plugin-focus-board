@@ -5,13 +5,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Added
-
-- **Developer toggle: pane chat scroll instrumentation.** A new off-by-default
-  Focus Board setting logs the thread pane transcript's scroll activity
-  while enabled — programmatic `scrollTop` writes with stacks, the gesture
-  stream, a copyable log in the pane header (`docs/chat-click-jump-2026-09-29.md`).
-
 ### Changed
 
 - **Every lane now has its sweep, each with its own destination.** Pinned
@@ -32,71 +25,168 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Unpinned" / "N → Read", running it reads "N of M". Screen-reader labels
   keep the full sweep wording.
 
-- **The long-idle sweep now marks threads Done instead of archiving them.**
-  Confirming a sweep on the Idle · A-while-ago column sends its quiet threads
-  to the Done column — the same mark-dragging a card there performs — instead
-  of straight to the archive; the fresh done stamp starts the Done-arm clock,
-  so they resurface in the Done sweep and archive only after aging there. The
-  Done column's own sweep still archives. A cancelled sweep's Undo unmarks
-  Done for these threads instead of unarchiving. The CLI sweep mirrors this:
-  with `--confirm`, Done-age threads archive and long-idle threads are marked
-  Done (`sweep --json` now reports `archived` and `markedDone` separately).
+## [0.7.0] - 2026-10-03
 
-- **Sweep mode is now manual: enter it any time and click cards to choose
-  exactly what gets archived.** The sweep button stays visible on the Done
-  and A-while-ago columns even when nothing is past the threshold; entering
-  sweep mode pre-selects the past-threshold threads, clicking a card
-  toggles it in or out (clicking away or Escape exits), and a thread that
-  still has live children refuses with an on-screen note instead of
-  silently doing nothing.
+### Changed
 
-- **Selecting cards for a sweep no longer reshuffles the column.** Selected
-  cards highlight where they sit and the list never reorders, so
-  deselecting cannot jump cards around mid-gesture; scroll to see the full
-  blast radius.
+- **New threads compose inside the board.** The toolbar, column, and
+  parent-lane new-thread buttons now open bb's full compose surface in a
+  modal over the board and pane instead of bb's new-thread window: a
+  single-project filter still seeds the project picker, submit spawns the
+  thread and opens it in the pane, a failed create keeps the draft with an
+  on-screen error, and Escape inside the modal closes only the modal.
 
-- **A sweep can be cancelled, not only confirmed.** An X beside the sweep
-  pill exits sweep mode, and during a run it stops the loop: the archive in
-  flight finishes, nothing else is swept, and the untouched cards stay
-  selected for inspection or a retry. When the stop landed after threads
-  had already archived, the notice offers an explicit Undo that restores
-  exactly the ids the run archived.
+## [0.6.0] - 2026-10-03
 
-- **Enter applies a sole dropdown search match.** When a filter dropdown's
-  search has narrowed the list to one row, pressing Enter selects it and
-  closes the menu like clicking the row; with more matches or none, Enter
-  stays inert.
+### Added
 
-- **Marking a card unread sends a parked card back to Pinned from any
-  surface** — bb's native thread menu, the board's menu, the pane toggle,
-  or a drop onto the Unread lane — and clears a contradicting Done mark;
-  ambient thread noise never moves cards.
+- **A family's done work now renders as a projection card in the Done
+  column.** Done children no longer nest under the family's active card —
+  they move to the Done column under a projection of the parent's card
+  (dimmed, with the done children nested beneath it), so a family can live in
+  both spaces at once: the live portion in its attention lane, the done
+  portion in Done. A done parent keeps its single Done card with its done
+  children nested. Each card's child-count chip counts its own space, and a
+  projection card refuses sweep selection (it is not a done thread).
+  - **Big families scroll inside their card.** When a family card nests more
+    than five child rows, the list caps its height and scrolls; five or fewer
+    render at natural height as before. The collapse chevron still hides the
+    whole list.
+  - **Archived children are now hidden outright, everywhere.** They no
+    longer render as dimmed rows under the family card on the Attention
+    board or as riders under the family header in the Parent-thread view —
+    archiving a thread removes it from the board completely, matching bb's
+    sidebar. Child chips count only visible children, and the children of an
+    archived parent now render as standalone cards instead of vanishing
+    under a card that never renders.
+
+- **Filter dropdowns with a search bar gain a select-all checkbox.** The
+  checkbox sits left of the search bar and covers the rows the search
+  currently shows: click selects every visible option in one commit (the
+  menu stays open), clicking again deselects them, and a partial selection
+  shows mixed. Applies to the Project and Provider dropdowns; the State
+  dropdown has no search bar and the Group control is single-choice, so
+  neither grows one.
+  - **Enter applies a sole dropdown search match.** When a filter dropdown's
+    search has narrowed the list to one row, pressing Enter selects it and
+    closes the menu like clicking the row; with more matches or none, Enter
+    stays inert.
+
+### Changed
+
+- **Developer toggle: pane chat scroll instrumentation.** A new off-by-default
+  Focus Board setting logs the thread pane transcript's scroll activity
+  while enabled — programmatic `scrollTop` writes with stacks, the gesture
+  stream, a copyable log in the pane header (`docs/chat-click-jump-2026-09-29.md`).
+
+- **Brand icon restored as the lane + card mark and now renders as drawn.**
+  bb masks plugin icon assets off alpha coverage, and the E1 stroked-outline
+  cut hollowed at icon sizes — the bold lane's hollow interior read as dark
+  breaks around the solid pupil, so the served mark looked glitched
+  ("clobbered"). The asset and inline `FocusBoard` element are now solid
+  alpha geometry: three flush-top columns whose side lanes ride as dim
+  fills (the right one short of the others), an opaque inverted middle
+  lane, and a card punched through that lane as an evenodd hole — one
+  `currentColor` asset that themes itself on light and dark surfaces,
+  renderer-proof at any size. A `tests/brand-icon.test.ts` coverage matrix
+  pins the asset and the inline element to the same mask-safe rules.
+  - **The sidebar row and pane title bar now draw the mark too.** Their
+    registration hardcoded a `Columns2` placeholder since the plugin's first
+    commit - the manifest `branding.icon` only covers Settings surfaces, and
+    an earlier bb build that preferred the manifest mark on the nav surfaces
+    had quietly hidden the placeholder. After the Oct 2 bb app update that
+    preference went away and the placeholder came back. The nav panel now
+    registers the brand mark in bb's app-wide icon registry (`FocusBoard`)
+    and draws it on both surfaces, tinted and mask-safe like every other
+    plugin glyph.
+
+- **The sweep is rebuilt around choosing exactly what gets archived, and
+  idle threads now resurface instead of vanishing.** The Done and
+  A-while-ago columns' sweep grew a manual selection flow, a mid-run stop,
+  and a gentler fate for quiet threads:
+  - **Sweep mode is now manual: enter it any time and click cards to choose
+    exactly what gets archived.** The sweep button stays visible on the Done
+    and A-while-ago columns even when nothing is past the threshold; entering
+    sweep mode pre-selects the past-threshold threads, clicking a card
+    toggles it in or out (clicking away or Escape exits), and a thread that
+    still has live children refuses with an on-screen note instead of
+    silently doing nothing.
+  - **The long-idle sweep now marks threads Done instead of archiving them.**
+    Confirming a sweep on the Idle · A-while-ago column sends its quiet threads
+    to the Done column — the same mark-dragging a card there performs — instead
+    of straight to the archive; the fresh done stamp starts the Done-arm clock,
+    so they resurface in the Done sweep and archive only after aging there. The
+    Done column's own sweep still archives. A cancelled sweep's Undo unmarks
+    Done for these threads instead of unarchiving. The CLI sweep mirrors this:
+    with `--confirm`, Done-age threads archive and long-idle threads are marked
+    Done (`sweep --json` now reports `archived` and `markedDone` separately).
+  - **A sweep can be cancelled, not only confirmed.** An X beside the sweep
+    pill exits sweep mode, and during a run it stops the loop: the archive in
+    flight finishes, nothing else is swept, and the untouched cards stay
+    selected for inspection or a retry. When the stop landed after threads
+    had already archived, the notice offers an explicit Undo that restores
+    exactly the ids the run archived.
+  - **Selecting cards for a sweep no longer reshuffles the column.** Selected
+    cards highlight where they sit and the list never reorders, so
+    deselecting cannot jump cards around mid-gesture; scroll to see the full
+    blast radius.
+  - **Confirming a sweep now archives every highlighted candidate, not just
+    one.** bb's sidebar archive aborts the previous in-flight archive when a
+    new one starts, so the sweep's confirm loop was losing all but the last
+    candidate; each archive is now awaited in turn, the running sweep shows a
+    throbber on the card being archived, keeps the highlight on the rest, and
+    reads "Sweeping N of M" on its button until the loop finishes. A failed
+    archive keeps its card highlighted for a one-click retry and says so in a
+    dismissible banner.
+
+- **Pinned cards now carry their thread's state both ways: read state and
+  needs-you.**
+  - **Marking a card unread sends a parked card back to Pinned from any
+    surface** — bb's native thread menu, the board's menu, the pane toggle,
+    or a drop onto the Unread lane — and clears a contradicting Done mark;
+    ambient thread noise never moves cards.
+  - **A pinned family with a member that needs you now calls attention from
+    inside Pinned.** A pinned family cannot relocate to a Needs-you lane
+    (pinned threads split out before the family-column overrides read), so a
+    child thread's question used to sit silent inside a card that read idle.
+    Now the pinned parent card pulses — an amber border, the changelog gift's
+    pulse language — shows its question icon, and rises to the top of the
+    Pinned lane (above manual ranks, like urgent child rows do); the signal
+    vanishes when the question is answered.
+
+### Removed
+
+- **The thread pane's project/branch footer line is gone.** A recent bb
+  composer build shows the working context in the composer itself, so the
+  plugin no longer repeats project and branch under the pane's composer; the
+  pane ends with the transcript.
 
 ### Fixed
 
-- **Confirming a sweep now archives every highlighted candidate, not just
-  one.** bb's sidebar archive aborts the previous in-flight archive when a
-  new one starts, so the sweep's confirm loop was losing all but the last
-  candidate; each archive is now awaited in turn, the running sweep shows a
-  throbber on the card being archived, keeps the highlight on the rest, and
-  reads "Sweeping N of M" on its button until the loop finishes. A failed
-  archive keeps its card highlighted for a one-click retry and says so in a
-  dismissible banner.
+- **Menu moves bring the destination lane into view.** The keep-in-view
+  contract followed the pane's active card on relocation, but a right-click
+  menu move relocates a card the pane never opened — "Pin thread" sends a
+  parent's whole nested family into the far-left Pinned lane — and in a
+  scrolled board the destination could sit offscreen: the action read as the
+  card silently vanishing. Every menu action that relocates a card (Pin,
+  Unpin, Mark Done/Not Done, Mark Read/Unread) now issues a one-shot reveal
+  that brings the card's new lane into view; it lands in the same commit as
+  the relocation (async host actions included), a visible destination scrolls
+  nothing, and passive changes still never move your scroll.
 
-- **The pane's click-jump guard no longer cements an upward displacement.**
-  It now does not arm for 3 seconds after any single scroll move of
-  ≥300px, so the host shell's own corrections land undisturbed (shipped in
-  0.5.19; `docs/chat-click-jump-2026-09-29.md`).
-
-- **A pinned family with a member that needs you now calls attention from
-  inside Pinned.** A pinned family cannot relocate to a Needs-you lane
-  (pinned threads split out before the family-column overrides read), so a
-  child thread's question used to sit silent inside a card that read idle.
-  Now the pinned parent card pulses — an amber border, the changelog gift's
-  pulse language — shows its question icon, and rises to the top of the
-  Pinned lane (above manual ranks, like urgent child rows do); the signal
-  vanishes when the question is answered.
-
+- **Clicking in the pane's chat no longer yanks the transcript to the
+  newest message while the reader is scrolled up.** The pane's click-jump
+  guard now arms on the position recorded at the gesture's pointerdown —
+  captured before the host shell's pending-capture clamp commits — and
+  restores it when a click lands the transcript pinned at the bottom
+  within ~200ms. Armed on the click-time read, the guard never fired at
+  all: the clamp lands during the pointerdown edge, so the fresh read was
+  already past the write and the reader stayed clamped (exposed by a live
+  adversarial run inside the guard's own design band). The settled-view
+  refusals of the previous fix survive only for clicks with no pointer
+  event (programmatic flows); reader gestures in the window still disarm
+  it, and pill and composer clicks never arm it
+  (`docs/chat-click-jump-2026-09-29.md`).
 ## [0.5.21] - 2026-09-30
 
 ### Added

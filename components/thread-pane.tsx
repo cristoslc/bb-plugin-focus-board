@@ -64,14 +64,6 @@ export interface ThreadPaneThread {
   displayTitle: string;
   status: PluginSidebarThread["status"];
   isUnread: boolean;
-  /**
-   * Header context: the project (and branch) this thread runs on. Null
-   * project suppresses the context line — archived rows keep only the
-   * title shape and render no line. `branchName` is the branch, or the
-   * host name when there is no branch (matching the board card).
-   */
-  projectName: string | null;
-  branchName: string | null;
 }
 
 interface ThreadPaneProps {
@@ -90,6 +82,13 @@ interface ThreadPaneProps {
    * thread is not running; when false, Escape always closes the pane.
    */
   escStopsRunningThread: boolean;
+  /**
+   * True while an overlay above the pane (the new-thread composer modal)
+   * owns Escape. This pane's Escape listener is a capture-phase document
+   * listener, so it would otherwise win the race against the overlay's own
+   * handling and close the pane — or stop the thread — underneath the modal.
+   */
+  escapeSuppressed?: boolean;
   /** Debug: attach the scroll-instrumentation session to this pane's transcript (ships off). */
   scrollDebug?: boolean;
 }
@@ -232,6 +231,7 @@ export function ThreadPane({
   onMaximize,
   onClose,
   escStopsRunningThread,
+  escapeSuppressed = false,
 }: ThreadPaneProps) {
   const [width, setWidth] = useState(readStoredPaneWidth);
   const isCompact = useIsCompactViewport();
@@ -351,6 +351,8 @@ export function ThreadPane({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) {
+        // An overlay above the pane owns Escape (see escapeSuppressed).
+        if (escapeSuppressed) return;
         // Inline editors (rename) consume Escape to cancel the edit; let them.
         const target = event.target;
         if (
@@ -383,7 +385,7 @@ export function ThreadPane({
     };
     document.addEventListener("keydown", onKeyDown, { capture: true });
     return () => document.removeEventListener("keydown", onKeyDown, { capture: true });
-  }, [onClose, escStopsRunningThread, thread.status, thread.id, sdk]);
+  }, [onClose, escStopsRunningThread, escapeSuppressed, thread.status, thread.id, sdk]);
 
   // Existence checks for the inline-code file links (see
   // decorate-inline-code.ts): a path verdict comes from the plugin
@@ -671,23 +673,6 @@ export function ThreadPane({
       >
         <ThreadChat threadId={thread.id} variant="compact" layout="contained" />
       </div>
-      {/* Which project (and branch) this pane works on: a project's own
-          checkout environment is just named "Project Checkout", so the
-          project label is the only way to tell panes apart. Sits in the
-          footer, under the composer, and is omitted for archived rows. */}
-      {thread.projectName === null ? null : (
-        <footer
-          aria-label="Thread project"
-          className="shrink-0 border-t border-border px-3 py-1.5"
-        >
-          <span className="block truncate text-[11px] leading-tight text-muted-foreground/70">
-            {thread.projectName}
-            {thread.branchName === null || thread.branchName === "" ? null : (
-              <span className="text-muted-foreground/40"> · {thread.branchName}</span>
-            )}
-          </span>
-        </footer>
-      )}
     </aside>
   );
 }

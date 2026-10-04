@@ -4,7 +4,8 @@ How to ship a new Focus Board version. The pipeline has a fixed shape: user
 work appends bullets to the changelog's `[Unreleased]` group when it merges
 into `dev`; releasing is a finalize commit on the dev lineage (name the
 version, strip `-dev`), a fast-forward of `main`, a signed tag on that
-commit, and a dev-only prep commit that re-arms the next cycle. Release-time
+commit, a GitHub Release page on that tag, and a dev-only prep commit that
+re-arms the next cycle. Release-time
 changelog writing is gone — read this spoke whenever a turn involves
 merging into `dev`, releasing, changelog writing, or tagging.
 
@@ -51,6 +52,7 @@ merging into `dev`, releasing, changelog writing, or tagging.
   behavior a published version already described, it gets fresh
   `[Unreleased]` bullets saying what the behavior is *now* (the parked-pin
   model revising 0.5.21's lane-exit unpin is the example to remember).
+- A finalize rename sets a changelog trap for the next merge into `dev`: the branch's bullets sit under the heading dev renamed to `[X.Y.Z]`, and git's auto-merge happily files the new bullets into the published section (observed with the 0.6.0 re-arm, 2026-10-03 — "New threads compose inside the board" landed inside `[0.6.0]` until hand-moved). After any dev merge that carries `[Unreleased]` bullets across a finalize boundary, check where they landed and move them into the fresh `[Unreleased]`; resolving the conflict by keeping both sides is exactly the back-edit the bullet above forbids.
 - `lib/whats-new.ts`'s WHATS_NEW array is not maintained by hand anywhere —
   no entries, no churn; the prerelease branch in the whats-new entry test
   keeps the suite green without a placeholder. On dev the modal leads with
@@ -60,9 +62,6 @@ merging into `dev`, releasing, changelog writing, or tagging.
   source of truth and no sentence is written twice. Published entries
   derive the same way at finalize time (section 5). The group also carries
   a parse contract — bullets open with `- ` at column zero and wrap with
-  two-space continuation lines — exercised in its tests; a bullet that
-  violates it simply stops appearing in the dev What's-new modal. That gives the group a
-  parse contract — bullets open with `- ` at column zero and wrap with
   two-space continuation lines — exercised in its tests; a bullet that
   violates it simply stops appearing in the dev What's-new modal.
 - The gift button's pulse on dev keys to the group's CONTENT, not the
@@ -106,7 +105,7 @@ entry below):
 This commit is what gets tagged and fast-forwarded onto main — nothing
 else should ride in it.
 
-## 4. Promote `main`, tag, push
+## 4. Promote `main`, tag, push, publish
 
 - From a temp worktree: `git worktree add /tmp/release-main main`, then
   `git merge --ff-only dev`. `--ff-only` must succeed: if it refuses, main
@@ -119,6 +118,14 @@ else should ride in it.
   retag. Tag signing is automatic (section 7a).
 - Push `dev`, `main`, and the tag to `origin` — a pushed tag is the
   distribution surface (users install semver ranges like `git:...@^X.Y`).
+- Publish the matching GitHub Release for the tag:
+  `gh release create vX.Y.Z --title "Focus Board X.Y.Z" --notes-file <file>`.
+  The notes file is the release's changelog section verbatim — retitle its
+  heading to `## Focus Board X.Y.Z (date)` — closed by a
+  `**Full changelog**: .../compare/v<PREVIOUS>...vX.Y.Z` compare link
+  against the previous tag (v0.5.21's release is the pattern). No binary
+  assets: the tag itself is the package, since bb installs it by semver
+  range. Confirm with `gh release view vX.Y.Z`.
 - Remove the temp worktree.
 
 ## 5. What's-new derivation (`WHATS_NEW` in `lib/whats-new.ts`)
@@ -171,6 +178,16 @@ and that checkout sits on `dev`, so the running plugin serves dev:
    What's-new gift button should pulse for the new version after a release
    and stay quiet once the prep commit lands.
 
+This is part of every merge into `dev`, not a release-only step. bb does
+not watch the plugin's `dist/` — a rebuilt bundle keeps serving the
+previously loaded code until the reload runs, so a merged-but-unreloaded
+board looks unshipped: new behavior absent and the gift silent even though
+`[Unreleased]` has bullets. Exactly that happened on 2026-10-03 (the
+new-thread modal merged, the operator saw no pulsing gift, and the fix was
+only the reload). Run steps 1–2 before reporting a dev merge as done, and
+treat a missing pulse after a changelog-carrying merge as the symptom of a
+stale bundle first, a code bug second.
+
 `bb plugin dev` is the watch-mode alternative for iterating, not for
 releases.
 
@@ -213,3 +230,7 @@ fingerprint says which key era produced it).
   distribution history; release notes for a version are recoverable from
   `git log vX.Y-prev..vX.Y`, the `WHATS_NEW` entry, and the CHANGELOG
   section.
+- GitHub Releases are the announcement surface: one public release per
+  version, created in section 4, notes identical to the version's
+  changelog section. A pushed tag without its release page is a
+  half-finished release.

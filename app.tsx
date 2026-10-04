@@ -13,11 +13,14 @@ import {
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { findTicketRefs, resolveRepoSlug } from "./lib/tickets";
 import { installHostLinkGlue } from "./components/host-link-glue";
+import { FocusBoardAppIcon } from "./components/ui/icon";
 import type { rpcContract } from "./server";
 import { Board } from "./components/board";
 import { BoardToolbar } from "./components/board-toolbar";
 import { ThreadPane } from "./components/thread-pane";
 import type { ThreadPaneThread } from "./components/thread-pane";
+import { NewThreadModal } from "./components/new-thread-modal";
+import type { SpawnedThread } from "./components/new-thread-modal";
 import type { CardMenuAction } from "./components/thread-card-menu";
 import type { FilterState, GroupBy, ThreadState } from "./components/grouping";
 import {
@@ -594,10 +597,11 @@ function BoardPage({ subPath }: { subPath: string }) {
   // additionally fires on host-side changes so cards never sit stale.
   useRealtime("thread-list-changed", () => {});
 
-  // R2: the family pipeline runs on the NON-HIDDEN set — archived threads
-  // are included so an archived child stays under its parent. Archived
-  // threads never render standalone; `assembleBoard` keeps them out of the
-  // columns in both modes.
+  // The family pipeline runs on the NON-HIDDEN set. Archived threads are
+  // included here but are hidden by the pipeline itself: buildFamilyIndex —
+  // the single authoritative hide — drops them, so an archived child renders
+  // nowhere (in either board view) and a child of an archived parent
+  // re-roots. assembleBoard keeps them out of the columns in both modes.
   const nonHiddenThreads = useMemo(
     () => threads.filter((thread) => !thread.isHidden),
     [threads],
@@ -619,7 +623,8 @@ function BoardPage({ subPath }: { subPath: string }) {
 
   // Family-aware filtering replaces per-thread filtering when nesting is ON:
   // a family passes when any member matches, non-matching members render
-  // dimmed (archived riders always dim; they never contribute a match).
+  // dimmed (archived members are hidden outright by the family index, so
+  // they never appear here at all).
   // Nesting OFF means a fully flat board — per-thread filtering again. The
   // "parent" grouping overrides that (D11): the nesting toggle is inert
   // there, and lane mode always filters family-first (D10 keep-and-dim).
@@ -649,9 +654,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Single assembly: buildColumns → nestUnderParents. The nesting result's
   // map (not the raw family index) drives which children render as nested
   // rows, so a promoted or cross-axis child appears only as its standalone
-  // card — never both standalone AND nested. The raw index's counts drive the
-  // parent card's child-count chip, which counts every child (archived
-  // included). With nesting OFF the board is flat: no rows, no chips.
+  // card — never both standalone AND nested. `doneChildrenByParent` drives
+  // the Done projection cards. The chip counts come from the assembly too,
+  // counted per card's own space (live children on a live card; done rows on
+  // a Done card). With nesting OFF the board is flat: no rows, no chips.
   const isParentGroupBy = groupBy === "parent";
   const parentLanes = useMemo(
     () => (isParentGroupBy ? buildParentLanes(searched, doneIds, Date.now(), doneTimes) : null),
@@ -730,6 +736,17 @@ function BoardPage({ subPath }: { subPath: string }) {
       }
     },
     [columns, doneIds, doneAgeSource, idleKept, liveChildParentIds, sweepConfig],
+  );
+
+  // A Done-column projection card (a live family's Done card) cannot join a
+  // sweep either: it is a rendering of a live parent, not a done thread.
+  const doneProjectionParentIds = useMemo(
+    () => new Set(assembly?.doneChildrenByParent.keys() ?? []),
+    [assembly],
+  );
+  const sweepBlockedIds = useMemo(
+    () => new Set([...liveChildParentIds, ...doneProjectionParentIds]),
+    [liveChildParentIds, doneProjectionParentIds],
   );
 
   const armSweepFor = useCallback(
@@ -835,20 +852,39 @@ function BoardPage({ subPath }: { subPath: string }) {
     const projectId = [...filter.projects][0];
     return projects.some((project) => project.id === projectId) ? projectId : undefined;
   }, [filter.projects, projects]);
+  // The board's own new-thread composer: a modal over the board and pane, so
+  // composing never leaves the surface and bb's new-thread window stays out
+  // of the way. The nonce re-focuses the composer editor on every open.
+  const [newThreadOpen, setNewThreadOpen] = useState(false);
+  const [composerFocusRequest, setComposerFocusRequest] = useState(0);
+  const openNewThread = useCallback(() => {
+    setComposerFocusRequest((nonce) => nonce + 1);
+    setNewThreadOpen(true);
+  }, []);
+  // A freshly spawned thread is not in the sidebar cache on the tick the
+  // pane route opens, and the pane only renders for a resolvable thread.
+  // The spawn result stands in until the cache carries the thread (this row
+  // then clears and the cached thread — with live status — wins).
+  const [provisionalSpawn, setProvisionalSpawn] = useState<{
+    id: string;
+    displayTitle: string;
+    status: ThreadPaneThread["status"];
+  } | null>(null);
+  useEffect(() => {
+    if (
+      provisionalSpawn !== null &&
+      sidebarThreads.some((thread) => thread.id === provisionalSpawn.id)
+    ) {
+      setProvisionalSpawn(null);
+    }
+  }, [sidebarThreads, provisionalSpawn]);
   // "Personal" is the board card's label for a thread whose project is not in
-  // the sidebar's project list (bb's default personal project); the pane
-  // header uses the same resolution so the two surfaces agree.
+  // the sidebar's project list (bb's default personal project).
   const projectNameFor = useCallback(
     (projectId: string) =>
       projects.find((project) => project.id === projectId)?.name ?? "Personal",
     [projects],
   );
-  const openNewThread = useCallback(() => {
-    actions.openNewThread({
-      ...(newThreadProjectId === undefined ? {} : { projectId: newThreadProjectId }),
-      focusPrompt: true,
-    });
-  }, [actions, newThreadProjectId]);
   // Archived riders sit in `searched` when nesting is ON (they stay under
   // their parent); board-level counts stay live-thread counts.
   const boardCount = useMemo(
@@ -876,10 +912,6 @@ function BoardPage({ subPath }: { subPath: string }) {
           displayTitle: openThreadActive.displayTitle,
           status: openThreadActive.status,
           isUnread: openThreadActive.isUnread,
-          projectName:
-            projectNameFor(openThreadActive.projectId),
-          branchName:
-            openThreadActive.environment?.branchName ?? openThreadActive.host?.name ?? null,
         }
       : openThreadArchived !== null
         ? {
@@ -888,10 +920,15 @@ function BoardPage({ subPath }: { subPath: string }) {
               openThreadArchived.title ?? openThreadArchived.titleFallback ?? openThreadArchived.id,
             status: "idle",
             isUnread: false,
-            projectName: null,
-            branchName: null,
           }
-        : null;
+        : provisionalSpawn !== null && provisionalSpawn.id === openThreadId
+          ? {
+              id: provisionalSpawn.id,
+              displayTitle: provisionalSpawn.displayTitle,
+              status: provisionalSpawn.status,
+              isUnread: false,
+            }
+          : null;
 
   const openThreadIsArchived =
     openThreadId === null
@@ -932,6 +969,20 @@ function BoardPage({ subPath }: { subPath: string }) {
       }
     },
     [navigate, openThreadId, threads, groupBy, projects, providers],
+  );
+
+  // The composer modal resolved a spawn: file the provisional row, then open
+  // the new thread in the pane (route push + frozen column as usual).
+  const handleSpawnedThread = useCallback(
+    (thread: SpawnedThread) => {
+      setProvisionalSpawn({
+        id: thread.id,
+        displayTitle: thread.title ?? thread.titleFallback ?? thread.id,
+        status: thread.status,
+      });
+      openThreadCard(thread.id);
+    },
+    [openThreadCard],
   );
 
   const closeThreadPane = useCallback(() => {
@@ -997,6 +1048,50 @@ function BoardPage({ subPath }: { subPath: string }) {
     [sdk],
   );
 
+  // One-shot lane-reveal claims (menu moves). Every menu action that
+  // relocates a card — Pin/Unpin, Mark Done/Not Done, Mark Read/Unread —
+  // moves a card the pane never opened, and the destination lane (Pinned
+  // far left, Done far right) can sit offscreen in a scrolled board: the
+  // action reads as the card silently vanishing from where it was.
+  //
+  // The board only follows the OPEN card (its keep-in-view effect), and it
+  // must not follow the DATA (passive status flips and host-side changes
+  // would yank the user's place) — so the board gets an intent CLAIM
+  // instead. Pin/Read ride the host bridge: the state (with it, the
+  // relocation) lands in a later render than the click, so rather than fire
+  // the reveal at click time, the run arms a pending claim that the effect
+  // below consumes the moment the thread's observable state matches — landing
+  // the reveal request in the same commit the card relocates. Done/Unread
+  // are local and optimistic: their runs fire the reveal directly, batched
+  // with the state change (Board processes it post-relocation).
+  //
+  // A claim that outlives its action (the host never applies the requested
+  // state) fires later, on the next state match — still the user's intent.
+  const [revealRequest, setRevealRequest] = useState<{
+    threadId: string;
+    seq: number;
+  } | null>(null);
+  const revealSeqRef = useRef(0);
+  const requestReveal = useCallback((threadId: string) => {
+    revealSeqRef.current += 1;
+    setRevealRequest({ threadId, seq: revealSeqRef.current });
+  }, []);
+  const pendingStateClaimsRef = useRef<
+    Map<string, { field: "isPinned" | "isUnread"; value: boolean }>
+  >(new Map());
+  useEffect(() => {
+    const claims = pendingStateClaimsRef.current;
+    if (claims.size === 0) return;
+    for (const [threadId, claim] of claims) {
+      const thread = threads.find((candidate) => candidate.id === threadId);
+      if (thread === undefined || thread[claim.field] !== claim.value) continue;
+      claims.delete(threadId);
+      requestReveal(threadId);
+    }
+    // Consumes per threads update while claims are armed; the deletion (and
+    // requestReveal's own setState) is the re-run trigger.
+  }, [threads, requestReveal]);
+
   // The Pinned lane-exit rule. A pinned card leaving the Pinned lane (a
   // cross-column drop or the menu's Mark Done) un-pins as part of the
   // gesture — column placement derives from the pin, so the pin must go
@@ -1050,7 +1145,15 @@ function BoardPage({ subPath }: { subPath: string }) {
         clearParkPin(threadId);
         return;
       }
-      // The restore itself, then the park dies — one gesture, once.
+      // The restore itself, then the park dies — one gesture, once. The
+      // reveal claim rides along: the card moves back to Pinned (far left,
+      // offscreen in a scrolled board) when the write lands, not when this
+      // function runs, so the consumed-when-applied claim is what keeps the
+      // board following it.
+      pendingStateClaimsRef.current.set(threadId, {
+        field: "isPinned",
+        value: true,
+      });
       void actions.setPinned(threadId, true);
       clearParkPin(threadId);
     },
@@ -1402,6 +1505,14 @@ function BoardPage({ subPath }: { subPath: string }) {
             // write supersedes must not resurrect on a later Mark Not Done
             // or Mark Unread.
             clearParkPin(thread.id);
+            // Arm the reveal claim first, then ask the host: the applied
+            // pin (and the card's relocation into or out of the Pinned
+            // lane) lands in a later commit, so the claim's consumption
+            // effect timing is what makes the reveal land AFTER the move.
+            pendingStateClaimsRef.current.set(thread.id, {
+              field: "isPinned",
+              value: !thread.isPinned,
+            });
             void actions.setPinned(thread.id, !thread.isPinned);
           },
         },
@@ -1410,6 +1521,14 @@ function BoardPage({ subPath }: { subPath: string }) {
           label: thread.isUnread ? "Mark Read" : "Mark Unread",
           icon: thread.isUnread ? "MailOpen" : "Mail",
           run: () => {
+            // Arm the reveal claim first — setRead also rides the host
+            // bridge, and the requested observable state is the toggle's
+            // flipped value (the applied result), not the arg passed
+            // through.
+            pendingStateClaimsRef.current.set(thread.id, {
+              field: "isUnread",
+              value: !thread.isUnread,
+            });
             // Marking unread carries the state-truth effects (a parked pin
             // returns; a Done card un-does); marking read leaves the park in
             // place — a card read now that the operator marks unread later
@@ -1434,6 +1553,12 @@ function BoardPage({ subPath }: { subPath: string }) {
               return next;
             });
             rpc.call("done_set", { threadId: thread.id, done: !isThreadDone }).catch(() => {});
+            // Local and optimistic: the card relocates to the Done lane (or
+            // back out of it) in the same commit as this batch, so the
+            // one-shot reveal can fire now — Board's layout effect
+            // processes it after the move, minimally (an already-visible
+            // destination lane scrolls nothing).
+            requestReveal(thread.id);
             if (!isThreadDone) {
               // Done implies read: a Done card must not still claim unread
               // (and a later Mark Not Done hands the card back read).
@@ -1495,7 +1620,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         },
       ];
     },
-    [actions, applyUnreadStateEffects, clearParkPin, doneAgeSource, doneIds, exitPinnedLane, restoreParkedPin, rpc, setDoneExtras, setDoneIds, sdk],
+    [actions, applyUnreadStateEffects, clearParkPin, doneAgeSource, doneIds, exitPinnedLane, requestReveal, restoreParkedPin, rpc, setDoneExtras, setDoneIds, sdk],
   );
 
   if (status === "loading" && threads.length === 0) {
@@ -1574,6 +1699,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             doneIds={doneIds}
             nestedChildrenByParent={assembly?.nestedChildrenByParent ?? new Map()}
             childCountByParent={assembly?.childCountByParent ?? new Map()}
+            doneChildrenByParent={assembly?.doneChildrenByParent ?? new Map()}
             dimmedIds={dimmedIds}
             projectNameFor={projectNameFor}
             repoBaseFor={repoBaseFor}
@@ -1588,7 +1714,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             onDismissSweepNotice={clearSweepNotice}
             onSweepUndo={undoSweepFor}
             onSweepToggle={toggleSweepSelectionFor}
-            sweepBlockedIds={liveChildParentIds}
+            sweepBlockedIds={sweepBlockedIds}
             onSweepArm={armSweepFor}
             onSweepDisarm={disarmSweep}
             onSweepConfirm={confirmSweepFor}
@@ -1662,6 +1788,7 @@ function BoardPage({ subPath }: { subPath: string }) {
                 .catch(() => refetchRanks());
             }}
             menuActionsFor={menuActionsFor}
+            reveal={revealRequest}
           />
         )}
       </div>
@@ -1702,10 +1829,18 @@ function BoardPage({ subPath }: { subPath: string }) {
           onRename={(title) => actions.rename(openThread.id, title)}
           onMaximize={() => navigate.toThread(openThread.id)}
           onClose={closeThreadPane}
+          escapeSuppressed={newThreadOpen}
           escStopsRunningThread={escStopsRunningThread}
           scrollDebug={scrollDebug}
         />
       )}
+      <NewThreadModal
+        open={newThreadOpen}
+        onOpenChange={setNewThreadOpen}
+        defaultProjectId={newThreadProjectId}
+        focusRequest={composerFocusRequest}
+        onSpawned={handleSpawnedThread}
+      />
       <WhatsNewModal
         open={whatsNewOpen}
         onOpenChange={setWhatsNewOpen}
@@ -1716,10 +1851,19 @@ function BoardPage({ subPath }: { subPath: string }) {
 }
 
 export default definePluginApp((app) => {
+  // The brand mark joins the host's app-wide icon registry under the name
+  // "FocusBoard", so every host-rendered surface that takes a `BbIconName`
+  // — the sidebar nav row and the pane's title-bar tab — can draw the same
+  // mark the manifest's branding.icon shows on the Tools pages, instead of
+  // the Columns2 placeholder this registration used to hardcode.
+  app.experimental_icons.register({
+    name: "FocusBoard",
+    component: FocusBoardAppIcon,
+  });
   app.slots.navPanel({
     id: "board",
     title: "Focus Board",
-    icon: "Columns2",
+    icon: "FocusBoard",
     path: PANEL_PATH,
     // The pane's thread arrives through the `subPath` prop (`t/<id>`), so
     // the open pane participates in browser history — bb's back arrow
