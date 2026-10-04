@@ -40,15 +40,12 @@ merging into `dev`, releasing, changelog writing, or tagging.
   the `[Unreleased]` group at the top of `CHANGELOG.md`, under the matching
   Keep-a-Changelog subsection: **Added** = new capability, **Changed** =
   behavior change to an existing surface, **Fixed** = bug fix.
-- Grouping is a write-time duty, checked on every changelog write — not just at finalize: each write to `[Unreleased]` looks at the whole group and decides whether items should be grouped. Place each new bullet under the matching subsection, and when a write leaves the group flat or mixed (bullets bare under `## [Unreleased]`, or a Fixed bullet stranded under Added), regroup the existing bullets in that same write. Bare bullets inherit straight into the published section at the finalize rename, and regrouping them there would be the back-edit the published-sections rule forbids.
+- Every changelog write audits the whole `[Unreleased]` group in the same edit and never defers the fixes to release: only user-facing behavior earns bullets (tests-only, refactor, docs-only, build-plumbing, and internal-identifier landings are commit-message material; a mixed landing bullets only its user-facing part); every bullet lands under the matching subsection, and stray or bare bullets regroup right there — bare ones inherit into a published section at the finalize rename, and touching a published section is the forbidden back-edit.
 - One bullet per *behavior*, not per merge or branch. The bullet's OPENING
   SENTENCE is its What's-new item (section 5), so start the bullet with a
   bold lead that reads standalone: surface first, then behavior, what a
   user can now do or see — all the modal ever shows of the bullet. A bare
-  noun phrase ("Parent thread lanes.") is the failure to avoid; the elaboration after the lead is free to run full-record length. Mechanism,
-  root-cause forensics, a workaround's removal condition, and test counts
-  belong there or in `docs/*.md` (linked), never in the lead sentence.
-- Every changelog write also sorts the landing before writing anything: user-facing behavior earns a bullet, maintainers-only work adds none. Tests-only, refactor, docs-only, build-plumbing, and internal-identifier landings are maintainers-only; a mixed landing gets bullets only for its user-facing parts, with the rest recorded in the commit message. This check runs at write time next to the grouping check, never deferred to release.
+  noun phrase ("Parent thread lanes.") is the failure to avoid. After the lead, the body runs at most three sentences; mechanism, root-cause forensics, workaround details, and test counts belong in `docs/*.md` (linked), not in the body — the old "free to run full-record length" license produced 11-line bullets (the lane-sweep and snooze bullets, 2026-10). Bullets covering the same behavior fold into one bullet with facet sub-bullets (0.6.0's projection card is the shape); sibling top-level bullets for one surface are the failure to avoid (the then-unreleased sweep + sweep-pill pair, 2026-10).
 - Published sections are never back-edited. If a later merge revises
   behavior a published version already described, it gets fresh
   `[Unreleased]` bullets saying what the behavior is *now* (the parked-pin
