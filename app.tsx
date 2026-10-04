@@ -1044,6 +1044,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           displayTitle: openThreadActive.displayTitle,
           status: openThreadActive.status,
           isUnread: openThreadActive.isUnread,
+          isPinned: openThreadActive.isPinned,
         }
       : openThreadArchived !== null
         ? {
@@ -1052,6 +1053,7 @@ function BoardPage({ subPath }: { subPath: string }) {
               openThreadArchived.title ?? openThreadArchived.titleFallback ?? openThreadArchived.id,
             status: "idle",
             isUnread: false,
+            isPinned: false,
           }
         : provisionalSpawn !== null && provisionalSpawn.id === openThreadId
           ? {
@@ -1059,6 +1061,7 @@ function BoardPage({ subPath }: { subPath: string }) {
               displayTitle: provisionalSpawn.displayTitle,
               status: provisionalSpawn.status,
               isUnread: false,
+              isPinned: false,
             }
           : null;
 
@@ -1969,6 +1972,22 @@ function BoardPage({ subPath }: { subPath: string }) {
             } else {
               actions.archive(openThreadId);
             }
+          }}
+          onTogglePinned={() => {
+            if (openThreadId === null || openThreadActive === null) return;
+            // Same semantics as the card menu's pin: a state change lifts any
+            // snooze first, and a live intent beats the parked value.
+            if (snoozedIds.has(openThreadId)) clearSnooze(openThreadId);
+            clearParkPin(openThreadId);
+            // Arm the reveal claim first, then ask the host: the applied pin
+            // (and the card's relocation into or out of the Pinned lane) lands
+            // in a later commit, so the claim's consumption effect timing is
+            // what makes the reveal land AFTER the move.
+            pendingStateClaimsRef.current.set(openThreadId, {
+              field: "isPinned",
+              value: !openThreadActive.isPinned,
+            });
+            void actions.setPinned(openThreadId, !openThreadActive.isPinned);
           }}
           snoozeMenuItems={snoozeMenuActions({
             snoozed: snoozedIds.has(openThread.id),

@@ -80,6 +80,7 @@ describe("Escape stops a running thread (toggle ON)", () => {
       displayTitle: "Test thread",
       status: "active",
       isUnread: false,
+      isPinned: false,
     });
     pressEscape();
     expect(stop).toHaveBeenCalledWith({ threadId: "thr_test" });
@@ -92,6 +93,7 @@ describe("Escape stops a running thread (toggle ON)", () => {
       displayTitle: "Test thread",
       status: "starting",
       isUnread: false,
+      isPinned: false,
     });
     pressEscape();
     expect(stop).toHaveBeenCalledTimes(1);
@@ -104,6 +106,7 @@ describe("Escape stops a running thread (toggle ON)", () => {
       displayTitle: "Test thread",
       status: "stopping",
       isUnread: false,
+      isPinned: false,
     });
     pressEscape();
     expect(stop).not.toHaveBeenCalled();
@@ -116,6 +119,7 @@ describe("Escape stops a running thread (toggle ON)", () => {
       displayTitle: "Test thread",
       status: "idle",
       isUnread: false,
+      isPinned: false,
     });
     pressEscape();
     expect(stop).not.toHaveBeenCalled();
@@ -131,6 +135,7 @@ describe("Escape closes the pane regardless of status (toggle OFF)", () => {
         displayTitle: "Test thread",
         status: "active",
         isUnread: false,
+        isPinned: false,
       },
       { escStopsRunningThread: false },
     );
@@ -148,6 +153,7 @@ describe("Escape stands down while an overlay owns the key (composer modal open)
         displayTitle: "Test thread",
         status: "active",
         isUnread: false,
+        isPinned: false,
         projectName: null,
         branchName: null,
       },
@@ -165,6 +171,7 @@ describe("Escape stands down while an overlay owns the key (composer modal open)
         displayTitle: "Test thread",
         status: "idle",
         isUnread: false,
+        isPinned: false,
         projectName: null,
         branchName: null,
       },
