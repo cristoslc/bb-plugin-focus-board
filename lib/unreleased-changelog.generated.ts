@@ -7,5 +7,9 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
   {
     "text": "**A double-tap of Escape no longer closes the thread pane.** After the pane stops a running thread or closes, further Escapes inside a short double-click window are swallowed, so a stop double-tap can't cascade into closing the pane.",
     "children": []
+  },
+  {
+    "text": "**Collapsed child rows now fold into a status-dot strip.** The strip replaces the plain \"N child threads\" pill — one colored dot per child, amber pulsing when a child needs you — and the fold toggle moved into the child section, directly above the rows it acts on.",
+    "children": []
   }
 ];

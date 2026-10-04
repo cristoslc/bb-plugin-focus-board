@@ -22,6 +22,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   double-click window are swallowed, so a stop double-tap can't cascade into
   closing the pane.
 
+- **Collapsed child rows now fold into a status-dot strip.** The strip
+  replaces the plain "N child threads" pill — one colored dot per child,
+  amber pulsing when a child needs you — and the fold toggle moved into the
+  child section, directly above the rows it acts on.
+
 ## [0.8.0] - 2026-10-03
 
 ### Added
@@ -45,12 +50,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   fallback modal that names the reason and offers another service or a
   manual rename.
 
-- **The thread pane's actions menu pins again.** The opened pane's more-actions
-  menu carries a Pin/Unpin entry between Mark Done and the snooze entry (an
-  archived row's menu keeps just its Unarchive), with the card menu's
-  semantics: the gesture lifts a snooze and clears a parked pin, the reveal
-  claim arms before the write, and the card's lane move reveals after the pin
-  lands.
+- **The thread pane's actions menu pins again.** A Pin/Unpin entry joins the
+  opened pane's more-actions menu with the card menu's semantics: the
+  gesture lifts a snooze and clears a parked pin, and a lane move reveals
+  after the pin lands.
 
 ### Changed
 

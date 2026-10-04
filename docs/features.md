@@ -17,7 +17,9 @@ Fine-grained notes that don't belong in the README's feature list.
 
 - A family can live in two spaces at once: the active card keeps the live children nested, and the done children render in a second card — the family's projection — in the Done column, dimmed, with the done children nested beneath it. A done parent keeps its single Done card. Each card's child-count chip counts its own space.
 - Archived children are hidden outright: they render nowhere on either board view, child chips count only visible children, and the children of an archived parent render standalone instead of vanishing.
-- A family card that nests more than five child rows caps the list and scrolls inside the card; the collapse chevron still hides the whole list.
+- A family card that nests more than five child rows caps the list and scrolls inside the card; the collapse toggle still hides the whole list.
+- Collapsed rows fold into a "N child threads" line with one status-colored dot per child (amber pulses when a child needs you); the toggle sits directly above the rows it acts on, and folds persist across sessions (localStorage).
+- A folded card opens by itself when one of its nested children turns unread or needs you; a family collapsed while a child was already unread stays folded.
 - A column drained to zero by nesting hides until a card returns to it.
 - A family card's nested rows can be collapsed: the chevron folds the rows into a "N child threads" pill that re-opens them, and the collapsed families persist across sessions (localStorage).
 - A collapsed card opens by itself when one of its nested children turns unread or needs you; a family collapsed while a child was already unread stays folded.
