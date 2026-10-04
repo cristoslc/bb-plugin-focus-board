@@ -7,11 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **Family cards fold their child rows into a status-dot strip below the
-  count chip.** The fold toggle sits in the child section, directly above the
-  rows it acts on, and folds persist across sessions. A child that needs you
-  un-nests into its own Needs-you card while the rest of the rows stay
-  folded.
+- **Family cards fold their child rows into a "N child threads" line with a
+  strip of status-colored dots immediately below it.** The fold toggle sits
+  in the child section, directly above the rows it acts on, and folds persist
+  across sessions. A child that needs you un-nests into its own Needs-you
+  card while the rest of the rows stay folded.
 
 - **Snooze: read now, unread again at a target time.** One "Snooze…" entry
   (on cards and in the pane's actions menu) opens a presets-or-picked-time
