@@ -18,7 +18,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   probed for the `complete` bridge focus-board calls (cached 60s — a
   deliberately invalid probe input can never trigger a model call), and a
   service whose plugin lacks the bridge (bb cloud, Codex) renders disabled
-  with its reason instead of a click that 404s.
+  with its reason instead of a click that 404s. `bb focus-board autotitle
+  availability|probe --thread-id <id>` mirrors the menu and runs the probe
+  end-to-end from the CLI, so the live verdict is observable without the
+  pane.
 
 ### Changed
 

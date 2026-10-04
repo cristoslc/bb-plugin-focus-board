@@ -1016,6 +1016,37 @@ export default async function plugin(bb: BbPluginApi) {
     }
   }
 
+  /**
+   * The ✨ diagnostic menu the fallback modal serves (thread_autotitle_services)
+   * and the autotitle CLI prints: the selection, every registered
+   * thread-title service bridge-classified, and the thread's probe
+   * availability. One builder so the modal and the CLI cannot drift.
+   */
+  async function autotitleServicesMenu(threadId: string) {
+    const state = (await bb.sdk.system.aiServices()) as Parameters<
+      typeof resolveTitleTarget
+    >[0];
+    const selected = resolveTitleSelection(state);
+    const threadModel = await threadModelAvailability(threadId);
+    return {
+      selected: selected.ok
+        ? { pluginId: selected.pluginId, serviceId: selected.serviceId }
+        : null,
+      services: await Promise.all(
+        autotitleTargets(state).map(async (target) => {
+          if (!target.ready) {
+            // A not-ready service is already blocked by its own message;
+            // no need to spend a probe on it.
+            return { ...target, bridge: false, bridgeReason: null };
+          }
+          const bridge = await serviceBridgeState(target.pluginId);
+          return { ...target, bridge: bridge.ok, bridgeReason: bridge.reason };
+        }),
+      ),
+      threadModel,
+    };
+  }
+
   bb.rpc.register(rpcContract, {
     done_list: async () => {
       const [{ doneIds, records }, kept] = await Promise.all([
@@ -1141,30 +1172,7 @@ export default async function plugin(bb: BbPluginApi) {
       }
       return { title };
     },
-    thread_autotitle_services: async ({ threadId }) => {
-      const state = (await bb.sdk.system.aiServices()) as Parameters<
-        typeof resolveTitleTarget
-      >[0];
-      const selected = resolveTitleSelection(state);
-      const threadModel = await threadModelAvailability(threadId);
-      return {
-        selected: selected.ok
-          ? { pluginId: selected.pluginId, serviceId: selected.serviceId }
-          : null,
-        services: await Promise.all(
-          autotitleTargets(state).map(async (target) => {
-            if (!target.ready) {
-              // A not-ready service is already blocked by its own message;
-              // no need to spend a probe on it.
-              return { ...target, bridge: false, bridgeReason: null };
-            }
-            const bridge = await serviceBridgeState(target.pluginId);
-            return { ...target, bridge: bridge.ok, bridgeReason: bridge.reason };
-          }),
-        ),
-        threadModel,
-      };
-    },
+    thread_autotitle_services: async ({ threadId }) => autotitleServicesMenu(threadId),
     tracker_status: async ({ repo, numbers }) => {
       const home = process.env.HOME ?? "";
       if (home === "") return { statuses: {} };
@@ -1727,6 +1735,78 @@ export default async function plugin(bb: BbPluginApi) {
     },
   });
 
+  // --- ✨ auto-rename diagnostics: bb focus-board autotitle ---
+  //
+  // The fallback modal owns the browser truth but cannot be observed from
+  // the outside; these two commands print the same state (availability,
+  // selection, bridge classification) and run the probe end-to-end, so the
+  // live verdict is one CLI call away.
+
+  const autotitleAvailability = cliCommand({
+    summary:
+      "Report the ✨ auto-rename menu for a thread: selection, bridges, thread-model probe availability",
+    positionals: [
+      {
+        name: "thread-id",
+        description: "Thread to report on",
+        required: true,
+      },
+    ],
+    options: {
+      json: { type: "boolean", description: "Emit machine-readable JSON" },
+    },
+    async run(input) {
+      const menu = await autotitleServicesMenu(input.positionals["thread-id"]);
+      if (input.options.json) {
+        return { exitCode: 0, stdout: JSON.stringify(menu, null, 2) + "\n" };
+      }
+      const lines: string[] = [];
+      lines.push(
+        menu.threadModel.available
+          ? "thread model probe: available"
+          : `thread model probe: not available — ${menu.threadModel.reason ?? "unknown reason"}`,
+      );
+      lines.push(
+        menu.selected === null
+          ? "selected service: none (task not set to a plugin service)"
+          : `selected service: ${menu.selected.pluginId}/${menu.selected.serviceId}`,
+      );
+      for (const service of menu.services) {
+        const at = `${service.displayName} (${service.pluginId}/${service.serviceId})`;
+        if (!service.ready) {
+          lines.push(`[not ready] ${at} — ${service.message ?? "not ready"}`);
+        } else if (service.bridge === false) {
+          lines.push(`[no bridge] ${at} — ${service.bridgeReason ?? "no bridge"}`);
+        } else {
+          lines.push(`[bridged] ${at}`);
+        }
+      }
+      return { exitCode: 0, stdout: lines.join("\n") + "\n" };
+    },
+  });
+
+  const autotitleProbe = cliCommand({
+    summary:
+      "Run the ✨ thread-model probe end-to-end for a thread (spawns a hidden one-turn thread, prints the title, deletes it)",
+    positionals: [
+      {
+        name: "thread-id",
+        description: "Thread whose provider/model the probe clones",
+        required: true,
+      },
+    ],
+    options: {
+      json: { type: "boolean", description: "Emit machine-readable JSON" },
+    },
+    async run(input) {
+      const title = await probeThreadModelTitle(input.positionals["thread-id"]);
+      const stdout = input.options.json
+        ? JSON.stringify({ title }, null, 2) + "\n"
+        : `probed title: ${title}\n`;
+      return { exitCode: 0, stdout };
+    },
+  });
+
   const configShow = cliCommand({
     summary: "Show the sweep threshold settings and their defaults",
     options: {
@@ -1826,7 +1906,7 @@ export default async function plugin(bb: BbPluginApi) {
       name: "focus-board",
       summary: "Manage the Focus Board plugin's own state",
       description:
-        "Done list/mark/clear, sweep (archive old Done + long-idle, dry-run by default), and the sweep thresholds.",
+        "Done list/mark/clear, snooze list/set/clear, autotitle availability/probe diagnostics, sweep (archive old Done + long-idle, dry-run by default), and the sweep thresholds.",
       commands: {
         "done list": doneList,
         "done mark": doneMark,
@@ -1834,6 +1914,8 @@ export default async function plugin(bb: BbPluginApi) {
         "snooze list": snoozeList,
         "snooze set": snoozeSet,
         "snooze clear": snoozeClear,
+        "autotitle availability": autotitleAvailability,
+        "autotitle probe": autotitleProbe,
         sweep,
         "config show": configShow,
         "config set": configSet,
