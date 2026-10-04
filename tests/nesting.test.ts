@@ -11,6 +11,8 @@ import {
 import {
   assembleBoard,
   buildFamilyIndex,
+  familiesToAutoExpand,
+  familiesWithUrgentChildren,
   familyColumnOverrides,
   filterFamilies,
   filterIndividually,
@@ -1379,5 +1381,80 @@ describe("urgent nested children float to the top of the family's rows", () => {
     const columns = buildColumns(threads, "status", CONTEXT, new Map(), new Set(), NOW);
     const nested = nestUnderParents(columns, threads, "status", CONTEXT, NOW);
     expect(ids(nested.childrenByParent.get("p"))).toEqual(["u2", "u1", "n"]);
+  });
+});
+describe("familiesWithUrgentChildren (auto-expand source set)", () => {
+  const child = (overrides: Partial<PluginSidebarThread>) =>
+    thread({ parentThreadId: "thr_parent", ...overrides });
+
+  it("counts a parent whose nested child is unread", () => {
+    const children = new Map([["thr_parent", [child({ id: "thr_c", isUnread: true })]]]);
+    expect(familiesWithUrgentChildren(children, new Set())).toEqual(new Set(["thr_parent"]));
+  });
+
+  it("counts needs-you (pending interaction) children", () => {
+    const children = new Map([["thr_parent", [child({ id: "thr_c", hasPendingInteraction: true })]]]);
+    expect(familiesWithUrgentChildren(children, new Set())).toEqual(new Set(["thr_parent"]));
+  });
+
+  it("skips working and idle children — a quiet family never demands expansion", () => {
+    const children = new Map([
+      [
+        "thr_parent",
+        [
+          child({ id: "thr_work", status: "active", updatedAt: 1000 }),
+          child({ id: "thr_idle" }),
+        ],
+      ],
+    ]);
+    expect(familiesWithUrgentChildren(children, new Set()).size).toBe(0);
+  });
+
+  it("never counts archived children — stale state must not demand attention", () => {
+    const children = new Map([["thr_parent", [child({ id: "thr_c", isUnread: true, isArchived: true })]]]);
+    expect(familiesWithUrgentChildren(children, new Set()).size).toBe(0);
+  });
+
+  it("never counts done children — completed state must not demand attention", () => {
+    const children = new Map([["thr_parent", [child({ id: "thr_c", isUnread: true })]]]);
+    expect(familiesWithUrgentChildren(children, new Set(["thr_c"])).size).toBe(0);
+  });
+
+  it("returns nothing for an empty nesting map", () => {
+    expect(familiesWithUrgentChildren(new Map(), new Set()).size).toBe(0);
+  });
+});
+
+describe("familiesToAutoExpand (transition rule)", () => {
+  it("expands a collapsed family whose child newly entered the urgent set", () => {
+    const expanded = familiesToAutoExpand(
+      new Set(),
+      new Set(["thr_p1", "thr_p2"]),
+      new Set(["thr_p1", "thr_p9"]),
+    );
+    expect(expanded).toEqual(["thr_p1"]);
+  });
+
+  it("does not re-fire for a child that was already unread — a deliberate collapse stands", () => {
+    const expanded = familiesToAutoExpand(
+      new Set(["thr_p1"]),
+      new Set(["thr_p1"]),
+      new Set(["thr_p1"]),
+    );
+    expect(expanded).toEqual([]);
+  });
+
+  it("ignores newly-urgent families that are not collapsed", () => {
+    const expanded = familiesToAutoExpand(new Set(), new Set(["thr_p1"]), new Set());
+    expect(expanded).toEqual([]);
+  });
+
+  it("expands every newly-urgent collapsed family, not just the first", () => {
+    const expanded = familiesToAutoExpand(
+      new Set(),
+      new Set(["thr_p1", "thr_p2"]),
+      new Set(["thr_p1", "thr_p2"]),
+    );
+    expect(expanded.sort()).toEqual(["thr_p1", "thr_p2"]);
   });
 });
