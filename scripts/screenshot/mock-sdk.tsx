@@ -264,6 +264,12 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     };
   }
   if (method === "rank_list") return { orders: structuredClone(simRanks) };
+  if (method === "thread_autotitle") {
+    // Deterministic canned reply: the real server builds the title from the
+    // thread's first prompt over bb's selected AI service; a UAT pass
+    // exercises the editor's commit-on-return flow with this.
+    return { title: "Simulated auto title" };
+  }
   if (method === "workspace_files_exist") {
     // The decoration's existence gate (components/decorate-inline-code.ts):
     // a path the workspace has verifies true, everything else stays plain.

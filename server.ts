@@ -52,6 +52,13 @@ import {
 import { readGitHubStatuses } from "./lib/tracker-status";
 import { resolveRepoSlug } from "./lib/tickets";
 import { resolveWithinRoot } from "./lib/workspace-paths";
+import {
+  buildAutotitlePrompt,
+  cleanGeneratedTitle,
+  promptTextFromHistory,
+  resolveTitleSelection,
+  type AutotitleHistoryEntry,
+} from "./lib/autotitle";
 import type { JsonValue } from "@get-bb/plugin-sdk";
 
 /**
@@ -110,6 +117,16 @@ export const rpcContract = defineRpcContract({
     output: z.object({
       statuses: z.record(z.number().int(), z.object({ kind: z.string(), state: z.string() })),
     }),
+  },
+
+  // ✨ auto-rename: generate a thread title from its first user prompt with
+  // whatever AI service bb's thread-title task is set to (Settings → AI
+  // services). bb has no plugin-facing invocation for its AI services, so
+  // the title rides the cross-plugin RPC bridge into the selected service's
+  // own `complete` method; lib/autotitle.ts owns the pure pieces.
+  thread_autotitle: {
+    input: z.object({ threadId: z.string().min(1) }),
+    output: z.object({ title: z.string() }),
   },
 
   // Existence check behind the thread pane's inline-code file links: the
@@ -543,6 +560,44 @@ export default async function plugin(bb: BbPluginApi) {
     pin_park_set: async ({ threadId, parked }) => {
       await writePinPark(threadId, parked);
       return { threadId, parked };
+    },
+    thread_autotitle: async ({ threadId }) => {
+      const selection = resolveTitleSelection(
+        (await bb.sdk.system.aiServices()) as Parameters<
+          typeof resolveTitleSelection
+        >[0],
+      );
+      if (!selection.ok) throw new Error(selection.reason);
+      const history = (await bb.sdk.threads.promptHistory({
+        threadId,
+      })) as unknown as readonly AutotitleHistoryEntry[];
+      const threadPrompt = promptTextFromHistory(history);
+      if (threadPrompt === null) {
+        throw new Error(
+          `thread_autotitle: thread ${threadId} has no prompt text to title from`,
+        );
+      }
+      // Any plugin service bb routes titles to must answer the same shape;
+      // this is the bridge method the openrouter-inference fork serves.
+      const reply = (await bb.sdk.plugins.callRpc({
+        pluginId: selection.pluginId,
+        method: "complete",
+        input: { prompt: buildAutotitlePrompt(threadPrompt) },
+        outputSchema: z.object({ text: z.string() }).passthrough(),
+        signal: AbortSignal.timeout(20_000),
+      })) as { text?: unknown };
+      if (typeof reply?.text !== "string") {
+        throw new Error(
+          `thread_autotitle: AI service ${selection.pluginId} returned no text reply`,
+        );
+      }
+      const title = cleanGeneratedTitle(reply.text);
+      if (title === null) {
+        throw new Error(
+          `thread_autotitle: AI service ${selection.pluginId} returned no usable title`,
+        );
+      }
+      return { title };
     },
     tracker_status: async ({ repo, numbers }) => {
       const home = process.env.HOME ?? "";

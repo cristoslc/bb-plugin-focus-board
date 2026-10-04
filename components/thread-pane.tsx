@@ -100,36 +100,81 @@ interface ActionMenuItem {
   run: () => void;
 }
 
-function EditableTitle({
+/** Exported for the ✨ auto-rename editor tests; ThreadPane renders it. */
+export function EditableTitle({
   title,
   onRename,
+  onAutotitle,
 }: {
   title: string;
   onRename: (title: string) => Promise<void>;
+  /**
+   * The ✨ auto-rename: ask the server for a generated title (thread_autotitle)
+   * and commit the rename with it. Absent on surfaces without the bridge —
+   * the SDK type is what carries it; the button only renders when wired.
+   */
+  onAutotitle?: () => Promise<string>;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
+  /**
+   * In-flight / failed state of the ✨ request. Failure keeps the editor
+   * open with the error named on the button (retry on the next click) —
+   * a failed generation never commits anything.
+   */
+  const [autotitle, setAutotitle] = useState<
+    { phase: "idle" } | { phase: "running" } | { phase: "failed"; message: string }
+  >({ phase: "idle" });
   const inputRef = useRef<HTMLInputElement>(null);
+  /** Set by cancel/commit so a late ✨ reply cannot rename a closed editor. */
+  const sessionDoneRef = useRef(false);
 
   useEffect(() => {
     if (editing) {
       inputRef.current?.focus();
       inputRef.current?.select();
+      sessionDoneRef.current = false;
+      setAutotitle({ phase: "idle" });
     }
   }, [editing]);
 
-  const commit = useCallback(() => {
-    const trimmed = draft.trim();
-    if (trimmed !== "" && trimmed !== title) {
-      void onRename(trimmed).catch(() => {});
-    }
-    setEditing(false);
-  }, [draft, title, onRename]);
+  const commit = useCallback(
+    (next?: string) => {
+      const trimmed = (next ?? draft).trim();
+      if (trimmed !== "" && trimmed !== title) {
+        void onRename(trimmed).catch(() => {});
+      }
+      // The editor is gone; any in-flight ✨ reply must not rename afterwards.
+      sessionDoneRef.current = true;
+      setEditing(false);
+    },
+    [draft, title, onRename],
+  );
 
   const cancel = useCallback(() => {
+    sessionDoneRef.current = true;
     setDraft(title);
     setEditing(false);
   }, [title]);
+
+  const runAutotitle = useCallback(() => {
+    if (onAutotitle === undefined || autotitle.phase === "running") return;
+    sessionDoneRef.current = false;
+    setAutotitle({ phase: "running" });
+    onAutotitle()
+      .then((generated) => {
+        if (sessionDoneRef.current) return;
+        setDraft(generated);
+        commit(generated);
+      })
+      .catch((error: unknown) => {
+        if (sessionDoneRef.current) return;
+        setAutotitle({
+          phase: "failed",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      });
+  }, [onAutotitle, autotitle.phase, commit]);
 
   if (!editing) {
     return (
@@ -148,25 +193,60 @@ function EditableTitle({
     );
   }
   return (
-    <input
-      ref={inputRef}
-      value={draft}
-      onChange={(event) => setDraft(event.target.value)}
-      onBlur={commit}
-      onKeyDown={(event) => {
-        event.stopPropagation();
-        if (event.key === "Enter" && !event.nativeEvent.isComposing) {
-          event.preventDefault();
-          commit();
-        } else if (event.key === "Escape" && !event.defaultPrevented) {
-          event.preventDefault();
+    <div className="relative min-w-0 flex-1">
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        // Blur commits, except when the blur is the ✨ click: the button
+        // prevents default on mousedown, so the input keeps focus and the
+        // generated rename is the only commit the gesture produces.
+        onBlur={() => commit()}
+        onKeyDown={(event) => {
           event.stopPropagation();
-          cancel();
-        }
-      }}
-      className="min-w-0 flex-1 rounded-sm border border-border bg-background px-1.5 py-0.5 text-sm font-medium outline-none focus:ring-1 focus:ring-ring"
-      aria-label="Thread title"
-    />
+          if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+            event.preventDefault();
+            commit();
+          } else if (event.key === "Escape" && !event.defaultPrevented) {
+            event.preventDefault();
+            event.stopPropagation();
+            cancel();
+          }
+        }}
+        className="min-w-0 flex-1 rounded-sm border border-border bg-background px-1.5 pr-7 py-0.5 text-sm font-medium outline-none focus:ring-1 focus:ring-ring"
+        aria-label="Thread title"
+      />
+      {onAutotitle !== undefined ? (
+        <button
+          type="button"
+          disabled={autotitle.phase === "running"}
+          aria-label={
+            autotitle.phase === "failed"
+              ? `Auto-rename failed, click to retry: ${autotitle.message}`
+              : "Auto-rename from the thread prompt"
+          }
+          title={
+            autotitle.phase === "failed"
+              ? `Auto-rename failed, click to retry: ${autotitle.message}`
+              : "Auto-rename from the thread prompt"
+          }
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={(event) => {
+            event.stopPropagation();
+            runAutotitle();
+          }}
+          className="absolute right-1 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-sm leading-none hover:bg-accent disabled:opacity-60"
+        >
+          {autotitle.phase === "running" ? (
+            <Icon name="Spinner" className="size-3 animate-spin" aria-hidden />
+          ) : autotitle.phase === "failed" ? (
+            <span aria-hidden>⚠️</span>
+          ) : (
+            <span aria-hidden>✨</span>
+          )}
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -571,7 +651,17 @@ export function ThreadPane({
           className="size-3.5 shrink-0 text-muted-foreground"
           aria-hidden
         />
-        <EditableTitle title={thread.displayTitle} onRename={onRename} />
+        <EditableTitle
+          title={thread.displayTitle}
+          onRename={onRename}
+          onAutotitle={() =>
+            // ✨ auto-rename (server.ts thread_autotitle): the title comes
+            // back already cleaned; commit it immediately.
+            rpc
+              .call("thread_autotitle", { threadId: thread.id })
+              .then((result) => result.title)
+          }
+        />
         <Button
           variant="ghost"
           size="sm"
