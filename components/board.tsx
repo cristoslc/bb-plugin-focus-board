@@ -10,8 +10,11 @@ import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { BoardColumn, GroupBy } from "./grouping";
 import { threadState } from "./grouping";
 import {
+  SWEEP_DESTINATION_LABELS,
+  SWEEP_SETTLED_WORDS,
   sweepColumnKind,
   sweepDestination,
+  sweepRemovesThreads,
   type ArmedSweep,
   type SweepDestination,
   type SweepNotice,
@@ -181,8 +184,11 @@ interface BoardProps {
   onSweepToggle?: (threadId: string) => void;
   /**
    * Threads that may never join a sweep (live-child parents, the
-   * sweep-family contract). In sweep mode their cards neither select nor
-   * carry the selectable ring, and clicking one refuses on screen.
+   * sweep-family contract). Arm-scoped: only the arms whose action removes
+   * the thread from the live board (Done → Archive, idle → Done) apply it;
+   * Pinned and Unread sweeps leave threads live, so parents join there. In
+   * a blocked arm their cards neither select nor carry the selectable ring,
+   * and clicking one refuses on screen.
    */
   sweepBlockedIds?: ReadonlySet<string>;
   onSweepArm?: (columnId: string) => void;
@@ -202,6 +208,10 @@ const DOT_CLASS: Record<string, string> = {
   unread: "bg-emerald-500",
   idle: "bg-muted-foreground/30",
 };
+
+/** The running pill's aria-label word: what the sweep has done so far. */
+const settledSoFar = (destination: SweepDestination): string =>
+  `${SWEEP_SETTLED_WORDS[destination]} so far`;
 
 function StateDot({ thread }: { thread: PluginSidebarThread }) {
   return (
@@ -232,11 +242,8 @@ function SweepButton({
   onArm: () => void;
   onConfirm: () => void;
 }) {
-  const destinationLabel = destination === "done" ? "Done" : "Archive";
-  const settledWord = destination === "done" ? "marked Done so far" : "archived so far";
-  // The pill's leading glyph names the destination: the Done arm leads to
-  // the archive; the idle arm leads to Done.
-  const destinationIcon = destination === "done" ? "Check" : "Archive";
+  const destinationLabel = SWEEP_DESTINATION_LABELS[destination];
+  const settledWord = settledSoFar(destination);
   if (run !== null) {
     return (
       <button
@@ -247,7 +254,7 @@ function SweepButton({
         className="inline-flex h-5 shrink-0 cursor-default items-center gap-1 whitespace-nowrap rounded bg-amber-500/90 px-1.5 text-[10px] font-medium text-amber-950"
       >
         <Icon name="Spinner" className="size-3 animate-spin" aria-hidden />
-        Sweeping {run.done} of {run.total}
+        {run.done} of {run.total}
       </button>
     );
   }
@@ -255,6 +262,10 @@ function SweepButton({
   // demand, even when nothing is past the threshold yet. With no
   // pre-selection the button is icon-only; armed, it confirms whatever the
   // operator's live selection holds, and an empty selection cannot confirm.
+  // The broom is the pill's only glyph and the word "Sweep" appears
+  // nowhere: the word repeated on every column header read as noise, and
+  // the broom plus the count (plus the destination, armed) carries the
+  // meaning at a glance.
   const inert = isArmed && eligibleCount === 0;
   return (
     <button
@@ -285,17 +296,8 @@ function SweepButton({
         inert && "cursor-default opacity-60",
       )}
     >
-      <Icon name={destinationIcon} className="size-3" aria-hidden />
-      {isArmed ? (
-        <>
-          Sweep {eligibleCount} → {destinationLabel}
-        </>
-      ) : (
-        <>
-          Sweep
-          {eligibleCount > 0 ? ` ${eligibleCount}` : ""}
-        </>
-      )}
+      <Icon name="Broom" className="size-3" aria-hidden />
+      {isArmed ? `${eligibleCount} → ${destinationLabel}` : eligibleCount > 0 ? eligibleCount : null}
     </button>
   );
 }
@@ -655,6 +657,11 @@ export function Board({
           const dropHandler = dropHandlerFor(column.id);
           const isDropTarget = dropHandler !== null;
           const sweepKind = sweepColumnKind(column.id);
+          // The sweep-family contract is arm-scoped: only the arms whose
+          // action removes the thread from the live board (archive, Done)
+          // refuse live-child parents. Unpinning and marking read leave the
+          // thread live, so Pinned and Unread sweeps take parents too.
+          const blockedIds = sweepRemovesThreads(column.id) ? sweepBlockedIds : undefined;
           const isArmed = armedSweep !== null && armedSweep.columnId === column.id;
           // A run is bound to its column: only that column's button shows
           // progress, and only its cards can carry the throbber.
@@ -747,7 +754,7 @@ export function Board({
                     <Icon name="SortingOneNine" className="size-3" aria-hidden />
                   </span>
                 ) : null}
-                {sweepActive ? (
+                {sweepActive && sweepKind !== null ? (
                   <span className="ml-auto flex items-center gap-0.5">
                     <SweepButton
                       eligibleCount={eligible.length}
@@ -768,7 +775,7 @@ export function Board({
                         aria-label={runHere !== null ? "Cancel sweep" : "Exit sweep mode"}
                         title={
                           runHere !== null
-                            ? "Cancel: the current archive finishes, nothing else is swept"
+                            ? "Cancel: the current thread finishes, nothing else is swept"
                             : "Exit sweep mode"
                         }
                         onClick={(event) => {
@@ -986,10 +993,10 @@ export function Board({
                             isArmed &&
                             !isDoneProjection &&
                             !(armedSet?.has(thread.id) ?? false) &&
-                            !(sweepBlockedIds?.has(thread.id) ?? false)
+                            !(blockedIds?.has(thread.id) ?? false)
                           }
                           onSweepToggle={(toggledId) => {
-                            if (sweepBlockedIds?.has(toggledId) ?? false) {
+                            if (blockedIds?.has(toggledId) ?? false) {
                               setSweepRefusal(
                                 `"${thread.displayTitle}" still has live children, so it cannot join a sweep.`,
                               );
