@@ -18,8 +18,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   at the wake time. One "Snooze…" entry (on cards and in the thread pane's
   actions menu beside Mark Unread) opens a single picker holding the presets
   (1 hour, 4 hours, tomorrow 9am, 1 week) and a picked date-time; a snoozed
-  thread's menu shows "Unsnooze". A snoozed card dims in place with a
-  "Snoozed · wakes …" chip and cannot be dragged; it sleeps through every
+  thread's menu shows "Edit snooze…", whose picker confirms a changed wake
+  time or removes the wake-up call. A snoozed card dims in place with a
+  "Snoozed · wakes …" chip (the open thread pane's header carries the same
+  chip) and cannot be dragged; it sleeps through every
   lane's sweep. Any pin/read/done/archive gesture lifts the snooze first, and
   a wake on a thread read by hand since snoozing stays silent. The clock is
   server-side: timers re-arm on plugin load (past-due wakes fire immediately)

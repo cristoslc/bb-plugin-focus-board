@@ -15,6 +15,7 @@ import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { describeWakeAt } from "@/lib/snooze";
 import type { SnoozeMenuAction } from "@/lib/snooze";
 import { COARSE_POINTER_HEADER_ICON_BUTTON_CLASS } from "@/components/ui/coarse-pointer-sizing";
 import { PendingInteractionCard } from "@/components/pending-interaction-card";
@@ -80,12 +81,18 @@ interface ThreadPaneProps {
   onClose: () => void;
   /**
    * Snooze entries for the "More thread actions" menu, already resolved for
-   * the open thread: the preset ladder + "Pick a time…" while unsnoozed, or
-   * "Unsnooze" while snoozed (lib/snooze `snoozeMenuActions`). The runs call
+   * the open thread: "Snooze…" while unsnoozed, "Edit snooze…" while snoozed
+   * (lib/snooze `snoozeMenuActions`). The runs call
    * the same RPC-backed snooze handlers the cards use. Optional: absent or
    * empty leaves the menu exactly as before this prop existed.
    */
   snoozeMenuItems?: readonly (SnoozeMenuAction | ActionMenuItem)[];
+  /**
+   * The open thread's wake time (epoch ms) while it is snoozed, null/absent
+   * otherwise. Drives the header's muted "Snoozed · wakes …" chip, so the
+   * open pane says the state the card already carries.
+   */
+  snoozeWakeAt?: number | null;
   /**
    * Escape behavior (the "Esc stops running thread" toolbar toggle): when
    * true, Escape stops a running thread and only closes the pane when the
@@ -243,6 +250,7 @@ export function ThreadPane({
   onToggleArchived,
   onToggleUnread,
   snoozeMenuItems,
+  snoozeWakeAt = null,
   onRename,
   onMaximize,
   onClose,
@@ -588,6 +596,18 @@ export function ThreadPane({
           aria-hidden
         />
         <EditableTitle title={thread.displayTitle} onRename={onRename} />
+        {snoozeWakeAt !== null ? (
+          // Muted chip on the pane's header: the open pane carries the same
+          // "snoozed, wakes at …" language the board card does.
+          <span
+            data-pane-snooze-chip=""
+            title={`Wakes ${describeWakeAt(snoozeWakeAt, Date.now())}`}
+            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-muted-foreground"
+          >
+            <Icon name="Clock" className="size-3" aria-hidden />
+            {isCompact ? "" : `Snoozed · wakes ${describeWakeAt(snoozeWakeAt, Date.now())}`}
+          </span>
+        ) : null}
         <Button
           variant="ghost"
           size="sm"
@@ -606,8 +626,7 @@ export function ThreadPane({
               icon: isDone ? "CircleCheck" : "Check",
               run: () => onToggleDone(!isDone),
             },
-            // Snooze group (preset ladder / Unsnooze), then archive. The
-            // first snooze entry carries its own divider.
+            // The single snooze entry (Snooze… / Edit snooze…), then archive.
             ...(snoozeMenuItems ?? []),
             {
               id: "archive",

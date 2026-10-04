@@ -1830,6 +1830,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             onClosePane={closeThreadPane}
             onNewTask={openNewThread}
             menuActionsFor={menuActionsFor}
+            snoozeFor={snoozeFor}
           />
         ) : boardCount === 0 ? (
           <div className="p-4">
@@ -1857,6 +1858,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             onOpenThread={openThreadCard}
             onClosePane={closeThreadPane}
             onNewTask={openNewThread}
+            snoozeFor={snoozeFor}
             sweepCandidatesFor={sweepCandidatesFor}
             armedSweep={armedSweep}
             sweepRun={sweepRun}
@@ -1947,6 +1949,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           thread={openThread}
           isArchived={openThreadIsArchived}
           isDone={doneIds.has(openThreadId ?? "")}
+          snoozeWakeAt={openThreadId === null ? null : snoozeFor(openThreadId)}
           onToggleDone={(done) => {
             if (openThreadId === null) return;
             // Current intent: a state change lifts any snooze first.
@@ -2015,8 +2018,13 @@ function BoardPage({ subPath }: { subPath: string }) {
         return (
           <SnoozeDialog
             threadTitle={dialogThread.displayTitle}
+            currentWakeAt={snoozeFor(dialogThread.id)}
             onConfirm={(wakeAt) => {
               snoozeUntil(dialogThread.id, wakeAt);
+              setSnoozeDialogFor(null);
+            }}
+            onRemove={() => {
+              clearSnooze(dialogThread.id);
               setSnoozeDialogFor(null);
             }}
             onCancel={() => setSnoozeDialogFor(null)}

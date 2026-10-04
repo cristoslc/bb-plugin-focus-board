@@ -139,7 +139,7 @@ describe("SNOOZE_METADATA_KEY", () => {
 });
 
 describe("snoozeMenuActions", () => {
-  it("a snoozed thread gets exactly one Unsnooze entry that clears", () => {
+  it("a snoozed thread gets exactly one Edit snooze… entry that opens the picker (removal lives in the picker)", () => {
     const clearSnooze = vi.fn();
     const openPicker = vi.fn();
     const entries = snoozeMenuActions({
@@ -148,12 +148,13 @@ describe("snoozeMenuActions", () => {
       openPicker,
     });
     expect(entries).toHaveLength(1);
-    expect(entries[0].label).toBe("Unsnooze");
+    expect(entries[0].id).toBe("snooze-edit");
+    expect(entries[0].label).toBe("Edit snooze…");
     expect(entries[0].icon).toBe("ClockArrowUp");
     expect(entries[0].dividerAbove).toBe(true);
     entries[0].run();
-    expect(clearSnooze).toHaveBeenCalledTimes(1);
-    expect(openPicker).not.toHaveBeenCalled();
+    expect(openPicker).toHaveBeenCalledTimes(1);
+    expect(clearSnooze).not.toHaveBeenCalled();
   });
 
   it("an unsnoozed thread gets ONE Snooze… entry that opens the picker (the ladder lives in the picker, not the menu)", () => {

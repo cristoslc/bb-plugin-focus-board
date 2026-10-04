@@ -3,9 +3,10 @@
 // picks that confirm immediately) and the custom datetime field (Confirm
 // gated on a strictly future time). The menus carry a single "Snooze…"
 // entry whose run lands here — this file pins what that run opens.
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, afterEach } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { SnoozeDialog } from "../components/snooze-dialog";
+import { describeWakeAt } from "../lib/snooze";
 
 afterEach(cleanup);
 
@@ -68,5 +69,53 @@ describe("snooze picker dialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+});
+
+describe("snooze picker dialog: edit mode (currentWakeAt set)", () => {
+  it("titles Edit snooze, names the current wake, and presets confirm a changed wake", () => {
+    const onConfirm = vi.fn();
+    const onRemove = vi.fn();
+    const currentWakeAt = Date.now() + 60 * 60 * 1000;
+    render(
+      <SnoozeDialog
+        threadTitle="Test thread"
+        currentWakeAt={currentWakeAt}
+        onConfirm={onConfirm}
+        onRemove={onRemove}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Edit snooze" })).toBeTruthy();
+    expect(document.querySelector("[data-snooze-dialog]")?.textContent).toContain(
+      `the current one is ${describeWakeAt(currentWakeAt, Date.now())}`,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Tomorrow 9am" }));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onRemove).not.toHaveBeenCalled();
+  });
+
+  it("Remove wake-up call removes without confirming", () => {
+    const onConfirm = vi.fn();
+    const onRemove = vi.fn();
+    render(
+      <SnoozeDialog
+        threadTitle="Test thread"
+        currentWakeAt={Date.now() + 60 * 60 * 1000}
+        onConfirm={onConfirm}
+        onRemove={onRemove}
+        onCancel={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Remove wake-up call" }));
+    expect(onRemove).toHaveBeenCalledTimes(1);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it("a fresh snooze keeps the Snooze thread title and hides the remove button", () => {
+    renderDialog();
+    expect(screen.getByRole("heading", { name: "Snooze thread" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Remove wake-up call" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
   });
 });

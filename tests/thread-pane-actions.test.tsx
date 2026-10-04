@@ -142,20 +142,21 @@ describe("snooze entries in the actions menu", () => {
     expect(screen.queryByRole("menuitem", { name: "Snooze…" })).toBeNull();
   });
 
-  it("a snoozed thread's pane offers Unsnooze only", () => {
-    const clearSnooze = vi.fn();
+  it("a snoozed thread's pane offers Edit snooze… that opens the picker", () => {
+    const openPicker = vi.fn();
     renderPaneWithSnooze(
       snoozeMenuActions({
         snoozed: true,
-        clearSnooze,
-        openPicker: vi.fn(),
+        clearSnooze: vi.fn(),
+        openPicker,
       }),
     );
     openActionsMenu();
-    expect(screen.getByRole("menuitem", { name: "Unsnooze" })).toBeTruthy();
+    const item = screen.getByRole("menuitem", { name: "Edit snooze…" });
+    expect(screen.getAllByRole("menuitem")).toHaveLength(3); // Done, Edit snooze…, Archive
     expect(screen.queryByRole("menuitem", { name: "Snooze…" })).toBeNull();
-    fireEvent.click(screen.getByRole("menuitem", { name: "Unsnooze" }));
-    expect(clearSnooze).toHaveBeenCalledTimes(1);
+    fireEvent.click(item);
+    expect(openPicker).toHaveBeenCalledTimes(1);
   });
 
   it("the snooze entry renders under its divider, between Done and Archive", () => {

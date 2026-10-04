@@ -143,11 +143,12 @@ export interface SnoozeMenuAction {
 
 /**
  * The card and pane menus' snooze section, pure so tests pin the entries
- * without rendering the app. Snoozed → one "Unsnooze" entry; otherwise a
- * single "Snooze…" entry that opens the snooze picker (the preset ladder
- * lives in the picker, not the menu — five flat menu rows drowned every
- * other action). The entry carries the divider so the snooze group
- * visually separates from the state actions above it.
+ * without rendering the app. Either way the menu carries ONE entry:
+ * unsnoozed → "Snooze…" opens the picker (the preset ladder lives in the
+ * picker, not the menu — five flat menu rows drowned every other action);
+ * snoozed → "Edit snooze…" opens the same picker in edit mode, where
+ * changing the wake time and removing the wake-up live. The entry carries
+ * the divider so it visually separates from the state actions above it.
  */
 export function snoozeMenuActions(options: {
   snoozed: boolean;
@@ -157,11 +158,11 @@ export function snoozeMenuActions(options: {
   if (options.snoozed) {
     return [
       {
-        id: "unsnooze",
-        label: "Unsnooze",
+        id: "snooze-edit",
+        label: "Edit snooze…",
         icon: "ClockArrowUp",
         dividerAbove: true,
-        run: () => options.clearSnooze(),
+        run: () => options.openPicker(),
       },
     ];
   }
