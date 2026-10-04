@@ -327,10 +327,10 @@ export function ThreadCard({
       className={cn(
         "relative overflow-hidden rounded-md bg-card transition-colors",
         "hover:bg-accent/50",
-        // A card with a child section needs its own bottom padding: the
-        // rows (or the folded strip) would otherwise sit flush against the
-        // card's bottom edge.
-        hasRows && (collapsed || onOpenThread !== undefined) && "pb-2",
+        // A card with a child section needs bottom padding beyond the body's
+        // own 8px: the rows (or the folded strip) would otherwise sit flush
+        // against the card's bottom edge.
+        hasRows && (collapsed || onOpenThread !== undefined) && "pb-3",
         isActive
           ? "ring-2 ring-ring"
           : "ring-1 ring-transparent hover:ring-border",

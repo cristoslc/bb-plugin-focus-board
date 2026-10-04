@@ -209,16 +209,16 @@ describe("collapse does not leak into the card's own gestures", () => {
     expect(document.querySelector("[data-child-threads-toggle]")).toBeNull();
   });
 
-  it("a card with a child section carries bottom padding; a childless card does not", () => {
+  it("a card with a child section carries bottom padding beyond the body's 8px; a childless card does not", () => {
     const withRows = renderCard();
     const card = document.querySelector('[data-thread-card="thr_parent"]');
     if (!(card instanceof HTMLElement)) throw new Error("missing parent card");
-    expect(card.className).toContain("pb-2");
+    expect(card.className).toContain("pb-3");
     withRows.unmount();
 
     renderCard({ childThreads: undefined, isCollapsed: true });
     const childless = document.querySelector('[data-thread-card="thr_parent"]');
     if (!(childless instanceof HTMLElement)) throw new Error("missing childless card");
-    expect(childless.className).not.toContain("pb-2");
+    expect(childless.className).not.toContain("pb-3");
   });
 });
