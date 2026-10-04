@@ -13,7 +13,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
     "version": "0.6.0",
     "items": [
       {
-        "lead": "A family's done work now renders as a projection card in the Done column.",
+        "lead": "A family's done work renders as a projection card in the Done column.",
         "children": [
           "Big families scroll inside their card."
         ]
@@ -29,21 +29,21 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
         "children": []
       },
       {
-        "lead": "Brand icon restored as the lane + card mark and now renders as drawn.",
+        "lead": "The brand icon is restored as the lane-and-card mark.",
         "children": [
-          "The sidebar row and pane title bar now draw the mark too."
+          "The sidebar row and pane title bar draw the mark too."
         ]
       },
       {
-        "lead": "The sweep is rebuilt around choosing exactly what gets archived, and idle threads now resurface instead of vanishing.",
+        "lead": "The sweep is rebuilt around choosing exactly what gets archived, and idle threads resurface instead of vanishing.",
         "children": [
-          "Sweep mode is now manual: enter it any time and click cards to choose exactly what gets archived."
+          "Sweep mode is manual: enter it any time and click the cards to archive."
         ]
       },
       {
-        "lead": "Pinned cards now carry their thread's state both ways: read state and needs-you.",
+        "lead": "Pinned cards carry their thread's state both ways: read state and needs-you.",
         "children": [
-          "Marking a card unread sends a parked card back to Pinned from any surface — bb's native thread menu, the board's menu, the pane toggle, or a drop onto the Unread lane — and clears a contradicting Done mark; ambient thread noise never moves cards."
+          "Marking a card unread now returns a parked card to Pinned from any surface."
         ]
       },
       {
@@ -55,7 +55,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
         "children": []
       },
       {
-        "lead": "Clicking in the pane's chat no longer yanks the transcript to the newest message while the reader is scrolled up.",
+        "lead": "Clicking in the pane's chat no longer yanks the transcript to the newest message while you are scrolled up.",
         "children": []
       }
     ]
@@ -108,7 +108,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
     "version": "0.5.17",
     "items": [
       {
-        "lead": "Parent lanes now size to fit their cards, and the selected family renders as a wide, readable ruler lane.",
+        "lead": "Parent lanes now size to fit their cards.",
         "children": []
       },
       {
@@ -161,7 +161,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
     "version": "0.5.5",
     "items": [
       {
-        "lead": "Inline-code workspace paths now verify against the workspace before they become clickable in the board's thread pane.",
+        "lead": "Inline-code workspace paths now verify against the workspace before they become clickable.",
         "children": []
       }
     ]
@@ -179,7 +179,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
     "version": "0.5.3",
     "items": [
       {
-        "lead": "Backticked workspace paths in thread messages are now clickable in the board's thread pane.",
+        "lead": "Backticked workspace paths in thread messages are now clickable in the board's pane.",
         "children": []
       }
     ]
@@ -188,7 +188,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
     "version": "0.5.2",
     "items": [
       {
-        "lead": "Right-clicking a nested child thread opened the parent card's menu on top of the child's.",
+        "lead": "Right-clicking a nested child thread no longer stacks the parent card's menu on top of the child's.",
         "children": []
       }
     ]
@@ -197,7 +197,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
     "version": "0.5.1",
     "items": [
       {
-        "lead": "The Done column now sorts by when each thread was marked done, newest first, instead of by the board's newest-activity order.",
+        "lead": "The Done column sorts by when each thread was marked done, newest first.",
         "children": []
       }
     ]
@@ -210,7 +210,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
         "children": []
       },
       {
-        "lead": "What's new: a gift button in the toolbar lists recent changes after an update.",
+        "lead": "What's new: a gift button in the toolbar lists recent changes after an update, pulsing until opened.",
         "children": []
       },
       {
@@ -232,7 +232,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
     "version": "0.4.5",
     "items": [
       {
-        "lead": "The first drag-and-drop reorder in a column silently did nothing unless the drop landed at the very top.",
+        "lead": "The first drag-and-drop reorder in a column silently did nothing unless the drop landed at the top.",
         "children": []
       }
     ]
@@ -259,7 +259,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
     "version": "0.4.2",
     "items": [
       {
-        "lead": "Rank refusal banners could not be dismissed.",
+        "lead": "Rank refusal banners can be dismissed.",
         "children": []
       }
     ]
@@ -268,7 +268,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
     "version": "0.4.1",
     "items": [
       {
-        "lead": "Selected option indicators were invisible in the pane question form.",
+        "lead": "Selected option indicators are visible in the pane question form.",
         "children": []
       }
     ]
@@ -279,7 +279,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
       {
         "lead": "Per-column card rank ordering.",
         "children": [
-          "Order is stored per column, not per thread, so it describes the column's reading order."
+          "Orders are stored per column, so a card that leaves and comes back returns to the slot it left."
         ]
       },
       {
@@ -351,7 +351,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
       {
         "lead": "The new `bb thread-board` CLI manages the plugin's own state.",
         "children": [
-          "`bb thread-board done list|mark|clear` — list done threads (with `doneAt`, `keep`, and a `not in the live thread list` flag; orphaned marks on deleted threads survive via a `done-index` KV), stamp Done (idempotent, refreshes `doneAt`), clear it."
+          "`done list|mark|clear` — agents get free Done marking."
         ]
       }
     ]
@@ -364,7 +364,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
         "children": []
       },
       {
-        "lead": "The sweep arms with a first click and performs with a second: arm-then-confirm buttons sit on the Done and Awhile-ago columns.",
+        "lead": "The sweep arms with a first click and performs with a second, on the Done and Awhile-ago columns.",
         "children": []
       },
       {
@@ -372,11 +372,11 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
         "children": []
       },
       {
-        "lead": "GitHub status dots appear on matching chips.",
+        "lead": "GitHub status dots appear on matching chips, read from the official GitHub plugin's local cache.",
         "children": []
       },
       {
-        "lead": "Threads spawned as children nest under their parent card as collapsible rows, Jira-subissue style.",
+        "lead": "Threads spawned as children nest under their parent card, Jira-subissue style.",
         "children": []
       },
       {
@@ -384,11 +384,11 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
         "children": []
       },
       {
-        "lead": "`done_list` returns richer Done records.",
+        "lead": "`done_list` returns richer Done records: `{ doneIds, records }` with the ISO `doneAt` stamp and `keep` flag.",
         "children": []
       },
       {
-        "lead": "The `done-changed` realtime payload narrows to the thread.",
+        "lead": "The `done-changed` realtime payload narrows to the thread: `{ threadId, done }`, was `{ count }`.",
         "children": []
       },
       {
