@@ -23,7 +23,7 @@ then rebuilds in the main checkout and runs `bb plugin reload focus-board` —
 bb keeps serving the previously loaded bundle otherwise, so an unreloaded
 merge looks unshipped (no new behavior, silent What's-new gift); also check
 the merge did not misfile new bullets into a renamed published section.
-On every changelog write, audit the whole `[Unreleased]` group in the same edit, never deferred to release: user-facing bullets only (tests, refactors, docs, plumbing earn none), each filed under the matching Added/Changed/Fixed subsection, same-behavior duplicates folded into one bullet with facet sub-bullets, each bullet capped at a bold lead plus three sentences — longer detail moves to linked docs.
+On every changelog write, audit the whole `[Unreleased]` group in the same edit, never deferred to release: user-facing bullets only (tests, refactors, docs, plumbing earn none), each filed under the matching Added/Changed/Fixed subsection, same-behavior duplicates folded into one bullet with facet sub-bullets, each bullet capped at a bold lead plus three short sentences — no slash-enumerated state lists; longer detail moves to linked docs.
 `dev` carries a provisional prerelease version (`next + "-dev"`, e.g.
 `0.6.0-dev`) in package.json/APP_VERSION; `main` is stable and moves only
 by fast-forward. Releasing = one finalize commit on the dev lineage (name

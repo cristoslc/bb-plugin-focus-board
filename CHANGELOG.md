@@ -40,11 +40,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   park), or mark unread again — and armed sweeps pre-select cards only on
   the aged-out arms (Done and A while ago); the other arms enter sweep mode
   with nothing selected, the sweep built by clicking cards.
-  - **The sweep pill drops the word "Sweep."** The word repeated on every
-    column header read as noise, so the pill is a broom glyph plus the
-    eligible count; armed it reads "N → Archive" / "N → Done" / "N →
-    Unpinned" / "N → Read", running it reads "N of M". Screen-reader labels
-    keep the full sweep wording.
+  - **The sweep pill drops the word "Sweep."** It read as noise on every
+    column header, so the pill is a broom glyph plus the eligible count:
+    armed it names its lane's destination ("N → Done"-style), running it
+    reads "N of M". Screen-reader labels keep the full sweep wording.
 
 ## [0.7.0] - 2026-10-03
 
