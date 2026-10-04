@@ -458,50 +458,14 @@ export function ThreadCard({
             </div>
           )}
         </a>
-        {chipCount > 0 || (hasRows && collapsed) ? (
-          // The top-right rail: the family-size count, and — when the rows
-          // are folded — the collapsed rows' dot strip directly below it, so
-          // count and states read as one cluster. The strip counts what
-          // folding hides (the nested rows); the chip counts the whole
-          // family, including children that render standalone.
-          <div className="flex shrink-0 flex-col items-end gap-1 py-2 pr-1.5">
-            {chipCount > 0 ? (
-              <span className="rounded-full bg-muted px-1.5 text-[10px] tabular-nums text-muted-foreground">
-                {chipCount}
-              </span>
-            ) : null}
-            {hasRows && collapsed ? (
-              <button
-                type="button"
-                data-child-thread-dots=""
-                aria-label="Expand subthreads"
-                title="Show the nested child threads"
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  toggleCollapsed();
-                }}
-                className={cn(
-                  "flex max-w-24 flex-wrap items-center justify-end gap-1 rounded-sm p-0.5",
-                  "transition-colors hover:bg-accent/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                )}
-              >
-                {children.map((child) => {
-                  const state = threadState(child);
-                  return (
-                    <span
-                      key={child.id}
-                      title={`${child.displayTitle} · ${THREAD_STATE_LABELS[state] ?? state}`}
-                      className={cn(
-                        "size-1.5 rounded-full",
-                        DOT_CLASS[state] ?? "bg-muted-foreground/30",
-                        state === "attention" && "motion-safe:animate-pulse",
-                      )}
-                    />
-                  );
-                })}
-              </button>
-            ) : null}
+        {chipCount > 0 ? (
+          // Family-size metadata only: the collapsed rows' dot strip lives in
+          // the child section below, directly under the "N child threads"
+          // label it describes.
+          <div className="flex shrink-0 items-start py-2 pr-1.5">
+            <span className="rounded-full bg-muted px-1.5 text-[10px] tabular-nums text-muted-foreground">
+              {chipCount}
+            </span>
           </div>
         ) : null}
       </div>
@@ -509,9 +473,9 @@ export function ThreadCard({
         <div className="ml-3 mt-1">
           {/* The section toggle: one control, in one place, on the boundary
               of the content it controls — directly above the rows when
-              expanded, and carrying the collapsed count when folded. The
-              status dots live beside the count chip above. Clicking it never
-              reaches the card's anchor, the pane, or the background closer. */}
+              expanded, and the header of the collapsed dot strip when
+              folded. Clicking it never reaches the card's anchor, the pane,
+              or the background closer. */}
           <button
             type="button"
             data-child-threads-toggle=""
@@ -535,6 +499,43 @@ export function ThreadCard({
             />
             {children.length} {children.length === 1 ? "child thread" : "child threads"}
           </button>
+          {collapsed ? (
+            // The collapsed rows, immediately below their label: one
+            // status-colored dot per nested child, in display order. The
+            // strip answers "are there children, and does any of them want
+            // me?" at a glance without expanding; hovering a dot names its
+            // child, clicking the strip re-opens the rows.
+            <button
+              type="button"
+              data-child-thread-dots=""
+              aria-label="Expand subthreads"
+              title="Show the nested child threads"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                toggleCollapsed();
+              }}
+              className={cn(
+                "ml-[18px] flex max-w-full flex-wrap items-center gap-1 rounded-sm py-0.5 pr-1",
+                "transition-colors hover:bg-accent/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              )}
+            >
+              {children.map((child) => {
+                const state = threadState(child);
+                return (
+                  <span
+                    key={child.id}
+                    title={`${child.displayTitle} · ${THREAD_STATE_LABELS[state] ?? state}`}
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      DOT_CLASS[state] ?? "bg-muted-foreground/30",
+                      state === "attention" && "motion-safe:animate-pulse",
+                    )}
+                  />
+                );
+              })}
+            </button>
+          ) : null}
           {!collapsed && onOpenThread !== undefined ? (
             <div
               data-nested-rows=""

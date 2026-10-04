@@ -2,10 +2,10 @@
 // Collapsible nested children on a family card. The toggle lives in the
 // child section itself — directly above the rows it controls. Collapsed, the
 // rows become a horizontal strip of status-colored dots (one per nested
-// child, in display order) sitting directly below the card's count chip in
-// the top-right rail; the strip and the section toggle both re-open the
-// rows. The collapsed state itself is controlled (persisted by the caller),
-// with an uncontrolled local fallback for callers that do not persist.
+// child, in display order) rendered immediately below the "N child threads"
+// label; the strip and the section toggle both re-open the rows. The
+// collapsed state itself is controlled (persisted by the caller), with an
+// uncontrolled local fallback for callers that do not persist.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
@@ -59,7 +59,7 @@ function dots(): HTMLElement {
   return strip;
 }
 
-/** The chip rail: the top-right container holding the count chip and the strip. */
+/** The chip rail: the top-right container holding the count chip. */
 function chipRail(): HTMLElement {
   const chip = document.querySelector<HTMLElement>('[data-thread-card] span.rounded-full');
   if (chip === null) throw new Error("missing count chip");
@@ -102,18 +102,19 @@ describe("the child section toggle placement", () => {
 });
 
 describe("uncontrolled collapse (callers without persistence)", () => {
-  it("the toggle collapses the rows into the dot strip below the count chip", () => {
+  it("the toggle collapses the rows into a dot strip directly below the label", () => {
     renderCard();
     fireEvent.click(toggle(false));
     expect(row("thr_c1")).toBeNull();
     expect(toggle(true).textContent).toContain("4 child threads");
-    // The strip sits in the chip rail, directly below the count.
-    expect(chipRail().contains(dots())).toBe(true);
-    expect(chipRail().querySelector("span.rounded-full")).not.toBeNull();
+    // The strip renders immediately below the "4 child threads" label —
+    // its previous sibling in the child section is the toggle itself.
+    const toggleButton = toggle(true);
+    expect(dots().previousElementSibling).toBe(toggleButton);
     expect(dots().children.length).toBe(4);
-    // The section toggle carries only the chevron and the count — the strip
-    // lives beside the chip, and exactly one strip renders.
-    expect(toggle(true).querySelector("[data-child-thread-dots]")).toBeNull();
+    // The top-right rail keeps only the count chip; exactly one strip renders.
+    expect(chipRail().contains(dots())).toBe(false);
+    expect(chipRail().querySelector("button")).toBeNull();
     expect(document.querySelectorAll("[data-child-thread-dots]").length).toBe(1);
   });
 

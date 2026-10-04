@@ -27,11 +27,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   double-click window are swallowed, so a stop double-tap can't cascade into
   closing the pane.
 
-- **Collapsed child rows fold into a status-dot strip below the count chip.**
-  One colored dot per nested child (hover names it); the fold toggle sits in
-  the child section, directly above the rows it acts on. A child that needs
-  you no longer hides behind a fold: it un-nests into its own Needs-you card
-  while the rest of the rows stay folded, and re-nests once answered.
+- **Family cards fold their child rows into a "N child threads" line with a
+  strip of status-colored dots immediately below it.** The fold toggle sits
+  in the child section, directly above the rows it acts on, and folds persist
+  across sessions. A child that needs you un-nests into its own Needs-you
+  card while the rest of the rows stay folded.
 
 ## [0.8.0] - 2026-10-03
 
