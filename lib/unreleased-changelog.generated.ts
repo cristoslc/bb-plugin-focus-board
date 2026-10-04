@@ -9,7 +9,7 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
-    "text": "**✨ auto-rename in the pane's title editor.** The title input carries a ✨ button inside its own rectangle; one click titles the thread from its first user prompt with whatever AI service bb's thread-title task is set to (Settings → AI services), via a cross-plugin `complete` bridge the openrouter-inference plugin serves. The generated title renames and closes the editor; failures keep it open with the error on the ⚠️ button, and automatic/bb-cloud selections refuse with the fix named.",
+    "text": "**✨ auto-rename in the pane's title editor.** The title input carries a ✨ button inside its own rectangle (the input spans the editor, no dead space to the button); one click titles the thread from its first user prompt with whatever AI service bb's thread-title task is set to (Settings → AI services), via a cross-plugin `complete` bridge the openrouter-inference plugin serves. The generated title renames and closes the editor; failures keep it open, auto-open a fallback modal naming the reason, and offer generating with another registered AI service, the thread's active model explained as unavailable (bb plugins cannot reach it), or a typed manual rename; automatic/bb-cloud selections refuse with the fix named.",
     "children": []
   },
   {
