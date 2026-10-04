@@ -18,6 +18,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   gesture lifts the snooze first, and CLI parity lands as
   `bb focus-board snooze list|set|clear`.
 
+- **✨ auto-rename in the pane's title editor.** The title input carries a
+  ✨ button inside its own rectangle; one click titles the thread from its
+  first user prompt with whatever AI service bb's thread-title task is set
+  to (Settings → AI services), via a cross-plugin `complete` bridge the
+  openrouter-inference plugin serves. The generated title renames and closes
+  the editor; failures keep it open with the error on the ⚠️ button, and
+  automatic/bb-cloud selections refuse with the fix named.
+
 - **The thread pane's actions menu pins again.** The opened pane's more-actions
   menu carries a Pin/Unpin entry at its head (an archived row's menu keeps
   just its Unarchive), with the card menu's semantics: the gesture lifts a
