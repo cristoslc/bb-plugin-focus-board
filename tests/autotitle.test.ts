@@ -6,11 +6,13 @@
 import { describe, expect, it } from "vitest";
 import {
   AUTOTITLE_PROMPT_MAX_CHARS,
+  autotitleTargets,
   buildAutotitlePrompt,
   clampPromptText,
   cleanGeneratedTitle,
   promptTextFromHistory,
   resolveTitleSelection,
+  resolveTitleTarget,
 } from "../lib/autotitle";
 
 describe("promptTextFromHistory", () => {
@@ -167,5 +169,155 @@ describe("resolveTitleSelection", () => {
 
   it("rejects a service selection missing its plugin id", () => {
     expect(selection({ mode: "service", serviceId: "default" }).ok).toBe(false);
+  });
+});
+describe("autotitleTargets", () => {
+  const services = [
+    {
+      pluginId: "openrouter-inference",
+      id: "default",
+      displayName: "OpenRouter",
+      automaticRank: 1,
+      status: { ready: true },
+      tasks: ["thread-title", "commit-message"],
+    },
+    {
+      pluginId: "bb-ai",
+      id: "cloud",
+      displayName: "bb cloud",
+      automaticRank: null,
+      status: { ready: false, message: "Sign in to bb" },
+      tasks: ["thread-title", "voice"],
+    },
+    {
+      pluginId: "voice-only",
+      id: "stt",
+      displayName: "Voice only",
+      automaticRank: null,
+      status: { ready: true },
+      tasks: ["voice"],
+    },
+  ];
+
+  it("maps registered services that serve thread titles", () => {
+    expect(autotitleTargets({ services })).toEqual([
+      {
+        pluginId: "openrouter-inference",
+        serviceId: "default",
+        displayName: "OpenRouter",
+        ready: true,
+        message: null,
+      },
+      {
+        pluginId: "bb-ai",
+        serviceId: "cloud",
+        displayName: "bb cloud",
+        ready: false,
+        message: "Sign in to bb",
+      },
+    ]);
+  });
+
+  it("tolerates a missing services list", () => {
+    expect(autotitleTargets({ services: [] })).toEqual([]);
+  });
+});
+
+describe("resolveTitleTarget", () => {
+  const state = {
+    selections: {
+      "thread-title": {
+        mode: "service",
+        pluginId: "openrouter-inference",
+        serviceId: "default",
+      },
+    },
+    services: [
+      {
+        pluginId: "openrouter-inference",
+        id: "default",
+        displayName: "OpenRouter",
+        automaticRank: 1,
+        status: { ready: true },
+        tasks: ["thread-title"],
+      },
+      {
+        pluginId: "other-plugin",
+        id: "alt",
+        displayName: "Other",
+        automaticRank: null,
+        status: { ready: true },
+        tasks: ["thread-title"],
+      },
+      {
+        pluginId: "third-plugin",
+        id: "down",
+        displayName: "Down service",
+        automaticRank: null,
+        status: { ready: false, message: "Sign in first" },
+        tasks: ["thread-title"],
+      },
+      {
+        pluginId: "voice-only",
+        id: "stt",
+        displayName: "Voice only",
+        automaticRank: null,
+        status: { ready: true },
+        tasks: ["voice"],
+      },
+    ],
+  };
+
+  it("falls back to the selected service when no override is given", () => {
+    const outcome = resolveTitleTarget(state, undefined);
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) expect(outcome).toMatchObject({ pluginId: "openrouter-inference", serviceId: "default" });
+  });
+
+  it("resolves an explicit override target", () => {
+    const outcome = resolveTitleTarget(
+      state,
+      { pluginId: "other-plugin", serviceId: "alt" },
+    );
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) expect(outcome).toMatchObject({ pluginId: "other-plugin", serviceId: "alt" });
+  });
+
+  it("rejects a half-given override", () => {
+    const outcome = resolveTitleTarget(
+      state,
+      { pluginId: "other-plugin", serviceId: undefined } as {
+        pluginId: string;
+        serviceId?: string;
+      },
+    );
+    expect(outcome.ok).toBe(false);
+  });
+
+  it("rejects an override the host has not registered", () => {
+    const outcome = resolveTitleTarget(
+      state,
+      { pluginId: "unknown", serviceId: "alt" },
+    );
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) expect(outcome.reason).toMatch(/registered/i);
+  });
+
+  it("rejects an override that does not serve thread titles", () => {
+    const outcome = resolveTitleTarget(
+      state,
+      { pluginId: "voice-only", serviceId: "stt" },
+    );
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) expect(outcome.reason).toMatch(/thread.title/i);
+  });
+
+  it("rejects a not-ready override, naming the blocker", () => {
+    const outcome = resolveTitleTarget(
+      state,
+      { pluginId: "third-plugin", serviceId: "down" },
+    );
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) expect(outcome.reason).toMatch(/Sign in first/);
   });
 });

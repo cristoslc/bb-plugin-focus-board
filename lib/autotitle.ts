@@ -19,6 +19,59 @@ export interface AutotitleSelection {
   "thread-title": { mode: string; pluginId?: string; serviceId?: string };
 }
 
+/** One registered AI service in bb's aiServices() response. */
+export interface AutotitleServiceEntry {
+  pluginId: string;
+  id: string;
+  displayName: string;
+  status: { ready: boolean; message?: string };
+  tasks: readonly string[];
+}
+
+/**
+ * One invocable thread-title service, the shape the fallback modal lists
+ * and the thread_autotitle override carries.
+ */
+export interface AutotitleTargetDescriptor {
+  pluginId: string;
+  serviceId: string;
+  displayName: string;
+  ready: boolean;
+  message: string | null;
+}
+
+/** An explicit "use this service instead" pair. */
+export interface AutotitleTarget {
+  pluginId: string;
+  serviceId: string;
+}
+
+/** What the fallback modal's service menu carries (thread_autotitle_services output). */
+export interface AutotitleFallbackState {
+  selected: AutotitleTarget | null;
+  services: readonly AutotitleTargetDescriptor[];
+}
+
+/**
+ * Every registered AI service that can serve a thread title, mapped to the
+ * descriptor shape. Services without the thread-title task (voice-only
+ * services) are not invocable as renamers and are left out.
+ */
+export function autotitleTargets(state: {
+  services?: readonly AutotitleServiceEntry[];
+}): readonly AutotitleTargetDescriptor[] {
+  return (state.services ?? [])
+    .filter((service) => service.tasks?.includes("thread-title"))
+    .map((service) => ({
+      pluginId: service.pluginId,
+      serviceId: service.id,
+      displayName: service.displayName,
+      ready: service.status?.ready === true,
+      message:
+        service.status?.ready === true ? null : (service.status?.message ?? null),
+    }));
+}
+
 /** How a resolved ✨ call should proceed, or why it refuses (fail loud). */
 export type TitleSelectionOutcome =
   | { ok: true; pluginId: string; serviceId: string }
@@ -54,6 +107,49 @@ export function resolveTitleSelection(state: {
     pluginId: selection.pluginId,
     serviceId: selection.serviceId,
   };
+}
+
+/**
+ * Which service a ✨ call should answer: the operator's selected one when no
+ * override is given, or the explicit alternative the fallback modal picked.
+ * The override must be a registered, thread-title-serving, ready service —
+ * anything else is refused with the reason named (fail loud).
+ */
+export function resolveTitleTarget(
+  state: { selections: AutotitleSelection; services?: readonly AutotitleServiceEntry[] },
+  override?: { pluginId?: string; serviceId?: string },
+): { ok: true; pluginId: string; serviceId: string } | { ok: false; reason: string } {
+  if (override === undefined) return resolveTitleSelection(state);
+  const { pluginId, serviceId } = override;
+  if (typeof pluginId !== "string" || typeof serviceId !== "string") {
+    return {
+      ok: false,
+      reason: "pluginId and serviceId must be given together to override the title service",
+    };
+  }
+  const entry = (state.services ?? []).find(
+    (service) => service.pluginId === pluginId && service.id === serviceId,
+  );
+  if (entry === undefined) {
+    return {
+      ok: false,
+      reason: `No AI service ${pluginId}/${serviceId} is registered in bb`,
+    };
+  }
+  if (!entry.tasks?.includes("thread-title")) {
+    return {
+      ok: false,
+      reason: `AI service ${pluginId}/${serviceId} does not serve thread titles`,
+    };
+  }
+  if (entry.status?.ready !== true) {
+    return {
+      ok: false,
+      reason:
+        `AI service ${entry.displayName} is not ready: ${entry.status?.message ?? "no reason given"}`,
+    };
+  }
+  return { ok: true, pluginId, serviceId };
 }
 
 /** Hard cap on prompt text sent for titling; titles come from beginnings. */

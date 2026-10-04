@@ -16,6 +16,8 @@ export type AutotitleTestHost = {
 
 export type AutotitleSetupOptions = {
   selection?: unknown;
+  /** The `services` array bb's aiServices response carries (registered services). */
+  services?: unknown[];
   history?: unknown[];
   /** What the stubbed service plugin answers with; a throw simulates failure. */
   serviceReply?: unknown | (() => never);
@@ -43,7 +45,7 @@ export async function setup(
             "commit-message": { mode: "off" },
             voice: { mode: "off" },
           },
-          services: [],
+          services: opts.services ?? [],
         }),
       },
       threads: {
