@@ -40,6 +40,7 @@ merging into `dev`, releasing, changelog writing, or tagging.
   the `[Unreleased]` group at the top of `CHANGELOG.md`, under the matching
   Keep-a-Changelog subsection: **Added** = new capability, **Changed** =
   behavior change to an existing surface, **Fixed** = bug fix.
+- Grouping is a write-time duty, checked on every changelog write — not just at finalize: each write to `[Unreleased]` looks at the whole group and decides whether items should be grouped. Place each new bullet under the matching subsection, and when a write leaves the group flat or mixed (bullets bare under `## [Unreleased]`, or a Fixed bullet stranded under Added), regroup the existing bullets in that same write. Bare bullets inherit straight into the published section at the finalize rename, and regrouping them there would be the back-edit the published-sections rule forbids.
 - One bullet per *behavior*, not per merge or branch. The bullet's OPENING
   SENTENCE is its What's-new item (section 5), so start the bullet with a
   bold lead that reads standalone: surface first, then behavior, what a
@@ -47,7 +48,7 @@ merging into `dev`, releasing, changelog writing, or tagging.
   noun phrase ("Parent thread lanes.") is the failure to avoid; the elaboration after the lead is free to run full-record length. Mechanism,
   root-cause forensics, a workaround's removal condition, and test counts
   belong there or in `docs/*.md` (linked), never in the lead sentence.
-- Tests-only, refactor, and docs-only landings add nothing.
+- Every changelog write also sorts the landing before writing anything: user-facing behavior earns a bullet, maintainers-only work adds none. Tests-only, refactor, docs-only, build-plumbing, and internal-identifier landings are maintainers-only; a mixed landing gets bullets only for its user-facing parts, with the rest recorded in the commit message. This check runs at write time next to the grouping check, never deferred to release.
 - Published sections are never back-edited. If a later merge revises
   behavior a published version already described, it gets fresh
   `[Unreleased]` bullets saying what the behavior is *now* (the parked-pin
