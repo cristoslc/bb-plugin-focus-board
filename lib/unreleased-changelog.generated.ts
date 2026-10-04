@@ -13,7 +13,7 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
-    "text": "**The thread pane's actions menu pins again.** The opened pane's more-actions menu carries a Pin/Unpin entry at its head (an archived row's menu keeps just its Unarchive), with the card menu's semantics: the gesture lifts a snooze and clears a parked pin, the reveal claim arms before the write, and the card's lane move reveals after the pin lands.",
+    "text": "**The thread pane's actions menu pins again.** The opened pane's more-actions menu carries a Pin/Unpin entry between Mark Done and the snooze entry (an archived row's menu keeps just its Unarchive), with the card menu's semantics: the gesture lifts a snooze and clears a parked pin, the reveal claim arms before the write, and the card's lane move reveals after the pin lands.",
     "children": []
   },
   {
