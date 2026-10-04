@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-// The Pinned-lane attention UX: a pinned family cannot move to Needs you
-// (the family-column overrides apply to unpinned roots only), so the call for
-// attention happens where the family already sits — a pulsing amber border on
-// the pinned parent card, and the family card at the top of the lane.
+// The Pinned-lane attention UX keys on the pinned card's OWN state. An
+// attention CHILD un-nests (nesting.ts childPlacement) and surfaces as its
+// own card in Needs you, so the family neither pulses nor lifts for it — the
+// needy child is its own actionable card now. A pinned card whose own state
+// needs you still pulses and leads the lane.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
@@ -45,14 +46,12 @@ function renderFamilyBoard(threads: PluginSidebarThread[]) {
     // prop is typed required; supply a no-op node.
     stateDot: null as ReactNode,
   } as unknown as BoardProps;
-  // Board requires stateDot per card? No — Board builds its own StateDot;
-  // the prop above is stripped by the cast.
   return render(<Board {...props} />);
 }
 
-function pinnedCardIds(): string[] {
-  const section = document.querySelector('section[data-column-id="pinned"]');
-  if (section === null) throw new Error("missing pinned column");
+function columnCardIds(columnId: string): string[] {
+  const section = document.querySelector(`section[data-column-id="${columnId}"]`);
+  if (section === null) throw new Error(`missing column ${columnId}`);
   // Top-level column cards only: nested child rows carry the same marker
   // inside their parent card, so drop any match that itself sits inside a
   // `[data-thread-card]`.
@@ -69,8 +68,8 @@ function pulseOn(cardId: string): boolean {
 
 afterEach(cleanup);
 
-describe("Pinned-lane attention (pulse + lift)", () => {
-  it("the attention family's pinned card pulses and leads the lane; the bystander stays quiet", () => {
+describe("Pinned-lane attention (pulse + lift for the card's own state)", () => {
+  it("an attention child of a pinned parent stands alone in Needs you; the pinned card stays quiet", () => {
     const parent = thread({ id: "p", isPinned: true, updatedAt: NOW - 2 * DAY });
     const child = thread({
       id: "c",
@@ -80,18 +79,35 @@ describe("Pinned-lane attention (pulse + lift)", () => {
     });
     const bystander = thread({ id: "q", isPinned: true, updatedAt: NOW - HOUR });
     renderFamilyBoard([parent, child, bystander]);
-    expect(pinnedCardIds()).toEqual(["p", "q"]);
+    // No lift: the newer bystander leads the pinned lane, and the child is
+    // not nested under it — it renders as its own card in Needs you.
+    expect(columnCardIds("pinned")).toEqual(["q", "p"]);
+    expect(columnCardIds("attention")).toEqual(["c"]);
+    expect(pulseOn("p")).toBe(false);
+    expect(pulseOn("q")).toBe(false);
+  });
+
+  it("a pinned card whose OWN state needs you pulses and leads the lane; the bystander stays quiet", () => {
+    const pinnedAttention = thread({
+      id: "p",
+      isPinned: true,
+      hasPendingInteraction: true,
+      updatedAt: NOW - 2 * DAY,
+    });
+    const bystander = thread({ id: "q", isPinned: true, updatedAt: NOW - HOUR });
+    renderFamilyBoard([pinnedAttention, bystander]);
+    expect(columnCardIds("pinned")).toEqual(["p", "q"]);
     expect(pulseOn("p")).toBe(true);
     expect(pulseOn("q")).toBe(false);
   });
 
-  it("the pulse disappears when the child's question is answered", () => {
+  it("the pulse disappears when the pinned card's own question is answered", () => {
     const parent = thread({ id: "p", isPinned: true, updatedAt: NOW - 2 * DAY });
     const child = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - HOUR });
     const bystander = thread({ id: "q", isPinned: true, updatedAt: NOW - HOUR });
     renderFamilyBoard([parent, child, bystander]);
     // No pending interaction anywhere: no lift (q is newer), no pulse.
-    expect(pinnedCardIds()).toEqual(["q", "p"]);
+    expect(columnCardIds("pinned")).toEqual(["q", "p"]);
     expect(pulseOn("p")).toBe(false);
     expect(pulseOn("q")).toBe(false);
   });

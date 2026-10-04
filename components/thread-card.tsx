@@ -306,21 +306,10 @@ export function ThreadCard({
   // counts children that render standalone (promoted / cross-axis).
   const hasRows = children.length > 0;
 
-  // Pinned-lane attention: a pinned family cannot move to a Needs-you lane —
-  // the state column overrides apply to unpinned roots only — so when a nested
-  // child (or the card's own state) needs the operator, the card says so
-  // itself: a pulsing amber border, the same pulse language the changelog gift
-  // uses. Done and archived members never count: completed or stale state
-  // must not demand attention. The pinned lane also lifts these cards to the
-  // top (nesting.ts, `pinnedAttentionIds`); the two signals must agree.
-  const familyNeedsAttention =
-    threadState(thread) === "attention" ||
-    children.some(
-      (child) =>
-        threadState(child) === "attention" &&
-        !child.isArchived &&
-        !(doneIds?.has(child.id) ?? false),
-    );
+  // The card's own attention: a pending interaction or an unread error. A
+  // nested child can no longer be the cause — attention children un-nest
+  // (nesting.ts `childPlacement`) and demand attention from their own card.
+  const familyNeedsAttention = threadState(thread) === "attention";
 
   // Snoozed state: the wake epoch-ms (null when not snoozed) drives the dim,
   // the chip, and the drag refusal all at once — one rule, no drift.
@@ -469,13 +458,50 @@ export function ThreadCard({
             </div>
           )}
         </a>
-        {chipCount > 0 ? (
-          // Family-size metadata only: the collapse control lives in the
-          // child section below, next to the rows it acts on.
-          <div className="flex shrink-0 items-start py-2 pr-1.5">
-            <span className="rounded-full bg-muted px-1.5 text-[10px] tabular-nums text-muted-foreground">
-              {chipCount}
-            </span>
+        {chipCount > 0 || (hasRows && collapsed) ? (
+          // The top-right rail: the family-size count, and — when the rows
+          // are folded — the collapsed rows' dot strip directly below it, so
+          // count and states read as one cluster. The strip counts what
+          // folding hides (the nested rows); the chip counts the whole
+          // family, including children that render standalone.
+          <div className="flex shrink-0 flex-col items-end gap-1 py-2 pr-1.5">
+            {chipCount > 0 ? (
+              <span className="rounded-full bg-muted px-1.5 text-[10px] tabular-nums text-muted-foreground">
+                {chipCount}
+              </span>
+            ) : null}
+            {hasRows && collapsed ? (
+              <button
+                type="button"
+                data-child-thread-dots=""
+                aria-label="Expand subthreads"
+                title="Show the nested child threads"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  toggleCollapsed();
+                }}
+                className={cn(
+                  "flex max-w-24 flex-wrap items-center justify-end gap-1 rounded-sm p-0.5",
+                  "transition-colors hover:bg-accent/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                )}
+              >
+                {children.map((child) => {
+                  const state = threadState(child);
+                  return (
+                    <span
+                      key={child.id}
+                      title={`${child.displayTitle} · ${THREAD_STATE_LABELS[state] ?? state}`}
+                      className={cn(
+                        "size-1.5 rounded-full",
+                        DOT_CLASS[state] ?? "bg-muted-foreground/30",
+                        state === "attention" && "motion-safe:animate-pulse",
+                      )}
+                    />
+                  );
+                })}
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -483,9 +509,9 @@ export function ThreadCard({
         <div className="ml-3 mt-1">
           {/* The section toggle: one control, in one place, on the boundary
               of the content it controls — directly above the rows when
-              expanded, and carrying the collapsed rows' replacement (the
-              status-dot strip) when folded. Clicking it never reaches the
-              card's anchor, the pane, or the background-click closer. */}
+              expanded, and carrying the collapsed count when folded. The
+              status dots live beside the count chip above. Clicking it never
+              reaches the card's anchor, the pane, or the background closer. */}
           <button
             type="button"
             data-child-threads-toggle=""
@@ -507,33 +533,6 @@ export function ThreadCard({
               className="size-3 shrink-0"
               aria-hidden
             />
-            {collapsed ? (
-              // The collapsed rows: one status-colored dot per nested child,
-              // in display order. The strip answers both "are there
-              // children?" and "does any of them want me?" at a glance — an
-              // amber dot pulses like every other attention signal on the
-              // board — without expanding. Hovering a dot names its child.
-              <span
-                data-child-thread-dots=""
-                aria-hidden
-                className="flex flex-wrap items-center gap-1"
-              >
-                {children.map((child) => {
-                  const state = threadState(child);
-                  return (
-                    <span
-                      key={child.id}
-                      title={`${child.displayTitle} · ${THREAD_STATE_LABELS[state] ?? state}`}
-                      className={cn(
-                        "size-1.5 rounded-full",
-                        DOT_CLASS[state] ?? "bg-muted-foreground/30",
-                        state === "attention" && "motion-safe:animate-pulse",
-                      )}
-                    />
-                  );
-                })}
-              </span>
-            ) : null}
             {children.length} {children.length === 1 ? "child thread" : "child threads"}
           </button>
           {!collapsed && onOpenThread !== undefined ? (

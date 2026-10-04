@@ -30,8 +30,6 @@ import {
 } from "./components/grouping";
 import {
   buildFamilyIndex,
-  familiesToAutoExpand,
-  familiesWithUrgentChildren,
   filterFamilies,
   filterIndividually,
   assembleBoard,
@@ -777,33 +775,14 @@ function BoardPage({ subPath }: { subPath: string }) {
   );
   const columns = assembly?.columns ?? [];
   // The map that actually renders as nested rows (nesting rules applied, so a
-  // promoted or cross-axis child is absent — expanding the card could never
-  // reveal it). Stable across renders: the auto-expand effect keys on it.
+  // promoted, un-nested, or cross-axis child is absent — expanding the card
+  // could never reveal it). Stable across renders.
   const nestedChildrenByParent = assembly?.nestedChildrenByParent ?? EMPTY_NESTED;
 
-  // Collapsed-family auto-expand: a folded card must open when one of its
-  // nested children enters an "unread+" state — unread activity, or needs-you
-  // (components/nesting.ts `familiesWithUrgentChildren` for the exact member
-  // rule). The decision is a TRANSITION, not a state: the first snapshot
-  // after load is a seed pass only, so a family collapsed while a child was
-  // already unread stays collapsed across reloads, and the rule answers live
-  // changes ("a child just went unread under a folded card") without fighting
-  // the operator's collapse gesture on every refresh. Expanding clears the
-  // persisted collapsed id: the opened state is the state that persists.
-  const urgentFamiliesRef = useRef<ReadonlySet<string> | null>(null);
-  useEffect(() => {
-    const current = familiesWithUrgentChildren(nestedChildrenByParent, doneIds);
-    const previous = urgentFamiliesRef.current;
-    urgentFamiliesRef.current = current;
-    if (previous === null) return; // seed pass: observe, never act
-    const toExpand = familiesToAutoExpand(previous, current, collapsedFamilies);
-    if (toExpand.length === 0) return;
-    setCollapsedFamilies((currentCollapsed) => {
-      const next = new Set(currentCollapsed);
-      for (const id of toExpand) next.delete(id);
-      return next;
-    });
-  }, [nestedChildrenByParent, doneIds, collapsedFamilies]);
+  // The old collapsed-family auto-expand is gone: an attention child now
+  // un-nests (nesting.ts `childPlacement`) and surfaces as its own card
+  // while the folded rows stay folded, so there is no expansion to fire and
+  // the persisted collapse never fights the surfacing.
 
   // Sweep eligibility per sweepable column, computed from the current board
   // data. Arming (in armSweepFor) captures this list at arm time; while a
