@@ -900,21 +900,52 @@ export default async function plugin(bb: BbPluginApi) {
    * Two live-found reasons make prompt history the FALLBACK, not the
    * source: bb's history carries composer turns only (spawn inputs never
    * land there) and pages newest-first. The source thread's timeline's
-   * oldest user conversation row is the honest first read.
+   * oldest user conversation row is the honest first read — but bb serves
+   * the timeline in segment windows (the newest first), so the read walks
+   * the older cursors and only trusts the result when the walk reached the
+   * thread's beginning; a capped walk that never reaches the bottom uses
+   * the paged history instead (a mid-thread row would mislabel the task).
    */
+  const ORIGINATING_PROMPT_MAX_PAGES = 40;
   async function threadOriginatingPrompt(threadId: string): Promise<string | null> {
-    const timeline = (await bb.sdk.threads.timeline({
-      threadId,
-      // bb's sequence-anchored read: afterSequence "0" = events strictly
-      // above 0, i.e. the thread's beginning (SDK types the bound as a
-      // string). The parameterless call serves bb's latest-rows cache —
-      // live it returned only seq 9066-10188 of a 10k-sequence thread,
-      // putting the user's newest message in "first".
-      afterSequence: "0",
-    })) as { rows?: unknown };
-    const fromTimeline = firstUserPromptFromTimeline(
-      (timeline.rows ?? []) as readonly AutotitleTimelineRow[],
-    );
+    const collected: AutotitleTimelineRow[] = [];
+    let cursor: { anchorId: string; anchorSeq: number } | null = null;
+    let reachedBeginning = false;
+    for (let page = 0; page < ORIGINATING_PROMPT_MAX_PAGES; page += 1) {
+      const timeline = (await bb.sdk.threads.timeline({
+        threadId,
+        // bb's sequence-anchored first read: afterSequence "0" = events
+        // strictly above 0 (the bound is a string, like limit). The
+        // parameterless call serves bb's latest-rows cache — live it
+        // returned only seq 9066-10188 of a 10k-sequence thread, putting
+        // the user's newest message in "first".
+        afterSequence: "0",
+        ...(cursor === null
+          ? {}
+          : { beforeAnchorId: cursor.anchorId, beforeAnchorSeq: String(cursor.anchorSeq) }),
+      })) as {
+        rows?: unknown;
+        timelinePage?: {
+          hasOlderRows?: boolean;
+          olderCursor?: { anchorId: string; anchorSeq: number } | null;
+        } | null;
+      };
+      collected.push(...((timeline.rows ?? []) as AutotitleTimelineRow[]));
+      const page1 = timeline.timelinePage;
+      if (page1 === undefined || page1 === null) {
+        reachedBeginning = true; // no pager info: treat the page as complete
+        break;
+      }
+      if (page1.hasOlderRows === true && page1.olderCursor != null) {
+        cursor = page1.olderCursor;
+        continue;
+      }
+      reachedBeginning = true;
+      break;
+    }
+    const fromTimeline = reachedBeginning
+      ? firstUserPromptFromTimeline(collected)
+      : null;
     if (fromTimeline !== null) return fromTimeline;
     const history = (await bb.sdk.threads.promptHistory({
       threadId,

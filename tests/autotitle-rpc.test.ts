@@ -647,3 +647,48 @@ describe("the originating-prompt read pages the timeline from the beginning", ()
     expect((lastServiceCall()!.input as { prompt: string }).prompt).toContain("emoji button");
   });
 });
+
+describe("the originating-prompt walk covers long threads", () => {
+  // bb serves the timeline in segment windows (user rows anchor segments);
+  // one call returns only the newest window. The read must walk older pages
+  // and may only use the result when the walk reached the thread's
+  // beginning — otherwise the paged prompt history wins.
+  it("walks older pages and titles from the oldest segment's user row", async () => {
+    const { callRpc, lastServiceCall, sourceTimelineCalls } = await setup({
+      sourceTimelinePages: [
+        {
+          rows: [{ kind: "conversation", role: "user", sourceSeqStart: 9000, text: "a much later question" }],
+          timelinePage: {
+            kind: "older",
+            hasOlderRows: true,
+            olderCursor: { anchorId: "timeline-window:9000", anchorSeq: 9000 },
+          },
+        },
+        {
+          rows: [{ kind: "conversation", role: "user", sourceSeqStart: 1, text: "When renaming a thread, I'd like an emoji button" }],
+          timelinePage: { kind: "older", hasOlderRows: false, olderCursor: null },
+        },
+      ],
+    });
+    await callRpc("thread_autotitle", { threadId: "thr_x" });
+    const prompt = (lastServiceCall()!.input as { prompt: string }).prompt;
+    expect(prompt).toContain("emoji button");
+    expect(prompt).not.toContain("much later question");
+    // The second call must carry page one's olderCursor as the anchor.
+    expect(sourceTimelineCalls().map((c) => c.beforeAnchorSeq)).toEqual([undefined, "9000"]);
+  });
+
+  it("falls back to prompt history when the walk never reaches the beginning", async () => {
+    const { callRpc, lastServiceCall } = await setup({
+      sourceTimelinePages: [
+        {
+          rows: [{ kind: "conversation", role: "user", sourceSeqStart: 9000, text: "a much later question" }],
+          timelinePage: { kind: "older", hasOlderRows: true, olderCursor: { anchorId: "timeline-window:9000", anchorSeq: 9000 } },
+        },
+        // Every further page still says it has older rows (degenerated walk).
+      ],
+    });
+    await callRpc("thread_autotitle", { threadId: "thr_x" });
+    expect((lastServiceCall()!.input as { prompt: string }).prompt).toContain("login redirect loop");
+  });
+});

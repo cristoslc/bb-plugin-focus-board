@@ -46,8 +46,17 @@ export type AutotitleSetupOptions = {
   probeStatuses?: string[];
   /** threads.timeline result for the probe thread. Default: one assistant row with the canned title. */
   probeTimeline?: unknown;
-  /** What a threads.timeline result carries in tests ({rows:[...]}) */
+  /**
+   * threads.timeline result for the SOURCE thread (the first-user-row prompt
+   * read); default [] so the server falls back to the prompt-history fixture.
+   */
   sourceTimeline?: unknown;
+  /**
+   * Canned paging sequence for the source thread's timeline read (the walk
+   * over bb's segment windows). Each entry is one call's response; the last
+   * entry repeats when the walk keeps going.
+   */
+  sourceTimelinePages?: Array<{ rows?: unknown; timelinePage?: unknown }>;
 };
 
 const SOURCE_THREAD_ID = "thr_x";
@@ -86,6 +95,8 @@ export async function setup(
     | null = null;
   let lastPromptHistoryArgs: { threadId?: string; limit?: number } | null = null;
   let lastSourceTimelineArgs: { threadId: string; afterSequence?: number } | null = null;
+  let sourceTimelineCallIndex = 0;
+  const sourceTimelineCalls: Array<{ threadId: string; afterSequence?: number; beforeAnchorId?: string; beforeAnchorSeq?: string }> = [];
   const allServiceCalls: Array<{
     pluginId: string;
     method: string;
@@ -145,12 +156,20 @@ export async function setup(
           const status = statuses[Math.min(statusIndex++, statuses.length - 1)];
           return { ...sourceRow, id: threadId, status };
         },
-        timeline: async (args: { threadId: string; afterSequence?: number }) => {
+        timeline: async (args: { threadId: string; afterSequence?: number; beforeAnchorId?: string; beforeAnchorSeq?: string }) => {
           lastSourceTimelineArgs = args;
           // The PROBE thread's reply; the SOURCE thread reads empty so the
           // server falls back to prompt history unless a test wires a
-          // source timeline.
-          if (args.threadId !== probeId) return opts.sourceTimeline ?? [];
+          // source timeline (or a canned page walk).
+          if (args.threadId !== probeId) {
+            sourceTimelineCalls.push(args);
+            if (opts.sourceTimelinePages !== undefined) {
+              const index = Math.min(sourceTimelineCallIndex, opts.sourceTimelinePages.length - 1);
+              sourceTimelineCallIndex += 1;
+              return opts.sourceTimelinePages[index];
+            }
+            return opts.sourceTimeline ?? [];
+          }
           return opts.probeTimeline ?? (DEFAULT_TIMELINE as unknown);
         },
         delete: async ({ threadId }: { threadId: string }) => {
@@ -191,6 +210,8 @@ export async function setup(
     lastPromptHistoryArgs: () => lastPromptHistoryArgs,
     /** The latest SOURCE-thread threads.timeline args — the prompt read must page from the beginning. */
     lastSourceTimelineArgs: () => lastSourceTimelineArgs,
+    /** Every SOURCE-thread timeline call, oldest first (the walk's cursor passing). */
+    sourceTimelineCalls: () => [...sourceTimelineCalls],
     lastSpawn: () => spawnArgs,
     deletedProbes: () => deleted,
     stoppedProbes: () => stopped,
