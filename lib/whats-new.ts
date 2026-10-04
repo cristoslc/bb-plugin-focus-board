@@ -54,44 +54,44 @@ const LEGACY_WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     version: "0.5.12",
     items: [
-      { lead: "The sweep now refuses a parent thread that still has live children, and the CLI sweep mirrors the board's quiet-thread rule: running turns and unseen-activity threads are never archive-eligible. Both certification findings are closed." },
+      { lead: "The sweep now refuses a parent thread that still has live children, and the CLI sweep mirrors the board's quiet-thread rule." },
     ],
   },
   {
     version: "0.5.11",
     items: [
-      { lead: "The What's-new log now includes the 0.5.9 line that shipped without one; no board behavior changes in this version." },
+      { lead: "The What's-new log now includes the 0.5.9 line that shipped without one — no board behavior changes in this version." },
     ],
   },
   {
     version: "0.5.10",
     items: [
-      { lead: "Threads that pause to ask you for something (like a secrets form) now show in the Needs you column instead of In Progress while they wait." },
+      { lead: "Threads that pause to ask you for something now wait in Needs you instead of In Progress." },
     ],
   },
   {
     version: "0.5.9",
     items: [
-      { lead: "Threads asking you for input (like a secrets form) now wait in the Needs you column instead of In Progress." },
+      { lead: "Threads asking you for input now wait in the Needs you column instead of In Progress." },
     ],
   },
   {
     version: "0.5.8",
     items: [
-      { lead: "Security hardening: an opened thread window can no longer reach back into the board, and the board's stored column orders reject malformed keys. No visible board behavior changes." },
+      { lead: "Security hardening: an opened thread window can no longer reach back into the board. No visible board changes." },
     ],
   },
   {
     version: "0.5.7",
     items: [
-      { lead: "Urgent child threads now float to the top of the rows nested under a parent card, so a child that needs you can't get buried under quieter siblings." },
+      { lead: "Urgent child threads now float to the top of the rows nested under a parent card." },
     ],
   },
   {
     version: "0.5.6",
     items: [
-      { lead: "Child threads now nest as one family: the family's card sits in the column of its most attention-requiring member, with urgent children rendered as rows under the parent card instead of floating away as standalone cards." },
-      { lead: "A pinned parent keeps its whole family in the Pinned column — an active child no longer detaches into its own column." },
+      { lead: "Child threads now nest as one family: the family's card sits in the column of its most attention-requiring member." },
+      { lead: "A pinned parent keeps its whole family in the Pinned column — an active child no longer detaches." },
     ],
   },
 ];
