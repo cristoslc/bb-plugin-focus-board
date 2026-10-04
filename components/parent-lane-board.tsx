@@ -50,6 +50,12 @@ interface ParentLaneBoardProps {
   onClosePane?: () => void;
   onNewTask: () => void;
   menuActionsFor: (thread: PluginSidebarThread) => readonly CardMenuAction[];
+  /**
+   * Snooze wake lookup (lib/snooze): the wake epoch-ms for a snoozed thread,
+   * null otherwise. Wired through to lane cards — dim in place and the wake
+   * chip (lane minis show the clock alone).
+   */
+  snoozeFor?: (threadId: string) => number | null;
 }
 
 /** Ruler+wrap board chrome measurements (shared with parent-lane-layout.ts). */
@@ -217,6 +223,7 @@ export function ParentLaneBoard({
   onClosePane,
   onNewTask,
   menuActionsFor,
+  snoozeFor,
 }: ParentLaneBoardProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const spacerRef = useRef<HTMLDivElement | null>(null);
@@ -818,6 +825,7 @@ export function ParentLaneBoard({
                           repoHrefBase={repoBaseFor(cell.thread.projectId) ?? undefined}
                           statusFor={statusFor}
                           menuActions={menuActionsFor(cell.thread)}
+                          snoozeFor={snoozeFor}
                           activeThreadId={activeThreadId}
                           dimmed={dimmedIds.has(cell.thread.id)}
                           onOpen={() => onOpenThread(cell.thread.id)}

@@ -250,3 +250,29 @@ Tried to disprove the report; verdicts:
   capture is an unhandled edge (their test covers prepend + continued
   gesture only). The re-scoped report is review-ready; upstream filing
   decision stays with the operator.
+
+## Update 2026-10-03 — guard fix verified live; investigation closed
+
+The interrupted verification was rerun directly (the child's background runs
+had crashed with the daemon restart and nobody resumed them):
+
+- **Band mode (the guard's design case) now fires correctly.** Staged
+  pending capture; reader parked 200 px above the bottom of the pane
+  (staged-guard.mjs run): the click's host clamp lands (6125 → 6305), and
+  17 ms later the guard's restore reverts it (6299 → 6125) with its wheel
+  dispatch ahead — reader position preserved, final 6125. This is the
+  shape the guard existed for; it never fired before this fix.
+- **Bottom mode stays silent** (verify-guard-baseline.mjs): reader pinned
+  at bottom, click → no guard writes at all; the reader ends pinned
+  (13234 of max 13234). No cement, no fighting the shell. Pill
+  non-misfire re-verified (host re-pin from 640 px up, guard silent).
+- Note for anyone re-verifying: the served host bundle changed identity
+  mid-investigation (bb's own app updated; page-shell-B24TvAJg.js is now
+  bottom-anchored-scroll-body-BCoAmb30.js with renamed symbols). The
+  recorded stacks are valid artifacts of their runs; the SHA-pinned
+  source still matches.
+
+Guard commits: `915c85c` (settle-listener suppression, superseded) and
+`e58b232` + `ee6fbc9` (pointerdown-capture baseline; the working form;
+dev merge `2ec8ef8`, suite 660 green). Issue for the host defect:
+get-bb/bb#4793.

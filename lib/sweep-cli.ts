@@ -49,6 +49,14 @@ export interface SweepFact {
   unread: boolean;
   /** True when at least one live (non-archived) child hangs off this id. */
   hasLiveChildren: boolean;
+  /**
+   * True while the board holds a snooze record for this thread. A snoozed
+   * thread is never sweep-eligible in either arm: the wake must resurface
+   * it (a Done arm sweep would archive first, an idle arm sweep would
+   * stamp a competing doneAt), so the snooze beats the sweep and the sweep
+   * resumes next wake.
+   */
+  snoozed?: boolean;
 }
 
 export type SweepReason = "done" | "idle";
@@ -77,6 +85,7 @@ export function sweepCliEligible(
   for (const fact of facts) {
     if (fact.archived) continue;
     if (fact.keep) continue;
+    if (fact.snoozed === true) continue; // The snooze beats the sweep.
     if (fact.hasLiveChildren) continue; // A live parent is never sweep-eligible.
     if (fact.doneAt !== null) {
       if (now - fact.doneAt >= doneThreshold) {

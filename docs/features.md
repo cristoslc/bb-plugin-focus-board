@@ -19,6 +19,16 @@ Fine-grained notes that don't belong in the README's feature list.
 - Archived children are hidden outright: they render nowhere on either board view, child chips count only visible children, and the children of an archived parent render standalone instead of vanishing.
 - A family card that nests more than five child rows caps the list and scrolls inside the card; the collapse chevron still hides the whole list.
 - A column drained to zero by nesting hides until a card returns to it.
+- A family card's nested rows can be collapsed: the chevron folds the rows into a "N child threads" pill that re-opens them, and the collapsed families persist across sessions (localStorage).
+- A collapsed card opens by itself when one of its nested children turns unread or needs you; a family collapsed while a child was already unread stays folded.
+
+## Snooze
+
+- Snoozing a thread reads it now and makes it unread again at the target time: the set gesture marks the thread read, so it leaves the Unread column; the wake stamps mark-unread at the target time, so the card returns to Unread like fresh mail. The board's existing wake handling (pin restore, un-done) applies with no snooze-specific wiring.
+- A snoozed card stays in its column, dimmed, with a "Snoozed · wakes …" chip (the open thread pane's header carries the same chip). One "Snooze…" menu entry (cards and the thread pane's actions menu) opens a single picker with the presets (1 hour, 4 hours, tomorrow 9am, 1 week) and a date-time field; a snoozed thread's menu shows "Edit snooze…", whose picker confirms a changed wake time or removes the wake-up call.
+- The snooze beats the sweep: snoozed cards are not sweep candidates on the board and are skipped by the server-side sweep while their sleep lasts. A snoozed card also refuses drag, so it cannot be dropped into a lane move its sleep is meant to skip.
+- Any state-changing gesture lifts the snooze first — pin, read toggle, done toggle, archive, or removing the wake-up from the edit picker. If the thread is genuinely read by hand while snoozed, the wake consumes the snooze without re-alerting.
+- Wake timers live server-side: they are re-armed on plugin load (a past-due snooze wakes immediately) and cleared on dispose. Full CLI parity: `bb focus-board snooze list|set|clear`.
 
 ## Escape
 

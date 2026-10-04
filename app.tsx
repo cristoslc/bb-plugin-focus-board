@@ -30,6 +30,8 @@ import {
 } from "./components/grouping";
 import {
   buildFamilyIndex,
+  familiesToAutoExpand,
+  familiesWithUrgentChildren,
   filterFamilies,
   filterIndividually,
   assembleBoard,
@@ -37,6 +39,13 @@ import {
 import { buildParentLanes } from "./components/parent-lanes";
 import { ParentLaneBoard } from "./components/parent-lane-board";
 import { doneAtToEpochMs } from "./lib/done-metadata";
+import { SnoozeDialog } from "./components/snooze-dialog";
+import {
+  snoozeMenuActions,
+  snoozeWakeAtMs,
+  type SnoozeMenuAction,
+  type SnoozeRecord,
+} from "./lib/snooze";
 import {
   applyInteractionFlags,
   interactionFlagChangeFromEvent,
@@ -52,9 +61,11 @@ import { pinStateChangeFromEvent, readStateChangeFromEvent } from "./lib/pin-par
 import {
   DEFAULT_DONE_ARCHIVE_MS,
   DEFAULT_IDLE_ARCHIVE_MS,
+  SWEEP_SETTLED_WORDS,
   armSweep,
   confirmSweep,
-  runSweepArchive,
+  runSweep,
+  sweepArmPreselects,
   sweepCandidatesForDoneColumn,
   sweepCandidatesForIdleColumn,
   sweepColumnKind,
@@ -68,11 +79,14 @@ import {
 } from "./lib/sweep";
 import { useSweepClickAway } from "./components/board";
 import {
+  COLLAPSED_FAMILIES_KEY,
   GROUP_BY_KEY,
   NEST_CHILDREN_KEY,
   PARENT_LANE_ORDER_KEY,
+  collapsedFamiliesStoredValue,
   escStopsRunningFromSetting,
   nestStoredValue,
+  parseCollapsedFamiliesStored,
   parseNestStored,
   parseGroupStored,
   parseParentLaneOrderStored,
@@ -96,6 +110,10 @@ const FILTER_KEY = "focus-board:filter";
 const SEARCH_KEY = "focus-board:search";
 /** This panel's own registered route path, for pane-history pushes. */
 const PANEL_PATH = "board";
+
+/** The nesting map when there is none (flat board, parent grouping): a stable
+ *  empty, so the auto-expand effect's inputs never churn identity per render. */
+const EMPTY_NESTED: ReadonlyMap<string, readonly PluginSidebarThread[]> = new Map();
 
 /**
  * `toPluginPanel` is typed `void`, but the host may return `false` when it
@@ -338,6 +356,66 @@ function BoardPage({ subPath }: { subPath: string }) {
     return times;
   }, [doneExtras]);
 
+  // Snoozed threads: per-thread plugin metadata ({ wakeAt, setAt }) surfaced
+  // through the snooze RPCs. The board only mirrors the records — dimming,
+  // the wake chip, menu entries, and sweep skipping all derive from them;
+  // the wake itself (markUnread at the target time) is server-side.
+  const [snoozeRecords, setSnoozeRecords] = useState<Record<string, SnoozeRecord>>({});
+  const refetchSnoozes = useCallback(() => {
+    rpc.call("snooze_list").then(
+      (result) => setSnoozeRecords(result.snoozes),
+      () => {}, // Snoozing is optional state; the board works without it.
+    );
+  }, [rpc]);
+  useEffect(() => {
+    refetchSnoozes();
+  }, [refetchSnoozes]);
+  useRealtime("snooze-changed", refetchSnoozes);
+  const snoozedIds = useMemo(
+    () => new Set(Object.keys(snoozeRecords)),
+    [snoozeRecords],
+  );
+  /** Wake epoch-ms for a thread, null when it is not snoozed. */
+  const snoozeFor = useCallback(
+    (threadId: string): number | null => {
+      const record = snoozeRecords[threadId];
+      return record === undefined ? null : snoozeWakeAtMs(record);
+    },
+    [snoozeRecords],
+  );
+  // A snooze set by any surface (this panel's menu, the CLI, another panel)
+  // lands here through the snooze-changed refetch; the optimistic write
+  // below only smooths this panel's own gesture.
+  const snoozeUntil = useCallback(
+    (threadId: string, wakeAt: Date) => {
+      const wakeAtIso = wakeAt.toISOString();
+      setSnoozeRecords((current) => ({
+        ...current,
+        [threadId]: { wakeAt: wakeAtIso, setAt: new Date().toISOString() },
+      }));
+      rpc.call("snooze_set", { threadId, wakeAt: wakeAtIso }).catch(() => refetchSnoozes());
+    },
+    [rpc, refetchSnoozes],
+  );
+  // Current-intent: lifting a snooze explicitly (Unsnooze, or any later
+  // state-changing gesture on the card). Optimistic removal; a rejected
+  // write settles the truth back through a refetch.
+  const clearSnooze = useCallback(
+    (threadId: string) => {
+      setSnoozeRecords((current) => {
+        if (current[threadId] === undefined) return current;
+        const next = { ...current };
+        delete next[threadId];
+        return next;
+      });
+      rpc.call("snooze_clear", { threadId }).catch(() => refetchSnoozes());
+    },
+    [rpc, refetchSnoozes],
+  );
+  // "Pick a time…" dialog target: the thread id waiting on a custom wake
+  // time, null when no dialog is open.
+  const [snoozeDialogFor, setSnoozeDialogFor] = useState<string | null>(null);
+
   // Manual column orders, keyed by columnRankKey. A column with no stored
   // order stays in the derived order and shows no drag affordance, so the
   // board never implies a reorder it will silently drop.
@@ -465,6 +543,13 @@ function BoardPage({ subPath }: { subPath: string }) {
   const [parentLaneOrder, setParentLaneOrder] = useState<ParentLaneOrder>(() =>
     parseParentLaneOrderStored(readStored(PARENT_LANE_ORDER_KEY, ["recency", "project"], "recency")),
   );
+  // Collapsed family cards: the parent ids whose nested rows are collapsed,
+  // persisted like every other board preference. Anything absent renders
+  // expanded — the stored list only ever records deliberate collapses, so a
+  // reload re-opens exactly the families the operator folded.
+  const [collapsedFamilies, setCollapsedFamilies] = useState<ReadonlySet<string>>(() =>
+    parseCollapsedFamiliesStored(readStoredText(COLLAPSED_FAMILIES_KEY, "")),
+  );
   // The open pane lives in the panel's URL subPath (`t/<threadId>`), not in
   // component state, so bb's back arrow, a reload, and deep links all land on
   // the pane the user left. The ref mirrors the last pushed thread id; sync
@@ -517,46 +602,6 @@ function BoardPage({ subPath }: { subPath: string }) {
     }
     setArmedSweep(null);
   }, [sweepRun]);
-  // Undo a cancelled run, reversing exactly what it settled: unarchive the
-  // Done arm's ids, unmark Done the idle arm's ids (the thread was never
-  // archived; a done_set(false) returns it to its column). Top-level
-  // selections only, never the server's whole archivedThreadIds subtree,
-  // because a child already archived before the sweep must stay archived.
-  // Sequential like the run itself; failures surface in the banner, the
-  // successes quietly return to their columns.
-  const undoSweepFor = useCallback(
-    (threadIds: readonly string[], destination: SweepDestination) => {
-      void (async () => {
-        const failed: string[] = [];
-        for (const threadId of threadIds) {
-          try {
-            if (destination === "done") {
-              await rpc.call("done_set", { threadId, done: false });
-              setDoneIds((current) => {
-                const next = new Set(current);
-                next.delete(threadId);
-                return next;
-              });
-            } else {
-              await sdk.threads.unarchive({ threadId });
-            }
-          } catch (error) {
-            failed.push(
-              error instanceof Error ? `${threadId} (${error.message})` : threadId,
-            );
-          }
-        }
-        if (failed.length === 0) {
-          setSweepNotice(null);
-          return;
-        }
-        setSweepNotice({
-          message: `Undo restored ${threadIds.length - failed.length} of ${threadIds.length}; ${failed.length} could not be restored: ${failed.join(", ")}.`,
-        });
-      })();
-    },
-    [rpc, sdk],
-  );
   // What's new: two "seen" models, picked by the running build. A stable
   // build compares versions: a fresh install (nothing stored) is stamped
   // silently — everything is new, so nothing counts as new — and an upgrade
@@ -629,6 +674,20 @@ function BoardPage({ subPath }: { subPath: string }) {
   const persistParentLaneOrder = useCallback((value: ParentLaneOrder) => {
     setParentLaneOrder(value);
     writeStored(PARENT_LANE_ORDER_KEY, value);
+  }, []);
+  // Single writer for the collapsed set: every mutation lands in state, this
+  // effect serializes it. The mount run writes the parsed value back — a
+  // harmless round-trip that also repairs a corrupt stored list.
+  useEffect(() => {
+    writeStored(COLLAPSED_FAMILIES_KEY, collapsedFamiliesStoredValue(collapsedFamilies));
+  }, [collapsedFamilies]);
+  const setFamilyCollapsed = useCallback((parentId: string, collapsed: boolean) => {
+    setCollapsedFamilies((current) => {
+      const next = new Set(current);
+      if (collapsed) next.add(parentId);
+      else next.delete(parentId);
+      return next;
+    });
   }, []);
 
   // The sidebar view pushes fresh thread data continuously; this signal
@@ -717,14 +776,45 @@ function BoardPage({ subPath }: { subPath: string }) {
     [isParentGroupBy, searched, groupBy, projects, providers, frozenColumns, doneIds, nestChildren, ranks, doneTimes],
   );
   const columns = assembly?.columns ?? [];
+  // The map that actually renders as nested rows (nesting rules applied, so a
+  // promoted or cross-axis child is absent — expanding the card could never
+  // reveal it). Stable across renders: the auto-expand effect keys on it.
+  const nestedChildrenByParent = assembly?.nestedChildrenByParent ?? EMPTY_NESTED;
+
+  // Collapsed-family auto-expand: a folded card must open when one of its
+  // nested children enters an "unread+" state — unread activity, or needs-you
+  // (components/nesting.ts `familiesWithUrgentChildren` for the exact member
+  // rule). The decision is a TRANSITION, not a state: the first snapshot
+  // after load is a seed pass only, so a family collapsed while a child was
+  // already unread stays collapsed across reloads, and the rule answers live
+  // changes ("a child just went unread under a folded card") without fighting
+  // the operator's collapse gesture on every refresh. Expanding clears the
+  // persisted collapsed id: the opened state is the state that persists.
+  const urgentFamiliesRef = useRef<ReadonlySet<string> | null>(null);
+  useEffect(() => {
+    const current = familiesWithUrgentChildren(nestedChildrenByParent, doneIds);
+    const previous = urgentFamiliesRef.current;
+    urgentFamiliesRef.current = current;
+    if (previous === null) return; // seed pass: observe, never act
+    const toExpand = familiesToAutoExpand(previous, current, collapsedFamilies);
+    if (toExpand.length === 0) return;
+    setCollapsedFamilies((currentCollapsed) => {
+      const next = new Set(currentCollapsed);
+      for (const id of toExpand) next.delete(id);
+      return next;
+    });
+  }, [nestedChildrenByParent, doneIds, collapsedFamilies]);
 
   // Sweep eligibility per sweepable column, computed from the current board
   // data. Arming (in armSweepFor) captures this list at arm time; while a
   // sweep is armed the FROZEN list is what Board displays and what confirm
-  // archives — the live recompute is only for the next arm.
+  // applies — the live recompute is only for the next arm. Only the
+  // aged-out arms (Done, A-while-ago) pre-select their past-threshold
+  // candidates; Pinned, Unread, and the fresher idle buckets arm empty
+  // (sweepArmPreselects) and the operator curates by clicking cards.
   //
   // Sweep-family contract: a thread with ≥1 live (non-archived) child is
-  // never sweep-eligible in either arm; children stay eligible
+  // never sweep-eligible in either aged-out arm; children stay eligible
   // independently. The parent set comes from the full live list, not the
   // column, so cross-column and flat-mode families are covered alike.
   const liveChildParentIds = useMemo(() => {
@@ -740,24 +830,44 @@ function BoardPage({ subPath }: { subPath: string }) {
       const column = columns.find((candidate) => candidate.id === columnId);
       if (column === undefined || sweepColumnKind(columnId) === null) return [];
       const now = Date.now();
-      return sweepColumnKind(columnId) === "done"
-        ? sweepCandidatesForDoneColumn(
-            column.threads,
+      // A snoozed thread sleeps through sweeps too: the wake is the whole
+      // point of the snooze, so its card is not a sweep candidate — on any
+      // arm, aged-out or manually curated (the server-side sweep skips
+      // snoozed facts the same way).
+      const sweepable = column.threads.filter(
+        (candidate) => !snoozedIds.has(candidate.id),
+      );
+      const kind = sweepColumnKind(columnId);
+      switch (kind) {
+        case "done":
+          return sweepCandidatesForDoneColumn(
+            sweepable,
             doneIds,
             doneAgeSource,
             { doneArchiveMs: sweepConfig.doneArchiveMs },
             now,
             liveChildParentIds,
-          )
-        : sweepCandidatesForIdleColumn(
-            column.threads,
-            doneIds,
-            { idleArchiveMs: sweepConfig.idleArchiveMs, kept: idleKept },
-            now,
-            liveChildParentIds,
           );
+        case "idle-bucket":
+          return sweepArmPreselects(columnId)
+            ? sweepCandidatesForIdleColumn(
+                sweepable,
+                doneIds,
+                { idleArchiveMs: sweepConfig.idleArchiveMs, kept: idleKept },
+                now,
+                liveChildParentIds,
+              )
+            : [];
+        // Manual arms: arming enters sweep mode with nothing selected; the
+        // operator curates the sweep by clicking cards.
+        case "pinned":
+        case "unread":
+          return [];
+        default:
+          return [];
+      }
     },
-    [columns, doneIds, doneAgeSource, idleKept, liveChildParentIds, sweepConfig],
+    [columns, doneIds, doneAgeSource, idleKept, liveChildParentIds, snoozedIds, sweepConfig],
   );
 
   // A Done-column projection card (a live family's Done card) cannot join a
@@ -773,108 +883,14 @@ function BoardPage({ subPath }: { subPath: string }) {
 
   const armSweepFor = useCallback(
     (columnId: string) => {
-      // A running sweep owns the gesture: no re-arming mid-run.
+      // A running sweep owns the gesture: no re-arming mid-run. And a
+      // non-sweepable column never arms — the pill is its only door, and
+      // that pill exists only on sweepable lanes.
       if (sweepRun !== null) return;
+      if (sweepColumnKind(columnId) === null) return;
       setArmedSweep(armSweep(columnId, sweepCandidatesFor(columnId)));
     },
     [sweepCandidatesFor, sweepRun],
-  );
-
-  const confirmSweepFor = useCallback(
-    (columnId: string) => {
-      // Side effects stay out of the state updater: read the armed snapshot,
-      // clear it, then sweep. React may re-invoke updaters; an action call
-      // must never run twice.
-      const current = armedSweep;
-      if (current === null || current.columnId !== columnId) return;
-      if (sweepRun !== null) return; // one run at a time
-      const threadIds = confirmSweep(current, true);
-      const destination = sweepDestination(columnId) ?? "archive";
-      if (threadIds.length === 0) {
-        setArmedSweep(null);
-        return;
-      }
-      // The idle arm's exit is staged: mark Done (the same recipe as a drop
-      // on the Done column), never archive a quiet-but-not-done thread. The
-      // fresh doneAt stamp starts the Done arm's archive clock, so swept
-      // threads resurface there in doneArchiveDays instead of vanishing.
-      const markDone = async (threadId: string): Promise<void> => {
-        await rpc.call("done_set", { threadId, done: true });
-        setDoneIds((currentDone) => {
-          const next = new Set(currentDone);
-          next.add(threadId);
-          return next;
-        });
-        // Done implies read: the card must not land in Done still claiming
-        // unread (the same rule the drop-on-Done path applies).
-        const thread = threads.find((candidate) => candidate.id === threadId);
-        if (thread !== undefined && thread.isUnread) {
-          void actions.setRead(threadId, true);
-        }
-      };
-      const sweepOne =
-        destination === "done"
-          ? markDone
-          : (threadId: string) => sdk.threads.archive({ threadId });
-      const settledWord =
-        destination === "done" ? "marked Done" : "archived";
-      setSweepNotice(null);
-      setSweepRun({ columnId, total: threadIds.length, done: 0, activeId: null });
-      sweepCancelRef.current = false;
-      void runSweepArchive(threadIds, {
-        // One action at a time, awaited (the runner's contract): the host's
-        // sidebar archive aborts the previous in-flight archive when a new
-        // one starts, so an unawaited loop archives only the last candidate
-        // (observed 2026-10-01: a 4-thread sweep archived one).
-        archive: sweepOne,
-        onActive: (activeId) =>
-          setSweepRun((run) => (run === null ? run : { ...run, activeId })),
-        onSettled: () =>
-          setSweepRun((run) =>
-            run === null ? run : { ...run, done: run.done + 1, activeId: null },
-          ),
-        // Cancel between actions; the one in flight always finishes.
-        shouldContinue: () => !sweepCancelRef.current,
-      }).then((result) => {
-        setSweepRun(null);
-        const failedIds = result.failures.map((failure) => failure.threadId);
-        // A cancelled run keeps whatever was never swept armed (plus any
-        // failures) so it can be inspected, retried, or explicitly exited;
-        // the pill flipping back to "Sweep N" is the cancellation feedback.
-        // Undo is OFFERED, never automatic: cancel means "stop", undo is a
-        // deliberate second click.
-        const stayArmed = result.cancelled
-          ? [...failedIds, ...result.remaining]
-          : failedIds;
-        setArmedSweep(stayArmed.length > 0 ? { columnId, threadIds: stayArmed } : null);
-        if (result.cancelled) {
-          if (result.swept.length === 0 && result.failures.length === 0) return;
-          const failedCopy =
-            result.failures.length > 0
-              ? ` ${result.failures.length} failed: ${result.failures
-                  .map((failure) => failure.message)
-                  .join(", ")}.`
-              : "";
-          setSweepNotice({
-            message: `Sweep stopped. ${result.swept.length} ${settledWord}, ${result.remaining.length} not attempted.${failedCopy}`,
-            undo: { ids: result.swept, destination },
-          });
-          return;
-        }
-        if (result.failures.length === 0) return;
-        // Fail loud: the failed candidates stay armed (highlight) for a
-        // one-click retry, and a banner says what happened.
-        const failedTitles = result.failures.map((failure) => {
-          const match = threads.find((candidate) => candidate.id === failure.threadId);
-          return `"${match?.displayTitle ?? match?.titleFallback ?? failure.threadId}" (${failure.message})`;
-        });
-        const attempted = threadIds.length - result.remaining.length;
-        setSweepNotice({
-          message: `Sweep ${settledWord} ${attempted - result.failures.length} of ${threadIds.length}; ${result.failures.length} failed: ${failedTitles.join(", ")}. The failed cards stay highlighted. Click Sweep to retry.`,
-        });
-      });
-    },
-    [actions, armedSweep, rpc, sdk, sweepRun, threads],
   );
 
   // Live GitHub status for ticket chips. Batched: one RPC per visible-ref
@@ -1276,15 +1292,183 @@ function BoardPage({ subPath }: { subPath: string }) {
     [actions, clearParkPin, parkIds, threads],
   );
   const exitPinnedLane = useCallback(
-    (threadId: string) => {
+    (threadId: string): Promise<unknown> => {
       const thread = threads.find((candidate) => candidate.id === threadId);
-      if (thread === undefined || !thread.isPinned) return;
+      if (thread === undefined || !thread.isPinned) return Promise.resolve();
       // The unpin is the gesture; the park is a side record, never a
-      // substitute for removing the pin itself.
-      void actions.setPinned(threadId, false);
+      // substitute for removing the pin itself. The unpin's promise returns
+      // so the sweep's sequential runner can await the write (the fire-and-
+      // forget drag paths ignore it).
+      const unpin = actions.setPinned(threadId, false);
       parkPin(threadId);
+      return unpin;
     },
     [actions, parkPin, threads],
+  );
+
+  // Confirm a sweep: apply the arm's per-thread gesture to the captured
+  // selection, strictly one at a time (the runner's contract — the host's
+  // sidebar writes run one row at a time, so an unawaited loop applies only
+  // the last candidate; observed 2026-10-01: a 4-thread sweep archived one).
+  // Side effects stay out of the state updater: read the armed snapshot,
+  // clear it, then sweep. React may re-invoke updaters; an action call must
+  // never run twice. Lives below exitPinnedLane/parkPin because the Pinned
+  // arm exits through the lane exit (unpin, pin parked).
+  const confirmSweepFor = useCallback(
+    (columnId: string) => {
+      const current = armedSweep;
+      if (current === null || current.columnId !== columnId) return;
+      if (sweepRun !== null) return; // one run at a time
+      const threadIds = confirmSweep(current, true);
+      const destination = sweepDestination(columnId);
+      if (destination === null) {
+        // Not a sweepable column: a confirm here is a caller bug. Refuse —
+        // never default to archiving — and drop the arm.
+        setArmedSweep(null);
+        return;
+      }
+      if (threadIds.length === 0) {
+        setArmedSweep(null);
+        return;
+      }
+      // The idle arm's exit is staged: mark Done (the same recipe as a drop
+      // on the Done column), never archive a quiet-but-not-done thread. The
+      // fresh doneAt stamp starts the Done arm's archive clock, so swept
+      // threads resurface there in doneArchiveDays instead of vanishing.
+      const markDone = async (threadId: string): Promise<void> => {
+        await rpc.call("done_set", { threadId, done: true });
+        setDoneIds((currentDone) => {
+          const next = new Set(currentDone);
+          next.add(threadId);
+          return next;
+        });
+        // Done implies read: the card must not land in Done still claiming
+        // unread (the same rule the drop-on-Done path applies).
+        const thread = threads.find((candidate) => candidate.id === threadId);
+        if (thread !== undefined && thread.isUnread) {
+          void actions.setRead(threadId, true);
+        }
+      };
+      // The Pinned arm exits through the lane exit: unpin, pin parked, so a
+      // swept thread returns to Pinned the next time it calls for attention.
+      const sweepOne = (threadId: string): Promise<unknown> => {
+        switch (destination) {
+          case "done":
+            return markDone(threadId);
+          case "unpinned":
+            return exitPinnedLane(threadId);
+          case "read":
+            // The catch-up gesture: mark read, nothing else. Marking read
+            // carries no state-truth reactions (parks ride unread, not read).
+            return actions.setRead(threadId, true);
+          default:
+            return sdk.threads.archive({ threadId });
+        }
+      };
+      const settledWord = SWEEP_SETTLED_WORDS[destination];
+      setSweepNotice(null);
+      setSweepRun({ columnId, total: threadIds.length, done: 0, activeId: null });
+      sweepCancelRef.current = false;
+      void runSweep(threadIds, {
+        act: sweepOne,
+        onActive: (activeId) =>
+          setSweepRun((run) => (run === null ? run : { ...run, activeId })),
+        onSettled: () =>
+          setSweepRun((run) =>
+            run === null ? run : { ...run, done: run.done + 1, activeId: null },
+          ),
+        // Cancel between actions; the one in flight always finishes.
+        shouldContinue: () => !sweepCancelRef.current,
+      }).then((result) => {
+        setSweepRun(null);
+        const failedIds = result.failures.map((failure) => failure.threadId);
+        // A cancelled run keeps whatever was never swept armed (plus any
+        // failures) so it can be inspected, retried, or explicitly exited;
+        // the pill flipping back to its count is the cancellation feedback.
+        // Undo is OFFERED, never automatic: cancel means "stop", undo is a
+        // deliberate second click.
+        const stayArmed = result.cancelled
+          ? [...failedIds, ...result.remaining]
+          : failedIds;
+        setArmedSweep(stayArmed.length > 0 ? { columnId, threadIds: stayArmed } : null);
+        if (result.cancelled) {
+          if (result.swept.length === 0 && result.failures.length === 0) return;
+          const failedCopy =
+            result.failures.length > 0
+              ? ` ${result.failures.length} failed: ${result.failures
+                  .map((failure) => failure.message)
+                  .join(", ")}.`
+              : "";
+          setSweepNotice({
+            message: `Sweep stopped. ${result.swept.length} ${settledWord}, ${result.remaining.length} not attempted.${failedCopy}`,
+            undo: { ids: result.swept, destination },
+          });
+          return;
+        }
+        if (result.failures.length === 0) return;
+        // Fail loud: the failed candidates stay armed (highlight) for a
+        // one-click retry, and a banner says what happened.
+        const failedTitles = result.failures.map((failure) => {
+          const match = threads.find((candidate) => candidate.id === failure.threadId);
+          return `"${match?.displayTitle ?? match?.titleFallback ?? failure.threadId}" (${failure.message})`;
+        });
+        const attempted = threadIds.length - result.remaining.length;
+        setSweepNotice({
+          message: `Sweep ${settledWord} ${attempted - result.failures.length} of ${threadIds.length}; ${result.failures.length} failed: ${failedTitles.join(", ")}. The failed cards stay highlighted. Click the broom to retry.`,
+        });
+      });
+    },
+    [actions, armedSweep, exitPinnedLane, rpc, sdk, sweepRun, threads],
+  );
+
+  // Undo a cancelled run, reversing exactly what it settled: unarchive the
+  // Done arm's ids, unmark Done the idle arm's ids (the thread was never
+  // archived; a done_set(false) returns it to its column), re-pin the
+  // Pinned arm's ids (consuming the park the sweep's lane exit wrote — a
+  // re-pin supersedes it), and mark the Unread arm's ids unread again (the
+  // write's own echo carries the state-truth reactions, as for any
+  // deliberate mark-unread). Top-level selections only, never the server's
+  // whole archivedThreadIds subtree, because a child already archived
+  // before the sweep must stay archived. Sequential like the run itself;
+  // failures surface in the banner, the successes quietly return to their
+  // columns.
+  const undoSweepFor = useCallback(
+    (threadIds: readonly string[], destination: SweepDestination) => {
+      void (async () => {
+        const failed: string[] = [];
+        for (const threadId of threadIds) {
+          try {
+            if (destination === "done") {
+              await rpc.call("done_set", { threadId, done: false });
+              setDoneIds((current) => {
+                const next = new Set(current);
+                next.delete(threadId);
+                return next;
+              });
+            } else if (destination === "unpinned") {
+              await actions.setPinned(threadId, true);
+              clearParkPin(threadId);
+            } else if (destination === "read") {
+              await actions.setRead(threadId, false);
+            } else {
+              await sdk.threads.unarchive({ threadId });
+            }
+          } catch (error) {
+            failed.push(
+              error instanceof Error ? `${threadId} (${error.message})` : threadId,
+            );
+          }
+        }
+        if (failed.length === 0) {
+          setSweepNotice(null);
+          return;
+        }
+        setSweepNotice({
+          message: `Undo restored ${threadIds.length - failed.length} of ${threadIds.length}; ${failed.length} could not be restored: ${failed.join(", ")}.`,
+        });
+      })();
+    },
+    [actions, clearParkPin, rpc, sdk],
   );
 
   // The state-truth reaction to a thread BECOMING unread — fired by our own
@@ -1429,6 +1613,17 @@ function BoardPage({ subPath }: { subPath: string }) {
   const menuActionsFor = useCallback(
     (thread: PluginSidebarThread): CardMenuAction[] => {
       const isThreadDone = doneIds.has(thread.id);
+      // Current intent: any state-changing gesture on a snoozed card lifts
+      // the snooze first — the wake recipe (read → unread later) would fire
+      // under a read/pin/done/archive write that has already superseded it.
+      const liftSnooze = () => {
+        if (snoozedIds.has(thread.id)) clearSnooze(thread.id);
+      };
+      const snoozeEntries: SnoozeMenuAction[] = snoozeMenuActions({
+        snoozed: snoozedIds.has(thread.id),
+        clearSnooze: () => clearSnooze(thread.id),
+        openPicker: () => setSnoozeDialogFor(thread.id),
+      });
       return [
         {
           id: "open-new-window",
@@ -1449,6 +1644,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           label: thread.isPinned ? "Unpin" : "Pin",
           icon: thread.isPinned ? "PinOff" : "Pin",
           run: () => {
+            liftSnooze();
             // Live intent beats the parked value: a park this gesture's
             // write supersedes must not resurrect on a later Mark Not Done
             // or Mark Unread.
@@ -1469,6 +1665,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           label: thread.isUnread ? "Mark Read" : "Mark Unread",
           icon: thread.isUnread ? "MailOpen" : "Mail",
           run: () => {
+            liftSnooze();
             // Arm the reveal claim first — setRead also rides the host
             // bridge, and the requested observable state is the toggle's
             // flipped value (the applied result), not the arg passed
@@ -1494,6 +1691,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           label: isThreadDone ? "Mark Not Done" : "Mark Done",
           icon: isThreadDone ? "CircleCheck" : "Check",
           run: () => {
+            liftSnooze();
             setDoneIds((current) => {
               const next = new Set(current);
               if (isThreadDone) next.delete(thread.id);
@@ -1523,6 +1721,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             }
           },
         },
+        ...snoozeEntries,
         {
           id: "sweep-keep",
           label: doneAgeSource.kept(thread.id) ? "Allow sweep" : "Keep from sweep",
@@ -1552,6 +1751,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           icon: thread.isArchived ? "ArchiveRestore" : "Archive",
           dividerAbove: true,
           run: () => {
+            liftSnooze();
             if (thread.isArchived) {
               sdk.threads.unarchive({ threadId: thread.id }).catch(() => {});
             } else {
@@ -1568,7 +1768,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         },
       ];
     },
-    [actions, applyUnreadStateEffects, clearParkPin, doneAgeSource, doneIds, exitPinnedLane, requestReveal, restoreParkedPin, rpc, setDoneExtras, setDoneIds, sdk],
+    [actions, applyUnreadStateEffects, clearParkPin, clearSnooze, doneAgeSource, doneIds, exitPinnedLane, requestReveal, restoreParkedPin, rpc, setDoneExtras, setDoneIds, setSnoozeDialogFor, snoozeUntil, snoozedIds, sdk],
   );
 
   if (status === "loading" && threads.length === 0) {
@@ -1630,6 +1830,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             onClosePane={closeThreadPane}
             onNewTask={openNewThread}
             menuActionsFor={menuActionsFor}
+            snoozeFor={snoozeFor}
           />
         ) : boardCount === 0 ? (
           <div className="p-4">
@@ -1645,9 +1846,11 @@ function BoardPage({ subPath }: { subPath: string }) {
             groupBy={groupBy}
             activeThreadId={openThreadId}
             doneIds={doneIds}
-            nestedChildrenByParent={assembly?.nestedChildrenByParent ?? new Map()}
+            nestedChildrenByParent={nestedChildrenByParent}
             childCountByParent={assembly?.childCountByParent ?? new Map()}
             doneChildrenByParent={assembly?.doneChildrenByParent ?? new Map()}
+            collapsedFamilyIds={collapsedFamilies}
+            onFamilyCollapsedChange={setFamilyCollapsed}
             dimmedIds={dimmedIds}
             projectNameFor={projectNameFor}
             repoBaseFor={repoBaseFor}
@@ -1655,6 +1858,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             onOpenThread={openThreadCard}
             onClosePane={closeThreadPane}
             onNewTask={openNewThread}
+            snoozeFor={snoozeFor}
             sweepCandidatesFor={sweepCandidatesFor}
             armedSweep={armedSweep}
             sweepRun={sweepRun}
@@ -1745,8 +1949,11 @@ function BoardPage({ subPath }: { subPath: string }) {
           thread={openThread}
           isArchived={openThreadIsArchived}
           isDone={doneIds.has(openThreadId ?? "")}
+          snoozeWakeAt={openThreadId === null ? null : snoozeFor(openThreadId)}
           onToggleDone={(done) => {
             if (openThreadId === null) return;
+            // Current intent: a state change lifts any snooze first.
+            if (snoozedIds.has(openThreadId)) clearSnooze(openThreadId);
             setDoneIds((current) => {
               const next = new Set(current);
               if (done) next.add(openThreadId);
@@ -1763,8 +1970,15 @@ function BoardPage({ subPath }: { subPath: string }) {
               actions.archive(openThreadId);
             }
           }}
+          snoozeMenuItems={snoozeMenuActions({
+            snoozed: snoozedIds.has(openThread.id),
+            clearSnooze: () => clearSnooze(openThread.id),
+            openPicker: () => setSnoozeDialogFor(openThread.id),
+          })}
           onToggleUnread={() => {
             if (openThreadId === null || openThreadActive === null) return;
+            // Current intent: a state change lifts any snooze first.
+            if (snoozedIds.has(openThreadId)) clearSnooze(openThreadId);
             if (openThreadActive.isUnread) {
               void actions.setRead(openThreadId, true);
             } else {
@@ -1794,6 +2008,29 @@ function BoardPage({ subPath }: { subPath: string }) {
         onOpenChange={setWhatsNewOpen}
         entries={whatsNewEntries}
       />
+      {snoozeDialogFor === null ? null : (() => {
+        const dialogThread = threads.find((candidate) => candidate.id === snoozeDialogFor);
+        if (dialogThread === undefined) {
+          // The thread left the board while the picker was open: close quietly.
+          setSnoozeDialogFor(null);
+          return null;
+        }
+        return (
+          <SnoozeDialog
+            threadTitle={dialogThread.displayTitle}
+            currentWakeAt={snoozeFor(dialogThread.id)}
+            onConfirm={(wakeAt) => {
+              snoozeUntil(dialogThread.id, wakeAt);
+              setSnoozeDialogFor(null);
+            }}
+            onRemove={() => {
+              clearSnooze(dialogThread.id);
+              setSnoozeDialogFor(null);
+            }}
+            onCancel={() => setSnoozeDialogFor(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

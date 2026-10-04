@@ -14,6 +14,9 @@ import {
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { describeWakeAt } from "@/lib/snooze";
+import type { SnoozeMenuAction } from "@/lib/snooze";
 import { COARSE_POINTER_HEADER_ICON_BUTTON_CLASS } from "@/components/ui/coarse-pointer-sizing";
 import { PendingInteractionCard } from "@/components/pending-interaction-card";
 import { DecidedQuestionsCard } from "@/components/decided-questions-card";
@@ -77,6 +80,20 @@ interface ThreadPaneProps {
   onMaximize: () => void;
   onClose: () => void;
   /**
+   * Snooze entries for the "More thread actions" menu, already resolved for
+   * the open thread: "Snooze…" while unsnoozed, "Edit snooze…" while snoozed
+   * (lib/snooze `snoozeMenuActions`). The runs call
+   * the same RPC-backed snooze handlers the cards use. Optional: absent or
+   * empty leaves the menu exactly as before this prop existed.
+   */
+  snoozeMenuItems?: readonly (SnoozeMenuAction | ActionMenuItem)[];
+  /**
+   * The open thread's wake time (epoch ms) while it is snoozed, null/absent
+   * otherwise. Drives the header's muted "Snoozed · wakes …" chip, so the
+   * open pane says the state the card already carries.
+   */
+  snoozeWakeAt?: number | null;
+  /**
    * Escape behavior (the "Esc stops running thread" toolbar toggle): when
    * true, Escape stops a running thread and only closes the pane when the
    * thread is not running; when false, Escape always closes the pane.
@@ -98,6 +115,8 @@ interface ActionMenuItem {
   label: string;
   icon: string;
   run: () => void;
+  /** The snooze entries arrive grouped: a divider above the group's head. */
+  dividerAbove?: boolean;
 }
 
 function EditableTitle({
@@ -202,7 +221,10 @@ function ActionsMenu({ items }: { items: readonly ActionMenuItem[] }) {
                   item.run();
                   setOpen(false);
                 }}
-                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent"
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent",
+                  item.dividerAbove && "mt-1 border-t border-border pt-2",
+                )}
               >
                 <Icon
                   name={item.icon}
@@ -227,6 +249,8 @@ export function ThreadPane({
   onToggleDone,
   onToggleArchived,
   onToggleUnread,
+  snoozeMenuItems,
+  snoozeWakeAt = null,
   onRename,
   onMaximize,
   onClose,
@@ -572,6 +596,18 @@ export function ThreadPane({
           aria-hidden
         />
         <EditableTitle title={thread.displayTitle} onRename={onRename} />
+        {snoozeWakeAt !== null ? (
+          // Muted chip on the pane's header: the open pane carries the same
+          // "snoozed, wakes at …" language the board card does.
+          <span
+            data-pane-snooze-chip=""
+            title={`Wakes ${describeWakeAt(snoozeWakeAt, Date.now())}`}
+            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-muted-foreground"
+          >
+            <Icon name="Clock" className="size-3" aria-hidden />
+            {isCompact ? "" : `Snoozed · wakes ${describeWakeAt(snoozeWakeAt, Date.now())}`}
+          </span>
+        ) : null}
         <Button
           variant="ghost"
           size="sm"
@@ -583,13 +619,15 @@ export function ThreadPane({
           {!isCompact ? (thread.isUnread ? "Mark Read" : "Mark Unread") : null}
         </Button>
         {(() => {
-          const actionItems: ActionMenuItem[] = [
+          const actionItems: (ActionMenuItem | SnoozeMenuAction)[] = [
             {
               id: "done",
               label: isDone ? "Mark Not Done" : "Mark Done",
               icon: isDone ? "CircleCheck" : "Check",
               run: () => onToggleDone(!isDone),
             },
+            // The single snooze entry (Snooze… / Edit snooze…), then archive.
+            ...(snoozeMenuItems ?? []),
             {
               id: "archive",
               label: isArchived ? "Unarchive" : "Archive",

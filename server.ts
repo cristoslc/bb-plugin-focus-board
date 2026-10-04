@@ -37,6 +37,14 @@ import {
   type PinParkRecord,
 } from "./lib/pin-park";
 import {
+  SNOOZE_METADATA_KEY,
+  parseSnoozeRecord,
+  parseWhenArg,
+  snoozeWakeAtMs,
+  stampSnooze,
+  type SnoozeRecord,
+} from "./lib/snooze";
+import {
   RANK_KV_KEY,
   applyMoveVisible,
   orderForColumn,
@@ -98,6 +106,37 @@ export const rpcContract = defineRpcContract({
   pin_park_set: {
     input: z.object({ threadId: z.string().min(1), parked: z.boolean() }),
     output: z.object({ threadId: z.string(), parked: z.boolean() }),
+  },
+  /**
+   * Snooze: read now, unread later. The record map rides off the live
+   * thread list (no metadata scan in the SDK); a snooze on a thread that
+   * has left the list is dormant until it returns, and its record is
+   * dropped by the wake when the thread is gone.
+   */
+  snooze_list: {
+    input: z.null(),
+    output: z.object({
+      snoozes: z.record(
+        z.string(),
+        z.object({ wakeAt: z.string(), setAt: z.string() }),
+      ),
+    }),
+  },
+  // (Re-)snooze a thread until `wakeAt` (epoch-parseable; past times are
+  // rejected by the handler — the contract cannot inject `now`).
+  snooze_set: {
+    input: z.object({
+      threadId: z.string().min(1),
+      wakeAt: z.string().refine((value) => !Number.isNaN(Date.parse(value))),
+    }),
+    output: z.object({
+      threadId: z.string().min(1),
+      wakeAt: z.string(),
+    }),
+  },
+  snooze_clear: {
+    input: z.object({ threadId: z.string().min(1) }),
+    output: z.object({ threadId: z.string().min(1), cleared: z.boolean() }),
   },
   tracker_status: {
     input: z.object({
@@ -184,6 +223,9 @@ const ARCHIVE_UNIT_SCHEMA = z.enum(ARCHIVE_UNITS);
  *  (was { count } before the metadata migration); consumers refetch on the
  *  event rather than reading the payload. */
 const DONE_CHANGED = "done-changed";
+/** Realtime signal after every snooze set/clear/wake. Payload is
+ *  { threadId }; consumers refetch the record map. */
+const SNOOZE_CHANGED = "snooze-changed";
 /** Realtime signal after a rank write. Payload names the column; boards
  *  refetch the whole store, so a stale payload cannot desync an order. */
 const RANK_CHANGED = "rank-changed";
@@ -505,6 +547,174 @@ export default async function plugin(bb: BbPluginApi) {
     await bb.storage.kv.set(RANK_KV_KEY, rankRowFromStore(store));
   }
 
+  // --- Snooze: read now, unread later (docs/plans/2026-10-02-snooze.md) ---
+  //
+  // The record rides per-thread plugin metadata (key "snooze"), the same
+  // store the Done and pin-park records use. The WAKE is the server's own
+  // job: a setTimeout per snoozed thread re-checked against the fresh
+  // record at fire time, re-armed at plugin load so a daemon restart
+  // catches misses, and cleared on dispose. The wake itself is mark-unread
+  // through bb's own write — every open board sees the resulting
+  // read-state-changed event and applies its existing unread state truth
+  // (parked pin returns, Done un-does) without any snooze-specific code.
+
+  async function readSnoozeRecord(
+    threadId: string,
+  ): Promise<SnoozeRecord | null> {
+    // Same cast contract as readDoneRecord above: getPluginMetadata returns
+    // an untyped namespace record; parseSnoozeRecord validates the shape.
+    const namespace = await bb.sdk.threads.getPluginMetadata({ threadId });
+    const value = (namespace as Record<string, JsonValue>)[SNOOZE_METADATA_KEY];
+    return parseSnoozeRecord(value);
+  }
+
+  /** Node's setTimeout ceiling (~24.8 days in ms); longer wakes re-arm. */
+  const MAX_WAKE_TIMEOUT_MS = 0x7fffffff;
+
+  const wakeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  /** Kill a thread's pending wake timer, if any (clear is the only killer). */
+  function clearWakeTimer(threadId: string): void {
+    const timer = wakeTimers.get(threadId);
+    if (timer === undefined) return;
+    clearTimeout(timer);
+    wakeTimers.delete(threadId);
+  }
+
+  /**
+   * The wake itself. Guards in order: the record must still exist (a
+   * clear or a newer set owns this timer slot otherwise) and must still
+   * carry THIS wake time (a re-snooze leaves the replaced timer stale
+   * until its tick no-ops). A thread genuinely read since the snooze began
+   * — "read" strictly later than the mark the set gesture itself caused —
+   * consumes the snooze quietly: a reminder the operator already visited
+   * must not re-alert them. A thread the SDK cannot resolve is treated the
+   * same way (record drop, no unread mark).
+   */
+  async function fireWake(threadId: string, wakeAtMs: number): Promise<void> {
+    const record = await readSnoozeRecord(threadId);
+    if (record === null) return; // cleared: nothing to wake
+    const stamp = snoozeWakeAtMs(record);
+    if (stamp === null || stamp !== wakeAtMs) return; // replaced; newer arm owns it
+    let readSinceSet = false;
+    let threadResolvable = true;
+    try {
+      const row = await bb.sdk.threads.get({ threadId });
+      const lastReadAt = row.lastReadAt;
+      readSinceSet = lastReadAt !== null && lastReadAt > Date.parse(record.setAt);
+    } catch {
+      threadResolvable = false;
+    }
+    if (!readSinceSet && threadResolvable) {
+      try {
+        await bb.sdk.threads.markUnread({ threadId });
+      } catch (error) {
+        // The unread write is the feature; failing it is logged, not
+        // swallowed — but the snooze still consumed (no retry loop), so
+        // the board at least stops dimming and the record cannot haunt
+        // a later session.
+        bb.log.warn(
+          `snooze wake: markUnread failed for ${threadId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+    await bb.sdk.threads.updatePluginMetadata({
+      threadId,
+      remove: [SNOOZE_METADATA_KEY],
+    });
+    bb.realtime.publish(SNOOZE_CHANGED, { threadId });
+  }
+
+  /**
+   * Arm (or replace) a thread's wake. A due-now wake fires with no timer
+   * slot at all; a longer-than-ceiling wake sleeps full slots and re-arms
+   * until the target is reachable. Every timer slot re-checks the fresh
+   * record before acting, so a stale slot is always a no-op.
+   */
+  function armWakeAt(threadId: string, wakeAtMs: number): void {
+    clearWakeTimer(threadId);
+    const lag = wakeAtMs - Date.now();
+    if (lag <= 0) {
+      void fireWake(threadId, wakeAtMs);
+      return;
+    }
+    const tick = (): void => {
+      const remaining = wakeAtMs - Date.now();
+      if (remaining > MAX_WAKE_TIMEOUT_MS) {
+        // Longer than a slot can hold: sleep the slot and re-arm.
+        wakeTimers.set(threadId, setTimeout(tick, MAX_WAKE_TIMEOUT_MS));
+        return;
+      }
+      wakeTimers.delete(threadId);
+      void fireWake(threadId, wakeAtMs);
+    };
+    wakeTimers.set(
+      threadId,
+      setTimeout(tick, Math.min(lag, MAX_WAKE_TIMEOUT_MS)),
+    );
+  }
+
+  /**
+   * Snooze a thread until wakeAt: mark read NOW (the card stops shouting),
+   * stamp the record with setAt anchored at the read mark itself — the one
+   * instant the wake's read-detection can compare against without racing
+   * this gesture's own write — arm the wake, publish, return the record.
+   * When the SDK cannot confirm the read mark, the wall clock remains the
+   * anchor (it is strictly after the mark, so the wake comparison stays safe).
+   */
+  async function writeSnooze(
+    threadId: string,
+    wakeAt: Date,
+  ): Promise<SnoozeRecord> {
+    let anchor = new Date();
+    try {
+      await bb.sdk.threads.markRead({ threadId });
+      const row = await bb.sdk.threads.get({ threadId });
+      if (row.lastReadAt !== null) anchor = new Date(row.lastReadAt);
+    } catch {
+      // Best-effort anchoring; the record write below is the loud part.
+    }
+    const record = stampSnooze(anchor, wakeAt);
+    await bb.sdk.threads.updatePluginMetadata({
+      threadId,
+      set: { [SNOOZE_METADATA_KEY]: record },
+    });
+    armWakeAt(threadId, wakeAt.getTime());
+    bb.realtime.publish(SNOOZE_CHANGED, { threadId });
+    return record;
+  }
+
+  /** Clear a snooze (idempotent): record gone, timer dead, signal out. */
+  async function clearSnooze(threadId: string): Promise<boolean> {
+    const existing = await readSnoozeRecord(threadId);
+    if (existing === null) return false;
+    await bb.sdk.threads.updatePluginMetadata({
+      threadId,
+      remove: [SNOOZE_METADATA_KEY],
+    });
+    clearWakeTimer(threadId);
+    bb.realtime.publish(SNOOZE_CHANGED, { threadId });
+    return true;
+  }
+
+  /**
+   * The load-time wake scan: arm every snoozed live thread; past-due
+   * records fire immediately ("arm" with lag ≤ 0 is a direct fire). Best-
+   * effort with a log line, so one corrupted thread's record scan failure
+   * cannot take the plugin down at load — the records themselves still
+   * parse fail-loud per thread.
+   */
+  async function armAllSnoozes(): Promise<void> {
+    const rows = await bb.sdk.threads.list({});
+    for (const row of rows) {
+      const record = await readSnoozeRecord(row.id);
+      if (record === null) continue;
+      const wakeAtMs = snoozeWakeAtMs(record);
+      if (wakeAtMs === null) continue; // Unparseable stamps never wake.
+      armWakeAt(row.id, wakeAtMs);
+    }
+  }
+
   bb.rpc.register(rpcContract, {
     done_list: async () => {
       const [{ doneIds, records }, kept] = await Promise.all([
@@ -543,6 +753,36 @@ export default async function plugin(bb: BbPluginApi) {
     pin_park_set: async ({ threadId, parked }) => {
       await writePinPark(threadId, parked);
       return { threadId, parked };
+    },
+    snooze_list: async () => {
+      // The live list only, like pin_parks_list: a snooze record on an
+      // archived thread has no board consumer (snoozed cards never leave
+      // their column), and the wake scan below reads the same list.
+      const rows = await bb.sdk.threads.list({});
+      const snoozes: Record<string, SnoozeRecord> = {};
+      for (const row of rows) {
+        const record = await readSnoozeRecord(row.id);
+        if (record !== null) snoozes[row.id] = record;
+      }
+      return { snoozes };
+    },
+    snooze_set: async ({ threadId, wakeAt }) => {
+      const wakeMs = Date.parse(wakeAt);
+      if (wakeMs <= Date.now()) {
+        throw new PluginCliError(
+          `wake time must be in the future, got ${wakeAt}`,
+          {
+            code: "invalid_value",
+            hint: "Give an epoch-parseable timestamp strictly later than now.",
+          },
+        );
+      }
+      const record = await writeSnooze(threadId, new Date(wakeMs));
+      return { threadId, wakeAt: record.wakeAt };
+    },
+    snooze_clear: async ({ threadId }) => {
+      const cleared = await clearSnooze(threadId);
+      return { threadId, cleared };
     },
     tracker_status: async ({ repo, numbers }) => {
       const home = process.env.HOME ?? "";
@@ -865,6 +1105,7 @@ export default async function plugin(bb: BbPluginApi) {
       const facts: SweepFact[] = await Promise.all(
         candidates.map(async (thread) => {
           const record = await readDoneRecord(thread.id);
+          const snoozeRecord = await readSnoozeRecord(thread.id);
           return {
             id: thread.id,
             archived: thread.archivedAt !== null,
@@ -875,6 +1116,7 @@ export default async function plugin(bb: BbPluginApi) {
                 ? null
                 : doneAtToEpochMs(record.doneAt),
             keep: record?.keep === true || kept[thread.id] === true,
+            snoozed: snoozeRecord !== null,
             status: thread.status,
             unread:
               thread.lastReadAt === null
@@ -976,6 +1218,130 @@ export default async function plugin(bb: BbPluginApi) {
                   : `archived ${result.id}`,
               )
               .join("\n") + "\n";
+      return { exitCode: 0, stdout };
+    },
+  });
+
+  // --- Snooze CLI: bb focus-board snooze ---
+  //
+  // Mirrors the done commands (board-owned state only; set is read-now +
+  // record + arm wake, clear kills the timer). `snooze set` takes the wake
+  // time FIRST so the thread ids can stay variadic at the end, matching
+  // `done mark`'s shape.
+
+  const snoozeList = cliCommand({
+    summary: "List snoozed threads with their wake times",
+    options: {
+      json: { type: "boolean", description: "Emit machine-readable JSON" },
+    },
+    async run(input) {
+      const rows = await bb.sdk.threads.list({});
+      const records: Array<{
+        id: string;
+        title: string | null;
+        wakeAt: string;
+        overdue: boolean;
+      }> = [];
+      for (const thread of rows) {
+        const record = await readSnoozeRecord(thread.id);
+        if (record === null) continue;
+        const wakeAtMs = snoozeWakeAtMs(record);
+        records.push({
+          id: thread.id,
+          title: thread.title ?? thread.titleFallback,
+          wakeAt: record.wakeAt,
+          overdue: wakeAtMs === null ? false : wakeAtMs <= Date.now(),
+        });
+      }
+      records.sort((a, b) => a.wakeAt.localeCompare(b.wakeAt));
+      const stdout = input.options.json
+        ? JSON.stringify(records, null, 2) + "\n"
+        : records.length === 0
+          ? "No threads are snoozed.\n"
+          : records
+              .map(
+                (row) =>
+                  `${row.id}\t${row.wakeAt}${row.overdue ? "\t(overdue)" : ""}\t${row.title ?? "(untitled)"}`,
+              )
+              .join("\n") + "\n";
+      return { exitCode: 0, stdout };
+    },
+  });
+
+  const snoozeSet = cliCommand({
+    summary:
+      "Snooze threads until <when>: marks read now, unread again at the wake",
+    description:
+      "<when> is a future epoch-parseable timestamp or a relative duration (+30m, +4h, +1d, +2w). The wake is server-armed: it fires after daemon restarts too.",
+    positionals: [
+      {
+        name: "when",
+        description: "+<N>m|h|d|w or a future ISO/parsable timestamp",
+        required: true,
+      },
+      {
+        name: "thread-id",
+        description: "Thread id(s) to snooze",
+        required: true,
+        variadic: true,
+      },
+    ],
+    options: {
+      json: { type: "boolean", description: "Emit machine-readable JSON" },
+    },
+    async run(input) {
+      const when = parseWhenArg(input.positionals.when, new Date());
+      if (when === null) {
+        throw new PluginCliError(
+          `invalid wake time '${input.positionals.when}'`,
+          {
+            code: "invalid_value",
+            hint: "Use +<N>m|h|d|w or a future timestamp (e.g. 2026-10-03T09:00).",
+          },
+        );
+      }
+      const snoozed: Array<{ id: string; wakeAt: string }> = [];
+      for (const threadId of input.positionals["thread-id"]) {
+        const record = await writeSnooze(threadId, when);
+        snoozed.push({ id: threadId, wakeAt: record.wakeAt });
+      }
+      const stdout = input.options.json
+        ? JSON.stringify({ snoozed }, null, 2) + "\n"
+        : snoozed
+            .map((entry) => `snoozed ${entry.id} until ${entry.wakeAt}`)
+            .join("\n") + "\n";
+      return { exitCode: 0, stdout };
+    },
+  });
+
+  const snoozeClear = cliCommand({
+    summary: "Cancel a snooze (keeps the thread's current read state)",
+    positionals: [
+      {
+        name: "thread-id",
+        description: "Thread id(s) to unsnooze",
+        required: true,
+        variadic: true,
+      },
+    ],
+    options: {
+      json: { type: "boolean", description: "Emit machine-readable JSON" },
+    },
+    async run(input) {
+      const cleared: Array<{ id: string; cleared: boolean }> = [];
+      for (const threadId of input.positionals["thread-id"]) {
+        cleared.push({
+          id: threadId,
+          cleared: await clearSnooze(threadId),
+        });
+      }
+      const stdout = input.options.json
+        ? JSON.stringify({ cleared }, null, 2) + "\n"
+        : cleared
+            .map((entry) =>
+              entry.cleared ? `cleared snooze ${entry.id}` : `not snoozed ${entry.id}`,
+            )
+            .join("\n") + "\n";
       return { exitCode: 0, stdout };
     },
   });
@@ -1084,6 +1450,9 @@ export default async function plugin(bb: BbPluginApi) {
         "done list": doneList,
         "done mark": doneMark,
         "done clear": doneClear,
+        "snooze list": snoozeList,
+        "snooze set": snoozeSet,
+        "snooze clear": snoozeClear,
         sweep,
         "config show": configShow,
         "config set": configSet,
@@ -1091,7 +1460,17 @@ export default async function plugin(bb: BbPluginApi) {
     }),
   );
 
+  // Arm every snoozed thread at load (fire-and-forget: scan failures log,
+  // never block the plugin's other surfaces), and drop all timers on
+  // dispose so a reload never leaves stale wakes ticking.
+  void armAllSnoozes().catch((error: unknown) => {
+    bb.log.warn(
+      `snooze wake scan failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  });
   bb.onDispose(() => {
+    for (const timer of wakeTimers.values()) clearTimeout(timer);
+    wakeTimers.clear();
     bb.log.info("disposed");
   });
 }
