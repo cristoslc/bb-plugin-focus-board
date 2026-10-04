@@ -7,10 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **Collapsible nested children on family cards.** The chevron folds nested
-  rows into a "N child threads" pill that reopens them, and folds persist
-  across sessions. A folded card reopens itself when a nested child turns
-  unread or needs you.
+- **Family cards fold their child rows into a status-dot strip.** The
+  collapsed rows become a "N child threads" line with one colored dot per
+  child — amber pulses when a child needs you — the toggle sits directly
+  above the rows it acts on, folds persist across sessions, and a folded
+  card reopens itself when a child turns unread or needs you.
 
 - **Snooze: read now, unread again at a target time.** One "Snooze…" entry
   (on cards and in the pane's actions menu) opens a presets-or-picked-time
@@ -18,24 +19,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   gesture lifts the snooze first, and CLI parity lands as
   `bb focus-board snooze list|set|clear`.
 
-- **✨ auto-rename in the pane's title editor.** The title input carries a
-  ✨ button inside its own rectangle (the input spans the editor, no dead
-  space to the button); one click titles the thread from its first user
-  prompt with whatever AI service bb's thread-title task is set to
-  (Settings → AI services), via a cross-plugin `complete` bridge the
-  openrouter-inference plugin serves. The generated title renames and closes
-  the editor; failures keep it open, auto-open a fallback modal naming the
-  reason, and offer generating with another registered AI service, the
-  thread's active model explained as unavailable (bb plugins cannot reach
-  it), or a typed manual rename; automatic/bb-cloud selections refuse with
-  the fix named.
+- **✨ auto-rename in the pane's title editor.** One click titles the thread
+  from its first user prompt via bb's configured AI title service; a failure
+  keeps the editor open and offers the reason, another AI service, or a
+  typed manual rename.
 
-- **The thread pane's actions menu pins again.** The opened pane's more-actions
-  menu carries a Pin/Unpin entry between Mark Done and the snooze entry (an
-  archived row's menu keeps just its Unarchive), with the card menu's
-  semantics: the gesture lifts a snooze and clears a parked pin, the reveal
-  claim arms before the write, and the card's lane move reveals after the pin
-  lands.
+- **The thread pane's actions menu pins again.** A Pin/Unpin entry joins the
+  opened pane's more-actions menu with the card menu's semantics: the
+  gesture lifts a snooze and clears a parked pin, and a lane move reveals
+  after the pin lands.
 
 ### Changed
 

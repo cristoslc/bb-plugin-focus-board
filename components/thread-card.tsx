@@ -2,7 +2,7 @@ import { type ReactNode, useState } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
-import { threadState } from "./grouping";
+import { threadState, THREAD_STATE_LABELS } from "./grouping";
 import { findTicketRefs, resolveRepoSlug, type TicketRef } from "@/lib/tickets";
 import type { GitHubItemStatus } from "@/lib/tracker-status";
 
@@ -470,86 +470,101 @@ export function ThreadCard({
           )}
         </a>
         {chipCount > 0 ? (
-          <div className="flex shrink-0 items-start gap-0.5 py-2 pr-1.5">
-            {hasRows ? (
-              <button
-                type="button"
-                aria-expanded={!collapsed}
-                aria-label={collapsed ? "Expand subthreads" : "Collapse subthreads"}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  toggleCollapsed();
-                }}
-                className={cn(
-                  "flex items-center gap-0.5 rounded-sm text-muted-foreground/70",
-                  "transition-colors hover:bg-accent hover:text-foreground",
-                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                )}
-              >
-                <Icon
-                  name={collapsed ? "ChevronRight" : "ChevronDown"}
-                  className="size-3"
-                  aria-hidden
-                />
-              </button>
-            ) : null}
+          // Family-size metadata only: the collapse control lives in the
+          // child section below, next to the rows it acts on.
+          <div className="flex shrink-0 items-start py-2 pr-1.5">
             <span className="rounded-full bg-muted px-1.5 text-[10px] tabular-nums text-muted-foreground">
               {chipCount}
             </span>
           </div>
         ) : null}
       </div>
-      {hasRows && collapsed ? (
-        // The collapsed rows' only trace: a labeled, clickable count that
-        // re-opens the family — a bare number chip reads as metadata, not as
-        // a control, so the summary names what clicking it reveals.
-        <button
-          type="button"
-          data-child-threads-summary=""
-          aria-expanded="false"
-          aria-label={`Expand ${children.length} nested child ${children.length === 1 ? "thread" : "threads"}`}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            toggleCollapsed();
-          }}
-          className={cn(
-            "ml-3 mt-1 flex items-center gap-1 rounded-sm px-1 py-0.5 text-[11px] text-muted-foreground/70",
-            "transition-colors hover:bg-accent/60 hover:text-foreground",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          )}
-        >
-          <Icon name="ChevronRight" className="size-3" aria-hidden />
-          {children.length} {children.length === 1 ? "child thread" : "child threads"}
-        </button>
-      ) : hasRows && !collapsed && onOpenThread !== undefined ? (
-        <div
-          data-nested-rows=""
-          className={cn(
-            "ml-3 mt-1 border-l border-border/70 pl-2",
-            // A big family scrolls its rows inside the card; a small one
-            // renders at natural height.
-            children.length > NESTED_ROWS_SCROLL_THRESHOLD && "max-h-64 overflow-y-auto",
-          )}
-        >
-          <ul className="flex flex-col gap-1">
-            {children.map((child) => {
-              const childDone = doneIds?.has(child.id) ?? false;
-              return (
-                <li key={child.id}>
-                  <ChildRow
-                    child={child}
-                    dimmed={isDone || childDone}
-                    isActive={child.id === activeThreadId}
-                    onOpenThread={onOpenThread}
-                    menuActions={childMenuActions?.(child)}
-                    snoozeFor={snoozeFor}
-                  />
-                </li>
-              );
-            })}
-          </ul>
+      {hasRows && (collapsed || onOpenThread !== undefined) ? (
+        <div className="ml-3 mt-1">
+          {/* The section toggle: one control, in one place, on the boundary
+              of the content it controls — directly above the rows when
+              expanded, and carrying the collapsed rows' replacement (the
+              status-dot strip) when folded. Clicking it never reaches the
+              card's anchor, the pane, or the background-click closer. */}
+          <button
+            type="button"
+            data-child-threads-toggle=""
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? "Expand subthreads" : "Collapse subthreads"}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              toggleCollapsed();
+            }}
+            className={cn(
+              "flex items-center gap-1.5 rounded-sm py-0.5 pr-1.5 text-[11px] text-muted-foreground/70",
+              "transition-colors hover:bg-accent/60 hover:text-foreground",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            )}
+          >
+            <Icon
+              name={collapsed ? "ChevronRight" : "ChevronDown"}
+              className="size-3 shrink-0"
+              aria-hidden
+            />
+            {collapsed ? (
+              // The collapsed rows: one status-colored dot per nested child,
+              // in display order. The strip answers both "are there
+              // children?" and "does any of them want me?" at a glance — an
+              // amber dot pulses like every other attention signal on the
+              // board — without expanding. Hovering a dot names its child.
+              <span
+                data-child-thread-dots=""
+                aria-hidden
+                className="flex flex-wrap items-center gap-1"
+              >
+                {children.map((child) => {
+                  const state = threadState(child);
+                  return (
+                    <span
+                      key={child.id}
+                      title={`${child.displayTitle} · ${THREAD_STATE_LABELS[state] ?? state}`}
+                      className={cn(
+                        "size-1.5 rounded-full",
+                        DOT_CLASS[state] ?? "bg-muted-foreground/30",
+                        state === "attention" && "motion-safe:animate-pulse",
+                      )}
+                    />
+                  );
+                })}
+              </span>
+            ) : null}
+            {children.length} {children.length === 1 ? "child thread" : "child threads"}
+          </button>
+          {!collapsed && onOpenThread !== undefined ? (
+            <div
+              data-nested-rows=""
+              className={cn(
+                "mt-1 border-l border-border/70 pl-2",
+                // A big family scrolls its rows inside the card; a small one
+                // renders at natural height.
+                children.length > NESTED_ROWS_SCROLL_THRESHOLD && "max-h-64 overflow-y-auto",
+              )}
+            >
+              <ul className="flex flex-col gap-1">
+                {children.map((child) => {
+                  const childDone = doneIds?.has(child.id) ?? false;
+                  return (
+                    <li key={child.id}>
+                      <ChildRow
+                        child={child}
+                        dimmed={isDone || childDone}
+                        isActive={child.id === activeThreadId}
+                        onOpenThread={onOpenThread}
+                        menuActions={childMenuActions?.(child)}
+                        snoozeFor={snoozeFor}
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

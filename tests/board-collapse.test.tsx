@@ -48,18 +48,18 @@ function renderBoard(overrides: Partial<BoardProps> = {}) {
   return render(<Board {...props} />);
 }
 
-function chevron(collapsed: boolean): HTMLElement {
+function toggle(collapsed: boolean): HTMLElement {
   const button = document.querySelector(
     `button[aria-label="${collapsed ? "Expand subthreads" : "Collapse subthreads"}"]`,
   );
-  if (!(button instanceof HTMLElement)) throw new Error("missing collapse chevron");
+  if (!(button instanceof HTMLElement)) throw new Error("missing child-section toggle");
   return button;
 }
 
-function summary(): HTMLElement {
-  const button = document.querySelector("[data-child-threads-summary]");
-  if (!(button instanceof HTMLElement)) throw new Error("missing collapsed summary");
-  return button;
+function dots(): HTMLElement {
+  const strip = document.querySelector("[data-child-thread-dots]");
+  if (!(strip instanceof HTMLElement)) throw new Error("missing child dot strip");
+  return strip;
 }
 
 function row(id: string): HTMLElement | null {
@@ -69,32 +69,32 @@ function row(id: string): HTMLElement | null {
 afterEach(cleanup);
 
 describe("Board collapse wiring", () => {
-  it("clicking the chevron reports the family collapsed with its parent id", () => {
+  it("clicking the section toggle reports the family collapsed with its parent id", () => {
     const onFamilyCollapsedChange = vi.fn();
     renderBoard({
       collapsedFamilyIds: new Set<string>(),
       onFamilyCollapsedChange,
     });
-    fireEvent.click(chevron(false));
+    fireEvent.click(toggle(false));
     expect(onFamilyCollapsedChange).toHaveBeenCalledWith("thr_parent", true);
   });
 
-  it("a collapsed family renders the summary instead of rows; the summary reports expansion", () => {
+  it("a collapsed family renders the dot strip instead of rows; clicking it reports expansion", () => {
     const onFamilyCollapsedChange = vi.fn();
     renderBoard({
       collapsedFamilyIds: new Set(["thr_parent"]),
       onFamilyCollapsedChange,
     });
     expect(row("thr_c1")).toBeNull();
-    expect(summary().textContent).toContain("2 child threads");
-    fireEvent.click(summary());
+    expect(toggle(true).textContent).toContain("2 child threads");
+    fireEvent.click(toggle(true));
     expect(onFamilyCollapsedChange).toHaveBeenCalledWith("thr_parent", false);
   });
 
   it("without the collapse props, the card keeps its local unpersisted toggle", () => {
     renderBoard();
-    fireEvent.click(chevron(false));
+    fireEvent.click(toggle(false));
     expect(row("thr_c1")).toBeNull();
-    expect(summary().textContent).toContain("2 child threads");
+    expect(toggle(true).textContent).toContain("2 child threads");
   });
 });
