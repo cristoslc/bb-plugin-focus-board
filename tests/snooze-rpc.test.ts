@@ -91,8 +91,12 @@ describe("snooze_set", () => {
   it("re-snoozing replaces the record", async () => {
     const { callRpc, meta } = await setup({ threads: ["thr_a"] });
     await callRpc("snooze_set", { threadId: "thr_a", wakeAt: futureIso(3_600_000) });
-    await callRpc("snooze_set", { threadId: "thr_a", wakeAt: futureIso(7_200_000) });
-    expect(snoozeRecordOf(meta, "thr_a")?.wakeAt).toBe(futureIso(7_200_000));
+    // One evaluation, checked against itself: recomputing futureIso inside
+    // the expectation raced the call across a millisecond boundary and
+    // flaked about once in twelve runs.
+    const wakeAt = futureIso(7_200_000);
+    await callRpc("snooze_set", { threadId: "thr_a", wakeAt });
+    expect(snoozeRecordOf(meta, "thr_a")?.wakeAt).toBe(wakeAt);
   });
 
   it("echoes { threadId, wakeAt }", async () => {
