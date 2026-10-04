@@ -31,6 +31,7 @@ function renderEditor({
       ready: boolean;
       message: string | null;
     }>;
+    threadModel: { available: boolean; reason: string | null };
   }>;
 }) {
   const onRename = vi.fn(async () => {});
@@ -102,7 +103,11 @@ describe("title editor auto-rename button", () => {
     // it is up — query the editor by label, the button by attribute.
     renderEditor({
       onAutotitle,
-      loadFallbackServices: async () => ({ selected: null, services: [] }),
+      loadFallbackServices: async () => ({
+        selected: null,
+        services: [],
+        threadModel: { available: false, reason: "no loader wired (test)" },
+      }),
     });
     fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
     await waitFor(() =>
@@ -131,6 +136,7 @@ describe("auto-rename fallback modal", () => {
       { pluginId: "other-plugin", serviceId: "alt", displayName: "Other service", ready: true, message: null },
       { pluginId: "bb-ai", serviceId: "cloud", displayName: "bb cloud", ready: false, message: "Sign in to your bb account" },
     ],
+    threadModel: { available: false, reason: "This thread has no resolved model" },
   };
 
   function failingRender(overrides?: {
@@ -198,7 +204,7 @@ describe("auto-rename fallback modal", () => {
     await screen.findByRole("dialog");
     const row = screen.getByRole("button", { name: /active model/i });
     expect(row.disabled).toBe(true);
-    expect(screen.getByText(/cannot invoke/i)).toBeTruthy();
+    expect(screen.getByText(/no resolved model/i)).toBeTruthy();
   });
 
   it("lets the user rename manually from the modal", async () => {
@@ -228,5 +234,65 @@ describe("auto-rename fallback modal", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     // The editor stays open so the rename attempt is not lost.
     expect(screen.getByRole("textbox", { name: "Thread title" })).toBeTruthy();
+  });
+});
+
+describe("fallback modal thread-model row", () => {
+  const AVAILABLE = {
+    selected: { pluginId: "openrouter-inference", serviceId: "default" },
+    services: [
+      { pluginId: "openrouter-inference", serviceId: "default", displayName: "OpenRouter", ready: true, message: null },
+    ],
+    threadModel: { available: true, reason: null },
+  };
+
+  function renderWithModal(overrides?: {
+    threadModel?: { available: boolean; reason: string | null };
+    onAutotitle?: (target?: { pluginId: string; serviceId: string } | { useThreadModel: true }) => Promise<string>;
+  }) {
+    return renderEditor({
+      onAutotitle:
+        overrides?.onAutotitle ??
+        (async () => {
+          throw new Error("OpenRouter: 401 invalid key");
+        }),
+      loadFallbackServices: async () => ({
+        ...AVAILABLE,
+        threadModel: overrides?.threadModel ?? AVAILABLE.threadModel,
+      }),
+    });
+  }
+
+  it("picks the thread's active model when it is available", async () => {
+    // The ✨ click still fails first (that is how the modal opens); the pick
+    // rides thread_autotitle's useThreadModel flag on the retry.
+    const onAutotitle = vi.fn(
+      async (target?: { pluginId: string; serviceId: string } | { useThreadModel: true }) => {
+        if (target === undefined) throw new Error("OpenRouter: 401 invalid key");
+        return "Thread model title";
+      },
+    );
+    const { onRename } = renderWithModal({ onAutotitle });
+    fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
+    const row = await screen.findByRole("button", { name: /active model/i });
+    expect(row.disabled).toBe(false);
+    fireEvent.click(row);
+    await waitFor(() =>
+      expect(onAutotitle).toHaveBeenCalledWith({ useThreadModel: true }),
+    );
+    await waitFor(() =>
+      expect(onRename).toHaveBeenCalledWith("Thread model title"),
+    );
+  });
+
+  it("shows the availability reason when the thread has no model", async () => {
+    renderWithModal({
+      threadModel: { available: false, reason: "This thread has no resolved model" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
+    await screen.findByRole("dialog");
+    const row = await screen.findByRole("button", { name: /active model/i });
+    expect(row.disabled).toBe(true);
+    expect(screen.getByText(/no resolved model/i)).toBeTruthy();
   });
 });

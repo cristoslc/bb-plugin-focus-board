@@ -50,7 +50,20 @@ export function AutotitleFallbackModal({
     setState({ phase: "loading" });
     setManual("");
     if (load === undefined) {
-      setState({ phase: "ready", data: { selected: null, services: [] } });
+      // No loader wired: the service menu is unreachable data, so the
+      // thread-model row renders disabled with that named, and the manual
+      // rename stays available.
+      setState({
+        phase: "ready",
+        data: {
+          selected: null,
+          services: [],
+          threadModel: {
+            available: false,
+            reason: "the services menu did not load (no loader wired)",
+          },
+        },
+      });
       return;
     }
     let cancelled = false;
@@ -143,16 +156,21 @@ export function AutotitleFallbackModal({
             <div>
               <button
                 type="button"
-                disabled
-                aria-label="Use the thread's active model (unavailable)"
-                className="flex w-full items-center rounded-sm border border-border px-2 py-1 text-left opacity-60"
+                disabled={!state.data.threadModel.available}
+                aria-label="Use the thread's active model"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onPick({ useThreadModel: true });
+                }}
+                className="flex w-full items-center justify-between gap-2 rounded-sm border border-border px-2 py-1 text-left hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
               >
-                The thread&apos;s active model
+                <span>The thread&apos;s active model</span>
+                <span aria-hidden>{state.data.threadModel.available ? "✨" : "—"}</span>
               </button>
               <p className="mt-1 text-xs text-muted-foreground">
-                Focus Board cannot invoke the thread&apos;s chat model — bb
-                plugins can only call services registered under Settings → AI
-                services. Pick a service or rename manually.
+                {state.data.threadModel.available
+                  ? "Generates in a hidden probe thread using this thread's provider and model; the probe is deleted when done."
+                  : `The thread's model is unavailable: ${state.data.threadModel.reason ?? "no reason given"}. bb plugins cannot invoke a thread's chat model directly — the probe path needs a resolved provider/model and a project to spawn in.`}
               </p>
             </div>
           </div>

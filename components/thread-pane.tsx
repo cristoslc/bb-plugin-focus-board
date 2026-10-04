@@ -734,24 +734,27 @@ export function ThreadPane({
           onRename={onRename}
           onAutotitle={(target) =>
             // ✨ auto-rename (server.ts thread_autotitle): the title comes
-            // back already cleaned; commit it immediately. A target names an
-            // alternative service the fallback modal picked.
+            // back already cleaned; commit it immediately. A target names
+            // the way out the fallback modal picked: an alternative service
+            // pair or the thread's own model probe.
             rpc
               .call(
                 "thread_autotitle",
                 target === undefined
                   ? { threadId: thread.id }
-                  : {
-                      threadId: thread.id,
-                      pluginId: target.pluginId,
-                      serviceId: target.serviceId,
-                    },
+                  : "useThreadModel" in target
+                    ? { threadId: thread.id, useThreadModel: true }
+                    : {
+                        threadId: thread.id,
+                        pluginId: target.pluginId,
+                        serviceId: target.serviceId,
+                      },
               )
               .then((result) => result.title)
           }
           loadFallbackServices={() =>
             rpc
-              .call("thread_autotitle_services", {})
+              .call("thread_autotitle_services", { threadId: thread.id })
               .then((result) => result as unknown as AutotitleFallbackState)
           }
         />

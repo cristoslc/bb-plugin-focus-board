@@ -69,6 +69,12 @@ import {
   resolveTitleTarget,
   type AutotitleHistoryEntry,
 } from "./lib/autotitle";
+import {
+  assistantTextFromTimeline,
+  buildAutotitleProbePrompt,
+  probeSettled,
+  type AutotitleTimelineRow,
+} from "./lib/autotitle-thread-model";
 import type { JsonValue } from "@get-bb/plugin-sdk";
 
 /**
@@ -173,15 +179,18 @@ export const rpcContract = defineRpcContract({
       // neither — a half-given pair is refused in the handler.
       pluginId: z.string().min(1).optional(),
       serviceId: z.string().min(1).optional(),
+      // Generate with the thread's own provider/model instead (the hidden
+      // probe path). Exclusive with the service override.
+      useThreadModel: z.boolean().optional(),
     }),
     output: z.object({ title: z.string() }),
   },
 
   // The fallback modal's menu: every registered service that can serve a
-  // thread title (with readiness) plus the current selection, so the pane
-  // can offer alternatives when the selected service fails.
+  // thread title (with readiness), the current selection, and whether the
+  // thread's own model is probeable.
   thread_autotitle_services: {
-    input: z.object({}),
+    input: z.object({ threadId: z.string().min(1) }),
     output: z.object({
       selected: z
         .object({ pluginId: z.string(), serviceId: z.string() })
@@ -195,6 +204,10 @@ export const rpcContract = defineRpcContract({
           message: z.string().nullable(),
         }),
       ),
+      threadModel: z.object({
+        available: z.boolean(),
+        reason: z.string().nullable(),
+      }),
     }),
   },
 
@@ -762,6 +775,193 @@ export default async function plugin(bb: BbPluginApi) {
     }
   }
 
+  // ---- ✨ auto-rename's thread-model probe (useThreadModel path) ----
+  // bb exposes no direct completion API for a thread's model; the route is
+  // a hidden probe thread the plugin spawns on the same provider/model pair
+  // (cloned with explicit provenance so bb actually honors it), reads the
+  // reply off the timeline, and deletes. Helpers live here in `bb` scope.
+
+  const PROBE_POLL_MS = 1000;
+  const PROBE_TIMEOUT_MS = 45_000;
+
+  const probeDelay = (ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  /** Can this thread's own model generate a title? Used by the fallback modal's menu. */
+  async function threadModelAvailability(
+    threadId: string,
+  ): Promise<{ available: boolean; reason: string | null }> {
+    try {
+      const execution = (await bb.sdk.threads.defaultExecutionOptions({
+        threadId,
+      })) as unknown as { providerId?: unknown; model?: unknown } | null;
+      if (
+        execution === null ||
+        typeof execution.providerId !== "string" ||
+        typeof execution.model !== "string"
+      ) {
+        return {
+          available: false,
+          reason: "This thread has no resolved provider/model to probe with",
+        };
+      }
+      const source = (await bb.sdk.threads.get({ threadId })) as unknown as {
+        projectId?: unknown;
+        environmentId?: unknown;
+      };
+      if (typeof source?.projectId !== "string") {
+        return {
+          available: false,
+          reason: "This thread has no project to spawn a title probe into",
+        };
+      }
+      if (typeof source?.environmentId !== "string") {
+        return {
+          available: false,
+          reason: "This thread has no environment to spawn a title probe into",
+        };
+      }
+      return { available: true, reason: null };
+    } catch (error: unknown) {
+      return {
+        available: false,
+        reason: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Generate a title with the source thread's own provider/model: spawn a
+   * hidden probe thread in the same project/environment, wait for it to
+   * settle, read the last assistant line off its timeline, clean it into a
+   * title. The probe is always deleted — best-effort, a delete failure is
+   * only logged so it can never fail the rename itself.
+   */
+  async function probeThreadModelTitle(threadId: string): Promise<string> {
+    const execution = (await bb.sdk.threads.defaultExecutionOptions({
+      threadId,
+    })) as unknown as { providerId?: unknown; model?: unknown } | null;
+    if (
+      execution === null ||
+      typeof execution.providerId !== "string" ||
+      typeof execution.model !== "string"
+    ) {
+      throw new Error(
+        `thread_autotitle: thread ${threadId} has no resolved provider/model to probe with`,
+      );
+    }
+    const source = (await bb.sdk.threads.get({ threadId })) as unknown as {
+      projectId?: unknown;
+      environmentId?: unknown;
+    };
+    if (typeof source?.projectId !== "string") {
+      throw new Error(
+        `thread_autotitle: thread ${threadId} has no project to spawn a title probe into`,
+      );
+    }
+    if (typeof source?.environmentId !== "string") {
+      throw new Error(
+        `thread_autotitle: thread ${threadId} has no environment to spawn a title probe into`,
+      );
+    }
+    const history = (await bb.sdk.threads.promptHistory({
+      threadId,
+    })) as unknown as readonly AutotitleHistoryEntry[];
+    const threadPrompt = promptTextFromHistory(history);
+    if (threadPrompt === null) {
+      throw new Error(
+        `thread_autotitle: thread ${threadId} has no prompt text to title from`,
+      );
+    }
+    const probe = (await bb.sdk.threads.spawn({
+      projectId: source.projectId,
+      environment: {
+        type: "reuse" as const,
+        environmentId: source.environmentId,
+      },
+      providerId: execution.providerId,
+      model: execution.model,
+      executionInputSources: { providerId: "explicit", model: "explicit" },
+      visibility: "hidden",
+      title: "✨ title probe (auto-deleted)",
+      prompt: buildAutotitleProbePrompt(threadPrompt),
+    })) as unknown as { id?: unknown };
+    if (typeof probe?.id !== "string") {
+      throw new Error(
+        "thread_autotitle: failed to spawn the title probe thread",
+      );
+    }
+    const probeId = probe.id;
+    // A failing probe turn may still be mid-run; stopping first keeps the
+    // delete from racing bb's own teardown.
+    const stopProbe = async () => {
+      try {
+        await bb.sdk.threads.stop({ threadId: probeId });
+      } catch (error: unknown) {
+        bb.log.warn(
+          `title probe stop failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    };
+    const deleteProbe = async () => {
+      try {
+        await bb.sdk.threads.delete({
+          threadId: probeId,
+          childThreadsConfirmed: true,
+        });
+      } catch (error: unknown) {
+        bb.log.warn(
+          `title probe delete failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    };
+    const deadline = Date.now() + PROBE_TIMEOUT_MS;
+    try {
+      for (;;) {
+        const row = (await bb.sdk.threads.get({
+          threadId: probeId,
+        })) as unknown as { status?: unknown };
+        if (probeSettled(String(row?.status))) {
+          if (row?.status !== "idle") {
+            throw new Error(
+              `thread_autotitle: the title probe turn failed on ${execution.providerId}/${execution.model}`,
+            );
+          }
+          break;
+        }
+        if (Date.now() >= deadline) {
+          throw new Error(
+            `thread_autotitle: the title probe turn did not finish within ${PROBE_TIMEOUT_MS / 1000}s on ${execution.providerId}/${execution.model}`,
+          );
+        }
+        await probeDelay(PROBE_POLL_MS);
+      }
+      const timeline = (await bb.sdk.threads.timeline({
+        threadId: probeId,
+      })) as unknown as { rows?: readonly AutotitleTimelineRow[] };
+      const reply = assistantTextFromTimeline(timeline.rows ?? []);
+      if (reply === null) {
+        throw new Error(
+          `thread_autotitle: the title probe wrote no assistant reply on ${execution.providerId}/${execution.model}`,
+        );
+      }
+      const title = cleanGeneratedTitle(reply);
+      if (title === null) {
+        throw new Error(
+          `thread_autotitle: the title probe reply had no usable title on ${execution.providerId}/${execution.model}`,
+        );
+      }
+      return title;
+    } catch (error: unknown) {
+      // A failing turn may still be mid-run: stop it so the delete below
+      // (finally) does not race bb's own teardown.
+      await stopProbe();
+      throw error;
+    } finally {
+      await deleteProbe();
+    }
+  }
+
   bb.rpc.register(rpcContract, {
     done_list: async () => {
       const [{ doneIds, records }, kept] = await Promise.all([
@@ -831,7 +1031,18 @@ export default async function plugin(bb: BbPluginApi) {
       const cleared = await clearSnooze(threadId);
       return { threadId, cleared };
     },
-    thread_autotitle: async ({ threadId, pluginId, serviceId }) => {
+    thread_autotitle: async ({ threadId, pluginId, serviceId, useThreadModel }) => {
+      if (
+        useThreadModel === true &&
+        (pluginId !== undefined || serviceId !== undefined)
+      ) {
+        throw new Error(
+          "thread_autotitle: useThreadModel and a pluginId/serviceId override are mutually exclusive",
+        );
+      }
+      if (useThreadModel === true) {
+        return { title: await probeThreadModelTitle(threadId) };
+      }
       const servicesState = (await bb.sdk.system.aiServices()) as Parameters<
         typeof resolveTitleTarget
       >[0];
@@ -876,16 +1087,18 @@ export default async function plugin(bb: BbPluginApi) {
       }
       return { title };
     },
-    thread_autotitle_services: async () => {
+    thread_autotitle_services: async ({ threadId }) => {
       const state = (await bb.sdk.system.aiServices()) as Parameters<
         typeof resolveTitleTarget
       >[0];
       const selected = resolveTitleSelection(state);
+      const threadModel = await threadModelAvailability(threadId);
       return {
         selected: selected.ok
           ? { pluginId: selected.pluginId, serviceId: selected.serviceId }
           : null,
         services: [...autotitleTargets(state)],
+        threadModel,
       };
     },
     tracker_status: async ({ repo, numbers }) => {
