@@ -268,8 +268,15 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     // Deterministic canned reply: the real server builds the title from the
     // thread's first prompt over bb's selected AI service; a UAT pass
     // exercises the editor's commit-on-return flow with this. The override
-    // target (fallback modal pick) names the alternative it simulated with.
-    const { pluginId, serviceId } = (args ?? {}) as { pluginId?: string; serviceId?: string };
+    // targets name the path the fallback modal simulated with.
+    const { pluginId, serviceId, useThreadModel } = (args ?? {}) as {
+      pluginId?: string;
+      serviceId?: string;
+      useThreadModel?: boolean;
+    };
+    if (useThreadModel === true) {
+      return { title: "Simulated thread-model title" };
+    }
     return {
       title:
         pluginId !== undefined && serviceId !== undefined
@@ -279,7 +286,8 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   }
   if (method === "thread_autotitle_services") {
     // The fallback modal's menu: one ready alternative (the simulated
-    // selection itself is excluded), one disabled with its blocker.
+    // selection itself is excluded), one disabled with its blocker, and the
+    // thread-model probe available.
     return {
       selected: { pluginId: "openrouter-inference", serviceId: "default" },
       services: [
@@ -287,6 +295,7 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
         { pluginId: "sim-alternative", serviceId: "other", displayName: "Simulated other service", ready: true, message: null },
         { pluginId: "sim-offline", serviceId: "down", displayName: "Simulated offline service", ready: false, message: "Simulated sign-in needed" },
       ],
+      threadModel: { available: true, reason: null },
     };
   }
   if (method === "workspace_files_exist") {

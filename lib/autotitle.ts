@@ -41,15 +41,22 @@ export interface AutotitleTargetDescriptor {
 }
 
 /** An explicit "use this service instead" pair. */
-export interface AutotitleTarget {
+export interface AutotitleTargetPair {
   pluginId: string;
   serviceId: string;
 }
 
+/**
+ * What a ✨ call may ask for: an alternative service pair (the bridge
+ * path) or the thread's own model (the hidden probe path).
+ */
+export type AutotitleTarget = AutotitleTargetPair | { useThreadModel: true };
+
 /** What the fallback modal's service menu carries (thread_autotitle_services output). */
 export interface AutotitleFallbackState {
-  selected: AutotitleTarget | null;
+  selected: AutotitleTargetPair | null;
   services: readonly AutotitleTargetDescriptor[];
+  threadModel: { available: boolean; reason: string | null };
 }
 
 /**

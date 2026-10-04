@@ -82,28 +82,37 @@ describe("thread_autotitle against the selected AI service", () => {
   });
 });
 describe("thread_autotitle_services contract", () => {
-  it("takes an empty input and returns selected plus service descriptors", () => {
-    expect(rpcContract.thread_autotitle_services.input.parse({})).toEqual({});
+  it("takes a thread id and returns selected, services, and thread-model availability", () => {
+    expect(
+      rpcContract.thread_autotitle_services.input.parse({ threadId: "thr_x" }),
+    ).toEqual({ threadId: "thr_x" });
     expect(
       rpcContract.thread_autotitle_services.output.parse({
         selected: { pluginId: "p", serviceId: "s" },
         services: [
           { pluginId: "p", serviceId: "s", displayName: "D", ready: true, message: null },
         ],
+        threadModel: { available: true, reason: null },
       }),
     ).toEqual({
       selected: { pluginId: "p", serviceId: "s" },
       services: [
         { pluginId: "p", serviceId: "s", displayName: "D", ready: true, message: null },
       ],
+      threadModel: { available: true, reason: null },
     });
     // No selection configured: the modal must still render.
     expect(
       rpcContract.thread_autotitle_services.output.parse({
         selected: null,
         services: [],
+        threadModel: { available: false, reason: "no model" },
       }),
-    ).toEqual({ selected: null, services: [] });
+    ).toEqual({
+      selected: null,
+      services: [],
+      threadModel: { available: false, reason: "no model" },
+    });
   });
 });
 
@@ -137,7 +146,9 @@ describe("thread_autotitle_services against the fake host", () => {
         },
       ],
     });
-    const out = (await callRpc("thread_autotitle_services", {})) as {
+    const out = (await callRpc("thread_autotitle_services", {
+      threadId: "thr_x",
+    })) as {
       selected: unknown;
       services: Array<{
         pluginId: string;
@@ -159,7 +170,9 @@ describe("thread_autotitle_services against the fake host", () => {
 
   it("reports no selection when the task is not set to a plugin service", async () => {
     const { callRpc } = await setup({ selection: { mode: "automatic" } });
-    const out = (await callRpc("thread_autotitle_services", {})) as {
+    const out = (await callRpc("thread_autotitle_services", {
+      threadId: "thr_x",
+    })) as {
       selected: unknown;
     };
     expect(out.selected).toBeNull();
@@ -239,5 +252,131 @@ describe("thread_autotitle with an override target", () => {
     await expect(
       callRpc("thread_autotitle", { threadId: "thr_x", pluginId: "other-plugin" }),
     ).rejects.toThrow(/together/);
+  });
+});
+
+describe("thread_autotitle useThreadModel contract", () => {
+  it("accepts a useThreadModel flag beside the thread id", () => {
+    expect(
+      rpcContract.thread_autotitle.input.parse({
+        threadId: "thr_x",
+        useThreadModel: true,
+      }),
+    ).toEqual({ threadId: "thr_x", useThreadModel: true });
+    // Overriding a service stays available: providers remain the first option.
+    expect(
+      rpcContract.thread_autotitle.input.parse({
+        threadId: "thr_x",
+        pluginId: "p",
+        serviceId: "s",
+      }),
+    ).toEqual({ threadId: "thr_x", pluginId: "p", serviceId: "s" });
+  });
+});
+
+describe("thread_autotitle via the thread's own model (hidden probe thread)", () => {
+  it("spawns a hidden probe on the source thread's model, reads the reply, deletes the probe", async () => {
+    const { callRpc, lastSpawn, lastServiceCall, deletedProbes, stoppedProbes } =
+      await setup({ history: undefined });
+    const out = (await callRpc("thread_autotitle", {
+      threadId: "thr_x",
+      useThreadModel: true,
+    })) as { title: string };
+    expect(out).toEqual({ title: "Login redirect loop fix" });
+    const spawn = lastSpawn();
+    expect(spawn).not.toBeNull();
+    expect(spawn!["projectId"]).toBe("proj_1");
+    // Reuse the source thread's environment: the probe never runs elsewhere.
+    expect(spawn!["environment"]).toEqual({ type: "reuse", environmentId: "env_1" });
+    // Hidden, explicitly titled (so bb's own title task never runs), and the
+    // model/pair pinned explicit — bb drops requested models without provenance.
+    expect(spawn!["visibility"]).toBe("hidden");
+    expect(spawn!["title"]).toMatch(/probe/i);
+    expect(spawn!["providerId"]).toBe("claude-code");
+    expect(spawn!["model"]).toBe("claude-sonnet-4-6");
+    expect(spawn!["executionInputSources"]).toEqual({
+      providerId: "explicit",
+      model: "explicit",
+    });
+    // The prompt is the thread's text plus the no-tools guardrail.
+    expect(String(spawn!["prompt"])).toContain("login redirect loop");
+    expect(String(spawn!["prompt"])).toMatch(/no tools/i);
+    // The bridge to plugin services is untouched on this path.
+    expect(lastServiceCall()).toBeNull();
+    // Cleanup: the probe is deleted; nothing needed stopping on success.
+    expect(deletedProbes()).toHaveLength(1);
+    expect(stoppedProbes()).toEqual([]);
+  });
+
+  it("refuses up front when the source thread has no execution options", async () => {
+    const { callRpc, lastSpawn, deletedProbes } = await setup({
+      executionOptions: null,
+    });
+    await expect(
+      callRpc("thread_autotitle", { threadId: "thr_x", useThreadModel: true }),
+    ).rejects.toThrow(/model/i);
+    expect(lastSpawn()).toBeNull();
+    expect(deletedProbes()).toEqual([]);
+  });
+
+  it("refuses with the named reason when the probe turn errors", async () => {
+    const { callRpc, deletedProbes, stoppedProbes } = await setup({
+      probeStatuses: ["pending", "error"],
+    });
+    await expect(
+      callRpc("thread_autotitle", { threadId: "thr_x", useThreadModel: true }),
+    ).rejects.toThrow(/failed|error/i);
+    expect(deletedProbes()).toHaveLength(1);
+    expect(stoppedProbes()).toHaveLength(1);
+  });
+
+  it("refuses when the probe never writes an assistant reply", async () => {
+    const { callRpc, deletedProbes } = await setup({
+      probeTimeline: { rows: [{ kind: "conversation", role: "user", text: "hm", id: "r1" }], maxSeq: 1 },
+    });
+    await expect(
+      callRpc("thread_autotitle", { threadId: "thr_x", useThreadModel: true }),
+    ).rejects.toThrow(/no .*reply|no .*title/i);
+    expect(deletedProbes()).toHaveLength(1);
+  });
+});
+
+describe("thread_autotitle_services thread-model availability", () => {
+  it("is part of the services menu shape", () => {
+    const parsed = rpcContract.thread_autotitle_services.output.parse({
+      selected: null,
+      services: [],
+      threadModel: { available: true, reason: null },
+    });
+    expect(parsed.threadModel).toEqual({ available: true, reason: null });
+  });
+
+  it("reports available when the source thread carries a model and project", async () => {
+    const { callRpc } = await setup({});
+    const out = (await callRpc("thread_autotitle_services", {
+      threadId: "thr_x",
+    })) as { threadModel: { available: boolean; reason: string | null } };
+    expect(out.threadModel.available).toBe(true);
+    expect(out.threadModel.reason).toBeNull();
+  });
+
+  it("reports unavailable with the reason when the thread has no model", async () => {
+    const { callRpc } = await setup({ executionOptions: null });
+    const out = (await callRpc("thread_autotitle_services", {
+      threadId: "thr_x",
+    })) as { threadModel: { available: boolean; reason: string | null } };
+    expect(out.threadModel.available).toBe(false);
+    expect(out.threadModel.reason).not.toBeNull();
+  });
+
+  it("reports unavailable when the thread has no project to spawn the probe into", async () => {
+    const { callRpc } = await setup({
+      threadRow: { id: "thr_x", projectId: null, environmentId: null, status: "idle" },
+    });
+    const out = (await callRpc("thread_autotitle_services", {
+      threadId: "thr_x",
+    })) as { threadModel: { available: boolean; reason: string | null } };
+    expect(out.threadModel.available).toBe(false);
+    expect(out.threadModel.reason).not.toBeNull();
   });
 });
