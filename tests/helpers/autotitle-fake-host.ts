@@ -46,10 +46,7 @@ export type AutotitleSetupOptions = {
   probeStatuses?: string[];
   /** threads.timeline result for the probe thread. Default: one assistant row with the canned title. */
   probeTimeline?: unknown;
-  /**
-   * threads.timeline result for the SOURCE thread (the first-user-row prompt
-   * read); default [] so the server falls back to the prompt-history fixture.
-   */
+  /** What a threads.timeline result carries in tests ({rows:[...]}) */
   sourceTimeline?: unknown;
 };
 
@@ -88,6 +85,7 @@ export async function setup(
     | { pluginId: string; method: string; input: unknown }
     | null = null;
   let lastPromptHistoryArgs: { threadId?: string; limit?: number } | null = null;
+  let lastSourceTimelineArgs: { threadId: string; afterSequence?: number } | null = null;
   const allServiceCalls: Array<{
     pluginId: string;
     method: string;
@@ -147,11 +145,12 @@ export async function setup(
           const status = statuses[Math.min(statusIndex++, statuses.length - 1)];
           return { ...sourceRow, id: threadId, status };
         },
-        timeline: async ({ threadId }: { threadId: string }) => {
+        timeline: async (args: { threadId: string; afterSequence?: number }) => {
+          lastSourceTimelineArgs = args;
           // The PROBE thread's reply; the SOURCE thread reads empty so the
           // server falls back to prompt history unless a test wires a
           // source timeline.
-          if (threadId !== probeId) return opts.sourceTimeline ?? [];
+          if (args.threadId !== probeId) return opts.sourceTimeline ?? [];
           return opts.probeTimeline ?? (DEFAULT_TIMELINE as unknown);
         },
         delete: async ({ threadId }: { threadId: string }) => {
@@ -190,6 +189,8 @@ export async function setup(
     allServiceCalls: () => [...allServiceCalls],
     /** The latest threads.promptHistory args — the oldest-entry fetch needs a big limit. */
     lastPromptHistoryArgs: () => lastPromptHistoryArgs,
+    /** The latest SOURCE-thread threads.timeline args — the prompt read must page from the beginning. */
+    lastSourceTimelineArgs: () => lastSourceTimelineArgs,
     lastSpawn: () => spawnArgs,
     deletedProbes: () => deleted,
     stoppedProbes: () => stopped,

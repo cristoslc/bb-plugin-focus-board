@@ -616,3 +616,34 @@ describe("the probe titles from the thread's originating prompt", () => {
     expect(prompt).not.toContain("later follow-up");
   });
 });
+
+describe("the originating-prompt read pages the timeline from the beginning", () => {
+  // The default (no-afterSequence) timeline call serves bb's LATEST-rows
+  // cache — live it returned only seq 9066-10188 of a 10k-sequence thread,
+  // so the "first" user row was the newest message. The read must anchor
+  // at the sequence floor: afterSequence 0 (events strictly above 0).
+  it("calls timeline with afterSequence 0 for the source thread", async () => {
+    const { callRpc, lastSourceTimelineArgs } = await setup({
+      sourceTimeline: {
+        rows: [
+          { kind: "conversation", role: "user", sourceSeqStart: 1, text: "When renaming a thread, I'd like an emoji button" },
+        ],
+      },
+    });
+    await callRpc("thread_autotitle", { threadId: "thr_x" });
+    expect(lastSourceTimelineArgs()).toMatchObject({ threadId: "thr_x", afterSequence: "0" });
+  });
+
+  it("titles from the anchored first page's oldest user row", async () => {
+    const { callRpc, lastServiceCall } = await setup({
+      sourceTimeline: {
+        rows: [
+          { kind: "conversation", role: "user", sourceSeqStart: 1, text: "When renaming a thread, I'd like an emoji button" },
+          { kind: "system", text: null },
+        ],
+      },
+    });
+    await callRpc("thread_autotitle", { threadId: "thr_x" });
+    expect((lastServiceCall()!.input as { prompt: string }).prompt).toContain("emoji button");
+  });
+});

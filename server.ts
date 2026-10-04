@@ -905,6 +905,12 @@ export default async function plugin(bb: BbPluginApi) {
   async function threadOriginatingPrompt(threadId: string): Promise<string | null> {
     const timeline = (await bb.sdk.threads.timeline({
       threadId,
+      // bb's sequence-anchored read: afterSequence "0" = events strictly
+      // above 0, i.e. the thread's beginning (SDK types the bound as a
+      // string). The parameterless call serves bb's latest-rows cache —
+      // live it returned only seq 9066-10188 of a 10k-sequence thread,
+      // putting the user's newest message in "first".
+      afterSequence: "0",
     })) as { rows?: unknown };
     const fromTimeline = firstUserPromptFromTimeline(
       (timeline.rows ?? []) as readonly AutotitleTimelineRow[],
@@ -1877,9 +1883,29 @@ export default async function plugin(bb: BbPluginApi) {
     },
     async run(input) {
       const threadId = input.positionals["thread-id"];
+      const timeline = (await bb.sdk.threads.timeline({
+        threadId,
+      })) as { rows?: unknown };
+      const rows = (timeline.rows ?? []) as readonly AutotitleTimelineRow[];
       const prompt = await threadOriginatingPrompt(threadId);
       if (input.options.json === true) {
-        return { exitCode: 0, stdout: `${JSON.stringify({ prompt })}\n` };
+        return {
+          exitCode: 0,
+          stdout: `${JSON.stringify(
+            {
+              prompt,
+              rows: rows.map((row) => ({
+                SeqStart: row.sourceSeqStart ?? null,
+                createdAt: row.createdAt ?? null,
+                kind: row["kind"] ?? null,
+                role: row["role"] ?? null,
+                text: typeof row.text === "string" ? row.text.slice(0, 120) : null,
+              })),
+            },
+            null,
+            2,
+          )}\n`,
+        };
       }
       return {
         exitCode: 0,
