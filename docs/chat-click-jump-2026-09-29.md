@@ -224,3 +224,55 @@ What stands and where the report now goes:
   at-bottom reader leaves it inert. It remains in place as a defense for
   the captured clamp-down variant until this investigation closes or bb
   ships the fix; this section supersedes the mechanism summary above.
+
+## Update 2026-10-02 — adversarial review round (child `thr_cexdxfbnaj`)
+
+Tried to disprove the report; verdicts:
+
+- **Mechanism survived everything, and is stronger than stated**: natural
+  gestures alone reproduce the yank (nat1–nat4, no staging): the pending
+  capture arises on EVERY older-rows load, success included — survival is
+  the norm. Direction: on natural runs the consume lands as a big
+  downward yank (or clamps at the bottom); the operator's upward-from-
+  pinned-bottom shape requires a no-intent descent that natural input
+  does not produce (wheel/touch/keys/scrollbar/pill all carry scroll
+  intent and refresh the pending capture; an ambient repin consumes at
+  arrival) — reproduced only under staging (frozen capture), labeled a
+  mechanism probe.
+- **The shipped guard never fires in any reproduced shape** — including
+  its own design band, where its arm-time read is already past the
+  pointerdown-commit write (nat4: 187px in-band, guard silent). The
+  race-proof build (e58b232, pointerdown-capture settlement gate) is
+  verified live (writes nothing; the shell's re-clamp sticks; non-misfire
+  verified on pill/composer) — but the guard is not a working mitigation
+  for the defect. It stops here.
+- **#2427's capture behavior is in-flight-only design**; an outliving
+  capture is an unhandled edge (their test covers prepend + continued
+  gesture only). The re-scoped report is review-ready; upstream filing
+  decision stays with the operator.
+
+## Update 2026-10-03 — guard fix verified live; investigation closed
+
+The interrupted verification was rerun directly (the child's background runs
+had crashed with the daemon restart and nobody resumed them):
+
+- **Band mode (the guard's design case) now fires correctly.** Staged
+  pending capture; reader parked 200 px above the bottom of the pane
+  (staged-guard.mjs run): the click's host clamp lands (6125 → 6305), and
+  17 ms later the guard's restore reverts it (6299 → 6125) with its wheel
+  dispatch ahead — reader position preserved, final 6125. This is the
+  shape the guard existed for; it never fired before this fix.
+- **Bottom mode stays silent** (verify-guard-baseline.mjs): reader pinned
+  at bottom, click → no guard writes at all; the reader ends pinned
+  (13234 of max 13234). No cement, no fighting the shell. Pill
+  non-misfire re-verified (host re-pin from 640 px up, guard silent).
+- Note for anyone re-verifying: the served host bundle changed identity
+  mid-investigation (bb's own app updated; page-shell-B24TvAJg.js is now
+  bottom-anchored-scroll-body-BCoAmb30.js with renamed symbols). The
+  recorded stacks are valid artifacts of their runs; the SHA-pinned
+  source still matches.
+
+Guard commits: `915c85c` (settle-listener suppression, superseded) and
+`e58b232` + `ee6fbc9` (pointerdown-capture baseline; the working form;
+dev merge `2ec8ef8`, suite 660 green). Issue for the host defect:
+get-bb/bb#4793.

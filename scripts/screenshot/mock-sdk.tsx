@@ -264,6 +264,31 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     };
   }
   if (method === "rank_list") return { orders: structuredClone(simRanks) };
+  if (method === "thread_autotitle") {
+    // Deterministic canned reply: the real server builds the title from the
+    // thread's first prompt over bb's selected AI service; a UAT pass
+    // exercises the editor's commit-on-return flow with this. The override
+    // target (fallback modal pick) names the alternative it simulated with.
+    const { pluginId, serviceId } = (args ?? {}) as { pluginId?: string; serviceId?: string };
+    return {
+      title:
+        pluginId !== undefined && serviceId !== undefined
+          ? `Simulated ${serviceId} title`
+          : "Simulated auto title",
+    };
+  }
+  if (method === "thread_autotitle_services") {
+    // The fallback modal's menu: one ready alternative (the simulated
+    // selection itself is excluded), one disabled with its blocker.
+    return {
+      selected: { pluginId: "openrouter-inference", serviceId: "default" },
+      services: [
+        { pluginId: "openrouter-inference", serviceId: "default", displayName: "OpenRouter", ready: true, message: null },
+        { pluginId: "sim-alternative", serviceId: "other", displayName: "Simulated other service", ready: true, message: null },
+        { pluginId: "sim-offline", serviceId: "down", displayName: "Simulated offline service", ready: false, message: "Simulated sign-in needed" },
+      ],
+    };
+  }
   if (method === "workspace_files_exist") {
     // The decoration's existence gate (components/decorate-inline-code.ts):
     // a path the workspace has verifies true, everything else stays plain.

@@ -52,6 +52,32 @@ export function parseParentLaneOrderStored(raw: string | null): ParentLaneOrder 
 }
 
 /**
+ * Collapsed family cards' persistence. The stored list holds the PARENT
+ * thread ids whose nested child rows are collapsed; every id absent from it
+ * renders expanded (the default), so the list only ever records deliberate
+ * collapses. Tolerant like every other stored value: corrupt JSON, a
+ * non-array, or non-string entries degrade to fewer (or zero) collapsed
+ * families, never to a board that fails to load.
+ */
+export const COLLAPSED_FAMILIES_KEY = "focus-board:collapsedFamilies";
+
+export function parseCollapsedFamiliesStored(raw: string | null): ReadonlySet<string> {
+  if (raw === null || raw === "") return new Set();
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((entry): entry is string => typeof entry === "string"));
+  } catch {
+    return new Set();
+  }
+}
+
+/** Sorted for a stable stored form, so equal sets round-trip byte-identical. */
+export function collapsedFamiliesStoredValue(ids: ReadonlySet<string>): string {
+  return JSON.stringify([...ids].sort());
+}
+
+/**
  * The server-declared boolean setting backing the thread pane's Escape
  * behavior (see server.ts `escStopsRunningThread`). Only an explicit stored
  * `false` is off: while loading, unset (default applied host-side as true),

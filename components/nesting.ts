@@ -11,6 +11,7 @@ import {
   buildColumns,
   columnFor,
   derivedCompare,
+  doneRecencyCompare,
   matchesFilter,
   threadState,
 } from "./grouping";
@@ -22,7 +23,7 @@ import {
 } from "../lib/rank";
 
 export interface FamilyIndex {
-  /** Parent id → its visible children, in input order. */
+  /** Parent id → its non-archived children, in input order. */
   childrenByParent: ReadonlyMap<string, readonly PluginSidebarThread[]>;
   /** Child id → its parent's id; absent for roots (including cycle members and orphans). */
   parentOf: ReadonlyMap<string, string>;
@@ -34,18 +35,29 @@ export interface NestingResult {
   columns: BoardColumn[];
   /** Parent id → the live children that render nested under its card. */
   childrenByParent: ReadonlyMap<string, readonly PluginSidebarThread[]>;
+  /**
+   * Parent id → the done children that render nested under the family's
+   * projection card in the Done column. Only live parents get entries: a
+   * done parent's done children nest via `childrenByParent` under the
+   * parent's own Done card.
+   */
+  doneChildrenByParent: ReadonlyMap<string, readonly PluginSidebarThread[]>;
 }
 
 export interface BoardAssembly {
   columns: BoardColumn[];
   /** Parent id → children that render as nested rows under the parent card. */
   nestedChildrenByParent: ReadonlyMap<string, readonly PluginSidebarThread[]>;
+  /** Parent id → done children nested under the family's Done projection card. */
+  doneChildrenByParent: ReadonlyMap<string, readonly PluginSidebarThread[]>;
   /**
-   * Parent id → ALL its children (from the raw family index, archived
-   * included). Drives the parent card's child-count chip (and chevron),
-   * which counts every child even when some render standalone (promoted /
-   * cross-axis). Empty when nesting is disabled — chips are meaningless on a
-   * flat board.
+   * Parent id → the number the card's child-count chip shows: the children
+   * in the card's OWN space. A live parent counts its live children (nested
+   * rows plus any that render standalone in the active space); a done parent
+   * counts the rows its Done card carries. A family split across spaces — a
+   * live card plus its Done projection — reads one count per card, and the
+   * two sum to the family size. Empty when nesting is disabled — chips are
+   * meaningless on a flat board.
    */
   childCountByParent: ReadonlyMap<string, number>;
 }
@@ -72,9 +84,10 @@ export interface NestingOptions {
    */
   doneTimes?: ReadonlyMap<string, number>;
   /**
-   * Threads marked Done. `childNests` needs them: a Done parent stays in the
-   * Done lane, so its live children still promote (raw-state comparison);
-   * a live parent always nests its children (R4).
+   * Threads marked Done. `childPlacement` needs them: a Done parent stays in
+   * the Done lane, so its live children still promote (raw-state
+   * comparison); its done children nest under its Done card; a live
+   * parent's done children project into the Done column.
    */
   doneIds?: ReadonlySet<string>;
 }
@@ -84,19 +97,18 @@ export interface NestingOptions {
  * composition app.tsx wires. `nestedChildrenByParent` (from
  * `nestUnderParents`, NOT the raw index) is what renders as child rows, so a
  * promoted (live child of a Done parent) or cross-axis child never appears
- * both as a standalone card and as a nested row. `childCountByParent` (from
- * the raw index) is what the child-count chip counts, so a parent still
- * shows its family size when a child stands alone.
+ * both as a standalone card and as a nested row. `doneChildrenByParent` is
+ * what renders under a family's Done projection card. `childCountByParent`
+ * counts each card's own space (see `BoardAssembly`).
  *
  * R4: under the status grouping, `familyColumnOverrides` places each family
  * in the column of its most attention-requiring live member, so the parent
  * card carries the family's urgency and its children nest under it.
  *
- * R2: archived children never take standalone column slots. They are
- * excluded from column building entirely and always nest under their parent
- * (archived overrides the promotion and axis-match rules), so an archived
- * child stays under its parent in every grouping. An archived child whose
- * parent is not in the input (archived or deleted parent) renders nowhere.
+ * Archived children are hidden outright: `buildFamilyIndex` excludes
+ * archived members, so an archived child renders nowhere and a child of an
+ * archived parent re-roots and renders standalone. `buildColumns` also never
+ * sees an archived thread.
  */
 export function assembleBoard(
   threads: readonly PluginSidebarThread[],
@@ -110,14 +122,15 @@ export function assembleBoard(
   const nestingEnabled = options.nestingEnabled ?? true;
   const ranks = options.ranks ?? {};
   const doneTimes = options.doneTimes ?? new Map<string, number>();
-  // Archived threads never take a column slot in either mode; when nesting
-  // is OFF they render nowhere at all (matching bb's sidebar, where
-  // archiving removes the thread from the list).
-  const columnThreads = threads.filter((thread) => !thread.isArchived);
+  // Archived threads never take a column slot; the family index drops them
+  // too (buildFamilyIndex is the single authoritative hide), so an archived
+  // child renders nowhere at all — matching bb's sidebar, where archiving
+  // removes the thread from the list.
+  const visible = threads.filter((thread) => !thread.isArchived);
   if (!nestingEnabled) {
     return {
       columns: buildColumns(
-        columnThreads,
+        visible,
         groupBy,
         context,
         frozenColumns,
@@ -127,18 +140,19 @@ export function assembleBoard(
         doneTimes,
       ),
       nestedChildrenByParent: new Map(),
+      doneChildrenByParent: new Map(),
       childCountByParent: new Map(),
     };
   }
-  // One family index serves all three passes: the R4 column overrides, the
-  // nesting pass, and the chip counts all read the same raw parent→children
-  // map (archived children included — they stay under the parent).
-  const familyIndex = buildFamilyIndex(threads);
+  // One family index serves all the passes: the R4 column overrides, the
+  // nesting pass, the Done projection, and the chip counts all read the same
+  // parent→children map (archived members already excluded by the index).
+  const familyIndex = buildFamilyIndex(visible);
   // R4: under the status grouping a family lands in the column of its most
   // attention-requiring live member, so the parent card carries the family's
   // urgency instead of splitting from its children.
   const columnOverrides = familyColumnOverrides(
-    columnThreads,
+    visible,
     familyIndex,
     groupBy,
     context,
@@ -146,7 +160,7 @@ export function assembleBoard(
   );
   const nested = nestUnderParents(
     buildColumns(
-      columnThreads,
+      visible,
       groupBy,
       context,
       frozenColumns,
@@ -156,22 +170,33 @@ export function assembleBoard(
       doneTimes,
       columnOverrides,
     ),
-    threads,
+    visible,
     groupBy,
     context,
     now,
     familyIndex,
-    // assembleBoard owns doneIds positionally; inject it so childNests can
-    // keep the Done-lane promotion rule.
+    // assembleBoard owns doneIds positionally; inject it so childPlacement
+    // can keep the Done-lane promotion rule.
     { ...options, doneIds },
   );
+  // The chip counts the children in the card's own space: a live parent
+  // counts its live children; a done parent counts the rows its Done card
+  // carries (done children plus any live child quiet enough to nest there).
+  const threadById = new Map(visible.map((thread) => [thread.id, thread]));
   const childCountByParent = new Map<string, number>();
   for (const [parentId, children] of familyIndex.childrenByParent) {
-    childCountByParent.set(parentId, children.length);
+    const parent = threadById.get(parentId);
+    childCountByParent.set(
+      parentId,
+      parent !== undefined && doneIds.has(parent.id)
+        ? (nested.childrenByParent.get(parentId)?.length ?? 0)
+        : children.filter((child) => !doneIds.has(child.id)).length,
+    );
   }
   return {
     columns: nested.columns,
     nestedChildrenByParent: nested.childrenByParent,
+    doneChildrenByParent: nested.doneChildrenByParent,
     childCountByParent,
   };
 }
@@ -183,13 +208,15 @@ export interface FamilyFilterResult {
 }
 
 /**
- * Build parent→children / child→parent maps from the non-hidden thread set.
- * The caller passes the already-filtered non-hidden set (app.tsx excludes
- * only hidden threads — archived threads are INCLUDED since R2, so archived
- * children stay under their parent). A `parentThreadId` that points at a
- * thread not in the set (deleted) leaves the child a root — flat fallback.
- * Corrupt parent cycles are treated as roots: cycle members keep their cards
- * instead of hanging the board.
+ * Build parent→children / child→parent maps from the thread set. This index
+ * is the single authoritative place where archived members are hidden: an
+ * archived child is indexed under nothing (it renders nowhere, in either
+ * board view), and a child whose parent is archived re-roots — the parent is
+ * not "present" — so it renders standalone instead of under a card that
+ * never renders. A `parentThreadId` that points at a thread not in the set
+ * (deleted) leaves the child a root — flat fallback. Corrupt parent cycles
+ * are treated as roots: cycle members keep their cards instead of hanging
+ * the board.
  *
  * Depth cap (two levels, everywhere): every family renders parent → children
  * only. A thread whose parent itself has a parent re-attaches to its family
@@ -197,10 +224,13 @@ export interface FamilyFilterResult {
  * untouched.
  */
 export function buildFamilyIndex(threads: readonly PluginSidebarThread[]): FamilyIndex {
-  const present = new Set(threads.map((thread) => thread.id));
+  // Archived members are dropped at the door: archived children are hidden
+  // outright, and archived parents leave their children rootless.
+  const visible = threads.filter((thread) => !thread.isArchived);
+  const present = new Set(visible.map((thread) => thread.id));
   const parentOf = new Map<string, string>();
 
-  for (const thread of threads) {
+  for (const thread of visible) {
     const parentId = thread.parentThreadId;
     if (parentId === null || parentId === "" || !present.has(parentId)) continue;
     if (parentId === thread.id) continue; // self-parent is corrupt data
@@ -212,7 +242,7 @@ export function buildFamilyIndex(threads: readonly PluginSidebarThread[]): Famil
   // (before any unlinking, so detection is order-independent), then unlink
   // them all so each renders as a root.
   const cyclic = new Set<string>();
-  for (const thread of threads) {
+  for (const thread of visible) {
     const start = thread.id;
     const walk = new Set<string>([start]);
     let cursor = parentOf.get(start);
@@ -234,7 +264,7 @@ export function buildFamilyIndex(threads: readonly PluginSidebarThread[]): Famil
   // real child of the root — never hidden behind a `+N more` chip. Chains
   // were flattened before this walk; every edge now points at a root.
   const displayParentOf = new Map(parentOf);
-  for (const thread of threads) {
+  for (const thread of visible) {
     const chain: string[] = [];
     let cursor = thread.id;
     while (displayParentOf.has(cursor)) {
@@ -244,7 +274,7 @@ export function buildFamilyIndex(threads: readonly PluginSidebarThread[]): Famil
     for (const id of chain) displayParentOf.set(id, cursor);
   }
 
-  for (const thread of threads) {
+  for (const thread of visible) {
     const parentId = displayParentOf.get(thread.id);
     if (parentId === undefined) continue;
     const siblings = childrenByParent.get(parentId);
@@ -253,56 +283,63 @@ export function buildFamilyIndex(threads: readonly PluginSidebarThread[]): Famil
   }
 
   const rootIds = new Set(
-    threads.filter((thread) => !displayParentOf.has(thread.id)).map((thread) => thread.id),
+    visible.filter((thread) => !displayParentOf.has(thread.id)).map((thread) => thread.id),
   );
   return { childrenByParent, parentOf: displayParentOf, rootIds };
 }
 
 /**
- * Does a child stay under its parent in this grouping? Returns `true` to
- * nest, `false` to keep the child flat.
+ * Where does a child render relative to its parent in this grouping? Returns
+ * `"nest"` (rows under the parent's own card), `"done"` (rows under the
+ * family's projection card in the Done column), or `"flat"` (the child keeps
+ * its standalone column placement).
  *
- * - R2: an archived child ALWAYS nests — it never takes a standalone column
- *   slot, in any grouping (archived overrides promotion and axis-match).
- * - R4 (status grouping): the family moves as one unit into the column of
- *   its most attention-requiring live member (`familyColumnOverrides` lifts
- *   the parent card there), so every visible child of a live parent nests —
- *   no child is ever buried, because the family relocates to meet the child.
- *   The promotion rule survives only where the family cannot relocate: a
- *   Done parent keeps its Done-lane card, and its live children still
- *   promote (raw-state comparison, Done being the rightmost lane).
- * - Axis match (project/provider/machine): the child nests only when its
+ * - Done children live in the Done space, under the family's card there:
+ *   under the parent's own card when the parent is done, otherwise under the
+ *   family's projection card — regardless of grouping or axis. Done is its
+ *   own space, and the family is a projection: its active card and its Done
+ *   card can exist at once.
+ * - R4 (status grouping): the live family moves as one unit into the column
+ *   of its most attention-requiring live member (`familyColumnOverrides`
+ *   lifts the parent card there), so every live child of a live parent
+ *   nests. The promotion rule survives only where the family cannot
+ *   relocate: a Done parent keeps its Done-lane card, and a live child
+ *   promotes when its raw state demands more attention than the parent's.
+ * - Axis match (project/provider/machine): a live child nests only when its
  *   axis key matches its parent's; otherwise it stays flat in its own axis
  *   column.
  * - Recency / None: columns are per-thread presentation, not grouping
  *   boundaries — always nest.
  */
-function childNests(
+type ChildPlacement = "nest" | "done" | "flat";
+
+function childPlacement(
   child: PluginSidebarThread,
   parent: PluginSidebarThread,
   groupBy: GroupBy,
-  now: number,
   doneIds: ReadonlySet<string>,
-): boolean {
-  if (child.isArchived) return true; // R2: archived children always nest
+): ChildPlacement {
+  if (doneIds.has(child.id)) {
+    return doneIds.has(parent.id) ? "nest" : "done";
+  }
   if (groupBy === "status") {
     if (doneIds.has(parent.id)) {
       // Done parent: the family stays in the Done lane; keep the raw-state
-      // comparison so live children promote and done children nest.
-      return stateRank(threadState(child)) >= stateRank(threadState(parent));
+      // comparison so an attention-hungry live child promotes.
+      return stateRank(threadState(child)) >= stateRank(threadState(parent)) ? "nest" : "flat";
     }
-    // R4: live parent — the family moves as one unit, every child nests.
-    return true;
+    // R4: live parent — the family moves as one unit, every live child nests.
+    return "nest";
   }
   if (groupBy === "project" || groupBy === "provider") {
     const key = groupBy === "project" ? child.projectId : child.providerId;
     const parentKey = groupBy === "project" ? parent.projectId : parent.providerId;
-    return key === parentKey;
+    return key === parentKey ? "nest" : "flat";
   }
   if (groupBy === "machine") {
-    return (child.host?.id ?? "none") === (parent.host?.id ?? "none");
+    return (child.host?.id ?? "none") === (parent.host?.id ?? "none") ? "nest" : "flat";
   }
-  return true; // recency / none
+  return "nest"; // recency / none
 }
 
 function stateRank(state: ThreadState): number {
@@ -370,21 +407,30 @@ export function familyColumnOverrides(
 
 /**
  * Pull nested children out of their column placement and attach them under
- * their parent's card. Applies these rules:
+ * their parent's card. Applies these rules (see `childPlacement`):
  *
- * - R4 (status grouping): the family moves as one unit into the column of
- *   its most attention-requiring live member (see `familyColumnOverrides`),
- *   and every visible child of a live parent nests. Live children of a Done
- *   parent still promote (the Done lane cannot relocate).
- * - Axis match (project/provider/machine): a child nests only when its axis
- *   key matches its parent's; otherwise it stays flat in its own column.
+ * - Done children project into the Done space: a live parent's done children
+ *   move under the family's projection card in the Done column — a second
+ *   rendering of the parent's card, because the family is a projection and
+ *   can exist in both spaces at once — while a done parent's done children
+ *   nest under the parent's own Done card.
+ * - R4 (status grouping): the live family moves as one unit into the column
+ *   of its most attention-requiring live member (see `familyColumnOverrides`),
+ *   and every live child of a live parent nests. Live children of a Done
+ *   parent still promote when their state demands attention (the Done lane
+ *   cannot relocate).
+ * - Axis match (project/provider/machine): a live child nests only when its
+ *   axis key matches its parent's; otherwise it stays flat in its own column.
  *   Recency and None groupings always nest.
  *
- * `childrenByParent` holds each parent's nested children sorted urgent-first,
- * then in the same order the columns use (pinned-first, newest-first; manual
- * ranks within each tier) — see `sortNestedByColumnRank`. Grandchildren are
- * never placed: a child that itself has children surfaces them only through
- * the `+N more` count (`grandchildCountFor`).
+ * `childrenByParent` holds each parent's live nested children sorted
+ * urgent-first, then in the same order the columns use (pinned-first,
+ * newest-first; manual ranks within each tier) — see `sortNestedByColumnRank`;
+ * a done parent's rows sort by done recency, the Done column's own order.
+ * `doneChildrenByParent` holds each projection's done children sorted newest
+ * done first. Grandchildren are never placed separately: the family index
+ * flattens every descendant onto the root, so a child that itself has
+ * children surfaces as real sibling rows.
  */
 export function nestUnderParents(
   columns: readonly BoardColumn[],
@@ -399,53 +445,99 @@ export function nestUnderParents(
   const threadById = new Map(threads.map((thread) => [thread.id, thread]));
   const ranks = options.ranks ?? {};
   const doneIds = options.doneIds ?? new Set<string>();
+  const doneTimes = options.doneTimes ?? new Map<string, number>();
 
   // R3: nesting disabled — a fully flat board. Columns pass through
   // untouched (the caller has already kept archived threads out of them);
-  // no child nests, no rows, no chips.
+  // no child nests, no rows, no chips, no projections.
   if (options.nestingEnabled === false) {
-    return { columns: [...columns], childrenByParent: new Map() };
+    return { columns: [...columns], childrenByParent: new Map(), doneChildrenByParent: new Map() };
   }
 
-  // Decide, per child, nest vs. flat. Promoted/flat children keep their
-  // column placement; nested children are removed from columns.
+  // Decide, per child, where it renders: rows under the parent's own card,
+  // rows under the family's Done projection card, or standalone. Flat
+  // children keep their column placement; the other two leave the column
+  // lists entirely. The family index has already dropped archived members,
+  // so neither side of an edge is archived (the guards below are defense for
+  // a caller whose threads array disagrees with the index it passed).
   const nested = new Map<string, PluginSidebarThread[]>();
+  const doneNested = new Map<string, PluginSidebarThread[]>();
   const flatIds = new Set<string>();
   for (const [childId, parentId] of index.parentOf) {
     const child = threadById.get(childId);
     const parent = threadById.get(parentId);
-    if (child === undefined || parent === undefined) {
+    if (child === undefined) continue; // hidden outright (archived children render nowhere)
+    if (parent === undefined || parent.isArchived) {
       flatIds.add(childId);
       continue;
     }
-    if (childNests(child, parent, groupBy, now, doneIds)) {
-      const siblings = nested.get(parentId);
-      if (siblings === undefined) nested.set(parentId, [child]);
-      else siblings.push(child);
-    } else {
+    const placement = childPlacement(child, parent, groupBy, doneIds);
+    if (placement === "flat") {
       flatIds.add(childId);
+      continue;
     }
+    const target = placement === "nest" ? nested : doneNested;
+    const siblings = target.get(parentId);
+    if (siblings === undefined) target.set(parentId, [child]);
+    else siblings.push(child);
   }
 
   // A parent whose children all nest keeps its card; children leave the
   // column lists entirely. Only roots (and promoted/flat children) stay.
   const nestedKeyIds = nestedKeys(nested);
-  sortNestedByColumnRank(nested, columns, groupBy, ranks);
+  const doneNestedKeyIds = nestedKeys(doneNested);
+  sortNestedByColumnRank(nested, columns, groupBy, ranks, doneTimes);
+  // Done-space rows read in the Done column's own order: newest done first.
+  for (const children of doneNested.values()) {
+    children.sort(doneRecencyCompare(doneTimes));
+  }
   // Pinned-lane attention lift: a pinned family with a live member needing
   // the operator cannot move out of Pinned (the family-column overrides apply
   // to unpinned roots only), so within the lane it rises to the top instead
   // — the same "urgent floats first" tier the nested rows use. See
   // `pinnedAttentionIds` / `withAttentionFirst` below.
   const pinnedAttention = pinnedAttentionIds(columns, nested, doneIds);
+
+  // The Done projection: each live parent whose done children moved to the
+  // Done space also renders a second card there — the family's projection
+  // card — with those children nested under it. A done parent needs no
+  // projection; its own card already sits in the Done column. The projection
+  // sorts by its most recent done child (the family's done recency); with no
+  // stamped child it falls in with the stamp-less cards, below stamped ones,
+  // exactly the rule the Done column applies to a card with no doneAt.
+  const projectionThreads = [...doneNested.keys()]
+    .map((id) => threadById.get(id))
+    .filter((thread): thread is PluginSidebarThread => thread !== undefined);
+  const projectionDoneTimes = new Map(doneTimes);
+  for (const [parentId, children] of doneNested) {
+    let newest: number | undefined;
+    for (const child of children) {
+      const stamp = projectionDoneTimes.get(child.id);
+      if (stamp !== undefined) newest = newest === undefined ? stamp : Math.max(newest, stamp);
+    }
+    if (newest !== undefined) projectionDoneTimes.set(parentId, newest);
+  }
+  const doneRankOrder = orderForColumn(ranks, columnRankKey(groupBy, "done"));
+  const withProjections = (cards: readonly PluginSidebarThread[]): PluginSidebarThread[] =>
+    [...cards, ...projectionThreads].sort(
+      compareByRank(doneRankOrder, doneRecencyCompare(projectionDoneTimes)),
+    );
+
   const outColumns: BoardColumn[] = columns
     .map((column) => {
       const kept = column.threads.filter(
-        (thread) => !nestedKeyIds.has(thread.id) && (flatIds.has(thread.id) || index.rootIds.has(thread.id)),
+        (thread) =>
+          !nestedKeyIds.has(thread.id) &&
+          !doneNestedKeyIds.has(thread.id) &&
+          (flatIds.has(thread.id) || index.rootIds.has(thread.id)),
       );
-      return {
-        ...column,
-        threads: column.id === "pinned" ? withAttentionFirst(kept, pinnedAttention) : kept,
-      };
+      if (column.id === "pinned") {
+        return { ...column, threads: withAttentionFirst(kept, pinnedAttention) };
+      }
+      if (column.id === "done") {
+        return { ...column, threads: withProjections(kept) };
+      }
+      return { ...column, threads: kept };
     })
     // Nesting drains a column when its every card is a nested child (a live
     // parent carries its whole family into the family column — R4 — and the
@@ -458,8 +550,19 @@ export function nestUnderParents(
     // entirely; if a card leaves the nest it returns to its own column and
     // the lane reappears with it.
     .filter((column) => column.threads.length > 0);
+  // A Done column assembled from nothing but projections still earns its
+  // place (buildColumns only creates the lane when a done thread exists, and
+  // drained done children are its projections' rows — this guards a
+  // caller-built column list without one).
+  if (projectionThreads.length > 0 && !outColumns.some((column) => column.id === "done")) {
+    outColumns.push({ id: "done", label: "Done", threads: withProjections([]) });
+  }
 
-  return { columns: outColumns, childrenByParent: nested };
+  return {
+    columns: outColumns,
+    childrenByParent: nested,
+    doneChildrenByParent: doneNested,
+  };
 }
 
 /**
@@ -524,6 +627,59 @@ function withAttentionFirst(
 }
 
 /**
+ * The collapsed-family auto-expand source set: parents whose nested rows
+ * currently hold a live child in an "unread+" state — threadState "unread"
+ * (unread activity) or "attention" (a pending interaction or an unread
+ * error), the states at or above Unread in the status column order. Done and
+ * archived members never count, the same rule `pinnedAttentionIds` applies:
+ * completed or stale state must not demand attention.
+ *
+ * Collapsed families key their auto-expand on the TRANSITION into this set
+ * (see `familiesToAutoExpand`), so the map that feeds the nested rows — the
+ * assembly's `nestedChildrenByParent`, not the raw family index — is the
+ * right input: expanding a card can only ever reveal rows this map holds.
+ */
+export function familiesWithUrgentChildren(
+  nestedChildrenByParent: ReadonlyMap<string, readonly PluginSidebarThread[]>,
+  doneIds: ReadonlySet<string>,
+): ReadonlySet<string> {
+  const ids = new Set<string>();
+  for (const [parentId, children] of nestedChildrenByParent) {
+    if (
+      children.some(
+        (child) =>
+          !child.isArchived &&
+          !doneIds.has(child.id) &&
+          (threadState(child) === "unread" || threadState(child) === "attention"),
+      )
+    ) {
+      ids.add(parentId);
+    }
+  }
+  return ids;
+}
+
+/**
+ * Which collapsed families must expand because a nested child NEWLY entered
+ * the urgent set. A child that was already unread+ does not re-fire: the
+ * operator who collapsed a family while a child sat unread has stated the
+ * rows may stay folded, and the rule answers live changes ("a child just
+ * went unread under a folded card"), not a standing condition that would
+ * fight that gesture on every refresh.
+ */
+export function familiesToAutoExpand(
+  previousUrgent: ReadonlySet<string>,
+  currentUrgent: ReadonlySet<string>,
+  collapsedIds: ReadonlySet<string>,
+): string[] {
+  const out: string[] = [];
+  for (const id of currentUrgent) {
+    if (!previousUrgent.has(id) && collapsedIds.has(id)) out.push(id);
+  }
+  return out;
+}
+
+/**
  * Sort each parent's nested children in the order of the column the PARENT
  * sits in. The family moves as one unit: a child's stored rank is an id in
  * that column's list, and the parent is the card the operator actually drags,
@@ -537,12 +693,17 @@ function withAttentionFirst(
  * rest) the parent column's own order applies unchanged, so a family with no
  * urgent member reads exactly as it did before. An unranked column (or a
  * parent not found in any column) sorts purely by the board's derived order.
+ *
+ * Rows under a card in the Done column (a done parent's card) read in the
+ * Done column's own order instead: newest done first — urgent-first is an
+ * active-space language, and a done child cannot demand attention.
  */
 function sortNestedByColumnRank(
   nested: Map<string, PluginSidebarThread[]>,
   columns: readonly BoardColumn[],
   groupBy: GroupBy,
   ranks: RankStore,
+  doneTimes: ReadonlyMap<string, number>,
 ): void {
   const columnOfThread = new Map<string, string>();
   for (const column of columns) {
@@ -550,6 +711,10 @@ function sortNestedByColumnRank(
   }
   for (const [parentId, children] of nested) {
     const columnId = columnOfThread.get(parentId);
+    if (columnId === "done") {
+      children.sort(doneRecencyCompare(doneTimes));
+      continue;
+    }
     const order =
       columnId === undefined
         ? []
@@ -578,9 +743,11 @@ function nestedKeys(nested: ReadonlyMap<string, readonly PluginSidebarThread[]>)
  * non-matching members recorded in `dimmedIds` so the board can render them
  * at reduced opacity. A family where nothing matches is dropped whole.
  *
- * R2: archived members never contribute a match (an archived child matching
- * alone does not surface the family) — they ride along with a passing
- * family, dimmed, and render under the parent with their archived treatment.
+ * Archived members are hidden outright: the family index carries none of
+ * them, so an archived thread in the input forms its own (parentless)
+ * family, and since an archived thread never passes the filters its family
+ * drops whole — an archived child can neither ride along nor surface its
+ * family.
  */
 export function filterFamilies(
   threads: readonly PluginSidebarThread[],

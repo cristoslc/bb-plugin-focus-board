@@ -11,6 +11,8 @@ import {
 import {
   assembleBoard,
   buildFamilyIndex,
+  familiesToAutoExpand,
+  familiesWithUrgentChildren,
   familyColumnOverrides,
   filterFamilies,
   filterIndividually,
@@ -103,13 +105,22 @@ describe("buildFamilyIndex", () => {
     expect(index.rootIds.has("c")).toBe(false);
   });
 
-  it("includes archived children in the index (R2: archived children stay under the parent)", () => {
+  it("excludes archived members outright (an archived child is hidden, never indexed)", () => {
     const parent = thread({ id: "p" });
     const liveChild = thread({ id: "c", parentThreadId: "p" });
     const archivedChild = thread({ id: "a", parentThreadId: "p", isArchived: true });
     const index = buildFamilyIndex([parent, liveChild, archivedChild]);
-    expect(ids(index.childrenByParent.get("p"))).toEqual(["c", "a"]);
-    expect(index.parentOf.get("a")).toBe("p");
+    expect(ids(index.childrenByParent.get("p"))).toEqual(["c"]);
+    expect(index.parentOf.has("a")).toBe(false);
+  });
+
+  it("re-roots the children of an archived parent (they render standalone, not nowhere)", () => {
+    const archivedParent = thread({ id: "p", isArchived: true });
+    const liveChild = thread({ id: "c", parentThreadId: "p" });
+    const index = buildFamilyIndex([archivedParent, liveChild]);
+    expect(index.childrenByParent.has("p")).toBe(false);
+    expect(index.parentOf.has("c")).toBe(false);
+    expect(index.rootIds.has("c")).toBe(true);
   });
 });
 
@@ -478,7 +489,7 @@ describe("assembleBoard — the composition app.tsx wires", () => {
     expect(result.childCountByParent.get("p")).toBe(1);
   });
 
-  it("chip vs rows divergence: a promoted-only child counts on the chip but renders zero nested rows", () => {
+  it("chip vs rows divergence: a promoted child renders zero Done-card rows and zero chip there", () => {
     const parent = thread({ id: "p", updatedAt: NOW - HOUR }); // idle → done column
     const child = thread({ id: "c", parentThreadId: "p", isUnread: true, updatedAt: NOW - 2 * HOUR });
     const doneIds = new Set(["p"]);
@@ -486,10 +497,10 @@ describe("assembleBoard — the composition app.tsx wires", () => {
     // promoted (live child of a done parent) → no nested rows under p
     expect(result.nestedChildrenByParent.get("p") ?? []).toHaveLength(0);
     expect(result.nestedChildrenByParent.has("p")).toBe(false);
-    // …but the parent card still reports its one visible child. The card
-    // renders the chip whenever this count is > 0, even with zero nested
-    // rows; only the chevron (which toggles rows) stays gated on rows.
-    expect(result.childCountByParent.get("p")).toBe(1);
+    // the Done card's chip counts the rows it carries — the promoted child
+    // is not one of them; it is visible as its own unread card instead
+    expect(result.childCountByParent.get("p")).toBe(0);
+    expect(idsIn(result.columns, "unread")).toEqual(["c"]);
   });
 });
 
@@ -608,8 +619,12 @@ describe("assembleBoard — family columns (R4: the family moves as one unit)", 
     expect(idsIn(result.columns, "idle-earlier")).toEqual(["p"]);
     expect(idsIn(result.columns, "attention")).toEqual([]);
     expect(idsIn(result.columns, "working")).toEqual([]);
-    // both children still nest under the live parent
-    expect(ids(result.nestedChildrenByParent.get("p") ?? []).sort()).toEqual(["a", "d"]);
+    // the archived child is hidden outright, and the done child projects
+    // into the Done column under the family's card instead of nesting here
+    expect(columnOf(result.columns, "a")).toBeUndefined();
+    expect(result.nestedChildrenByParent.has("p")).toBe(false);
+    expect(ids(result.doneChildrenByParent.get("p"))).toEqual(["d"]);
+    expect(idsIn(result.columns, "done")).toEqual(["p"]);
   });
 
   it("a frozen column keeps a lifted family's parent where it was frozen", () => {
@@ -807,9 +822,178 @@ describe("familyColumnOverrides — the placement override map", () => {
   });
 });
 
-describe("assembleBoard — archived children (R2)", () => {
-  it("an archived child nests under its parent and never takes a column slot", () => {
+describe("assembleBoard — done children project into the Done column (families are a projection)", () => {
+  it("a done child of a live parent leaves the active card and nests under the family's Done card", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - 2 * DAY }); // idle-earlier
+    const doneChild = thread({ id: "d", parentThreadId: "p", updatedAt: NOW - HOUR });
+    const doneIds = new Set(["d"]);
+    const result = assembleBoard(
+      [parent, doneChild],
+      "status",
+      CONTEXT,
+      new Map(),
+      doneIds,
+      NOW,
+      { doneTimes: new Map([["d", NOW - HOUR]]) },
+    );
+    // the live card carries no done rows…
+    expect(result.nestedChildrenByParent.has("p")).toBe(false);
+    // …and the Done column holds the projection card with the child under it
+    expect(idsIn(result.columns, "done")).toEqual(["p"]);
+    expect(ids(result.doneChildrenByParent.get("p"))).toEqual(["d"]);
+    expect(columnOf(result.columns, "d")).toBeUndefined();
+  });
+
+  it("a mixed family splits across spaces: live rows stay, done rows project", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - 3 * HOUR }); // idle-today
+    const liveChild = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
+    const doneChild = thread({ id: "d", parentThreadId: "p", updatedAt: NOW - HOUR });
+    const doneIds = new Set(["d"]);
+    const result = assembleBoard(
+      [parent, liveChild, doneChild],
+      "status",
+      CONTEXT,
+      new Map(),
+      doneIds,
+      NOW,
+    );
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
+    expect(ids(result.doneChildrenByParent.get("p") ?? [])).toEqual(["d"]);
+    expect(idsIn(result.columns, "done")).toEqual(["p"]);
+    // each card's chip counts its own space: one live child here
+    expect(result.childCountByParent.get("p")).toBe(1);
+  });
+
+  it("all children done: the live card carries no rows and the Done card carries them all", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - 3 * HOUR });
+    const doneA = thread({ id: "d1", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
+    const doneB = thread({ id: "d2", parentThreadId: "p", updatedAt: NOW - HOUR });
+    const doneIds = new Set(["d1", "d2"]);
+    const doneTimes = new Map([
+      ["d1", NOW - 2 * HOUR],
+      ["d2", NOW - HOUR],
+    ]);
+    const result = assembleBoard(
+      [parent, doneA, doneB],
+      "status",
+      CONTEXT,
+      new Map(),
+      doneIds,
+      NOW,
+      { doneTimes },
+    );
+    expect(result.nestedChildrenByParent.has("p")).toBe(false);
+    expect(result.childCountByParent.get("p")).toBe(0);
+    expect(idsIn(result.columns, "done")).toEqual(["p"]);
+    // newest done first, the Done column's own order
+    expect(ids(result.doneChildrenByParent.get("p"))).toEqual(["d2", "d1"]);
+  });
+
+  it("a done parent keeps a single Done card: its done children nest under it, no separate projection", () => {
     const parent = thread({ id: "p", updatedAt: NOW - HOUR });
+    const doneChild = thread({ id: "d", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
+    const doneIds = new Set(["p", "d"]);
+    const result = assembleBoard(
+      [parent, doneChild],
+      "status",
+      CONTEXT,
+      new Map(),
+      doneIds,
+      NOW,
+    );
+    expect(idsIn(result.columns, "done")).toEqual(["p"]);
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["d"]);
+    expect(result.doneChildrenByParent.size).toBe(0);
+    // the Done card's chip counts the rows it carries
+    expect(result.childCountByParent.get("p")).toBe(1);
+  });
+
+  it("a done child with a hot raw state still nests under the done parent's card (done beats state)", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - HOUR });
+    const doneChild = thread({
+      id: "d",
+      parentThreadId: "p",
+      status: "active", // live it would promote to working
+      updatedAt: NOW - 2 * HOUR,
+    });
+    const doneIds = new Set(["p", "d"]);
+    const result = assembleBoard(
+      [parent, doneChild],
+      "status",
+      CONTEXT,
+      new Map(),
+      doneIds,
+      NOW,
+    );
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["d"]);
+    expect(idsIn(result.columns, "working")).toEqual([]);
+  });
+
+  it("an axis-mismatched done child still joins the family's Done card (Done is its own space)", () => {
+    const parent = thread({ id: "p", projectId: "proj_a", updatedAt: NOW - 2 * HOUR });
+    const doneChild = thread({
+      id: "d",
+      parentThreadId: "p",
+      projectId: "proj_b",
+      updatedAt: NOW - HOUR,
+    });
+    const doneIds = new Set(["d"]);
+    const result = assembleBoard(
+      [parent, doneChild],
+      "project",
+      CONTEXT,
+      new Map(),
+      doneIds,
+      NOW,
+    );
+    expect(ids(result.doneChildrenByParent.get("p") ?? [])).toEqual(["d"]);
+    expect(idsIn(result.columns, "done")).toEqual(["p"]);
+    expect(columnOf(result.columns, "d")).toBeUndefined();
+  });
+
+  it("the Done projection sorts by its most recent done child", () => {
+    const older = thread({ id: "p1", updatedAt: NOW - 5 * HOUR });
+    const newer = thread({ id: "p2", updatedAt: NOW - 5 * HOUR });
+    const olderDoneChild = thread({ id: "d1", parentThreadId: "p1", updatedAt: NOW - 4 * HOUR });
+    const newerDoneChild = thread({ id: "d2", parentThreadId: "p2", updatedAt: NOW - 3 * HOUR });
+    const doneIds = new Set(["d1", "d2"]);
+    const doneTimes = new Map([
+      ["d1", NOW - 4 * HOUR],
+      ["d2", NOW - 3 * HOUR],
+    ]);
+    const result = assembleBoard(
+      [older, newer, olderDoneChild, newerDoneChild],
+      "status",
+      CONTEXT,
+      new Map(),
+      doneIds,
+      NOW,
+      { doneTimes },
+    );
+    expect(idsIn(result.columns, "done")).toEqual(["p2", "p1"]);
+  });
+
+  it("leaves flat mode alone: with nesting off, done children stand alone in Done", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - 2 * HOUR });
+    const doneChild = thread({ id: "d", parentThreadId: "p", updatedAt: NOW - HOUR });
+    const doneIds = new Set(["d"]);
+    const result = assembleBoard(
+      [parent, doneChild],
+      "status",
+      CONTEXT,
+      new Map(),
+      doneIds,
+      NOW,
+      { nestingEnabled: false },
+    );
+    expect(idsIn(result.columns, "done")).toEqual(["d"]);
+    expect(result.doneChildrenByParent.size).toBe(0);
+  });
+});
+
+describe("assembleBoard — archived children are hidden outright", () => {
+  it("an archived child renders nowhere: no column slot, no nested row, no chip count", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - 30 * 60 * 1000 }); // idle-recent
     const archivedChild = thread({
       id: "a",
       parentThreadId: "p",
@@ -824,13 +1008,15 @@ describe("assembleBoard — archived children (R2)", () => {
       new Set(),
       NOW,
     );
-    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["a"]);
+    expect(idsIn(result.columns, "idle-recent")).toEqual(["p"]);
+    expect(result.nestedChildrenByParent.has("p")).toBe(false);
     expect(columnOf(result.columns, "a")).toBeUndefined();
-    // chip counts include archived children
-    expect(result.childCountByParent.get("p")).toBe(1);
+    // the chip counts only the children a card actually carries (no entry at
+    // all when the family has no visible children; the card falls back to 0)
+    expect(result.childCountByParent.get("p") ?? 0).toBe(0);
   });
 
-  it("an archived child never promotes in Attention grouping (archived overrides promotion)", () => {
+  it("an archived child never promotes (hidden beats hot)", () => {
     const parent = thread({ id: "p", updatedAt: NOW - HOUR }); // idle
     const archivedChild = thread({
       id: "a",
@@ -848,10 +1034,11 @@ describe("assembleBoard — archived children (R2)", () => {
       NOW,
     );
     expect(idsIn(result.columns, "unread")).not.toContain("a");
-    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["a"]);
+    expect(result.nestedChildrenByParent.has("p")).toBe(false);
+    expect(columnOf(result.columns, "a")).toBeUndefined();
   });
 
-  it("an archived cross-project child stays under the parent (archived overrides axis-match)", () => {
+  it("an archived cross-project child is hidden in axis groupings too", () => {
     const parent = thread({ id: "p", projectId: "proj_a" });
     const archivedChild = thread({
       id: "a",
@@ -868,9 +1055,8 @@ describe("assembleBoard — archived children (R2)", () => {
       new Set(),
       NOW,
     );
-    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["a"]);
+    expect(result.nestedChildrenByParent.has("p")).toBe(false);
     expect(columnOf(result.columns, "a")).toBeUndefined();
-    expect(columnOf(result.columns, "a")?.id).toBeUndefined();
   });
 
   it("an archived child with no present parent renders nowhere (archived orphans vanish)", () => {
@@ -895,30 +1081,45 @@ describe("assembleBoard — archived children (R2)", () => {
     expect(columnOf(result.columns, "a")).toBeUndefined();
   });
 
-  it("a live parent keeps archived children in the chip count alongside live children", () => {
-    const parent = thread({ id: "p", updatedAt: NOW - HOUR });
-    const liveChild = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
-    const archivedChild = thread({
-      id: "a",
+  it("a live child of an archived parent re-roots and renders standalone", () => {
+    const archivedParent = thread({ id: "p", isArchived: true });
+    const liveChild = thread({
+      id: "c",
       parentThreadId: "p",
-      isArchived: true,
-      updatedAt: NOW - 3 * HOUR,
+      status: "active",
+      updatedAt: NOW - HOUR,
     });
     const result = assembleBoard(
-      [parent, liveChild, archivedChild],
+      [archivedParent, liveChild],
       "status",
       CONTEXT,
       new Map(),
       new Set(),
       NOW,
     );
-    expect(result.childCountByParent.get("p")).toBe(2);
-    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c", "a"]);
+    expect(idsIn(result.columns, "working")).toEqual(["c"]);
+    expect(result.nestedChildrenByParent.size).toBe(0);
+  });
+
+  it("a done child of an archived parent renders standalone in Done (no projection for a hidden parent)", () => {
+    const archivedParent = thread({ id: "p", isArchived: true });
+    const doneChild = thread({ id: "d", parentThreadId: "p", updatedAt: NOW - HOUR });
+    const doneIds = new Set(["d"]);
+    const result = assembleBoard(
+      [archivedParent, doneChild],
+      "status",
+      CONTEXT,
+      new Map(),
+      doneIds,
+      NOW,
+    );
+    expect(idsIn(result.columns, "done")).toEqual(["d"]);
+    expect(result.doneChildrenByParent.size).toBe(0);
   });
 });
 
-describe("filterFamilies with archived members (R2)", () => {
-  it("archived members ride along with a passing family (dimmed), never contribute a match", () => {
+describe("filterFamilies with archived members", () => {
+  it("archived members are hidden: they neither ride along nor contribute a match", () => {
     const parent = thread({ id: "p", updatedAt: NOW - HOUR });
     const archivedChild = thread({
       id: "a",
@@ -928,9 +1129,8 @@ describe("filterFamilies with archived members (R2)", () => {
     });
     const index = buildFamilyIndex([parent, archivedChild]);
     const result = filterFamilies([parent, archivedChild], index, EMPTY_FILTER, "");
-    expect(result.kept.map((t) => t.id).sort()).toEqual(["a", "p"]);
-    expect(result.dimmedIds.has("a")).toBe(true);
-    expect(result.dimmedIds.has("p")).toBe(false);
+    expect(result.kept.map((t) => t.id)).toEqual(["p"]);
+    expect(result.dimmedIds.size).toBe(0);
   });
 
   it("an archived child matching alone does not surface the family", () => {
@@ -1101,16 +1301,20 @@ describe("assembleBoard — empty columns hide entirely", () => {
     expect(idsIn(result.columns, "idle-recent")).toEqual(["p"]);
   });
 
-  it("the Done column hides too when its only card is a done child of a live parent", () => {
-    // A done child of a live parent nests (the Done lane cannot relocate for
-    // a done PARENT; a done CHILD of a live parent rides its family). The
-    // Done column that held only that child drains empty and must go.
+  it("the Done column keeps its projection card when a family's only done child moves into it", () => {
+    // A done child of a live parent projects into the Done space: the child
+    // drains out of the Done column and the family's projection card takes
+    // its place — the lane never parks empty, and the child never nests
+    // under the live parent's active card.
     const parent = thread({ id: "p", status: "active", updatedAt: NOW - HOUR });
     const child = thread({ id: "c", parentThreadId: "p", updatedAt: NOW - 2 * HOUR });
     const doneIds = new Set(["c"]);
-    const result = assembleBoard([parent, child], "status", CONTEXT, new Map(), new Set(), NOW);
-    expect(result.columns.find((column) => column.id === "done")).toBeUndefined();
-    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["c"]);
+    const result = assembleBoard([parent, child], "status", CONTEXT, new Map(), doneIds, NOW);
+    expect(
+      result.columns.find((column) => column.id === "done")?.threads.map((t) => t.id),
+    ).toEqual(["p"]);
+    expect(result.nestedChildrenByParent.has("p")).toBe(false);
+    expect(ids(result.doneChildrenByParent.get("p") ?? [])).toEqual(["c"]);
   });
 
   it("a column that still holds a card is never hidden by the rule", () => {
@@ -1177,5 +1381,80 @@ describe("urgent nested children float to the top of the family's rows", () => {
     const columns = buildColumns(threads, "status", CONTEXT, new Map(), new Set(), NOW);
     const nested = nestUnderParents(columns, threads, "status", CONTEXT, NOW);
     expect(ids(nested.childrenByParent.get("p"))).toEqual(["u2", "u1", "n"]);
+  });
+});
+describe("familiesWithUrgentChildren (auto-expand source set)", () => {
+  const child = (overrides: Partial<PluginSidebarThread>) =>
+    thread({ parentThreadId: "thr_parent", ...overrides });
+
+  it("counts a parent whose nested child is unread", () => {
+    const children = new Map([["thr_parent", [child({ id: "thr_c", isUnread: true })]]]);
+    expect(familiesWithUrgentChildren(children, new Set())).toEqual(new Set(["thr_parent"]));
+  });
+
+  it("counts needs-you (pending interaction) children", () => {
+    const children = new Map([["thr_parent", [child({ id: "thr_c", hasPendingInteraction: true })]]]);
+    expect(familiesWithUrgentChildren(children, new Set())).toEqual(new Set(["thr_parent"]));
+  });
+
+  it("skips working and idle children — a quiet family never demands expansion", () => {
+    const children = new Map([
+      [
+        "thr_parent",
+        [
+          child({ id: "thr_work", status: "active", updatedAt: 1000 }),
+          child({ id: "thr_idle" }),
+        ],
+      ],
+    ]);
+    expect(familiesWithUrgentChildren(children, new Set()).size).toBe(0);
+  });
+
+  it("never counts archived children — stale state must not demand attention", () => {
+    const children = new Map([["thr_parent", [child({ id: "thr_c", isUnread: true, isArchived: true })]]]);
+    expect(familiesWithUrgentChildren(children, new Set()).size).toBe(0);
+  });
+
+  it("never counts done children — completed state must not demand attention", () => {
+    const children = new Map([["thr_parent", [child({ id: "thr_c", isUnread: true })]]]);
+    expect(familiesWithUrgentChildren(children, new Set(["thr_c"])).size).toBe(0);
+  });
+
+  it("returns nothing for an empty nesting map", () => {
+    expect(familiesWithUrgentChildren(new Map(), new Set()).size).toBe(0);
+  });
+});
+
+describe("familiesToAutoExpand (transition rule)", () => {
+  it("expands a collapsed family whose child newly entered the urgent set", () => {
+    const expanded = familiesToAutoExpand(
+      new Set(),
+      new Set(["thr_p1", "thr_p2"]),
+      new Set(["thr_p1", "thr_p9"]),
+    );
+    expect(expanded).toEqual(["thr_p1"]);
+  });
+
+  it("does not re-fire for a child that was already unread — a deliberate collapse stands", () => {
+    const expanded = familiesToAutoExpand(
+      new Set(["thr_p1"]),
+      new Set(["thr_p1"]),
+      new Set(["thr_p1"]),
+    );
+    expect(expanded).toEqual([]);
+  });
+
+  it("ignores newly-urgent families that are not collapsed", () => {
+    const expanded = familiesToAutoExpand(new Set(), new Set(["thr_p1"]), new Set());
+    expect(expanded).toEqual([]);
+  });
+
+  it("expands every newly-urgent collapsed family, not just the first", () => {
+    const expanded = familiesToAutoExpand(
+      new Set(),
+      new Set(["thr_p1", "thr_p2"]),
+      new Set(["thr_p1", "thr_p2"]),
+    );
+    expect(expanded.sort()).toEqual(["thr_p1", "thr_p2"]);
   });
 });

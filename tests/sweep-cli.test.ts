@@ -6,6 +6,7 @@ import {
 import type { BbPluginApi } from "@get-bb/plugin-sdk";
 import type { FakePluginHarness } from "@get-bb/plugin-sdk/testing";
 import server from "../server";
+import { SNOOZE_METADATA_KEY } from "../lib/snooze";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 // The server CLI sweeps with the real clock (the pure eligibility core takes
@@ -278,6 +279,25 @@ describe("bb focus-board sweep", () => {
         (JSON.parse(result.stdout) as { eligible: Array<{ id: string }> })
           .eligible.map((entry) => entry.id),
       ).toEqual(["thr_quiet"]);
+    });
+
+    it("a snoozed thread sleeps through the sweep; the snooze beats the sweep", async () => {
+      await load();
+      listedThreads = [
+        idleThread("thr_snoozed", 90),
+        idleThread("thr_awake", 90),
+      ];
+      metadata.set("thr_snoozed", {
+        [SNOOZE_METADATA_KEY]: {
+          wakeAt: new Date(NOW + DAY_MS).toISOString(),
+          setAt: iso(DAY_MS),
+        },
+      });
+      const result = await harness.behavior.runCli(["sweep", "--json"]);
+      expect(
+        (JSON.parse(result.stdout) as { eligible: Array<{ id: string }> })
+          .eligible.map((entry) => entry.id),
+      ).toEqual(["thr_awake"]);
     });
   });
 

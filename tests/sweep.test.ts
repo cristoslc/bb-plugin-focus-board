@@ -6,10 +6,12 @@ import {
   DEFAULT_IDLE_ARCHIVE_MS,
   armSweep,
   confirmSweep,
+  sweepArmPreselects,
   sweepCandidatesForDoneColumn,
   sweepCandidatesForIdleColumn,
   sweepColumnKind,
   sweepDestination,
+  sweepRemovesThreads,
   toggleSweepSelection,
 } from "../lib/sweep";
 
@@ -387,22 +389,67 @@ describe("manual sweep selection (click to toggle while armed)", () => {
 });
 
 describe("column classification", () => {
-  it("names the sweepable columns; done vs idle-bucket; null for others", () => {
+  it("names the sweepable columns; null for lanes that never sweep", () => {
     expect(sweepColumnKind("done")).toBe("done");
     expect(sweepColumnKind("idle-awhile")).toBe("idle-bucket");
+    expect(sweepColumnKind("idle-earlier")).toBe("idle-bucket");
+    expect(sweepColumnKind("idle-today")).toBe("idle-bucket");
+    expect(sweepColumnKind("idle-recent")).toBe("idle-bucket");
     expect(sweepColumnKind("awhile")).toBe("idle-bucket");
+    expect(sweepColumnKind("pinned")).toBe("pinned");
+    expect(sweepColumnKind("unread")).toBe("unread");
+    // Needs You and Working never sweep: attention is not the operator's to
+    // clear, and running threads cannot be swept out from under themselves.
+    expect(sweepColumnKind("attention")).toBeNull();
     expect(sweepColumnKind("working")).toBeNull();
-    expect(sweepColumnKind("idle-earlier")).toBeNull();
     expect(sweepColumnKind("earlier")).toBeNull();
-    expect(sweepColumnKind("pinned")).toBeNull();
   });
 
-  it("sends each arm to its own destination: Done-age archives, long-idle marks Done", () => {
+  it("sends each arm to its own destination", () => {
     expect(sweepDestination("done")).toBe("archive");
     expect(sweepDestination("idle-awhile")).toBe("done");
+    expect(sweepDestination("idle-earlier")).toBe("done");
+    expect(sweepDestination("idle-today")).toBe("done");
+    expect(sweepDestination("idle-recent")).toBe("done");
     expect(sweepDestination("awhile")).toBe("done");
+    expect(sweepDestination("pinned")).toBe("unpinned");
+    expect(sweepDestination("unread")).toBe("read");
+    expect(sweepDestination("attention")).toBeNull();
     expect(sweepDestination("working")).toBeNull();
-    expect(sweepDestination("idle-earlier")).toBeNull();
+  });
+
+  it("only the archive and Done arms remove threads from the live board", () => {
+    expect(sweepRemovesThreads("done")).toBe(true);
+    expect(sweepRemovesThreads("idle-awhile")).toBe(true);
+    // Unpinning and marking read leave the thread live in place, so the
+    // sweep-family contract (live-child parents refuse) does not apply.
+    expect(sweepRemovesThreads("pinned")).toBe(false);
+    expect(sweepRemovesThreads("unread")).toBe(false);
+  });
+});
+
+describe("arm pre-selection", () => {
+  it("the aged-out arms pre-select their past-threshold candidates", () => {
+    expect(sweepArmPreselects("done")).toBe(true);
+    expect(sweepArmPreselects("idle-awhile")).toBe(true);
+    expect(sweepArmPreselects("awhile")).toBe(true);
+  });
+
+  it("every other sweepable arm enters sweep mode with nothing selected", () => {
+    // 2026-10-03 operator decision: Pinned, Unread, and the idle buckets
+    // fresher than A-while-ago are curated by clicking cards — arming
+    // pre-selects nothing, so the pill never proposes a bulk sweep the
+    // operator did not build by hand.
+    expect(sweepArmPreselects("pinned")).toBe(false);
+    expect(sweepArmPreselects("unread")).toBe(false);
+    expect(sweepArmPreselects("idle-earlier")).toBe(false);
+    expect(sweepArmPreselects("idle-today")).toBe(false);
+    expect(sweepArmPreselects("idle-recent")).toBe(false);
+  });
+
+  it("non-sweepable columns never pre-select", () => {
+    expect(sweepArmPreselects("attention")).toBe(false);
+    expect(sweepArmPreselects("working")).toBe(false);
   });
 });
 

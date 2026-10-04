@@ -86,12 +86,45 @@ _Nothing unreleased — bullets land here as work merges._
 `;
 
 describe("parseUnreleasedChangelog", () => {
-  it("extracts bullets from the group, unwrapped and unbolded", () => {
+  it("extracts bullets from the group as text-plus-children records", () => {
     const parsed = parseUnreleasedChangelog(FULL_CHANGELOG_FIXTURE);
     expect(parsed.items).toEqual([
-      "First. Multi line continuation.",
-      "Second. Plain.",
-      "Third. After a subsection.",
+      { text: "**First.** Multi line continuation.", children: [] },
+      { text: "**Second.** Plain.", children: [] },
+      { text: "**Third.** After a subsection.", children: [] },
+    ]);
+  });
+
+  it("keeps two-space-indent sub-bullets as children of their bullet", () => {
+    // A grouped bullet is one col-zero lead with related sub-bullets under
+    // it; each child joins its own continuations and stays its own record.
+    const markdown = [
+      "## [Unreleased]",
+      "",
+      "### Changed",
+      "",
+      "- **Sweep rebuild.** The flow is opt-in now.",
+      "  - **Sweep mode is manual.** Enter any time.",
+      "  - **A sweep can be cancelled,** and the undo restores",
+      "    exactly the ids the run archived.",
+    ].join("\n");
+    const parsed = parseUnreleasedChangelog(markdown);
+    expect(parsed.items).toEqual([
+      {
+        text: "**Sweep rebuild.** The flow is opt-in now.",
+        children: [
+          "**Sweep mode is manual.** Enter any time.",
+          "**A sweep can be cancelled,** and the undo restores exactly the ids the run archived.",
+        ],
+      },
+    ]);
+  });
+
+  it("extracts published sub-bullets as children of their bullet", () => {
+    const parsed = parsePublishedChangelog(FULL_CHANGELOG_FIXTURE);
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].subsections[0].bullets).toEqual([
+      { text: "**Old.** Released work stays out.", children: [] },
     ]);
   });
 
@@ -107,7 +140,9 @@ describe("parseUnreleasedChangelog", () => {
     const parsed = parseUnreleasedChangelog(
       "## [Unreleased]\n\n- **New.** Unreleased work\n\n## [0.5.21] - 2026-09-30\n\n- **Old.** Released work\n",
     );
-    expect(parsed.items).toEqual(["New. Unreleased work"]);
+    expect(parsed.items).toEqual([
+      { text: "**New.** Unreleased work", children: [] },
+    ]);
   });
 });
 
@@ -189,7 +224,10 @@ describe("whatsNewEntriesFor", () => {
       const head = {
         version: "0.6.0-dev",
         unreleased: true,
-        items: UNRELEASED_ITEMS.map(leadFromBullet),
+        items: UNRELEASED_ITEMS.map((item) => ({
+          lead: leadFromBullet(item.text),
+          children: item.children.map(leadFromBullet).filter(Boolean),
+        })),
       };
       expect(whatsNewEntriesFor("0.6.0-dev", true, null)).toEqual([head]);
       expect(whatsNewEntriesFor("0.6.0-dev", false, null)).toEqual([head, ...WHATS_NEW]);
@@ -226,14 +264,18 @@ describe("WHATS_NEW derives from CHANGELOG.md's published sections", () => {
     }
   });
 
-  it("gives every entry a sentence-lead item set", () => {
+  it("gives every entry an item set of sentence leads plus children", () => {
     for (const entry of WHATS_NEW) {
       expect(entry.items.length).toBeGreaterThan(0);
       for (const item of entry.items) {
-        // Every item is the bullet's first sentence: terminal punctuation,
+        // Every lead is the bullet's first sentence: terminal punctuation,
         // no stray bold markup, and — unlike a bullet — no doc links.
-        expect(item).toMatch(/[.!?]$/);
-        expect(item).not.toMatch(/\*\*/);
+        expect(item.lead).toMatch(/[.!?]$/);
+        expect(item.lead).not.toMatch(/\*\*/);
+        for (const child of item.children ?? []) {
+          expect(child).toMatch(/[.!?]$/);
+          expect(child).not.toMatch(/\*\*/);
+        }
       }
     }
   });
@@ -278,6 +320,8 @@ describe("entriesSince", () => {
   it("returns entries strictly newer than the stored version", () => {
     const entries = entriesSince("0.4.2");
     expect(entries.map((entry) => entry.version)).toEqual([
+      "0.7.0",
+      "0.6.0",
       "0.5.21",
       "0.5.20",
       "0.5.19",

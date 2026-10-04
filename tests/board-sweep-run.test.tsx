@@ -37,6 +37,7 @@ function renderBoard(
     doneIds,
     nestedChildrenByParent: new Map<string, readonly PluginSidebarThread[]>(),
     childCountByParent: new Map<string, number>(),
+    doneChildrenByParent: new Map<string, readonly PluginSidebarThread[]>(),
     dimmedIds: new Set<string>(),
     projectNameFor: () => "One",
     repoBaseFor: () => null,
@@ -124,7 +125,7 @@ describe("Board sweep run", () => {
         activeId: "thr_d2",
       } satisfies SweepRunView,
     });
-    expect(sweepButton().textContent).toContain("Sweeping 1 of 3");
+    expect(sweepButton().textContent).toContain("1 of 3");
     fireEvent.click(sweepButton());
     expect(onSweepConfirm).not.toHaveBeenCalled();
   });

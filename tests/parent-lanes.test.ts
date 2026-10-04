@@ -95,15 +95,11 @@ describe("buildParentLanes — lane building", () => {
     expect(lanes).toHaveLength(0);
   });
 
-  it("an archived-only family still shows a lane header with archived riders", () => {
+  it("an archived-only family renders no lane (archived children are hidden)", () => {
     const parent = thread({ id: "p" });
     const archived = thread({ id: "a", parentThreadId: "p", isArchived: true });
     const lanes = buildParentLanes([parent, archived], new Set(), NOW);
-    expect(laneIds(lanes)).toEqual(["p"]);
-    const lane = laneOf(lanes, "p")!;
-    expect(lane.childCount).toBe(1);
-    expect(idsOf(lane.archivedChildren)).toEqual(["a"]);
-    expect(lane.rows.every((row) => row.threads.length === 0)).toBe(true);
+    expect(lanes).toHaveLength(0);
   });
 });
 
@@ -300,12 +296,12 @@ describe("buildParentLanes — cell order", () => {
 });
 
 describe("buildParentLanes — header facts", () => {
-  it("child-count chip counts every child, archived included", () => {
+  it("child-count chip counts every visible child (archived are hidden)", () => {
     const parent = thread({ id: "p" });
     const live = thread({ id: "live", parentThreadId: "p" });
     const archived = thread({ id: "arch", parentThreadId: "p", isArchived: true });
     const lanes = buildParentLanes([parent, live, archived], new Set(), NOW);
-    expect(laneOf(lanes, "p")?.childCount).toBe(2);
+    expect(laneOf(lanes, "p")?.childCount).toBe(1);
   });
 
   it("state dot is driven by the parent thread's own state", () => {
@@ -325,23 +321,16 @@ describe("buildParentLanes — header facts", () => {
   });
 });
 
-describe("buildParentLanes — archived riders (D7)", () => {
-  it("archived children render as riders under the family header", () => {
+describe("buildParentLanes — archived children are hidden", () => {
+  it("archived children render nowhere: no riders, no row cells, no lane of their own", () => {
     const parent = thread({ id: "p" });
     const live = thread({ id: "live", parentThreadId: "p" });
     const archived = thread({ id: "arch", parentThreadId: "p", isArchived: true });
     const lanes = buildParentLanes([parent, live, archived], new Set(), NOW);
     const lane = laneOf(lanes, "p")!;
     expect(idsOf(rowOf(lane, "idle-awhile"))).toEqual(["live"]);
-    expect(idsOf(lane.archivedChildren)).toEqual(["arch"]);
-  });
-
-  it("archived children never appear in a row cell", () => {
-    const parent = thread({ id: "p" });
-    const archived = thread({ id: "arch", parentThreadId: "p", isArchived: true });
-    const lanes = buildParentLanes([parent, archived], new Set(), NOW);
-    const lane = laneOf(lanes, "p")!;
     expect(lane.rows.every((row) => !idsOf(row.threads).includes("arch"))).toBe(true);
+    expect(laneIds(lanes)).toEqual(["p"]);
   });
 });
 

@@ -1,16 +1,27 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { BoardColumn, GroupBy } from "./grouping";
 import { threadState } from "./grouping";
 import {
+  SWEEP_DESTINATION_LABELS,
+  SWEEP_SETTLED_WORDS,
   sweepColumnKind,
   sweepDestination,
+  sweepRemovesThreads,
   type ArmedSweep,
   type SweepDestination,
   type SweepNotice,
   type SweepRunView,
 } from "../lib/sweep";
 import { ThreadCard } from "./thread-card";
+import { containerSlideX, listScrollY } from "./board-scroll";
 import type { CardMenuAction } from "./thread-card-menu";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
@@ -76,8 +87,22 @@ interface BoardProps {
    * child-count chip, which counts children that render standalone too.
    */
   childCountByParent: ReadonlyMap<string, number>;
+  /**
+   * Parent id → done children that render nested under the family's
+   * projection card in the Done column. A live parent's card in the Done
+   * column IS that projection: it shows the done portion of the family while
+   * the active card keeps the live portion.
+   */
+  doneChildrenByParent: ReadonlyMap<string, readonly PluginSidebarThread[]>;
   /** Family members that did not match the active filters; rendered dimmed. */
   dimmedIds: ReadonlySet<string>;
+  /**
+   * Parent ids whose nested rows are collapsed, persisted by the caller.
+   * Absent → each card holds its own unpersisted collapse state.
+   */
+  collapsedFamilyIds?: ReadonlySet<string>;
+  /** Reports a family card's collapse/expand gesture (parent id, new state). */
+  onFamilyCollapsedChange?: (parentId: string, collapsed: boolean) => void;
   projectNameFor: (projectId: string) => string;
   /** GitHub repo base per project ("https://github.com/owner/repo"), when known. */
   repoBaseFor: (projectId: string) => string | null;
@@ -120,8 +145,21 @@ interface BoardProps {
    * exactly as before this prop existed.
    */
   onDropPinned?: (threadId: string) => void;
+  /**
+   * One-shot lane-reveal request from a menu action that relocates a card
+   * (see the reveal effect inside `Board`). Seq-numbered so the board can
+   * consume each request exactly once; optional because only app.tsx issues
+   * them today.
+   */
+  reveal?: { threadId: string; seq: number } | null;
   /** Right-click menu actions for one thread, sidebar-menu style. */
   menuActionsFor: (thread: PluginSidebarThread) => readonly CardMenuAction[];
+  /**
+   * Snooze wake lookup (lib/snooze): the wake epoch-ms for a snoozed thread,
+   * null otherwise. Wired through to cards — dim in place, the wake chip,
+   * and the card-level drag refusal.
+   */
+  snoozeFor?: (threadId: string) => number | null;
   /**
    * Sweep wiring: eligibility per column (empty when nothing is eligible),
    * and the armed lifecycle. Arming pre-selects the past-threshold
@@ -152,8 +190,11 @@ interface BoardProps {
   onSweepToggle?: (threadId: string) => void;
   /**
    * Threads that may never join a sweep (live-child parents, the
-   * sweep-family contract). In sweep mode their cards neither select nor
-   * carry the selectable ring, and clicking one refuses on screen.
+   * sweep-family contract). Arm-scoped: only the arms whose action removes
+   * the thread from the live board (Done → Archive, idle → Done) apply it;
+   * Pinned and Unread sweeps leave threads live, so parents join there. In
+   * a blocked arm their cards neither select nor carry the selectable ring,
+   * and clicking one refuses on screen.
    */
   sweepBlockedIds?: ReadonlySet<string>;
   onSweepArm?: (columnId: string) => void;
@@ -173,6 +214,10 @@ const DOT_CLASS: Record<string, string> = {
   unread: "bg-emerald-500",
   idle: "bg-muted-foreground/30",
 };
+
+/** The running pill's aria-label word: what the sweep has done so far. */
+const settledSoFar = (destination: SweepDestination): string =>
+  `${SWEEP_SETTLED_WORDS[destination]} so far`;
 
 function StateDot({ thread }: { thread: PluginSidebarThread }) {
   return (
@@ -203,11 +248,8 @@ function SweepButton({
   onArm: () => void;
   onConfirm: () => void;
 }) {
-  const destinationLabel = destination === "done" ? "Done" : "Archive";
-  const settledWord = destination === "done" ? "marked Done so far" : "archived so far";
-  // The pill's leading glyph names the destination: the Done arm leads to
-  // the archive; the idle arm leads to Done.
-  const destinationIcon = destination === "done" ? "Check" : "Archive";
+  const destinationLabel = SWEEP_DESTINATION_LABELS[destination];
+  const settledWord = settledSoFar(destination);
   if (run !== null) {
     return (
       <button
@@ -218,7 +260,7 @@ function SweepButton({
         className="inline-flex h-5 shrink-0 cursor-default items-center gap-1 whitespace-nowrap rounded bg-amber-500/90 px-1.5 text-[10px] font-medium text-amber-950"
       >
         <Icon name="Spinner" className="size-3 animate-spin" aria-hidden />
-        Sweeping {run.done} of {run.total}
+        {run.done} of {run.total}
       </button>
     );
   }
@@ -226,6 +268,10 @@ function SweepButton({
   // demand, even when nothing is past the threshold yet. With no
   // pre-selection the button is icon-only; armed, it confirms whatever the
   // operator's live selection holds, and an empty selection cannot confirm.
+  // The broom is the pill's only glyph and the word "Sweep" appears
+  // nowhere: the word repeated on every column header read as noise, and
+  // the broom plus the count (plus the destination, armed) carries the
+  // meaning at a glance.
   const inert = isArmed && eligibleCount === 0;
   return (
     <button
@@ -256,17 +302,8 @@ function SweepButton({
         inert && "cursor-default opacity-60",
       )}
     >
-      <Icon name={destinationIcon} className="size-3" aria-hidden />
-      {isArmed ? (
-        <>
-          Sweep {eligibleCount} → {destinationLabel}
-        </>
-      ) : (
-        <>
-          Sweep
-          {eligibleCount > 0 ? ` ${eligibleCount}` : ""}
-        </>
-      )}
+      <Icon name="Broom" className="size-3" aria-hidden />
+      {isArmed ? `${eligibleCount} → ${destinationLabel}` : eligibleCount > 0 ? eligibleCount : null}
     </button>
   );
 }
@@ -278,7 +315,10 @@ export function Board({
   doneIds,
   nestedChildrenByParent,
   childCountByParent,
+  doneChildrenByParent,
   dimmedIds,
+  collapsedFamilyIds,
+  onFamilyCollapsedChange,
   projectNameFor,
   repoBaseFor,
   statusFor,
@@ -290,7 +330,9 @@ export function Board({
   onDropDone,
   onDropUnread,
   onDropPinned,
+  reveal = null,
   menuActionsFor,
+  snoozeFor,
   sweepCandidatesFor,
   armedSweep = null,
   sweepRun = null,
@@ -337,28 +379,17 @@ export function Board({
     const keepActiveCardInView = () => {
       const card = container.querySelector(`[data-thread-card="${CSS.escape(activeThreadId)}"]`);
       if (!(card instanceof HTMLElement)) return;
-      const cardRect = card.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
       // Horizontal: the pane opening (or a drag resize) narrows the visible
-      // range; slide the card back inside it.
-      if (cardRect.left < containerRect.left) {
-        container.scrollLeft -= containerRect.left - cardRect.left;
-      } else if (cardRect.right > containerRect.right) {
-        container.scrollLeft += cardRect.right - containerRect.right;
-      }
-      // Vertical: a lane taller than the board scrolls its own list, and a
-      // card that history just restored (deep link, back/forward — no click
-      // preceded it) can sit below the fold. scrollIntoView would scroll
-      // every ancestor including the host page, so adjust the lane list
-      // directly, the same way the horizontal case does.
+      // range; slide the card back inside it. Vertical: a lane taller than
+      // the board scrolls its own list, and a card that history just restored
+      // (deep link, back/forward — no click preceded it) can sit below the
+      // fold; the list is adjusted directly — never scrollIntoView, which
+      // would scroll every ancestor including the host page.
+      const cardRect = card.getBoundingClientRect();
+      container.scrollLeft += containerSlideX(container.getBoundingClientRect(), cardRect);
       const list = card.closest("[data-card-list]");
       if (list instanceof HTMLElement) {
-        const listRect = list.getBoundingClientRect();
-        if (cardRect.top < listRect.top) {
-          list.scrollTop -= listRect.top - cardRect.top;
-        } else if (cardRect.bottom > listRect.bottom) {
-          list.scrollTop += cardRect.bottom - listRect.bottom;
-        }
+        list.scrollTop += listScrollY(list.getBoundingClientRect(), cardRect);
       }
     };
     keepActiveCardInView();
@@ -370,6 +401,48 @@ export function Board({
     // activeCardLaneId re-fits when the active card relocates (pin, done,
     // archive, grouping change) without firing on same-lane data refreshes.
   }, [activeThreadId, activeCardLaneId]);
+
+  // One-shot, intent-scoped bring-into-view (`revealRequest` from app.tsx):
+  // every menu action that relocates a card — Pin/Unpin into or out of the
+  // far-left Pinned lane, Mark Done/Not Done into or out of the far-right
+  // Done lane, Mark Read/Unread out of the Unread column — moves a card the
+  // pane never opened, so the keep-in-view effect above (which follows the
+  // ACTIVE card) has no key on it, and in a scrolled board the destination
+  // lane can be offscreen: the menu action reads as the card silently
+  // vanishing from where it was.
+  //
+  // The request is a CLAIM, not a scroll order. The relocation of an async
+  // action (Pin/Unpin/Read go through the host bridge) lands in a LATER
+  // render than the click, so a reveal fired at click time would scroll to
+  // the card's OLD lane — or, worse, race the data. So the claim survives
+  // renders until this effect first sees the card and can bring it into
+  // view; app.tsx only issues the claim at the commit the relocation rides
+  // (or when the host-applied state it was waiting on lands). Consumed
+  // exactly once (seq-gated, key = last-seen seq), so data refreshes and
+  // passive state changes never yank the user's scroll.
+  const revealClaimRef = useRef<{ seq: number; threadId: string } | null>(null);
+  useLayoutEffect(() => {
+    if (reveal !== null && reveal.seq !== revealClaimRef.current?.seq) {
+      revealClaimRef.current = { seq: reveal.seq, threadId: reveal.threadId };
+    }
+    const claim = revealClaimRef.current;
+    const container = scrollRef.current;
+    if (claim === null || container === null) return;
+    const card = container.querySelector(`[data-thread-card="${CSS.escape(claim.threadId)}"]`);
+    if (!(card instanceof HTMLElement)) {
+      // Not on the board in this commit (a filter may hide the card, or the
+      // host state has not landed yet): keep the claim and re-check on the
+      // next board change, so the intent is honoured late rather than lost.
+      return;
+    }
+    const cardRect = card.getBoundingClientRect();
+    container.scrollLeft += containerSlideX(container.getBoundingClientRect(), cardRect);
+    const list = card.closest("[data-card-list]");
+    if (list instanceof HTMLElement) {
+      list.scrollTop += listScrollY(list.getBoundingClientRect(), cardRect);
+    }
+    revealClaimRef.current = null;
+  }, [reveal, columns]);
 
   const sweepActive = sweepCandidatesFor !== undefined && onSweepArm !== undefined;
   // Clicking empty board area (anything that is not a card, control, or link)
@@ -504,6 +577,7 @@ export function Board({
     <div
       ref={scrollRef}
       onClick={handleBackgroundClick}
+      data-columns-board
       className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-3 pb-3 pt-2"
     >
       {/* The insertion line is the only visual feedback a reorder gives, so
@@ -590,6 +664,11 @@ export function Board({
           const dropHandler = dropHandlerFor(column.id);
           const isDropTarget = dropHandler !== null;
           const sweepKind = sweepColumnKind(column.id);
+          // The sweep-family contract is arm-scoped: only the arms whose
+          // action removes the thread from the live board (archive, Done)
+          // refuse live-child parents. Unpinning and marking read leave the
+          // thread live, so Pinned and Unread sweeps take parents too.
+          const blockedIds = sweepRemovesThreads(column.id) ? sweepBlockedIds : undefined;
           const isArmed = armedSweep !== null && armedSweep.columnId === column.id;
           // A run is bound to its column: only that column's button shows
           // progress, and only its cards can carry the throbber.
@@ -682,7 +761,7 @@ export function Board({
                     <Icon name="SortingOneNine" className="size-3" aria-hidden />
                   </span>
                 ) : null}
-                {sweepActive ? (
+                {sweepActive && sweepKind !== null ? (
                   <span className="ml-auto flex items-center gap-0.5">
                     <SweepButton
                       eligibleCount={eligible.length}
@@ -703,7 +782,7 @@ export function Board({
                         aria-label={runHere !== null ? "Cancel sweep" : "Exit sweep mode"}
                         title={
                           runHere !== null
-                            ? "Cancel: the current archive finishes, nothing else is swept"
+                            ? "Cancel: the current thread finishes, nothing else is swept"
                             : "Exit sweep mode"
                         }
                         onClick={(event) => {
@@ -731,7 +810,17 @@ export function Board({
                 ) : null}
                 {column.threads.length === 0 ? null : (
                   <ul className="flex flex-col gap-1.5">
-                    {shownThreads.map((thread) => (
+                    {shownThreads.map((thread) => {
+                      // A live thread sitting in the Done column is a family's
+                      // projection card: it renders the done portion of the
+                      // family (done children nested under it) while the
+                      // active card keeps the live portion. It is not a done
+                      // thread — it carries the Done treatment and refuses
+                      // sweep selection.
+                      const isDoneProjection =
+                        column.id === "done" && !doneIds.has(thread.id);
+                      const projectionChildren = doneChildrenByParent.get(thread.id);
+                      return (
                       <li
                         key={thread.id}
                         data-rank-slot={ranking ? thread.id : undefined}
@@ -903,19 +992,26 @@ export function Board({
                           thread={thread}
                           stateDot={<StateDot thread={thread} />}
                           isActive={thread.id === activeThreadId}
-                          isDone={doneIds.has(thread.id)}
+                          isDone={doneIds.has(thread.id) || isDoneProjection}
                           isSweepHighlighted={armedSet?.has(thread.id) ?? false}
                           isSweeping={runHere !== null && runHere.activeId === thread.id}
                           isSweepSelecting={isArmed}
                           isSweepSelectable={
                             isArmed &&
+                            !isDoneProjection &&
                             !(armedSet?.has(thread.id) ?? false) &&
-                            !(sweepBlockedIds?.has(thread.id) ?? false)
+                            !(blockedIds?.has(thread.id) ?? false)
                           }
                           onSweepToggle={(toggledId) => {
-                            if (sweepBlockedIds?.has(toggledId) ?? false) {
+                            if (blockedIds?.has(toggledId) ?? false) {
                               setSweepRefusal(
                                 `"${thread.displayTitle}" still has live children, so it cannot join a sweep.`,
+                              );
+                              return;
+                            }
+                            if (isDoneProjection) {
+                              setSweepRefusal(
+                                `"${thread.displayTitle}" is a family's Done card, not a done thread.`,
                               );
                               return;
                             }
@@ -925,8 +1021,21 @@ export function Board({
                           repoHrefBase={repoBaseFor(thread.projectId) ?? undefined}
                           statusFor={statusFor}
                           menuActions={menuActionsFor(thread)}
-                          childThreads={nestedChildrenByParent.get(thread.id)}
-                          childCount={childCountByParent.get(thread.id) ?? 0}
+                          childThreads={
+                            isDoneProjection
+                              ? projectionChildren
+                              : nestedChildrenByParent.get(thread.id)
+                          }
+                          childCount={
+                            isDoneProjection
+                              ? (projectionChildren?.length ?? 0)
+                              : (childCountByParent.get(thread.id) ?? 0)
+                          }
+                          isCollapsed={collapsedFamilyIds?.has(thread.id)}
+                          onCollapsedChange={(collapsed) =>
+                            onFamilyCollapsedChange?.(thread.id, collapsed)
+                          }
+                          snoozeFor={snoozeFor}
                           doneIds={doneIds}
                           activeThreadId={activeThreadId}
                           dimmed={dimmedIds.has(thread.id)}
@@ -943,7 +1052,8 @@ export function Board({
                           }}
                         />
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 )}
                 {column.id === "working" ? (

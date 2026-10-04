@@ -26,6 +26,11 @@ interface MultiSelectDropdownProps {
   summaryFor: (selected: ReadonlySet<string>) => string;
   /** Omit when `exclusive`: there is nothing to add a row to. */
   onToggle?: (value: string) => void;
+  /** Bulk add/remove behind the select-all checkbox beside the search bar:
+   *  `add` selects every listed value in one commit, without closing. The
+   *  checkbox renders only where a search bar does, so omit this for
+   *  dropdowns that never grow one. */
+  onToggleMany?: (values: readonly string[], add: boolean) => void;
   onSingleSelect: (value: string) => void;
   /** Omit when `exclusive`: picking another row replaces the selection. */
   onClear?: () => void;
@@ -41,6 +46,7 @@ function MultiSelectDropdown({
   options,
   summaryFor,
   onToggle,
+  onToggleMany,
   onSingleSelect,
   onClear,
   exclusive = false,
@@ -57,6 +63,24 @@ function MultiSelectDropdown({
   const visibleOptions = searchable
     ? filterDropdownOptions(options, query)
     : options;
+  // Select-all state, scoped to what the search currently shows: every
+  // visible row selected → the next click clears those rows; anything
+  // less → the next click completes the visible set. A partial selection
+  // renders mixed.
+  const selectedVisibleCount = visibleOptions.reduce(
+    (count, option) => count + (selected.has(option.value) ? 1 : 0),
+    0,
+  );
+  const allVisibleSelected =
+    visibleOptions.length > 0 && selectedVisibleCount === visibleOptions.length;
+  const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
+  const toggleAllVisible = () => {
+    if (visibleOptions.length === 0) return;
+    onToggleMany?.(
+      visibleOptions.map((option) => option.value),
+      !allVisibleSelected,
+    );
+  };
   // The query is a per-visit scratch pad: reopening always starts blank.
   // Closing returns focus to the trigger, since the search input unmounts
   // with the menu and would otherwise drop focus onto the body.
@@ -103,33 +127,78 @@ function MultiSelectDropdown({
                 while the rows scroll, like bb's model picker. */}
             {searchable ? (
               <div className="sticky top-0 z-10 -mx-1 mb-1 border-b border-border bg-popover px-2 pb-1.5 pt-0.5">
-                <div className="relative">
-                  <Icon
-                    name="Search"
-                    className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
-                    aria-hidden
-                  />
-                  <Input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    onKeyDown={(event) => {
-                      // Enter with exactly one filtered match acts like
-                      // clicking that row: apply it as the single selection
-                      // and close. With 2+ matches Enter stays inert (the
-                      // user hasn't narrowed far enough); with none there
-                      // is nothing to accept.
-                      if (event.key !== "Enter") return;
-                      if (visibleOptions.length !== 1) return;
-                      event.preventDefault();
-                      onSingleSelect(visibleOptions[0].value);
-                      close();
-                    }}
-                    placeholder={`Search ${label.toLowerCase()}…`}
-                    aria-label={`Search ${label.toLowerCase()} options`}
-                    aria-controls={listboxId}
-                    autoFocus
-                    className="h-7 pl-7 text-xs"
-                  />
+                <div className="flex items-center gap-1.5">
+                  {/* Select-all / deselect-all for the rows the search
+                      currently shows. Only multi-select dropdowns get it —
+                      an exclusive control replaces, never accumulates. */}
+                  {!exclusive && onToggleMany !== undefined ? (
+                    <button
+                      type="button"
+                      role="checkbox"
+                      data-select-all=""
+                      aria-checked={
+                        allVisibleSelected ? true : someVisibleSelected ? "mixed" : false
+                      }
+                      aria-label={
+                        allVisibleSelected
+                          ? `Deselect all ${label.toLowerCase()} options`
+                          : `Select all ${label.toLowerCase()} options`
+                      }
+                      title={
+                        allVisibleSelected
+                          ? `Deselect all ${label.toLowerCase()} options`
+                          : `Select all ${label.toLowerCase()} options`
+                      }
+                      onClick={toggleAllVisible}
+                      className="flex size-6 shrink-0 items-center justify-center rounded-sm hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <span
+                        className={cn(
+                          "flex size-3.5 items-center justify-center rounded-[3px] border",
+                          allVisibleSelected || someVisibleSelected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-muted-foreground/50 bg-background",
+                        )}
+                        aria-hidden
+                      >
+                        {allVisibleSelected || someVisibleSelected ? (
+                          <Icon
+                            name={someVisibleSelected ? "Minus" : "Check"}
+                            className="size-2.5"
+                            aria-hidden
+                          />
+                        ) : null}
+                      </span>
+                    </button>
+                  ) : null}
+                  <div className="relative min-w-0 flex-1">
+                    <Icon
+                      name="Search"
+                      className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+                      aria-hidden
+                    />
+                    <Input
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      onKeyDown={(event) => {
+                        // Enter with exactly one filtered match acts like
+                        // clicking that row: apply it as the single selection
+                        // and close. With 2+ matches Enter stays inert (the
+                        // user hasn't narrowed far enough); with none there
+                        // is nothing to accept.
+                        if (event.key !== "Enter") return;
+                        if (visibleOptions.length !== 1) return;
+                        event.preventDefault();
+                        onSingleSelect(visibleOptions[0].value);
+                        close();
+                      }}
+                      placeholder={`Search ${label.toLowerCase()}…`}
+                      aria-label={`Search ${label.toLowerCase()} options`}
+                      aria-controls={listboxId}
+                      autoFocus
+                      className="h-7 pl-7 text-xs"
+                    />
+                  </div>
                 </div>
               </div>
             ) : null}
@@ -238,6 +307,7 @@ interface ProjectDropdownProps {
   projects: readonly PluginSidebarProject[];
   selected: ReadonlySet<string>;
   onToggle: (projectId: string) => void;
+  onToggleMany: (projectIds: readonly string[], add: boolean) => void;
   onSingleSelect: (projectId: string) => void;
   onClear: () => void;
   onCreate: (name: string) => Promise<void>;
@@ -247,6 +317,7 @@ function ProjectDropdown({
   projects,
   selected,
   onToggle,
+  onToggleMany,
   onSingleSelect,
   onClear,
   onCreate,
@@ -287,6 +358,7 @@ function ProjectDropdown({
             : `${current.size} projects`
       }
       onToggle={onToggle}
+      onToggleMany={onToggleMany}
       onSingleSelect={onSingleSelect}
       onClear={onClear}
       footer={
@@ -452,6 +524,14 @@ export function BoardToolbar({
           else next.add(projectId);
           onFilterChange({ ...filter, projects: next });
         }}
+        onToggleMany={(projectIds, add) => {
+          const next = new Set(filter.projects);
+          for (const projectId of projectIds) {
+            if (add) next.add(projectId);
+            else next.delete(projectId);
+          }
+          onFilterChange({ ...filter, projects: next });
+        }}
         onSingleSelect={(projectId) =>
           onFilterChange({ ...filter, projects: new Set([projectId]) })
         }
@@ -474,6 +554,14 @@ export function BoardToolbar({
           const next = new Set(filter.providers);
           if (next.has(providerId)) next.delete(providerId);
           else next.add(providerId);
+          onFilterChange({ ...filter, providers: next });
+        }}
+        onToggleMany={(providerIds, add) => {
+          const next = new Set(filter.providers);
+          for (const providerId of providerIds) {
+            if (add) next.add(providerId);
+            else next.delete(providerId);
+          }
           onFilterChange({ ...filter, providers: next });
         }}
         onSingleSelect={(providerId) =>

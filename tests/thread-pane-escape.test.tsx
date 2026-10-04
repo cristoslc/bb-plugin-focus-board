@@ -41,7 +41,10 @@ afterEach(cleanup);
 
 function paneElement(
   thread: Parameters<typeof ThreadPane>[0]["thread"],
-  { escStopsRunningThread = true }: { escStopsRunningThread?: boolean } = {},
+  {
+    escStopsRunningThread = true,
+    escapeSuppressed = false,
+  }: { escStopsRunningThread?: boolean; escapeSuppressed?: boolean } = {},
 ) {
   return createElement(
     CompactViewportOverrideProvider,
@@ -57,6 +60,7 @@ function paneElement(
       onMaximize: noop,
       onClose,
       escStopsRunningThread,
+      escapeSuppressed,
     }),
   );
 }
@@ -81,8 +85,7 @@ describe("Escape stops a running thread (toggle ON)", () => {
       displayTitle: "Test thread",
       status: "active",
       isUnread: false,
-      projectName: null,
-      branchName: null,
+      isPinned: false,
     });
     pressEscape();
     expect(stop).toHaveBeenCalledWith({ threadId: "thr_test" });
@@ -95,8 +98,7 @@ describe("Escape stops a running thread (toggle ON)", () => {
       displayTitle: "Test thread",
       status: "starting",
       isUnread: false,
-      projectName: null,
-      branchName: null,
+      isPinned: false,
     });
     pressEscape();
     expect(stop).toHaveBeenCalledTimes(1);
@@ -109,8 +111,7 @@ describe("Escape stops a running thread (toggle ON)", () => {
       displayTitle: "Test thread",
       status: "stopping",
       isUnread: false,
-      projectName: null,
-      branchName: null,
+      isPinned: false,
     });
     pressEscape();
     expect(stop).not.toHaveBeenCalled();
@@ -123,8 +124,7 @@ describe("Escape stops a running thread (toggle ON)", () => {
       displayTitle: "Test thread",
       status: "idle",
       isUnread: false,
-      projectName: null,
-      branchName: null,
+      isPinned: false,
     });
     pressEscape();
     expect(stop).not.toHaveBeenCalled();
@@ -140,8 +140,7 @@ describe("Escape closes the pane regardless of status (toggle OFF)", () => {
         displayTitle: "Test thread",
         status: "active",
         isUnread: false,
-        projectName: null,
-        branchName: null,
+        isPinned: false,
       },
       { escStopsRunningThread: false },
     );
@@ -160,8 +159,7 @@ describe("Escape double-tap debounce", () => {
     displayTitle: "Test thread",
     status,
     isUnread: false,
-    projectName: null,
-    branchName: null,
+    isPinned: false,
   });
 
   beforeEach(() => {
@@ -238,5 +236,42 @@ describe("Escape double-tap debounce", () => {
     pressEscape(); // t=800: 800ms since the stop, past the window — closes
     expect(stop).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Escape stands down while an overlay owns the key (composer modal open)", () => {
+  it("neither stops a running thread nor closes the pane", () => {
+    renderPane(
+      {
+        id: "thr_test",
+        displayTitle: "Test thread",
+        status: "active",
+        isUnread: false,
+        isPinned: false,
+        projectName: null,
+        branchName: null,
+      },
+      { escapeSuppressed: true },
+    );
+    pressEscape();
+    expect(stop).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("does not close an idle thread's pane either", () => {
+    renderPane(
+      {
+        id: "thr_test",
+        displayTitle: "Test thread",
+        status: "idle",
+        isUnread: false,
+        isPinned: false,
+        projectName: null,
+        branchName: null,
+      },
+      { escStopsRunningThread: false, escapeSuppressed: true },
+    );
+    pressEscape();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

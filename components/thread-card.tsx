@@ -7,6 +7,7 @@ import { findTicketRefs, resolveRepoSlug, type TicketRef } from "@/lib/tickets";
 import type { GitHubItemStatus } from "@/lib/tracker-status";
 
 import { rankDragType } from "../lib/rank";
+import { describeWakeAt } from "../lib/snooze";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
 
 function relativeTime(timestamp: number, now: number): string {
@@ -78,6 +79,14 @@ interface ThreadCardProps {
    * only moment it can authorise the drop.
    */
   rankKey?: string;
+  /**
+   * Snooze wake lookup (lib/snooze): the wake epoch-ms for a snoozed thread,
+   * null when it is not snoozed. A snoozed card dims in place, carries a
+   * "Snoozed · wakes …" chip, and refuses drag so it cannot join the very
+   * sweeps and lane moves its sleep is meant to skip. Applies to nested
+   * child rows too, via the same lookup.
+   */
+  snoozeFor?: (threadId: string) => number | null;
   /** Reports the card a drag started on, so the board can hold it. */
   onRankDragStart?: (threadId: string | null) => void;
   onOpen: () => void;
@@ -87,6 +96,15 @@ interface ThreadCardProps {
   onOpenThread?: (threadId: string) => void;
   /** Right-click menu actions for a nested child thread. */
   childMenuActions?: (thread: PluginSidebarThread) => readonly CardMenuAction[];
+  /**
+   * Controlled collapsed state for the nested rows: true hides the rows and
+   * shows the collapsed "N child threads" summary in their place. Absent →
+   * uncontrolled local state, so callers that do not persist still get a
+   * working toggle.
+   */
+  isCollapsed?: boolean;
+  /** Reports a collapse/expand gesture. Paired with `isCollapsed`. */
+  onCollapsedChange?: (collapsed: boolean) => void;
   /** GitHub repo base for the thread's project, when it has one. */
   repoHrefBase?: string;
   /** GitHub cache status lookup (repo slug + number), when wired. */
@@ -101,6 +119,12 @@ const STATUS_DOT_CLASS: Record<string, string> = {
   MERGED: "bg-purple-500",
   CLOSED: "bg-muted-foreground/50",
 };
+
+/**
+ * More nested child rows than this and the list caps its height and scrolls
+ * instead of stretching the family card (and its whole lane) toward the sky.
+ */
+export const NESTED_ROWS_SCROLL_THRESHOLD = 5;
 
 /** Small clickable ticket chip; inert (span) when the ref has no href. */
 function TicketChip({
@@ -146,6 +170,7 @@ function ChildRow({
   isActive,
   onOpenThread,
   menuActions,
+  snoozeFor,
 }: {
   child: PluginSidebarThread;
   /** A done child row dims, as does any child of a done parent. */
@@ -154,12 +179,16 @@ function ChildRow({
   isActive?: boolean;
   onOpenThread: (threadId: string) => void;
   menuActions?: readonly CardMenuAction[];
+  /** Snooze wake lookup, for the row's little clock marker. */
+  snoozeFor?: (threadId: string) => number | null;
 }) {
   const now = Date.now();
+  const childSnoozeWakeAt = snoozeFor?.(child.id) ?? null;
   const row = (
     <a
       href={child.href}
       data-thread-card={child.id}
+      data-snoozed={childSnoozeWakeAt !== null ? "" : undefined}
       draggable={false}
       aria-current={isActive ? "true" : undefined}
       onClick={(event) => {
@@ -177,6 +206,7 @@ function ChildRow({
         "opacity-70 hover:opacity-100",
         child.isArchived && "saturate-50",
         dimmed && "opacity-50",
+        childSnoozeWakeAt !== null && "saturate-50",
         isActive && "ring-2 ring-ring",
       )}
     >
@@ -192,6 +222,16 @@ function ChildRow({
           <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/70">
             <Icon name="Archive" className="size-3" aria-hidden />
             archived
+          </span>
+        ) : null}
+        {childSnoozeWakeAt !== null ? (
+          <span
+            data-snooze-chip
+            title={`Wakes ${describeWakeAt(childSnoozeWakeAt, now)}`}
+            className="inline-flex shrink-0 items-center gap-0.5 text-[10px] text-muted-foreground/80"
+          >
+            <Icon name="Clock" className="size-3" aria-hidden />
+            snoozed
           </span>
         ) : null}
         <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground/60">
@@ -233,15 +273,25 @@ export function ThreadCard({
   dimmed,
   rankKey,
   onRankDragStart,
+  snoozeFor,
   onOpen,
   activeThreadId,
   onOpenThread,
   childMenuActions,
+  isCollapsed,
+  onCollapsedChange,
   // Ruler+wrap mini cards: tighter padding and type, no ticket chips.
   compact = false,
 }: ThreadCardProps) {
   const now = Date.now();
-  const [collapsed, setCollapsed] = useState(false);
+  // Controlled when `isCollapsed` is supplied (the app persists the set);
+  // otherwise local state preserves the pre-persistence toggle behavior.
+  const [localCollapsed, setLocalCollapsed] = useState(false);
+  const collapsed = isCollapsed ?? localCollapsed;
+  const toggleCollapsed = () => {
+    if (isCollapsed === undefined) setLocalCollapsed(!collapsed);
+    else onCollapsedChange?.(!collapsed);
+  };
   const branch = thread.environment?.branchName ?? thread.host?.name ?? "";
   const repo = repoHrefBase === undefined ? null : resolveRepoSlug(repoHrefBase);
   const ticketRefs = findTicketRefs(thread.displayTitle, {
@@ -272,6 +322,11 @@ export function ThreadCard({
         !(doneIds?.has(child.id) ?? false),
     );
 
+  // Snoozed state: the wake epoch-ms (null when not snoozed) drives the dim,
+  // the chip, and the drag refusal all at once — one rule, no drift.
+  const snoozeWakeAt = snoozeFor?.(thread.id) ?? null;
+  const snoozed = snoozeWakeAt !== null;
+
   // The card is a container; the anchor (title/body) and the collapse toggle
   // are siblings inside it — a button inside an anchor would be invalid HTML.
   const card = (
@@ -279,6 +334,7 @@ export function ThreadCard({
       data-thread-card={thread.id}
       data-sweep-highlighted={isSweepHighlighted ? "" : undefined}
       data-sweep-active={isSweeping ? "" : undefined}
+      data-snoozed={snoozed ? "" : undefined}
       className={cn(
         "relative overflow-hidden rounded-md bg-card transition-colors",
         "hover:bg-accent/50",
@@ -287,6 +343,7 @@ export function ThreadCard({
           : "ring-1 ring-transparent hover:ring-border",
         isDone && "opacity-50 saturate-50",
         dimmed && "opacity-50",
+        snoozed && "opacity-50",
         isSweepHighlighted &&
           "ring-2 ring-amber-500 bg-amber-500/10 saturate-100 opacity-100",
         isSweepSelectable && "ring-1 ring-amber-500/40",
@@ -314,8 +371,16 @@ export function ThreadCard({
         <a
           href={thread.href}
           aria-current={isActive ? "true" : undefined}
-          draggable
+          draggable={!snoozed}
           onDragStart={(event) => {
+            // A snoozed card refuses drag (`draggable={!snoozed}` above);
+            // this guard keeps the refusal true even where the attribute
+            // is not enforced, so nothing can drag a sleeping card into a
+            // lane move its sleep is meant to skip.
+            if (snoozed) {
+              event.preventDefault();
+              return;
+            }
             event.dataTransfer.setData("text/focus-board-id", thread.id);
             if (rankKey !== undefined) {
               // The lane rides in the drag TYPE, not a payload value: the
@@ -377,6 +442,16 @@ export function ThreadCard({
                 />
               </span>
             ) : null}
+            {snoozed ? (
+              <span
+                data-snooze-chip
+                title={`Wakes ${describeWakeAt(snoozeWakeAt, now)}`}
+                className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[10px] text-muted-foreground"
+              >
+                <Icon name="Clock" className="size-3" aria-hidden />
+                {compact ? "" : `Snoozed · wakes ${describeWakeAt(snoozeWakeAt, now)}`}
+              </span>
+            ) : null}
             <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground/60">
               {relativeTime(thread.updatedAt, now)}
             </span>
@@ -404,7 +479,7 @@ export function ThreadCard({
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
-                  setCollapsed((value) => !value);
+                  toggleCollapsed();
                 }}
                 className={cn(
                   "flex items-center gap-0.5 rounded-sm text-muted-foreground/70",
@@ -425,8 +500,39 @@ export function ThreadCard({
           </div>
         ) : null}
       </div>
-      {hasRows && !collapsed && onOpenThread !== undefined ? (
-        <div className="ml-3 mt-1 border-l border-border/70 pl-2">
+      {hasRows && collapsed ? (
+        // The collapsed rows' only trace: a labeled, clickable count that
+        // re-opens the family — a bare number chip reads as metadata, not as
+        // a control, so the summary names what clicking it reveals.
+        <button
+          type="button"
+          data-child-threads-summary=""
+          aria-expanded="false"
+          aria-label={`Expand ${children.length} nested child ${children.length === 1 ? "thread" : "threads"}`}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleCollapsed();
+          }}
+          className={cn(
+            "ml-3 mt-1 flex items-center gap-1 rounded-sm px-1 py-0.5 text-[11px] text-muted-foreground/70",
+            "transition-colors hover:bg-accent/60 hover:text-foreground",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          )}
+        >
+          <Icon name="ChevronRight" className="size-3" aria-hidden />
+          {children.length} {children.length === 1 ? "child thread" : "child threads"}
+        </button>
+      ) : hasRows && !collapsed && onOpenThread !== undefined ? (
+        <div
+          data-nested-rows=""
+          className={cn(
+            "ml-3 mt-1 border-l border-border/70 pl-2",
+            // A big family scrolls its rows inside the card; a small one
+            // renders at natural height.
+            children.length > NESTED_ROWS_SCROLL_THRESHOLD && "max-h-64 overflow-y-auto",
+          )}
+        >
           <ul className="flex flex-col gap-1">
             {children.map((child) => {
               const childDone = doneIds?.has(child.id) ?? false;
@@ -438,6 +544,7 @@ export function ThreadCard({
                     isActive={child.id === activeThreadId}
                     onOpenThread={onOpenThread}
                     menuActions={childMenuActions?.(child)}
+                    snoozeFor={snoozeFor}
                   />
                 </li>
               );

@@ -10,7 +10,7 @@ import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { ThreadCard } from "./thread-card";
-import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
+import type { CardMenuAction } from "./thread-card-menu";
 import { EmptyState } from "./empty-state";
 import { threadState } from "./grouping";
 import {
@@ -50,6 +50,12 @@ interface ParentLaneBoardProps {
   onClosePane?: () => void;
   onNewTask: () => void;
   menuActionsFor: (thread: PluginSidebarThread) => readonly CardMenuAction[];
+  /**
+   * Snooze wake lookup (lib/snooze): the wake epoch-ms for a snoozed thread,
+   * null otherwise. Wired through to lane cards — dim in place and the wake
+   * chip (lane minis show the clock alone).
+   */
+  snoozeFor?: (threadId: string) => number | null;
 }
 
 /** Ruler+wrap board chrome measurements (shared with parent-lane-layout.ts). */
@@ -92,60 +98,6 @@ export function verticalCardCorrection(
   if (cardRect.top < visibleTop) return -(visibleTop - cardRect.top) - 8;
   if (cardRect.bottom > boardRect.bottom) return cardRect.bottom - boardRect.bottom + 8;
   return 0;
-}
-
-function ArchivedRider({
-  child,
-  dimmed,
-  isActive,
-  onOpenThread,
-  menuActions,
-}: {
-  child: PluginSidebarThread;
-  dimmed?: boolean;
-  isActive?: boolean;
-  onOpenThread: (threadId: string) => void;
-  menuActions?: readonly CardMenuAction[];
-}) {
-  const anchor = (
-    <a
-      href={child.href}
-      data-thread-card={child.id}
-      draggable={false}
-      aria-current={isActive ? "true" : undefined}
-      onClick={(event) => {
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-        event.preventDefault();
-        onOpenThread(child.id);
-      }}
-      className={cn(
-        "block w-32 shrink-0 rounded-md border border-border/50 bg-muted/40 px-2 py-1 text-left",
-        "transition-colors hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        "opacity-70 hover:opacity-100 saturate-50",
-        dimmed && "opacity-50",
-        isActive && "ring-2 ring-ring",
-      )}
-    >
-      <div className="flex items-center gap-1.5">
-        <LaneStateDot thread={child} />
-        <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/70">
-          <Icon name="Archive" className="size-3" aria-hidden />
-          archived
-        </span>
-      </div>
-      <p className="mt-0.5 line-clamp-1 text-[11px] leading-snug">{child.displayTitle}</p>
-    </a>
-  );
-  if (menuActions === undefined || menuActions.length === 0) return anchor;
-  return (
-    <ThreadCardMenu
-      anchor={anchor}
-      actions={menuActions}
-      href={child.href}
-      onOpen={() => onOpenThread(child.id)}
-      title={child.displayTitle}
-    />
-  );
 }
 
 function LaneHeader({
@@ -271,6 +223,7 @@ export function ParentLaneBoard({
   onClosePane,
   onNewTask,
   menuActionsFor,
+  snoozeFor,
 }: ParentLaneBoardProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const spacerRef = useRef<HTMLDivElement | null>(null);
@@ -608,7 +561,6 @@ export function ParentLaneBoard({
       for (const row of lane.rows) {
         if (row.threads.some((t) => t.id === activeThreadId)) return lane.id;
       }
-      if (lane.archivedChildren.some((t) => t.id === activeThreadId)) return lane.id;
     }
     return null;
   }, [flat, activeThreadId]);
@@ -809,20 +761,6 @@ export function ParentLaneBoard({
                   onOpenThread={onOpenThread}
                   onLock={() => lockToRef.current(laneIndex)}
                 />
-                {lane.archivedChildren.length > 0 ? (
-                  <div className="flex gap-1 overflow-x-auto pb-0.5">
-                    {lane.archivedChildren.map((child) => (
-                      <ArchivedRider
-                        key={child.id}
-                        child={child}
-                        dimmed={dimmedIds.has(child.id)}
-                        isActive={child.id === activeThreadId}
-                        onOpenThread={onOpenThread}
-                        menuActions={menuActionsFor(child)}
-                      />
-                    ))}
-                  </div>
-                ) : null}
               </div>
               {lane.rows.map((row, rowIndex) => {
                 const cells = laneLayout.cells.filter((cell) => cell.row === rowIndex);
@@ -887,6 +825,7 @@ export function ParentLaneBoard({
                           repoHrefBase={repoBaseFor(cell.thread.projectId) ?? undefined}
                           statusFor={statusFor}
                           menuActions={menuActionsFor(cell.thread)}
+                          snoozeFor={snoozeFor}
                           activeThreadId={activeThreadId}
                           dimmed={dimmedIds.has(cell.thread.id)}
                           onOpen={() => onOpenThread(cell.thread.id)}

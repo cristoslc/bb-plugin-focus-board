@@ -39,6 +39,7 @@ function renderBoard(
     doneIds,
     nestedChildrenByParent: new Map<string, readonly PluginSidebarThread[]>(),
     childCountByParent: new Map<string, number>(),
+    doneChildrenByParent: new Map<string, readonly PluginSidebarThread[]>(),
     dimmedIds: new Set<string>(),
     projectNameFor: () => "One",
     repoBaseFor: () => null,
@@ -163,7 +164,7 @@ describe("the sweep button is always available", () => {
       sweepCandidatesFor: () => [],
       onSweepArm,
     });
-    expect(sweepButton().textContent).not.toContain("Sweep 0");
+    expect(sweepButton().textContent).toBe("");
     fireEvent.click(sweepButton());
     expect(onSweepArm).toHaveBeenCalledWith("done");
   });
@@ -172,7 +173,7 @@ describe("the sweep button is always available", () => {
     renderBoard([doneThread("thr_d1")], {
       sweepCandidatesFor: () => ["thr_d1"],
     });
-    expect(sweepButton().textContent).toContain("Sweep 1");
+    expect(sweepButton().textContent).toBe("1");
   });
 
   it("refuses to confirm an empty selection while armed", () => {

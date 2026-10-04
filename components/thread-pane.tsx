@@ -14,6 +14,9 @@ import {
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { describeWakeAt } from "@/lib/snooze";
+import type { SnoozeMenuAction } from "@/lib/snooze";
 import { COARSE_POINTER_HEADER_ICON_BUTTON_CLASS } from "@/components/ui/coarse-pointer-sizing";
 import { PendingInteractionCard } from "@/components/pending-interaction-card";
 import { DecidedQuestionsCard } from "@/components/decided-questions-card";
@@ -33,6 +36,11 @@ import {
   type ChatClickJumpGuard,
 } from "@/components/chat-jump-guard";
 import { attachScrollDebug } from "@/components/scroll-debug";
+import { AutotitleFallbackModal } from "@/components/autotitle-fallback-modal";
+import type {
+  AutotitleFallbackState,
+  AutotitleTarget,
+} from "@/lib/autotitle";
 
 // Shared header-button classes: a 28px ghost icon button that grows to a
 // 36px touch target on coarse pointers (phones), matching bb's own headers.
@@ -73,14 +81,8 @@ export interface ThreadPaneThread {
   displayTitle: string;
   status: PluginSidebarThread["status"];
   isUnread: boolean;
-  /**
-   * Header context: the project (and branch) this thread runs on. Null
-   * project suppresses the context line — archived rows keep only the
-   * title shape and render no line. `branchName` is the branch, or the
-   * host name when there is no branch (matching the board card).
-   */
-  projectName: string | null;
-  branchName: string | null;
+  /** Drives the actions menu's Pin/Unpin entry, the card menu's wording. */
+  isPinned: boolean;
 }
 
 interface ThreadPaneProps {
@@ -89,16 +91,38 @@ interface ThreadPaneProps {
   isDone: boolean;
   onToggleDone: (done: boolean) => void;
   onToggleArchived: () => void;
+  onTogglePinned: () => void;
   onToggleUnread: () => void;
   onRename: (title: string) => Promise<void>;
   onMaximize: () => void;
   onClose: () => void;
+  /**
+   * Snooze entries for the "More thread actions" menu, already resolved for
+   * the open thread: "Snooze…" while unsnoozed, "Edit snooze…" while snoozed
+   * (lib/snooze `snoozeMenuActions`). The runs call
+   * the same RPC-backed snooze handlers the cards use. Optional: absent or
+   * empty leaves the menu exactly as before this prop existed.
+   */
+  snoozeMenuItems?: readonly (SnoozeMenuAction | ActionMenuItem)[];
+  /**
+   * The open thread's wake time (epoch ms) while it is snoozed, null/absent
+   * otherwise. Drives the header's muted "Snoozed · wakes …" chip, so the
+   * open pane says the state the card already carries.
+   */
+  snoozeWakeAt?: number | null;
   /**
    * Escape behavior (the "Esc stops running thread" toolbar toggle): when
    * true, Escape stops a running thread and only closes the pane when the
    * thread is not running; when false, Escape always closes the pane.
    */
   escStopsRunningThread: boolean;
+  /**
+   * True while an overlay above the pane (the new-thread composer modal)
+   * owns Escape. This pane's Escape listener is a capture-phase document
+   * listener, so it would otherwise win the race against the overlay's own
+   * handling and close the pane — or stop the thread — underneath the modal.
+   */
+  escapeSuppressed?: boolean;
   /** Debug: attach the scroll-instrumentation session to this pane's transcript (ships off). */
   scrollDebug?: boolean;
 }
@@ -108,38 +132,110 @@ interface ActionMenuItem {
   label: string;
   icon: string;
   run: () => void;
+  /** The snooze entries arrive grouped: a divider above the group's head. */
+  dividerAbove?: boolean;
 }
 
-function EditableTitle({
+/** Exported for the ✨ auto-rename editor tests; ThreadPane renders it. */
+export function EditableTitle({
   title,
   onRename,
+  onAutotitle,
+  loadFallbackServices,
 }: {
   title: string;
   onRename: (title: string) => Promise<void>;
+  /**
+   * The ✨ auto-rename: ask the server for a generated title (thread_autotitle)
+   * and commit the rename with it. Absent on surfaces without the bridge —
+   * the SDK type is what carries it; the button only renders when wired.
+   */
+  onAutotitle?: (target?: AutotitleTarget) => Promise<string>;
+  /**
+   * The fallback modal's menu (server.ts thread_autotitle_services): the
+   * registered thread-title services plus the current selection. Optional —
+   * the modal still names the failure and takes a manual rename without it.
+   */
+  loadFallbackServices?: () => Promise<AutotitleFallbackState>;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
+  /**
+   * In-flight / failed state of the ✨ request. Failure keeps the editor
+   * open with the error named on the button (retry on the next click) —
+   * a failed generation never commits anything.
+   */
+  const [autotitle, setAutotitle] = useState<
+    { phase: "idle" } | { phase: "running" } | { phase: "failed"; message: string }
+  >({ phase: "idle" });
+  /** The fallback modal: auto-opens on a failed generation, ⚠️ reopens it. */
+  const [fallbackOpen, setFallbackOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  /** Set by cancel/commit so a late ✨ reply cannot rename a closed editor. */
+  const sessionDoneRef = useRef(false);
 
   useEffect(() => {
     if (editing) {
       inputRef.current?.focus();
       inputRef.current?.select();
+      sessionDoneRef.current = false;
+      setAutotitle({ phase: "idle" });
+      setFallbackOpen(false);
     }
   }, [editing]);
 
-  const commit = useCallback(() => {
-    const trimmed = draft.trim();
-    if (trimmed !== "" && trimmed !== title) {
-      void onRename(trimmed).catch(() => {});
-    }
-    setEditing(false);
-  }, [draft, title, onRename]);
+  const commit = useCallback(
+    (next?: string) => {
+      const trimmed = (next ?? draft).trim();
+      if (trimmed !== "" && trimmed !== title) {
+        void onRename(trimmed).catch(() => {});
+      }
+      // The editor is gone; any in-flight ✨ reply must not rename afterwards.
+      sessionDoneRef.current = true;
+      setEditing(false);
+    },
+    [draft, title, onRename],
+  );
 
   const cancel = useCallback(() => {
+    sessionDoneRef.current = true;
     setDraft(title);
     setEditing(false);
   }, [title]);
+
+  const runAutotitle = useCallback(
+    (target?: AutotitleTarget) => {
+      if (onAutotitle === undefined || autotitle.phase === "running") return;
+      sessionDoneRef.current = false;
+      setAutotitle({ phase: "running" });
+      onAutotitle(target)
+        .then((generated) => {
+          if (sessionDoneRef.current) return;
+          setDraft(generated);
+          commit(generated);
+        })
+        .catch((error: unknown) => {
+          if (sessionDoneRef.current) return;
+          setAutotitle({
+            phase: "failed",
+            message: error instanceof Error ? error.message : String(error),
+          });
+          // A failure must not be a silent ⚠️: the modal names the reason
+          // and offers the ways out (other services, manual rename).
+          setFallbackOpen(true);
+        });
+    },
+    [onAutotitle, autotitle.phase, commit],
+  );
+
+  /** Manual title from the fallback modal — same commit path as typing. */
+  const renameManually = useCallback(
+    (value: string) => {
+      setFallbackOpen(false);
+      commit(value);
+    },
+    [commit],
+  );
 
   if (!editing) {
     return (
@@ -158,25 +254,80 @@ function EditableTitle({
     );
   }
   return (
-    <input
-      ref={inputRef}
-      value={draft}
-      onChange={(event) => setDraft(event.target.value)}
-      onBlur={commit}
-      onKeyDown={(event) => {
-        event.stopPropagation();
-        if (event.key === "Enter" && !event.nativeEvent.isComposing) {
-          event.preventDefault();
+    <div className="relative min-w-0 flex-1">
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        // Blur commits, except when the blur is the ✨ click: the button
+        // prevents default on mousedown, so the input keeps focus and the
+        // generated rename is the only commit the gesture produces. While
+        // the fallback modal is open the modal itself owns the gesture, so
+        // the blur it causes must not close the editor out from under it.
+        onBlur={() => {
+          if (fallbackOpen) return;
           commit();
-        } else if (event.key === "Escape" && !event.defaultPrevented) {
-          event.preventDefault();
+        }}
+        onKeyDown={(event) => {
           event.stopPropagation();
-          cancel();
-        }
-      }}
-      className="min-w-0 flex-1 rounded-sm border border-border bg-background px-1.5 py-0.5 text-sm font-medium outline-none focus:ring-1 focus:ring-ring"
-      aria-label="Thread title"
-    />
+          if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+            event.preventDefault();
+            commit();
+          } else if (event.key === "Escape" && !event.defaultPrevented) {
+            event.preventDefault();
+            event.stopPropagation();
+            cancel();
+          }
+        }}
+        className="w-full min-w-0 flex-1 rounded-sm border border-border bg-background px-1.5 pr-7 py-0.5 text-sm font-medium outline-none focus:ring-1 focus:ring-ring"
+        aria-label="Thread title"
+      />
+      {onAutotitle !== undefined ? (
+        <button
+          type="button"
+          disabled={autotitle.phase === "running"}
+          aria-label={
+            autotitle.phase === "failed"
+              ? `Auto-rename failed, click for options: ${autotitle.message}`
+              : "Auto-rename from the thread prompt"
+          }
+          title={
+            autotitle.phase === "failed"
+              ? `Auto-rename failed, click for options: ${autotitle.message}`
+              : "Auto-rename from the thread prompt"
+          }
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={(event) => {
+            event.stopPropagation();
+            // A failed generation is the modal's job now; ✨ regenerates.
+            if (autotitle.phase === "failed") setFallbackOpen(true);
+            else runAutotitle();
+          }}
+          className="absolute right-1 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-sm leading-none hover:bg-accent disabled:opacity-60"
+        >
+          {autotitle.phase === "running" ? (
+            <Icon name="Spinner" className="size-3 animate-spin" aria-hidden />
+          ) : autotitle.phase === "failed" ? (
+            <span aria-hidden>⚠️</span>
+          ) : (
+            <span aria-hidden>✨</span>
+          )}
+        </button>
+      ) : null}
+      {fallbackOpen ? (
+        <AutotitleFallbackModal
+          open={fallbackOpen}
+          onOpenChange={setFallbackOpen}
+          message={autotitle.phase === "failed" ? autotitle.message : ""}
+          load={loadFallbackServices}
+          onPick={(target) => {
+            setFallbackOpen(false);
+            runAutotitle(target);
+          }}
+          onManualTitle={renameManually}
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -212,7 +363,10 @@ function ActionsMenu({ items }: { items: readonly ActionMenuItem[] }) {
                   item.run();
                   setOpen(false);
                 }}
-                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent"
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent",
+                  item.dividerAbove && "mt-1 border-t border-border pt-2",
+                )}
               >
                 <Icon
                   name={item.icon}
@@ -236,11 +390,15 @@ export function ThreadPane({
   scrollDebug = false,
   onToggleDone,
   onToggleArchived,
+  onTogglePinned,
   onToggleUnread,
+  snoozeMenuItems,
+  snoozeWakeAt = null,
   onRename,
   onMaximize,
   onClose,
   escStopsRunningThread,
+  escapeSuppressed = false,
 }: ThreadPaneProps) {
   const [width, setWidth] = useState(readStoredPaneWidth);
   const isCompact = useIsCompactViewport();
@@ -367,6 +525,8 @@ export function ThreadPane({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) {
+        // An overlay above the pane owns Escape (see escapeSuppressed).
+        if (escapeSuppressed) return;
         // Inline editors (rename) consume Escape to cancel the edit; let them.
         const target = event.target;
         if (
@@ -416,7 +576,7 @@ export function ThreadPane({
     };
     document.addEventListener("keydown", onKeyDown, { capture: true });
     return () => document.removeEventListener("keydown", onKeyDown, { capture: true });
-  }, [onClose, escStopsRunningThread, thread.status, thread.id, sdk]);
+  }, [onClose, escStopsRunningThread, escapeSuppressed, thread.status, thread.id, sdk]);
 
   // Existence checks for the inline-code file links (see
   // decorate-inline-code.ts): a path verdict comes from the plugin
@@ -602,7 +762,44 @@ export function ThreadPane({
           className="size-3.5 shrink-0 text-muted-foreground"
           aria-hidden
         />
-        <EditableTitle title={thread.displayTitle} onRename={onRename} />
+        <EditableTitle
+          title={thread.displayTitle}
+          onRename={onRename}
+          onAutotitle={(target) =>
+            // ✨ auto-rename (server.ts thread_autotitle): the title comes
+            // back already cleaned; commit it immediately. A target names an
+            // alternative service the fallback modal picked.
+            rpc
+              .call(
+                "thread_autotitle",
+                target === undefined
+                  ? { threadId: thread.id }
+                  : {
+                      threadId: thread.id,
+                      pluginId: target.pluginId,
+                      serviceId: target.serviceId,
+                    },
+              )
+              .then((result) => result.title)
+          }
+          loadFallbackServices={() =>
+            rpc
+              .call("thread_autotitle_services", {})
+              .then((result) => result as unknown as AutotitleFallbackState)
+          }
+        />
+        {snoozeWakeAt !== null ? (
+          // Muted chip on the pane's header: the open pane carries the same
+          // "snoozed, wakes at …" language the board card does.
+          <span
+            data-pane-snooze-chip=""
+            title={`Wakes ${describeWakeAt(snoozeWakeAt, Date.now())}`}
+            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-muted-foreground"
+          >
+            <Icon name="Clock" className="size-3" aria-hidden />
+            {isCompact ? "" : `Snoozed · wakes ${describeWakeAt(snoozeWakeAt, Date.now())}`}
+          </span>
+        ) : null}
         <Button
           variant="ghost"
           size="sm"
@@ -614,13 +811,27 @@ export function ThreadPane({
           {!isCompact ? (thread.isUnread ? "Mark Read" : "Mark Unread") : null}
         </Button>
         {(() => {
-          const actionItems: ActionMenuItem[] = [
+          const actionItems: (ActionMenuItem | SnoozeMenuAction)[] = [
             {
               id: "done",
               label: isDone ? "Mark Not Done" : "Mark Done",
               icon: isDone ? "CircleCheck" : "Check",
               run: () => onToggleDone(!isDone),
             },
+            // Pin sits after the done toggle. An archived row pins nothing:
+            // its only way out is Unarchive.
+            ...(isArchived
+              ? []
+              : [
+                  {
+                    id: "pin",
+                    label: thread.isPinned ? "Unpin" : "Pin",
+                    icon: thread.isPinned ? "PinOff" : "Pin",
+                    run: onTogglePinned,
+                  },
+                ]),
+            // The single snooze entry (Snooze… / Edit snooze…), then archive.
+            ...(snoozeMenuItems ?? []),
             {
               id: "archive",
               label: isArchived ? "Unarchive" : "Archive",
@@ -704,23 +915,6 @@ export function ThreadPane({
       >
         <ThreadChat threadId={thread.id} variant="compact" layout="contained" />
       </div>
-      {/* Which project (and branch) this pane works on: a project's own
-          checkout environment is just named "Project Checkout", so the
-          project label is the only way to tell panes apart. Sits in the
-          footer, under the composer, and is omitted for archived rows. */}
-      {thread.projectName === null ? null : (
-        <footer
-          aria-label="Thread project"
-          className="shrink-0 border-t border-border px-3 py-1.5"
-        >
-          <span className="block truncate text-[11px] leading-tight text-muted-foreground/70">
-            {thread.projectName}
-            {thread.branchName === null || thread.branchName === "" ? null : (
-              <span className="text-muted-foreground/40"> · {thread.branchName}</span>
-            )}
-          </span>
-        </footer>
-      )}
     </aside>
   );
 }
