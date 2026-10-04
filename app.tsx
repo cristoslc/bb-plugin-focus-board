@@ -41,11 +41,9 @@ import { ParentLaneBoard } from "./components/parent-lane-board";
 import { doneAtToEpochMs } from "./lib/done-metadata";
 import { SnoozeDialog } from "./components/snooze-dialog";
 import {
-  presetWakeAt,
   snoozeMenuActions,
   snoozeWakeAtMs,
   type SnoozeMenuAction,
-  type SnoozePreset,
   type SnoozeRecord,
 } from "./lib/snooze";
 import {
@@ -1623,10 +1621,8 @@ function BoardPage({ subPath }: { subPath: string }) {
       };
       const snoozeEntries: SnoozeMenuAction[] = snoozeMenuActions({
         snoozed: snoozedIds.has(thread.id),
-        snoozeWith: (kind: SnoozePreset) =>
-          snoozeUntil(thread.id, presetWakeAt(kind, new Date())),
         clearSnooze: () => clearSnooze(thread.id),
-        pickCustom: () => setSnoozeDialogFor(thread.id),
+        openPicker: () => setSnoozeDialogFor(thread.id),
       });
       return [
         {
@@ -1973,10 +1969,8 @@ function BoardPage({ subPath }: { subPath: string }) {
           }}
           snoozeMenuItems={snoozeMenuActions({
             snoozed: snoozedIds.has(openThread.id),
-            snoozeWith: (kind: SnoozePreset) =>
-              snoozeUntil(openThread.id, presetWakeAt(kind, new Date())),
             clearSnooze: () => clearSnooze(openThread.id),
-            pickCustom: () => setSnoozeDialogFor(openThread.id),
+            openPicker: () => setSnoozeDialogFor(openThread.id),
           })}
           onToggleUnread={() => {
             if (openThreadId === null || openThreadActive === null) return;

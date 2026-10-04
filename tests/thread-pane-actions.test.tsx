@@ -125,29 +125,21 @@ describe("snooze entries in the actions menu", () => {
     );
   }
 
-  it("an open-thread pane gets the preset ladder plus the picker; a preset run snoozes", () => {
-    const snoozeWith = vi.fn();
+  it("an open-thread pane gets ONE Snooze… entry that opens the picker", () => {
+    const openPicker = vi.fn();
     renderPaneWithSnooze(
       snoozeMenuActions({
         snoozed: false,
-        snoozeWith,
         clearSnooze: vi.fn(),
-        pickCustom: vi.fn(),
+        openPicker,
       }),
     );
     openActionsMenu();
-    for (const label of [
-      "Snooze · 1 hour",
-      "Snooze · 4 hours",
-      "Snooze · Tomorrow 9am",
-      "Snooze · 1 week",
-      "Pick a time…",
-    ]) {
-      expect(screen.getByRole("menuitem", { name: label })).toBeTruthy();
-    }
-    fireEvent.click(screen.getByRole("menuitem", { name: "Snooze · 4 hours" }));
-    expect(snoozeWith).toHaveBeenCalledWith("4h");
-    expect(screen.queryByRole("menuitem", { name: "Snooze · 4 hours" })).toBeNull();
+    const item = screen.getByRole("menuitem", { name: "Snooze…" });
+    expect(screen.getAllByRole("menuitem")).toHaveLength(3); // Done, Snooze…, Archive
+    fireEvent.click(item);
+    expect(openPicker).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("menuitem", { name: "Snooze…" })).toBeNull();
   });
 
   it("a snoozed thread's pane offers Unsnooze only", () => {
@@ -155,25 +147,23 @@ describe("snooze entries in the actions menu", () => {
     renderPaneWithSnooze(
       snoozeMenuActions({
         snoozed: true,
-        snoozeWith: vi.fn(),
         clearSnooze,
-        pickCustom: vi.fn(),
+        openPicker: vi.fn(),
       }),
     );
     openActionsMenu();
     expect(screen.getByRole("menuitem", { name: "Unsnooze" })).toBeTruthy();
-    expect(screen.queryByRole("menuitem", { name: "Pick a time…" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Snooze…" })).toBeNull();
     fireEvent.click(screen.getByRole("menuitem", { name: "Unsnooze" }));
     expect(clearSnooze).toHaveBeenCalledTimes(1);
   });
 
-  it("the snooze group renders under its divider, between Done and Archive", () => {
+  it("the snooze entry renders under its divider, between Done and Archive", () => {
     renderPaneWithSnooze(
       snoozeMenuActions({
         snoozed: false,
-        snoozeWith: vi.fn(),
         clearSnooze: vi.fn(),
-        pickCustom: vi.fn(),
+        openPicker: vi.fn(),
       }),
     );
     openActionsMenu();
@@ -181,27 +171,19 @@ describe("snooze entries in the actions menu", () => {
     const labels = Array.from(menu.querySelectorAll("[role='menuitem']")).map(
       (item) => item.textContent,
     );
-    expect(labels).toEqual([
-      "Mark Done",
-      "Snooze · 1 hour",
-      "Snooze · 4 hours",
-      "Snooze · Tomorrow 9am",
-      "Snooze · 1 week",
-      "Pick a time…",
-      "Archive",
-    ]);
+    expect(labels).toEqual(["Mark Done", "Snooze…", "Archive"]);
     const head = Array.from(menu.querySelectorAll("[role='menuitem']")).find(
-      (item) => item.textContent === "Snooze · 1 hour",
+      (item) => item.textContent === "Snooze…",
     );
-    if (head === undefined) throw new Error("missing snooze head item");
+    if (head === undefined) throw new Error("missing snooze entry");
     expect(head.className).toContain("border-t");
     expect(head.className).toContain("mt-1");
   });
 
-  it("without the prop the menu carries no snooze entries (back-compat)", () => {
+  it("without the prop the menu carries no snooze entry (back-compat)", () => {
     renderPane({ compact: false });
     openActionsMenu();
-    expect(screen.queryByRole("menuitem", { name: "Pick a time…" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Snooze…" })).toBeNull();
     expect(screen.getByRole("menuitem", { name: "Mark Done" })).toBeTruthy();
   });
 });

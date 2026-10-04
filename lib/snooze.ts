@@ -142,16 +142,17 @@ export interface SnoozeMenuAction {
 }
 
 /**
- * The card menu's snooze section, pure so tests pin the entries without
- * rendering the app. Snoozed → one "Unsnooze" entry; otherwise the preset
- * ladder plus a custom picker. The first entry carries the divider so the
- * whole group visually separates from the state actions above it.
+ * The card and pane menus' snooze section, pure so tests pin the entries
+ * without rendering the app. Snoozed → one "Unsnooze" entry; otherwise a
+ * single "Snooze…" entry that opens the snooze picker (the preset ladder
+ * lives in the picker, not the menu — five flat menu rows drowned every
+ * other action). The entry carries the divider so the snooze group
+ * visually separates from the state actions above it.
  */
 export function snoozeMenuActions(options: {
   snoozed: boolean;
-  snoozeWith: (kind: SnoozePreset) => void;
   clearSnooze: () => void;
-  pickCustom: () => void;
+  openPicker: () => void;
 }): SnoozeMenuAction[] {
   if (options.snoozed) {
     return [
@@ -165,13 +166,6 @@ export function snoozeMenuActions(options: {
     ];
   }
   return [
-    ...SNOOZE_PRESETS.map((preset, index) => ({
-      id: `snooze-${preset.kind}`,
-      label: preset.label,
-      icon: "Clock",
-      ...(index === 0 ? { dividerAbove: true } : {}),
-      run: () => options.snoozeWith(preset.kind),
-    })),
-    { id: "snooze-custom", label: "Pick a time…", icon: "ClockArrowUp", run: () => options.pickCustom() },
+    { id: "snooze", label: "Snooze…", icon: "Clock", dividerAbove: true, run: () => options.openPicker() },
   ];
 }

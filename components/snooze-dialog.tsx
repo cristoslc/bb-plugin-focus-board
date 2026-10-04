@@ -8,6 +8,19 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
+import { presetWakeAt, type SnoozePreset } from "../lib/snooze";
+
+/**
+ * The picker's quick-pick row: the same four presets the menus used to
+ * carry flat, relocated here so one menu entry ("Snooze…") opens one
+ * surface that holds the whole ladder plus the custom field.
+ */
+const PICKER_PRESETS: readonly { kind: SnoozePreset; label: string }[] = [
+  { kind: "1h", label: "1 hour" },
+  { kind: "4h", label: "4 hours" },
+  { kind: "tomorrow9", label: "Tomorrow 9am" },
+  { kind: "1week", label: "1 week" },
+];
 
 /**
  * Local-input format for `datetime-local` ("YYYY-MM-DDTHH:mm"): the input
@@ -59,6 +72,20 @@ export function SnoozeDialog({ threadTitle, onConfirm, onCancel }: SnoozeDialogP
             “{threadTitle}” becomes unread at the chosen time.
           </DialogDescription>
         </DialogHeader>
+        <div className="flex flex-wrap gap-1.5">
+          {PICKER_PRESETS.map((preset) => (
+            <Button
+              key={preset.kind}
+              variant="outline"
+              size="sm"
+              data-snooze-preset={preset.kind}
+              onClick={() => onConfirm(presetWakeAt(preset.kind, new Date()))}
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">Or pick a specific time:</p>
         <input
           type="datetime-local"
           aria-label="Wake time"

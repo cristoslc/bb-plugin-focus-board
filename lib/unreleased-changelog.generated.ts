@@ -5,7 +5,7 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
-    "text": "**Snooze: read now, unread again at a target time.** Snoozing a thread marks it read so it leaves the Unread column, then the board marks it unread again at the wake time — presets (1 hour, 4 hours, tomorrow 9am, 1 week) or a picked date-time from the card menu, and the same entries in the thread pane's actions menu beside Mark Unread. A snoozed card dims in place with a \"Snoozed · wakes …\" chip and cannot be dragged; it sleeps through every lane's sweep. Any pin/read/done/archive gesture lifts the snooze first, and a wake on a thread read by hand since snoozing stays silent. The clock is server-side: timers re-arm on plugin load (past-due wakes fire immediately) and full CLI parity lands as `bb focus-board snooze list|set|clear`.",
+    "text": "**Snooze: read now, unread again at a target time.** Snoozing a thread marks it read so it leaves the Unread column, then the board marks it unread again at the wake time. One \"Snooze…\" entry (on cards and in the thread pane's actions menu beside Mark Unread) opens a single picker holding the presets (1 hour, 4 hours, tomorrow 9am, 1 week) and a picked date-time; a snoozed thread's menu shows \"Unsnooze\". A snoozed card dims in place with a \"Snoozed · wakes …\" chip and cannot be dragged; it sleeps through every lane's sweep. Any pin/read/done/archive gesture lifts the snooze first, and a wake on a thread read by hand since snoozing stays silent. The clock is server-side: timers re-arm on plugin load (past-due wakes fire immediately) and full CLI parity lands as `bb focus-board snooze list|set|clear`.",
     "children": []
   },
   {

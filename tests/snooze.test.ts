@@ -141,12 +141,11 @@ describe("SNOOZE_METADATA_KEY", () => {
 describe("snoozeMenuActions", () => {
   it("a snoozed thread gets exactly one Unsnooze entry that clears", () => {
     const clearSnooze = vi.fn();
-    const snoozeWith = vi.fn();
+    const openPicker = vi.fn();
     const entries = snoozeMenuActions({
       snoozed: true,
-      snoozeWith,
       clearSnooze,
-      pickCustom: vi.fn(),
+      openPicker,
     });
     expect(entries).toHaveLength(1);
     expect(entries[0].label).toBe("Unsnooze");
@@ -154,41 +153,22 @@ describe("snoozeMenuActions", () => {
     expect(entries[0].dividerAbove).toBe(true);
     entries[0].run();
     expect(clearSnooze).toHaveBeenCalledTimes(1);
-    expect(snoozeWith).not.toHaveBeenCalled();
+    expect(openPicker).not.toHaveBeenCalled();
   });
 
-  it("an unsnoozed thread gets the preset ladder, each running its own preset", () => {
-    const snoozeWith = vi.fn();
+  it("an unsnoozed thread gets ONE Snooze… entry that opens the picker (the ladder lives in the picker, not the menu)", () => {
+    const openPicker = vi.fn();
     const entries = snoozeMenuActions({
       snoozed: false,
-      snoozeWith,
       clearSnooze: vi.fn(),
-      pickCustom: vi.fn(),
+      openPicker,
     });
-    expect(entries.map((entry) => entry.label)).toEqual([
-      "Snooze · 1 hour",
-      "Snooze · 4 hours",
-      "Snooze · Tomorrow 9am",
-      "Snooze · 1 week",
-      "Pick a time…",
-    ]);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].id).toBe("snooze");
+    expect(entries[0].label).toBe("Snooze…");
+    expect(entries[0].icon).toBe("Clock");
     expect(entries[0].dividerAbove).toBe(true);
-    expect(entries.slice(1, 4).every((entry) => entry.dividerAbove !== true)).toBe(true);
-    entries[1].run();
-    expect(snoozeWith).toHaveBeenCalledWith("4h");
-  });
-
-  it("the custom entry opens the picker, never a preset", () => {
-    const pickCustom = vi.fn();
-    const entries = snoozeMenuActions({
-      snoozed: false,
-      snoozeWith: vi.fn(),
-      clearSnooze: vi.fn(),
-      pickCustom,
-    });
-    const custom = entries.find((entry) => entry.id === "snooze-custom");
-    expect(custom).toBeDefined();
-    custom!.run();
-    expect(pickCustom).toHaveBeenCalledTimes(1);
+    entries[0].run();
+    expect(openPicker).toHaveBeenCalledTimes(1);
   });
 });
