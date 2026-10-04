@@ -16,7 +16,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Snooze: read now, unread again at a target time.** Snoozing a thread marks
   it read so it leaves the Unread column, then the board marks it unread again
   at the wake time — presets (1 hour, 4 hours, tomorrow 9am, 1 week) or a
-  picked date-time from the card menu. A snoozed card dims in place with a
+  picked date-time from the card menu, and the same entries in the thread
+  pane's actions menu beside Mark Unread. A snoozed card dims in place with a
   "Snoozed · wakes …" chip and cannot be dragged; it sleeps through every
   lane's sweep. Any pin/read/done/archive gesture lifts the snooze first, and
   a wake on a thread read by hand since snoozing stays silent. The clock is

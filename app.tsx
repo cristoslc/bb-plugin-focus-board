@@ -1971,6 +1971,13 @@ function BoardPage({ subPath }: { subPath: string }) {
               actions.archive(openThreadId);
             }
           }}
+          snoozeMenuItems={snoozeMenuActions({
+            snoozed: snoozedIds.has(openThread.id),
+            snoozeWith: (kind: SnoozePreset) =>
+              snoozeUntil(openThread.id, presetWakeAt(kind, new Date())),
+            clearSnooze: () => clearSnooze(openThread.id),
+            pickCustom: () => setSnoozeDialogFor(openThread.id),
+          })}
           onToggleUnread={() => {
             if (openThreadId === null || openThreadActive === null) return;
             // Current intent: a state change lifts any snooze first.

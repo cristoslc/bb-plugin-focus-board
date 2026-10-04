@@ -8,6 +8,7 @@ import { createElement, type ReactNode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ThreadPane } from "../components/thread-pane";
 import { CompactViewportOverrideProvider } from "../components/ui/hooks/use-compact-viewport";
+import { snoozeMenuActions } from "../lib/snooze";
 
 vi.mock("@get-bb/plugin-sdk/app", () => ({
   // The pane's embedded chat is only imported for render; the actions menu
@@ -91,5 +92,116 @@ describe("desktop thread pane header", () => {
     expect(more()).toBeTruthy();
     openActionsMenu();
     expect(screen.queryByRole("menuitem", { name: "Full Screen" })).toBeNull();
+  });
+});
+
+describe("snooze entries in the actions menu", () => {
+  function renderPaneWithSnooze(
+    items: Parameters<typeof ThreadPane>[0]["snoozeMenuItems"],
+  ) {
+    return render(
+      createElement(
+        CompactViewportOverrideProvider,
+        { isCompactViewport: false },
+        createElement(ThreadPane, {
+          thread: {
+            id: "thr_test",
+            displayTitle: "Test thread",
+            status: "idle",
+            isUnread: false,
+          },
+          isArchived: false,
+          isDone: false,
+          onToggleDone: noop,
+          onToggleArchived: noop,
+          onToggleUnread: noop,
+          snoozeMenuItems: items,
+          onRename: async () => {},
+          onMaximize,
+          onClose: noop,
+          escStopsRunningThread: false,
+        }),
+      ),
+    );
+  }
+
+  it("an open-thread pane gets the preset ladder plus the picker; a preset run snoozes", () => {
+    const snoozeWith = vi.fn();
+    renderPaneWithSnooze(
+      snoozeMenuActions({
+        snoozed: false,
+        snoozeWith,
+        clearSnooze: vi.fn(),
+        pickCustom: vi.fn(),
+      }),
+    );
+    openActionsMenu();
+    for (const label of [
+      "Snooze · 1 hour",
+      "Snooze · 4 hours",
+      "Snooze · Tomorrow 9am",
+      "Snooze · 1 week",
+      "Pick a time…",
+    ]) {
+      expect(screen.getByRole("menuitem", { name: label })).toBeTruthy();
+    }
+    fireEvent.click(screen.getByRole("menuitem", { name: "Snooze · 4 hours" }));
+    expect(snoozeWith).toHaveBeenCalledWith("4h");
+    expect(screen.queryByRole("menuitem", { name: "Snooze · 4 hours" })).toBeNull();
+  });
+
+  it("a snoozed thread's pane offers Unsnooze only", () => {
+    const clearSnooze = vi.fn();
+    renderPaneWithSnooze(
+      snoozeMenuActions({
+        snoozed: true,
+        snoozeWith: vi.fn(),
+        clearSnooze,
+        pickCustom: vi.fn(),
+      }),
+    );
+    openActionsMenu();
+    expect(screen.getByRole("menuitem", { name: "Unsnooze" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "Pick a time…" })).toBeNull();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Unsnooze" }));
+    expect(clearSnooze).toHaveBeenCalledTimes(1);
+  });
+
+  it("the snooze group renders under its divider, between Done and Archive", () => {
+    renderPaneWithSnooze(
+      snoozeMenuActions({
+        snoozed: false,
+        snoozeWith: vi.fn(),
+        clearSnooze: vi.fn(),
+        pickCustom: vi.fn(),
+      }),
+    );
+    openActionsMenu();
+    const menu = screen.getByRole("menu");
+    const labels = Array.from(menu.querySelectorAll("[role='menuitem']")).map(
+      (item) => item.textContent,
+    );
+    expect(labels).toEqual([
+      "Mark Done",
+      "Snooze · 1 hour",
+      "Snooze · 4 hours",
+      "Snooze · Tomorrow 9am",
+      "Snooze · 1 week",
+      "Pick a time…",
+      "Archive",
+    ]);
+    const head = Array.from(menu.querySelectorAll("[role='menuitem']")).find(
+      (item) => item.textContent === "Snooze · 1 hour",
+    );
+    if (head === undefined) throw new Error("missing snooze head item");
+    expect(head.className).toContain("border-t");
+    expect(head.className).toContain("mt-1");
+  });
+
+  it("without the prop the menu carries no snooze entries (back-compat)", () => {
+    renderPane({ compact: false });
+    openActionsMenu();
+    expect(screen.queryByRole("menuitem", { name: "Pick a time…" })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: "Mark Done" })).toBeTruthy();
   });
 });
