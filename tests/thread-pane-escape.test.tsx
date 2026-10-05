@@ -19,6 +19,7 @@ vi.mock("@get-bb/plugin-sdk/app", () => ({
   useSdk: () => ({ threads: { get: async () => ({}), stop } }),
   useRpc: () => ({ call: async () => ({ existence: {} }) }),
   useBbNavigate: () => ({ toThread: () => {} }),
+  useSettings: () => ({ values: undefined, isLoading: false }),
 }));
 
 vi.mock("../components/pending-interaction-card", () => ({

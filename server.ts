@@ -61,6 +61,15 @@ import { readGitHubStatuses } from "./lib/tracker-status";
 import { resolveRepoSlug } from "./lib/tickets";
 import { resolveWithinRoot } from "./lib/workspace-paths";
 import {
+	createWorkspaceOpenTargetsCache,
+	openWorkspaceInTarget,
+	probeLocalDaemon,
+	resolveWorkspaceOpenState,
+	daemonPortsFromSystemConfig,
+	type HostDaemonProbe,
+	type WorkspaceOpenState,
+} from "./lib/workspace-open";
+import {
   autotitleTargets,
   buildAutotitlePrompt,
   cleanGeneratedTitle,
@@ -231,6 +240,47 @@ export const rpcContract = defineRpcContract({
     output: z.object({ existence: z.record(z.string(), z.boolean()) }),
   },
 
+  // Workspace-open discovery for the pane header's open menu: which local
+  // apps can open the thread's workspace folder. The plugin server asks
+  // the loopback host daemon (the same authority bb's own thread header
+  // uses), so the verdict also covers the remote-browser case — the app
+  // opens where the workspace lives. Unavailable always carries a reason.
+  workspace_open_targets: {
+    input: z.object({ threadId: z.string().min(1) }),
+    output: z.object({
+      status: z.enum(["available", "unavailable"]),
+      reason: z.string().nullable(),
+      root: z.string().nullable(),
+      targets: z.array(
+        z.object({
+          id: z.string(),
+          label: z.string(),
+          kind: z.string().nullable(),
+          icon: z
+            .object({ kind: z.string() })
+            .passthrough()
+            .nullable(),
+          capabilities: z.object({
+            openDirectory: z.boolean(),
+            openFile: z.boolean(),
+            openFileAtLine: z.boolean(),
+            openFileAtColumn: z.boolean().nullable(),
+          }),
+        }),
+      ),
+    }),
+  },
+  // Open the thread's workspace folder in one of the discovered targets.
+  // Errors come back as { ok: false, message } — the menu shows them
+  // inline rather than dying silently.
+  workspace_open_in_target: {
+    input: z.object({
+      threadId: z.string().min(1),
+      targetId: z.string().min(1),
+    }),
+    output: z.object({ ok: z.boolean(), message: z.string().nullable() }),
+  },
+
   sweep_config_get: {
     input: z.null(),
     /**
@@ -396,16 +446,61 @@ export default async function plugin(bb: BbPluginApi) {
     // committed default is off everywhere, so stable builds never
     // instrument; it is turned on in a developer environment through this
     // setting alone. While on, the pane wraps the transcript scroller's
-    // scrollTop setter and logging session with a copyable export
-    // (see components/scroll-debug.ts).
+    // scrollTop setter and logging session; the log reaches the browser
+    // console and the `__focusBoardScrollDebug.dump()` window handle only
+    // (see components/scroll-debug.ts) — the pane header carries no debug
+    // button.
     scrollDebugInstrumentation: {
       type: "boolean",
       label: "Developer: instrument pane chat scrolling (debug)",
       description:
-        "Logs the pane chat transcript's scroll writes with calling stacks, plus scroll/wheel/touch events, and adds a copyable debug log to the pane header. Debug use only; keep off otherwise.",
+        "Logs the pane chat transcript's scroll writes with calling stacks, plus scroll/wheel/touch events, to the browser console with a __focusBoardScrollDebug.dump() window handle. Debug use only; keep off otherwise.",
       default: false,
     },
   });
+
+  // Workspace-open state for the pane header's open menu. The local host
+  // daemon is probed per call (cheap), while the per-root app discovery —
+  // seconds on a cold daemon — is cached for the pane's lifetime here.
+  const workspaceOpenTargetsCache = createWorkspaceOpenTargetsCache(5 * 60_000);
+
+  async function requireLocalDaemon(): Promise<HostDaemonProbe | null> {
+    const config = (await bb.sdk.system.config()) as {
+      hostDaemonPort?: number | null;
+      localHelperPorts?: number[] | null;
+    };
+    return probeLocalDaemon(daemonPortsFromSystemConfig(config), {
+      fetchImpl: fetch,
+      timeoutMs: 3_000,
+    });
+  }
+
+  async function resolveThreadWorkspaceOpen(
+    threadId: string,
+  ): Promise<WorkspaceOpenState> {
+    const thread = await bb.sdk.threads.get({ threadId });
+    const environmentId =
+      "environmentId" in thread ? thread.environmentId : null;
+    if (environmentId === null) {
+      return {
+        status: "unavailable",
+        reason: "This thread runs outside an environment, so it has no workspace to open.",
+        root: null,
+        targets: [],
+      };
+    }
+    const environment = await bb.sdk.environments.get({ environmentId });
+    return resolveWorkspaceOpenState({
+      root: environment.path,
+      environmentHostId: environment.hostId,
+      systemConfig: (await bb.sdk.system.config()) as {
+        hostDaemonPort?: number | null;
+        localHelperPorts?: number[] | null;
+      },
+      deps: { fetchImpl: fetch, timeoutMs: 15_000 },
+      targetsCache: workspaceOpenTargetsCache,
+    });
+  }
 
   async function readDoneRecord(
     threadId: string,
@@ -1325,6 +1420,39 @@ export default async function plugin(bb: BbPluginApi) {
         if (typeof verdict === "boolean") out[path] = verdict;
       }
       return { existence: out };
+    },
+    workspace_open_targets: async ({ threadId }) => {
+      const state = await resolveThreadWorkspaceOpen(threadId);
+      return state;
+    },
+    workspace_open_in_target: async ({ threadId, targetId }) => {
+      const state = await resolveThreadWorkspaceOpen(threadId);
+      if (
+        state.status !== "available" ||
+        state.root === null ||
+        !state.targets.some((target) => target.id === targetId)
+      ) {
+        return {
+          ok: false,
+          message: state.reason ?? "This workspace cannot be opened here.",
+        };
+      }
+      try {
+        const daemon = await requireLocalDaemon();
+        if (daemon === null) {
+          return { ok: false, message: "Local host daemon is unavailable." };
+        }
+        await openWorkspaceInTarget(daemon.port, state.root, targetId, {
+          fetchImpl: fetch,
+          timeoutMs: 10_000,
+        });
+        return { ok: true, message: null };
+      } catch (error) {
+        return {
+          ok: false,
+          message: error instanceof Error ? error.message : String(error),
+        };
+      }
     },
     sweep_config_get: async () => {
       const values = await settings.get();

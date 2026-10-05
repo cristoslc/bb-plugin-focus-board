@@ -36,6 +36,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the run from the last-clicked card through the one you click (cards that
   cannot join a sweep are skipped); ⌘/Ctrl-click toggles a single card.
 
+- **Open menu in the thread pane header.** The pane header carries an
+  open button in the style of the main thread view's workspace button: the
+  icon opens the thread's workspace folder in your preferred editor, and
+  the dropdown lists Open in editor, Open in file explorer, Open in
+  terminal, Open in new window, and Copy thread link. It works from remote
+  sessions too — the open runs on the machine the workspace lives on — and
+  hides itself when there is no workspace, the host daemon is down, or the
+  workspace lives on another host.
+
 ### Changed
 
 - **The Done column sorts by activity recency again, most recently active on top.** The idle sweep's fresh stamps no longer vault long-idle threads or family projections up the column, and a stored drag order still wins.
@@ -50,6 +59,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   in the child section, directly above the rows it acts on, and folds persist
   across sessions. A child that needs you un-nests into its own Needs-you
   card while the rest of the rows stay folded.
+
+- The pane-header debug bug button is gone. The scroll instrumentation
+  setting still works, but the log now reaches only the browser console
+  (and the `__focusBoardScrollDebug.dump()` window handle) instead of
+  growing a header button.
 
 ## [0.8.0] - 2026-10-03
 
