@@ -83,6 +83,7 @@ export const EXTENDED_ICON_NAMES = [
   "Mic",
   "Minus",
   "Minimize2",
+  "More",
   "MoveTo",
   "NewTab",
   "News01",

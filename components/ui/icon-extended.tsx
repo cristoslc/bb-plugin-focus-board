@@ -35,6 +35,7 @@ import CloudOffIcon from "@hugeicons/core-free-icons/CloudOffIcon";
 import CodeIcon from "@hugeicons/core-free-icons/CodeIcon";
 import ComputerTerminal01Icon from "@hugeicons/core-free-icons/ComputerTerminal01Icon";
 import Copy01Icon from "@hugeicons/core-free-icons/Copy01Icon";
+import EllipsisIcon from "@hugeicons/core-free-icons/EllipsisIcon";
 import Coffee02Icon from "@hugeicons/core-free-icons/Coffee02Icon";
 import CollapseIcon from "@hugeicons/core-free-icons/CollapseIcon";
 import DashedLine02Icon from "@hugeicons/core-free-icons/DashedLine02Icon";
@@ -254,6 +255,7 @@ export const EXTENDED_ICON_MAP: ExtendedIconMap = {
   CloudOff: CloudOffIcon,
   Code: CodeIcon,
   Copy: Copy01Icon,
+  More: EllipsisIcon,
   Coffee: Coffee02Icon,
   Columns2: LayoutTwoColumnIcon,
   CornerDownLeft: ArrowMoveDownLeftIcon,

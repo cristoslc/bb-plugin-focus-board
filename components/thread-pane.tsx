@@ -37,7 +37,7 @@ import {
 } from "@/components/chat-jump-guard";
 import { attachScrollDebug } from "@/components/scroll-debug";
 import { AutotitleFallbackModal } from "@/components/autotitle-fallback-modal";
-import { WorkspaceOpenMenu } from "@/components/workspace-open-menu";
+import { WorkspaceOpenMenu, OPEN_LABEL_MIN_PANE_WIDTH } from "@/components/workspace-open-menu";
 import { HEADER_ICON_BUTTON_CLASS } from "@/lib/pane-chrome";
 import type {
   AutotitleFallbackState,
@@ -338,7 +338,7 @@ function ActionsMenu({ items }: { items: readonly ActionMenuItem[] }) {
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        <Icon name="ChevronDown" className="size-4" />
+        <Icon name="More" className="size-4" />
       </Button>
       {open ? (
         <>
@@ -821,27 +821,22 @@ export function ThreadPane({
           }
           return <ActionsMenu items={actionItems} />;
         })()}
-        {!isCompact ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
-            aria-label="Open thread full screen"
-            onClick={onMaximize}
-          >
-            <Icon name="Maximize2" className="size-4" />
-          </Button>
-        ) : null}
         {(() => {
           // The pane's take on the main view's workspace-open button: an
           // icon that opens the thread's workspace in the preferred editor
-          // plus a dropdown (file explorer, terminal, new window, copy
-          // link). Renders nothing when no local open applies — no
-          // workspace, daemon down, or the workspace on another host.
+          // plus a dropdown (file explorer, terminal, Maximize pane, new
+          // window, copy link). The standalone full-screen button is gone —
+          // its action lives in this dropdown as bb's "Maximize pane". On a
+          // wide pane the primary grows an "Open in editor" label; the
+          // default width keeps it icon-only so the title keeps its room.
+          // Renders nothing when no local open applies — no workspace,
+          // daemon down, or the workspace on another host.
           return (
             <WorkspaceOpenMenu
               threadId={thread.id}
               threadHref={thread.href}
+              onMaximize={onMaximize}
+              showLabel={!isCompact && width >= OPEN_LABEL_MIN_PANE_WIDTH}
             />
           );
         })()}
