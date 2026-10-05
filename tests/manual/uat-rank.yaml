@@ -224,6 +224,19 @@ steps:
     assert:
       - live_region: "Moved to position 2 of 3 in Unread."
 
+  - id: leaving-toward-the-title-clears-the-line
+    title: The insertion line clears when the drag leaves the card toward the header
+    # The hover's promise is placement; the title writes none. A line parked
+    # while the cursor sits on the title would promise a placement that
+    # never happens — the boundary crossing out of the slot (dragleave)
+    # kills the line.
+    goto: "?groupBy=status"
+    gestures:
+      - hover_header: { from: thr_review_pr, to: thr_rpc_auth, edge: before, column: unread, leave: false }
+      - hover_header: { from: thr_review_pr, to: thr_rpc_auth, edge: before, column: unread, leave: true }
+    assert:
+      - cleared_line: { to: thr_rpc_auth }
+
   - id: title-drop-skips-the-rank
     title: Dropping a card on its own column's title writes no order
     # The title strip is the family detach target, not a placement. A

@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-10-05T19:08:36.719Z by `npm run uat`._
+_Generated 2026-10-05T19:18:28.420Z by `npm run uat`._
 
 ## rank-ordering
 
@@ -26,5 +26,6 @@ Source: `tests/manual/uat-rank.yaml` · theme dark
 | Alt+ArrowUp on the second card lands it at the very top | pass | ✓ unread order |
 | The insertion line appears on the hovered half | pass | ✓ insertion line visible; ✓ drop permitted during hover; ✓ no insertion line |
 | A completed move is announced for screen readers | pass | ✓ move announced |
+| The insertion line clears when the drag leaves the card toward the header | pass | ✓ the line cleared when the drag left the card |
 | Dropping a card on its own column's title writes no order | pass | ✓ no rank_move call; ✓ unread has 3 reorder slots |
 | Dropping an Unread card on the Pinned title pins without ranking | pass | ✓ no rank_move call; ✓ unread has 2 reorder slots |

@@ -517,3 +517,46 @@ describe("the column header is the closer detach target (family drag)", () => {
     expect(props.onRankMove).not.toHaveBeenCalled();
   });
 });
+
+describe("the hover's promise dies when the pointer leaves the card", () => {
+  /** Set the insertion line on a slot's top edge with a live drag. */
+  function showLine(fromId: string, targetId: string) {
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(cardAnchor(fromId), { dataTransfer: dt });
+    const slot = cardSlot(targetId);
+    withRect(slot);
+    const over = createEvent.dragOver(slot, { dataTransfer: dt });
+    Object.defineProperty(over, "clientY", { value: 60 });
+    fireEvent(slot, over);
+    return slot;
+  }
+
+  it("crossing out of the slot toward the title clears the line", () => {
+    renderBoard(twoCardFixture());
+    const slot = showLine("thr_a", "thr_b");
+    expect(slot.className).toMatch(/inset-x-0/);
+    // The header is NOT inside the slot — this is the leave the browser
+    // fires when the pointer crosses from the card up to the title strip.
+    const header = document.querySelector('section[data-column-id="unread"] header');
+    if (!(header instanceof HTMLElement)) throw new Error("missing unread header");
+    const leave = createEvent.dragLeave(slot, { dataTransfer: makeDataTransfer() });
+    // jsdom does not apply `relatedTarget` in the init dict (same as
+    // `clientY`); force it the way the spec event would arrive.
+    Object.defineProperty(leave, "relatedTarget", { value: header });
+    fireEvent(slot, leave);
+    expect(slot.className).not.toMatch(/inset-x-0/);
+  });
+
+  it("a leave that lands deeper inside the card keeps the line", () => {
+    renderBoard(twoCardFixture());
+    const slot = showLine("thr_a", "thr_b");
+    // Some browsers fire dragleave on the slot even when the pointer only
+    // sinks into a descendant (the card anchor itself): relatedTarget inside
+    // the slot means the hover never left — keep the promise.
+    const anchor = cardAnchor("thr_b");
+    const leave = createEvent.dragLeave(slot, { dataTransfer: makeDataTransfer() });
+    Object.defineProperty(leave, "relatedTarget", { value: anchor });
+    fireEvent(slot, leave);
+    expect(slot.className).toMatch(/inset-x-0/);
+  });
+});
