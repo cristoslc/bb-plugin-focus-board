@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-10-05T18:20:24.161Z by `npm run uat`._
+_Generated 2026-10-05T18:55:13.324Z by `npm run uat`._
 
 ## drop-onto-to-nest
 
@@ -16,3 +16,5 @@ Source: `tests/manual/uat-reparent.yaml` · theme dark
 | Hovering a dragged child over a column floor rings the floor amber | pass | ✓ drop permitted during drag |
 | Dropping a child on a column floor detaches it (rpc parentThreadId null) | pass | ✓ drop permitted during drag; ✓ thread_reparent {"threadId":"thr_rpc_auth","parentThreadId":null}; ✓ no nested row (thr_rpc_auth); ✓ unread has 3 reorder slots |
 | Dragging the card back onto its former parent re-nests it | pass | ✓ drop permitted during drag; ✓ drop permitted during drag; ✓ thread_reparent {"threadId":"thr_rpc_auth","parentThreadId":"thr_uat_queue"}; ✓ nested row under the family card (thr_rpc_auth); ✓ unread has 2 reorder slots |
+| Hovering a dragged child over a column title rings it amber and grows it | pass | ✓ drop permitted during drag |
+| Dropping a child on a column title detaches it (rpc parentThreadId null) | pass | ✓ drop permitted during drag; ✓ thread_reparent {"threadId":"thr_rpc_auth","parentThreadId":null}; ✓ no nested row (thr_rpc_auth); ✓ unread has 3 reorder slots |

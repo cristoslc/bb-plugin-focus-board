@@ -5,7 +5,7 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
-    "text": "**Drag a nested child onto any column floor to top-level it again.** Nested rows drag like cards now, and the floor rings amber for the family detach — dragging the child back onto a card re-nests it, so nest and detach are each other's undo.",
+    "text": "**Drag a nested child onto any column header or floor to top-level it again.** Nested rows drag like cards now, the hovered title strip grows a notch and rings amber for the family detach (the floor works too) — dragging the child back onto a card re-nests it, so nest and detach are each other's undo.",
     "children": []
   }
 ];

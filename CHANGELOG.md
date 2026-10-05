@@ -13,10 +13,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the thread under the target; the card menu's Make Top-Level detaches a
   child again.
 
-- **Drag a nested child onto any column floor to top-level it again.** Nested
-  rows drag like cards now, and the floor rings amber for the family detach —
-  dragging the child back onto a card re-nests it, so nest and detach are each
-  other's undo.
+- **Drag a nested child onto any column header or floor to top-level it
+  again.** Nested rows drag like cards now, the hovered title strip grows a
+  notch and rings amber for the family detach (the floor works too) —
+  dragging the child back onto a card re-nests it, so nest and detach are
+  each other's undo.
 
 ## [0.8.0] - 2026-10-03
 

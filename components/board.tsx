@@ -380,6 +380,13 @@ export function Board({
   // family write wins wherever both apply, because the drop's family effect
   // is the surprising half.
   const [familyFloorColumn, setFamilyFloorColumn] = useState<string | null>(null);
+  // The column HEADER a family hover lights up (amber), next to the floor:
+  // the header sits inside the section so a drop on it bubbles to the
+  // section's handlers for free — this state is the hover affordance only.
+  const [familyHeaderColumn, setFamilyHeaderColumn] = useState<string | null>(null);
+  // True while any card or child-row drag is in flight: headers grow a few
+  // pixels so the small title strip is easier to hit as a detach target.
+  const [dragInFlight, setDragInFlight] = useState(false);
   // { columnId, threadId, zone } for the drop the cursor is over while a
   // ranked card is dragged over a ranked column. `zone` is an insertion edge
   // ("before"/"after") or the nest zone ("onto") — a drop in the hovered
@@ -857,6 +864,9 @@ export function Board({
                 const releaseFloor = () => {
                   setDragOverColumn(null);
                   setFamilyFloorColumn(null);
+                  // The header's amber dies with any successful drop (a
+                  // header drop bubbles into this very handler).
+                  setFamilyHeaderColumn(null);
                 };
                 if (ranking && isLaneDrag(event.dataTransfer.types, rankKey)) {
                   // Released over the lane's empty space below the last card:
@@ -911,7 +921,34 @@ export function Board({
                   : dragOverColumn === column.id && "bg-accent/60 ring-2 ring-ring",
               )}
             >
-              <header className="flex items-baseline gap-1.5 px-1 pb-1.5">
+              <header
+                className={cn(
+                  "flex items-baseline gap-1.5 px-1 pb-1.5 transition-colors",
+                  // Grow the hit strip only while a drag flies, and grow it
+                  // with negated margins so no card moves beneath the cursor:
+                  // +4px each side here, -4px back from the content flow.
+                  dragInFlight && "px-2 pb-2.5 -mx-1 -mb-1",
+                  familyHeaderColumn === column.id
+                    ? "rounded-md ring-2 ring-amber-500 bg-accent/40"
+                    : null,
+                )}
+                onDragOver={(event) => {
+                  // Hover affordance only: the section's own onDragOver
+                  // already preventDefaults a child drag and will accept the
+                  // drop (the header is inside it), so nothing semantic
+                  // happens here — the amber just follows the cursor up to
+                  // the small element under it.
+                  const draggedId = draggingIdRef.current;
+                  if (draggedId === null || draggedId === "") return;
+                  if (onReparent === undefined || liveParentOf(draggedId) === null) return;
+                  setFamilyHeaderColumn(column.id);
+                  setFamilyFloorColumn(column.id);
+                }}
+                onDragLeave={() => {
+                  setFamilyHeaderColumn((c) => (c === column.id ? null : c));
+                  setFamilyFloorColumn((c) => (c === column.id ? null : c));
+                }}
+              >
                 <h3 className="truncate text-[11px] font-medium text-muted-foreground">
                   {column.label}
                 </h3>
@@ -1230,6 +1267,10 @@ export function Board({
                           rankKey={ranking ? rankKey : undefined}
                           onRankDragStart={(id) => {
                             draggingIdRef.current = id;
+                            // Any drag in flight is the board's signal to grow
+                            // the column headers (they are detach targets the
+                            // whole time a family drag lives).
+                            setDragInFlight(id !== null);
                             // A drag that ends anywhere but a successful drop
                             // (Escape, a refused target) must not leave its
                             // insertion line on screen.

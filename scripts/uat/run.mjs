@@ -232,6 +232,61 @@ const pageFloorAmber = ({ from, column }) => {
 };
 
 /**
+ * Drop a card (nested child row or top-level) on a column's TITLE strip: the
+ * header sits inside the section, so the drop bubbles to the section's own
+ * floor handlers — detach for a child, the column's normal floor action for
+ * a top-level card. The header is hovered, not the floor: no scroll needed.
+ */
+const pageDragChildToHeader = ({ from, column }) => {
+  const anchor = document.querySelector(`a[data-thread-card="${from}"][draggable]`);
+  const section = document.querySelector(`section[data-column-id="${column}"]`);
+  const header = section?.querySelector("header");
+  if (!anchor || !header) throw new Error(`drag_child_to_header: missing ${from}=${anchor != null} or ${column} header=${header != null}`);
+  const dt = new DataTransfer();
+  anchor.dispatchEvent(new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: dt }));
+  const box = header.getBoundingClientRect();
+  const point = {
+    bubbles: true,
+    cancelable: true,
+    dataTransfer: dt,
+    clientX: box.left + box.width / 2,
+    clientY: box.top + box.height / 2,
+  };
+  header.dispatchEvent(new DragEvent("dragover", point));
+  header.dispatchEvent(new DragEvent("drop", point));
+  anchor.dispatchEvent(new DragEvent("dragend", { bubbles: true, dataTransfer: dt }));
+  return { ok: true, dropAllowed: true };
+};
+
+/** Header hover probe: amber ring on the title strip, and it grew while the drag flew. */
+const pageHeaderAmber = ({ from, column }) => {
+  const anchor = document.querySelector(`a[data-thread-card="${from}"][draggable]`);
+  const section = document.querySelector(`section[data-column-id="${column}"]`);
+  const header = section?.querySelector("header");
+  if (!anchor || !header) throw new Error(`header_amber: missing ${from} or ${column} header`);
+  const dt = new DataTransfer();
+  anchor.dispatchEvent(new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: dt }));
+  const box = header.getBoundingClientRect();
+  header.dispatchEvent(new DragEvent("dragover", {
+    bubbles: true,
+    cancelable: true,
+    dataTransfer: dt,
+    clientX: box.left + box.width / 2,
+    clientY: box.top + box.height / 2,
+  }));
+  const classes = [...header.classList];
+  const result = {
+    shown: classes.some((cls) => cls.startsWith("ring-amber")),
+    grown: classes.includes("pb-2.5"),
+    reason: classes.some((cls) => cls.startsWith("ring-amber"))
+      ? "header rings amber for a family detach drop"
+      : `no amber on the header (classes: ${classes.join(" ")})`,
+  };
+  anchor.dispatchEvent(new DragEvent("dragend", { bubbles: true, dataTransfer: dt }));
+  return result;
+};
+
+/**
  * Hover a card's chosen half. Split from `pageLineShown` because the dragover
  * sets React state: reading the computed style in the same task would sample
  * the DOM before the commit.
@@ -1116,6 +1171,17 @@ async function check(step, page, gestureResults = []) {
         shown.reason,
       );
     }
+    if (rule.header_amber !== undefined) {
+      // The title strip is the near detach target: probe its amber hover
+      // ring, plus its growth while the drag is in flight.
+      const want = rule.header_amber; // { from: threadId, column, shown: boolean }
+      const shown = await page.evaluate(pageHeaderAmber, want);
+      expect(
+        want.shown ? "header rings amber for the family detach hover" : "no amber header ring",
+        shown.shown === want.shown && (want.grown === undefined || shown.grown === want.grown),
+        shown.reason,
+      );
+    }
     if (rule.reparent_called !== undefined) {
       // The last thread_reparent call's args must carry every key/value given
       // — child drops assert {threadId, parentThreadId: null} this way.
@@ -1206,7 +1272,7 @@ async function runSuite(file, { port, browser }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "hover", "key", "back", "click", "click_aria", "menu", "scroll", "wheel_pan", "resize", "sleep", "press_escape", "push_url"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "drag_child_to_header", "hover", "key", "back", "click", "click_aria", "menu", "scroll", "wheel_pan", "resize", "sleep", "press_escape", "push_url"];
       let gestureFailed = false;
       // A gesture that cannot even run (its own element is absent — a
       // regression deleted what the step targets) records the step and
@@ -1256,6 +1322,8 @@ async function runSuite(file, { port, browser }) {
             await sleep(200);
           } else if (gesture === "drag_child_to_floor") {
             await page.evaluate(pageDragChildToFloor, payload);
+          } else if (gesture === "drag_child_to_header") {
+            await page.evaluate(pageDragChildToHeader, payload);
             await sleep(200);
           } else if (gesture === "hover") {
             // A hover with a board y-fraction moves the real mouse into that
