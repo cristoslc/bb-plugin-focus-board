@@ -29,15 +29,7 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
-    "text": "**✨ \"New child thread…\" in the card and pane menus.** A thread's context menu (board cards, nested rows) and the pane's actions menu now open the composer preset to spawn a child, and the spawned child opens in the pane nested under its parent. ||||||| c7607ae",
-    "children": []
-  },
-  {
-    "text": "**✨ \"New child thread…\" in the card and pane menus.** A thread's context menu (board cards, nested rows) and the pane's actions menu now open the composer preset to spawn a child, and the spawned child opens in the pane nested under its parent. =======",
-    "children": []
-  },
-  {
-    "text": "**✨ \"New child thread…\" in the card and pane menus.** A thread's context menu (board cards, nested rows) and the pane's actions menu now open the composer preset to spawn a child: the composer seeds itself with the parent's project, the spawned child opens in the pane nested under its parent. >>>>>>> bb/add-thread-menu-features-thr_z8yjt4ri63",
+    "text": "**✨ \"New child thread…\" in the card and pane menus.** A thread's context menu (board cards, nested rows) and the pane's actions menu now open the composer preset to spawn a child: the composer seeds itself with the parent's project, the spawned child opens in the pane nested under its parent.",
     "children": []
   }
 ];
