@@ -15,11 +15,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   modal's other-services list is probed for the bridge focus-board calls,
   so a service whose plugin lacks it (bb cloud, Codex) renders disabled
   with its reason instead of a click that 404s.
-  - **Titles come from the thread's true originating prompt** — the source
-    timeline's oldest user row, prompt history as the fallback — so ✨
-    titles the task, not the latest follow-up.
-  - **CLI parity:** `bb focus-board autotitle availability|prompt|probe
-    --thread-id <id>` mirrors the menu and runs the probe end-to-end
+  - **Titles come from the thread's true originating prompt.** The source
+    timeline's oldest user row wins, prompt history as the fallback — no
+    more titling the latest follow-up.
+  - **The CLI mirrors the menu.** `bb focus-board autotitle
+    availability|prompt|probe --thread-id <id>` runs the probe end-to-end
     without opening the pane.
 
 - **Sweep selection takes shift-click and ⌘/Ctrl-click.** Shift-click grabs
@@ -28,11 +28,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **Open menu in the thread pane header.** The workspace button becomes a
   header menu styled like the main thread view's: the icon opens the
-  thread's workspace folder in your preferred editor, the dropdown adds
-  file explorer, terminal, new window, and Copy thread link, and full
-  screen joins the dropdown. It runs on the machine the workspace lives on
-  (remote sessions included) and hides when there is no workspace, the
-  host daemon is down, or the workspace lives on another host.
+  thread's workspace folder in your preferred editor, and the dropdown adds
+  file explorer, terminal, new window, and Copy thread link. It runs on the
+  machine the workspace lives on (remote sessions included) and hides when
+  there is no workspace, the host daemon is down, or the workspace lives on
+  another host.
+  - **Full screen joins the dropdown.** The floating caret button becomes
+    an ellipsis in the swap.
   - **The debug bug button is gone.** The scroll instrumentation setting
     still works, but its log reaches only the browser console (and the
     `__focusBoardScrollDebug.dump()` window handle).
@@ -62,16 +64,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Drop a card onto a card to nest it.** The hovered target rings amber —
   distinct from the top/bottom thirds' ordinary insertion line, so a family
   drop never masquerades as a lane drop — and the drop re-parents the
-  thread under the target; the card menu's Make Top-Level detaches a child
-  again.
+  thread under the target.
+  - **Drag a nested child onto any column floor to top-level it again.**
+    Nested rows drag like cards now, the floor rings amber for the family
+    detach, and dragging the child back onto a card re-nests it — nest and
+    detach are each other's undo; the card menu's Make Top-Level detaches
+    too.
 
-- **Mark Unread joins the pane's actions as one attached split control.** The
-  header's split menus no longer clip: their carets open visible dropdowns.
-
-- **Drag a nested child onto any column floor to top-level it again.** Nested
-  rows drag like cards now, and the floor rings amber for the family detach —
-  dragging the child back onto a card re-nests it, so nest and detach are each
-  other's undo.
+- **Mark Unread joins the pane's actions as one attached split control.**
+  The header's split menus no longer clip: their carets now open visible
+  dropdowns.
 
 ## [0.8.0] - 2026-10-03
 
