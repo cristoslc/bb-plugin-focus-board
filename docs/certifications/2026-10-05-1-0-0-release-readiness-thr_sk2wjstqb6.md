@@ -38,3 +38,11 @@ Operator request of record (thread `thr_sk2wjstqb6`, branch
 ## Definition of 1.0.0-ready
 
 The finalize commit may be cut the moment: items 1–3 and 5–7 land on `dev` (item 1's range bump rides the 1.0.0 cut per spoke §4a), item 4's audit reports nothing above low with any finding remediated red-tests-first, and the full suite plus typecheck are green on the release branch. Item 8 is optional and does not gate.
+
+## Update 2026-10-05 — work progressed on `bb/1-0-0-release-readiness-thr_sk2wjstqb6`
+
+- Item 2 + 3 closed in commit `616b790`: `docs/compatibility-1.0.md` (frozen CLI shapes, stored-state tables for `focus-board:rank-orders` / `sweep-keep-flags` / `done-index` and the per-thread metadata keys `done` / `snooze` / `pin`, the nine localStorage keys, the three realtime payloads, the full `rpcContract` method list, the host-range policy, the no-preference-reset rule with the 0.3.1 lesson named), plus the README's install example de-pinned from `@v0.8.0` and a Compatibility pointer.
+- Item 4 dispatched to a background audit agent (session `ses_ef28f98feffeo6xsR5u7KhqGSo`), scoped to the post-0.5.6 surfaces: autotitle probe lifecycle and prompt-injection path, workspace-open daemon HTTP boundary, snooze timers, CLI additions.
+- Item 5, live-host CLI smoke cells (matrix rows 103–107 + snooze smoke), executed 2026-10-05 against the running bb, read-only: `done list --json` returns id/title/doneAt rows (exit 0); `done list` human rows render the same set; `sweep` dry-run prints five idle-eligible threads and exits 1 exactly as contracted; `config show` reads all four thresholds at their defaults; `snooze list` reads "No threads are snoozed." Exit codes measured with the pipe stripped.
+
+Still open on this certification: item 1 (marketplace PR #481 merge, then the 1.0.0 range bump — hold point), item 5's operator/UI manual cells (phone full-screen, pane archive/unarchive, click-jump guard in live bb, parent-board touch momentum), item 6's upstream bb filing (hold point — the write-up is ready), item 7's marketplace-description check riding the 1.0.0 cut, and item 4's audit return (gate: nothing above low).
