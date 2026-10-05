@@ -150,11 +150,16 @@ describe("pane header chrome", () => {
 		).toBeNull();
 	});
 
-	it("the actions menu reads as an ellipsis, not a floating caret", () => {
+	it("Mark Unread and the actions caret form one attached split control on desktop", () => {
 		renderPane();
+		const primary = screen.getByRole("button", {
+			name: /mark thread unread/i,
+		});
 		const trigger = screen.getByRole("button", { name: "More thread actions" });
-		expect(trigger.querySelector('[data-icon="More"]')).not.toBeNull();
-		expect(trigger.querySelector('[data-icon="ChevronDown"]')).toBeNull();
+		// Attached, like the open control: same wrapper, caret on the right.
+		expect(primary.parentElement).toBe(trigger.parentElement);
+		expect(trigger.querySelector('[data-icon="ChevronDown"]')).not.toBeNull();
+		expect(trigger.querySelector('[data-icon="More"]')).toBeNull();
 	});
 });
 
