@@ -30,6 +30,8 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
   },
   {
     "text": "**✨ \"New child thread…\" in the card and pane menus.** A thread's context menu (board cards, nested rows) and the pane's actions menu now open the composer preset to spawn a child: the composer seeds itself with the parent's project, the spawned child opens in the pane nested under its parent.",
-    "children": []
+    "children": [
+      "**The child starts where the parent runs.** When the parent's checkout is a worktree, the composer's environment picker is seeded to reuse that worktree, so the child lands in the parent's checkout instead of a fresh project-default one; other checkouts keep bb's own default."
+    ]
   }
 ];

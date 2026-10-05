@@ -69,12 +69,14 @@ function renderModal(
   {
     open = true,
     defaultProjectId,
+    defaultEnvironment,
     focusRequest,
     parentThreadId,
     parentThreadTitle,
   }: {
     open?: boolean;
     defaultProjectId?: string;
+    defaultEnvironment?: Record<string, unknown>;
     focusRequest?: number;
     parentThreadId?: string;
     parentThreadTitle?: string;
@@ -85,6 +87,7 @@ function renderModal(
       open,
       onOpenChange,
       defaultProjectId,
+      defaultEnvironment,
       focusRequest,
       parentThreadId,
       parentThreadTitle,
@@ -168,6 +171,25 @@ describe("NewThreadModal", () => {
     });
     expect(lastComposerProps?.defaultProjectId).toBe("proj_home");
     expect(screen.getByText("New child thread")).toBeTruthy();
+  });
+
+  it("forwards an environment seed to the composer", () => {
+    // The parent's worktree checkout, as a `reuse` environment: the composer
+    // seeds its environment picker so the child starts in the parent's
+    // checkout rather than the project-default one.
+    renderModal({
+      parentThreadId: "thr_root",
+      defaultEnvironment: { type: "reuse", environmentId: "env_1" },
+    });
+    expect(lastComposerProps?.defaultEnvironment).toEqual({
+      type: "reuse",
+      environmentId: "env_1",
+    });
+  });
+
+  it("without an environment seed, passes nothing to the composer (inverse)", () => {
+    renderModal({ parentThreadId: "thr_root" });
+    expect("defaultEnvironment" in (lastComposerProps ?? {})).toBe(false);
   });
 
   it("without a parent, keeps the plain title and no nesting hint (inverse)", () => {

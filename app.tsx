@@ -37,7 +37,7 @@ import {
 import { buildParentLanes } from "./components/parent-lanes";
 import { ParentLaneBoard } from "./components/parent-lane-board";
 import { doneAtToEpochMs } from "./lib/done-metadata";
-import { newThreadSeedProjectId } from "./lib/new-thread-seed";
+import { newThreadSeedEnvironment, newThreadSeedProjectId } from "./lib/new-thread-seed";
 import { SnoozeDialog } from "./components/snooze-dialog";
 import {
   snoozeMenuActions,
@@ -1018,6 +1018,13 @@ function BoardPage({ subPath }: { subPath: string }) {
         knownProjectIds: projects.map((project) => project.id),
       }),
     [newThreadParent, filter.projects, projects],
+  );
+  // The composer's environment seed: a parent whose checkout is a worktree
+  // seeds the `reuse` variant so the child starts in the parent's checkout
+  // (lib/new-thread-seed: plain/unknown checkouts seed nothing).
+  const newThreadEnvironmentSeed = useMemo(
+    () => newThreadSeedEnvironment({ parentEnvironment: newThreadParent?.environment }),
+    [newThreadParent],
   );
   // A freshly spawned thread is not in the sidebar cache on the tick the
   // pane route opens, and the pane only renders for a resolvable thread.
@@ -2057,6 +2064,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         open={newThreadOpen}
         onOpenChange={setNewThreadOpen}
         defaultProjectId={newThreadProjectId}
+        defaultEnvironment={newThreadEnvironmentSeed}
         focusRequest={composerFocusRequest}
         parentThreadId={newThreadParentId ?? undefined}
         parentThreadTitle={newThreadParentTitle}
