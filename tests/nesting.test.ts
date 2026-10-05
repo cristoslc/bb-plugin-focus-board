@@ -1322,6 +1322,13 @@ describe("column accounting with nesting", () => {
 });
 
 describe("assembleBoard — empty columns hide entirely", () => {
+  it("the Working lane never drains away: the status board keeps it even when nesting leaves it empty", () => {
+    const idle = thread({ id: "i", updatedAt: NOW - 5 * 60 * 1000 });
+    const result = assembleBoard([idle], "status", CONTEXT, new Map(), new Set(), NOW);
+    const working = result.columns.find((column) => column.id === "working");
+    expect(working?.threads).toEqual([]);
+  });
+
   it("a column drained by nesting disappears: an Idle·Today child nested under its Idle·Recent parent leaves no empty lane", () => {
     // buildColumns assigns both threads to their own buckets; nesting then
     // pulls the child under the parent's card. The Idle·Today bucket held

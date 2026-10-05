@@ -997,7 +997,13 @@ export function Board({
                 className="min-h-0 flex-1 overflow-y-auto rounded-lg bg-muted/30 p-1.5"
               >
                 {column.threads.length === 0 && dragOverColumn !== column.id ? (
-                  isDropTarget ? (
+                  column.id === "working" ? (
+                    // The ever-present Working lane answers the obvious
+                    // question — is anything running? — with words.
+                    <p className="px-1 py-3 text-center text-xs text-muted-foreground/60">
+                      No work in progress
+                    </p>
+                  ) : isDropTarget ? (
                     <p className="px-1 py-3 text-center text-xs text-muted-foreground/60">
                       Drop to {column.id === "done" ? "mark done" : "mark unread"}
                     </p>

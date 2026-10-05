@@ -571,17 +571,22 @@ export function nestUnderParents(
       }
       return { ...column, threads: kept };
     })
-    // Nesting drains a column when its every card is a nested child (a live
-    // parent carries its whole family into the family column — R4 — and the
-    // card itself takes a slot elsewhere). buildColumns never yields an
-    // empty bucket: “columns exist only while they hold cards” is the rule
-    // that keeps the board readable and that hides Idle·buckets that have
-    // aged out or emptied. A lane drained to zero violates it — the board
-    // would park an empty lane (header, count 0, maybe a stale drop hint)
-    // beside columns that all earn their place. Hide the drained column
-    // entirely; if a card leaves the nest it returns to its own column and
-    // the lane reappears with it.
-    .filter((column) => column.threads.length > 0);
+    // Nesting drains a column when its every card is a nested child
+    // (a live parent carries its whole family into the family column — R4 —
+    // and the card itself takes a slot elsewhere). buildColumns yields only
+    // one empty bucket by design — Working, the ever-present attention lane —
+    // and “columns exist only while they hold cards” is the rule that keeps
+    // the board readable and that hides Idle·buckets that have aged out or
+    // emptied. A lane drained to zero violates it — the board would park an
+    // empty lane (header, count 0, maybe a stale drop hint) beside columns
+    // that all earn their place. Hide the drained column entirely; if a card
+    // leaves the nest it returns to its own column and the lane reappears
+    // with it. Working is exempt: under the status grouping the lane stays
+    // even when emptied, reading "No work in progress".
+    .filter(
+      (column) =>
+        column.threads.length > 0 || (groupBy === "status" && column.id === "working"),
+    );
   // A Done column assembled from nothing but projections still earns its
   // place (buildColumns only creates the lane when a done thread exists, and
   // drained done children are its projections' rows — this guards a

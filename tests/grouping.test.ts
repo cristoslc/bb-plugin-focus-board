@@ -183,6 +183,24 @@ describe("buildColumns", () => {
     expect(columns.map((c) => c.id)).toEqual(["working"]);
   });
 
+  it("keeps the Working column on the attention board even when nothing runs", () => {
+    // "Working" is a fixture of the attention board, not a lane that appears
+    // only while a card runs in it: an all-idle board still carries the lane,
+    // empty, where the UI reads "No work in progress".
+    const columns = buildColumns(
+      [thread({ id: "i", updatedAt: NOW - 5 * 1000 })],
+      "status",
+      context,
+      new Map(),
+      new Set(),
+      NOW,
+    );
+    expect(columns.map((c) => c.id)).toEqual(["working", "idle-recent"]);
+    const working = columns.find((c) => c.id === "working");
+    expect(working?.threads).toEqual([]);
+    expect(working?.label).toBe("Working");
+  });
+
   it("puts pinned threads in a far-left column and done in a far-right one", () => {
     const columns = buildColumns(
       [
@@ -254,7 +272,7 @@ describe("buildColumns", () => {
       new Set(),
       NOW,
     );
-    expect(columns.map((c) => c.id)).toEqual(["unread"]);
+    expect(columns.map((c) => c.id)).toEqual(["unread", "working"]);
   });
 
   it("keeps done threads dimmed-flagged but still grouped by done", () => {
@@ -266,7 +284,7 @@ describe("buildColumns", () => {
       new Set(["1"]),
       NOW,
     );
-    expect(columns.map((c) => c.id)).toEqual(["done"]);
+    expect(columns.map((c) => c.id)).toEqual(["working", "done"]);
   });
 
   describe("Done column default sort", () => {

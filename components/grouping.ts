@@ -295,6 +295,20 @@ export function buildColumns(
       threads: sorted(bucket.threads, orderForColumn(ranks, columnRankKey(groupBy, id))),
     }));
 
+  // "Working" never leaves the attention board: a board whose every thread
+  // has gone idle still carries the lane, empty, where the UI reads
+  // "No work in progress". Every other lane keeps the "columns exist only
+  // while they hold cards" rule, so the lane is inserted where a populated
+  // working bucket would sit — before the idle buckets.
+  if (groupBy === "status" && !columns.some((column) => column.id === "working")) {
+    const idleStart = columns.findIndex((column) => column.id.startsWith("idle-"));
+    columns.splice(idleStart === -1 ? columns.length : idleStart, 0, {
+      id: "working",
+      label: THREAD_STATE_LABELS.working,
+      threads: [],
+    });
+  }
+
   // The Pinned column renders whenever a card has entered it, at the far
   // left, before every other column.
   if (pinned.length > 0) {
