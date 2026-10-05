@@ -95,3 +95,9 @@ The operator chose the automation path for item 5's UI cells. Closed as:
 Full battery after the changes: 9 suites, 82 steps, all pass; 1078 vitest tests green, `tsc --noEmit` clean, `npm run gates` passing.
 
 **Item 5 is closed.** The certification's remaining gates reduce to: the dev merge (executing now), hold point 3 (upstream bb filing — operator sign-off), and hold point 4 (marketplace PR #481 plus the `^1.0.0` bump riding the cut).
+
+## Update 2026-10-05 — dev merge executed
+
+The branch merged into `dev` in the main checkout (`a4cb09a`, merge commit, per the spoke's branch model) and pushed (`a58d42f..a4cb09a` on `origin/dev`). Verify on the merged tree: 1078 tests across 74 files green (after a `npm install` in the main checkout picked up the fast-check dev dependency the merge carries), `tsc --noEmit` clean, `npm run gates` passing, build green, `bb plugin reload focus-board` ran, and `bb plugin list` reports `focus-board@0.9.1-dev running` from the main checkout path. With this merge, definition clauses "items 2–3 land on dev" and the branch halves of items 5 and 7 are satisfied on `dev` itself; item 4 was already met; items 9 and 10 are on `dev`.
+
+**Remaining to a licensed 1.0.0 finalize (both hold points, both operator-gated):** the upstream bb filing of the scroll-shell bug (item 6 — or an operator amendment deferring it), and the marketplace pair: PR #481's merge plus the `^1.0.0` range bump and listing refresh riding the cut (item 1). The finalize commit itself remains intent-and-wait.
