@@ -772,37 +772,49 @@ export default async function plugin(bb: BbPluginApi) {
    * same way (record drop, no unread mark).
    */
   async function fireWake(threadId: string, wakeAtMs: number): Promise<void> {
-    const record = await readSnoozeRecord(threadId);
-    if (record === null) return; // cleared: nothing to wake
-    const stamp = snoozeWakeAtMs(record);
-    if (stamp === null || stamp !== wakeAtMs) return; // replaced; newer arm owns it
-    let readSinceSet = false;
-    let threadResolvable = true;
+    // Self-catching end-to-end (audit 2026-10-05 finding 1): this runs on
+    // setTimeout inside the bb server process, so any rejection here — a
+    // record corrupted between read and wake, a failed metadata remove —
+    // must land in the log, never as an unhandled rejection. The record
+    // is left in place on failure: corrupt state stays fail-loud (the
+    // board's snooze_list surfaces it), never coerced into silence.
     try {
-      const row = await bb.sdk.threads.get({ threadId });
-      const lastReadAt = row.lastReadAt;
-      readSinceSet = lastReadAt !== null && lastReadAt > Date.parse(record.setAt);
-    } catch {
-      threadResolvable = false;
-    }
-    if (!readSinceSet && threadResolvable) {
+      const record = await readSnoozeRecord(threadId);
+      if (record === null) return; // cleared: nothing to wake
+      const stamp = snoozeWakeAtMs(record);
+      if (stamp === null || stamp !== wakeAtMs) return; // replaced; newer arm owns it
+      let readSinceSet = false;
+      let threadResolvable = true;
       try {
-        await bb.sdk.threads.markUnread({ threadId });
-      } catch (error) {
-        // The unread write is the feature; failing it is logged, not
-        // swallowed — but the snooze still consumed (no retry loop), so
-        // the board at least stops dimming and the record cannot haunt
-        // a later session.
-        bb.log.warn(
-          `snooze wake: markUnread failed for ${threadId}: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        const row = await bb.sdk.threads.get({ threadId });
+        const lastReadAt = row.lastReadAt;
+        readSinceSet = lastReadAt !== null && lastReadAt > Date.parse(record.setAt);
+      } catch {
+        threadResolvable = false;
       }
+      if (!readSinceSet && threadResolvable) {
+        try {
+          await bb.sdk.threads.markUnread({ threadId });
+        } catch (error) {
+          // The unread write is the feature; failing it is logged, not
+          // swallowed — but the snooze still consumed (no retry loop), so
+          // the board at least stops dimming and the record cannot haunt
+          // a later session.
+          bb.log.warn(
+            `snooze wake: markUnread failed for ${threadId}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      }
+      await bb.sdk.threads.updatePluginMetadata({
+        threadId,
+        remove: [SNOOZE_METADATA_KEY],
+      });
+      bb.realtime.publish(SNOOZE_CHANGED, { threadId });
+    } catch (error) {
+      bb.log.warn(
+        `snooze wake: failed for ${threadId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
-    await bb.sdk.threads.updatePluginMetadata({
-      threadId,
-      remove: [SNOOZE_METADATA_KEY],
-    });
-    bb.realtime.publish(SNOOZE_CHANGED, { threadId });
   }
 
   /**
@@ -882,16 +894,24 @@ export default async function plugin(bb: BbPluginApi) {
    * records fire immediately ("arm" with lag ≤ 0 is a direct fire). Best-
    * effort with a log line, so one corrupted thread's record scan failure
    * cannot take the plugin down at load — the records themselves still
-   * parse fail-loud per thread.
+   * parse fail-loud per thread, and one corrupt row is skipped with a
+   * warn (audit 2026-10-05 finding 2): it can never strand the wake set
+   * behind it.
    */
   async function armAllSnoozes(): Promise<void> {
     const rows = await bb.sdk.threads.list({});
     for (const row of rows) {
-      const record = await readSnoozeRecord(row.id);
-      if (record === null) continue;
-      const wakeAtMs = snoozeWakeAtMs(record);
-      if (wakeAtMs === null) continue; // Unparseable stamps never wake.
-      armWakeAt(row.id, wakeAtMs);
+      try {
+        const record = await readSnoozeRecord(row.id);
+        if (record === null) continue;
+        const wakeAtMs = snoozeWakeAtMs(record);
+        if (wakeAtMs === null) continue; // Unparseable stamps never wake.
+        armWakeAt(row.id, wakeAtMs);
+      } catch (error) {
+        bb.log.warn(
+          `snooze wake scan: skipping ${row.id}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }
   }
 
@@ -1163,6 +1183,13 @@ export default async function plugin(bb: BbPluginApi) {
       plan.kind === "pair"
         ? { providerId: plan.providerId, model: plan.model }
         : { providerId: "bb default chain", model: "bb default chain" };
+    // Security residual (audit 2026-10-05, finding 3): bb's spawn contract
+    // has no tools-disabled or readonly option — CreateThreadRequest's
+    // permissionMode union is accept-edits|auto|full|workspace-write — so
+    // the "No tools" guardrail below is promptual only. The probe's payload
+    // is untrusted thread content, and an instruction-ignoring model could
+    // act with the environment's ordinary tool access. Accepted for 1.0:
+    // the probe is hidden, deleted on every path, and capped at one turn.
     const probe = (await bb.sdk.threads.spawn({
       projectId: source.projectId,
       environment: {

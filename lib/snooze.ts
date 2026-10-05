@@ -92,6 +92,12 @@ export function presetWakeAt(kind: SnoozePreset, now: Date): Date {
  * CLI error (fail loud, never coerce).
  */
 export function parseWhenArg(raw: string, now: Date): Date | null {
+  // Date's valid range is ±8.64e15 ms (±100 million days); anything past
+  // it is an Invalid Date that must be refused HERE, before the caller's
+  // mark-read side effect (audit 2026-10-05 finding 7).
+  const DATE_MAX_MS = 8.64e15;
+  const withinDateRange = (ms: number): boolean =>
+    Number.isFinite(ms) && Math.abs(ms) <= DATE_MAX_MS;
   const relative = /^\+(\d+)([mhdw])$/.exec(raw.trim());
   if (relative !== null) {
     const count = Number(relative[1]);
@@ -101,10 +107,13 @@ export function parseWhenArg(raw: string, now: Date): Date | null {
       d: 24 * 60 * 60_000,
       w: 7 * 24 * 60 * 60_000,
     }[relative[2] as "m" | "h" | "d" | "w"];
-    return new Date(now.getTime() + count * unitMs);
+    const ms = now.getTime() + count * unitMs;
+    if (!withinDateRange(ms)) return null;
+    return new Date(ms);
   }
   const ms = Date.parse(raw);
   if (Number.isNaN(ms) || ms <= now.getTime()) return null;
+  if (!withinDateRange(ms)) return null;
   return new Date(ms);
 }
 

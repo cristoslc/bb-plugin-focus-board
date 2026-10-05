@@ -21,6 +21,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   cloning just the provider. The old path resolved the provider's catalog
   default (an openrouter model here) and the metered gate rejected it with
   a 409.
+- **A corrupt snooze record can no longer silence the other wake-ups.** One
+  bad record is skipped with a log line at load instead of stranding every
+  later snooze, and a record that turns unreadable between set and wake now
+  logs instead of crashing the timer.
+- **An absurd snooze duration refuses cleanly.** A `<when>` like
+  `+100000000w` that overflows the Date range exits with the invalid-wake
+  hint and no longer marks the thread read as a side effect.
 
 ### Changed
 

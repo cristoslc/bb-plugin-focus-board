@@ -9,6 +9,14 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
+    "text": "**A corrupt snooze record can no longer silence the other wake-ups.** One bad record is skipped with a log line at load instead of stranding every later snooze, and a record that turns unreadable between set and wake now logs instead of crashing the timer.",
+    "children": []
+  },
+  {
+    "text": "**An absurd snooze duration refuses cleanly.** A `<when>` like `+100000000w` that overflows the Date range exits with the invalid-wake hint and no longer marks the thread read as a side effect.",
+    "children": []
+  },
+  {
     "text": "**A drop on a column title never writes an order.** It still detaches a nested child (or applies the column's state change cross-lane), but placement stays with the insertion line beside the cards — the floor below keeps its append.",
     "children": []
   },

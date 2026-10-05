@@ -93,7 +93,7 @@ export function daemonPortsFromSystemConfig(config: {
 }): number[] {
 	const ports: number[] = [];
 	for (const port of [config.hostDaemonPort, ...(config.localHelperPorts ?? [])]) {
-		if (typeof port !== "number" || !Number.isInteger(port) || port <= 0) continue;
+		if (typeof port !== "number" || !Number.isInteger(port) || port < 1 || port > 65535) continue;
 		if (!ports.includes(port)) ports.push(port);
 	}
 	return ports;

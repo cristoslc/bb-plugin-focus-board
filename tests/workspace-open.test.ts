@@ -88,6 +88,18 @@ describe("daemonPortsFromSystemConfig", () => {
 			daemonPortsFromSystemConfig({ hostDaemonPort: null, localHelperPorts: null }),
 		).toEqual([]);
 	});
+
+	it("drops ports outside the valid 1–65535 range (audit 2026-10-05 finding 6)", () => {
+		expect(
+			daemonPortsFromSystemConfig({
+				hostDaemonPort: 70000,
+				localHelperPorts: [0, -1, 65536],
+			}),
+		).toEqual([]);
+		expect(
+			daemonPortsFromSystemConfig({ hostDaemonPort: 65535, localHelperPorts: [1] }),
+		).toEqual([65535, 1]);
+	});
 });
 
 describe("probeLocalDaemon", () => {
