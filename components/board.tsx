@@ -1107,8 +1107,10 @@ export function Board({
                             rankDrop.zone === "onto"
                               // The nest zone: a ring around the whole card,
                               // not an insertion line — the drop is "into"
-                              // this card, not beside it.
-                              ? "after:absolute after:inset-0 after:rounded-lg after:ring-2 after:ring-ring"
+                              // this card, not beside it. Amber marks the
+                              // family write so it reads differently from the
+                              // insertion line's lane-color affordance.
+                              ? "after:absolute after:inset-0 after:rounded-lg after:ring-2 after:ring-amber-500 after:bg-amber-500/10"
                               : rankDrop.zone === "before"
                                 ? "before:absolute before:inset-x-0 before:-top-0.5 before:h-0.5 before:rounded-full before:bg-ring"
                                 : "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-ring"

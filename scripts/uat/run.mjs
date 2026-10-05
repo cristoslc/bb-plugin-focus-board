@@ -231,7 +231,10 @@ const pageLineShown = ({ to, edge }) => {
 const pageNestRing = ({ to }) => {
   const target = document.querySelector(`li[data-rank-slot="${to}"]`);
   if (!target) return { shown: false, reason: "no slot" };
-  const ringed = [...target.classList].some((cls) => cls.startsWith("after:ring"));
+  // The family (nest) zone is amber on purpose — lane edges keep the theme's
+  // ring color, so the probe must match the amber ring specifically to verify
+  // the two affordances stay visually distinct.
+  const ringed = [...target.classList].some((cls) => cls.startsWith("after:ring-amber"));
   return {
     shown: ringed,
     reason: ringed
