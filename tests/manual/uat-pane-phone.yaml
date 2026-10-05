@@ -1,0 +1,28 @@
+suite: pane-phone
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5183
+defaults:
+  groupBy: status
+  theme: dark
+  viewport: { width: 390, height: 844 }
+steps:
+  - id: a-card-opens-the-pane-on-phone
+    title: On a phone viewport the pane opens over the board (the full-screen sheet)
+    goto: "?groupBy=status"
+    click: { card: thr_uat_queue }
+    assert:
+      - pane: { threadId: thr_uat_queue }
+  - id: the-compact-actions-menu-carries-full-screen
+    title: The compact header's actions menu carries Full Screen (the standalone button is dropped on compact)
+    gestures:
+      - click_aria: { label: "More thread actions" }
+    assert:
+      - text_visible: "Full Screen"
+  - id: choosing-full-screen-runs-the-maximize-path
+    title: Choosing Full Screen runs the maximize path; the mock's navigation is a no-op so the pane stays
+    gestures:
+      - click_aria: { label: "Full Screen" }
+    assert:
+      - pane: { threadId: thr_uat_queue }
+      - no_visible_error: true
