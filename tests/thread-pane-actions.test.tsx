@@ -98,6 +98,15 @@ describe("compact viewport thread pane header", () => {
     expect(trigger.querySelector('[data-icon="ChevronDown"]')).toBeNull();
   });
 
+  it("the standalone actions menu keeps its own positioning wrapper", () => {
+    renderPane({ compact: true });
+    const trigger = screen.getByRole("button", { name: "More thread actions" });
+    // The dropdown is absolutely positioned against its wrapper; without
+    // the wrapper it drifts to the pane's top-right corner instead of
+    // dropping under the button.
+    expect(trigger.parentElement?.className).toContain("relative");
+  });
+
   it("offers Full Screen in the actions menu and maximizes on click", () => {
     renderPane({ compact: true });
     openActionsMenu();

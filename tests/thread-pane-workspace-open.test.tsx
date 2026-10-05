@@ -161,6 +161,28 @@ describe("pane header chrome", () => {
 		expect(trigger.querySelector('[data-icon="ChevronDown"]')).not.toBeNull();
 		expect(trigger.querySelector('[data-icon="More"]')).toBeNull();
 	});
+
+	it("the actions dropdown is not trapped inside a clipping wrapper", async () => {
+		renderPane();
+		fireEvent.click(
+			screen.getByRole("button", { name: "More thread actions" }),
+		);
+		const menu = screen.getByRole("menu", { name: "More thread actions" });
+		// The split wrapper once carried overflow-hidden for its rounded
+		// corners, which clipped the absolutely-positioned menu to nothing —
+		// the caret opened a menu nobody could see. The menu must never sit
+		// inside a clipping ancestor again.
+		expect(menu.closest('[class*="overflow-hidden"]')).toBeNull();
+	});
+
+	it("the open dropdown is not trapped inside a clipping wrapper either", async () => {
+		renderPane();
+		fireEvent.click(
+			await screen.findByRole("button", { name: /more places to open/i }),
+		);
+		const menu = screen.getByRole("menu", { name: "More places to open" });
+		expect(menu.closest('[class*="overflow-hidden"]')).toBeNull();
+	});
 });
 
 describe("pane header workspace-open menu", () => {
