@@ -325,20 +325,36 @@ export function EditableTitle({
   );
 }
 
-function ActionsMenu({ items }: { items: readonly ActionMenuItem[] }) {
+function ActionsMenu({
+  items,
+  attached = false,
+}: {
+  items: readonly ActionMenuItem[];
+  /**
+   * Attached mode: the trigger is the right half of a split control (a
+   * caret beside a labeled primary — the same grammar as the open menu),
+   * so it renders no wrapper of its own; the split wrapper positions the
+   * menu. Standalone mode keeps the 28px ellipsis button.
+   */
+  attached?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="relative">
+    <>
       <Button
         variant="ghost"
         size="icon"
-        className={HEADER_ICON_BUTTON_CLASS}
+        className={
+          attached
+            ? "h-7 w-7 shrink-0 rounded-l-none px-0 text-muted-foreground hover:text-foreground max-md:pointer-coarse:size-9"
+            : HEADER_ICON_BUTTON_CLASS
+        }
         aria-label="More thread actions"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        <Icon name="More" className="size-4" />
+        <Icon name={attached ? "ChevronDown" : "More"} className={attached ? "size-3" : "size-4"} />
       </Button>
       {open ? (
         <>
@@ -373,7 +389,7 @@ function ActionsMenu({ items }: { items: readonly ActionMenuItem[] }) {
           </div>
         </>
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -770,17 +786,14 @@ export function ThreadPane({
             {isCompact ? "" : `Snoozed · wakes ${describeWakeAt(snoozeWakeAt, Date.now())}`}
           </span>
         ) : null}
-        <Button
-          variant="ghost"
-          size="sm"
-          className={isCompact ? HEADER_ICON_BUTTON_CLASS : "h-7 shrink-0 px-2 text-xs text-muted-foreground hover:text-foreground"}
-          aria-label={thread.isUnread ? "Mark thread read" : "Mark thread unread"}
-          onClick={onToggleUnread}
-        >
-          <Icon name={thread.isUnread ? "MailOpen" : "Mail"} className="size-3.5" aria-hidden />
-          {!isCompact ? (thread.isUnread ? "Mark Read" : "Mark Unread") : null}
-        </Button>
         {(() => {
+          // The read-state toggle and the thread actions are one family, so
+          // on desktop they render as ONE split control — the same grammar
+          // as the open menu: labeled primary (Mark Unread / Mark Read) on
+          // the left, attached caret opening the thread-actions menu (done,
+          // pin, snooze, archive) on the right. No floating ellipsis. The
+          // compact header keeps the icon toggle plus the standalone ⋯
+          // menu, since there is no room for a labeled split there.
           const actionItems: (ActionMenuItem | SnoozeMenuAction)[] = [
             {
               id: "done",
@@ -809,17 +822,52 @@ export function ThreadPane({
               run: onToggleArchived,
             },
           ];
-          // On compact viewports the full-screen button is dropped from the
-          // header to save space, so the menu carries "Full Screen" instead.
           if (isCompact) {
+            // On compact viewports the full-screen button is dropped from
+            // the header to save space, so the menu carries it instead
+            // (bb's compact term; the desktop open dropdown has "Maximize
+            // pane").
             actionItems.push({
               id: "maximize",
               label: "Full Screen",
               icon: "Maximize2",
               run: onMaximize,
             });
+            return (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={HEADER_ICON_BUTTON_CLASS}
+                  aria-label={thread.isUnread ? "Mark thread read" : "Mark thread unread"}
+                  onClick={onToggleUnread}
+                >
+                  <Icon name={thread.isUnread ? "MailOpen" : "Mail"} className="size-4" />
+                </Button>
+                <ActionsMenu items={actionItems} />
+              </>
+            );
           }
-          return <ActionsMenu items={actionItems} />;
+          return (
+            <div className="relative inline-flex shrink-0 items-stretch overflow-hidden rounded-md">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 shrink-0 gap-1.5 rounded-r-none px-2 text-xs text-muted-foreground hover:text-foreground"
+                aria-label={thread.isUnread ? "Mark thread read" : "Mark thread unread"}
+                onClick={onToggleUnread}
+              >
+                <Icon
+                  name={thread.isUnread ? "MailOpen" : "Mail"}
+                  className="size-3.5"
+                  aria-hidden
+                />
+                {thread.isUnread ? "Mark Read" : "Mark Unread"}
+              </Button>
+              <div className="w-px self-stretch my-1.5 bg-border" aria-hidden />
+              <ActionsMenu items={actionItems} attached />
+            </div>
+          );
         })()}
         {(() => {
           // The pane's take on the main view's workspace-open button: an

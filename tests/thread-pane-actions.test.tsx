@@ -88,6 +88,13 @@ describe("compact viewport thread pane header", () => {
     expect(screen.queryByLabelText("Open thread full screen")).toBeNull();
   });
 
+  it("the standalone actions trigger reads as an ellipsis, not a caret", () => {
+    renderPane({ compact: true });
+    const trigger = screen.getByRole("button", { name: "More thread actions" });
+    expect(trigger.querySelector('[data-icon="More"]')).not.toBeNull();
+    expect(trigger.querySelector('[data-icon="ChevronDown"]')).toBeNull();
+  });
+
   it("offers Full Screen in the actions menu and maximizes on click", () => {
     renderPane({ compact: true });
     openActionsMenu();
