@@ -238,7 +238,12 @@ const pageFloorAmber = ({ from, column }) => {
  * a top-level card. The header is hovered, not the floor: no scroll needed.
  */
 const pageDragChildToHeader = ({ from, column }) => {
-  const anchor = document.querySelector(`a[data-thread-card="${from}"][draggable]`);
+  // The dragged card may be TOP-LEVEL (its anchor is inside the ranked
+  // slot's li, not a nested row) or a nested child row (anchor carries
+  // data-thread-card). Try both sources.
+  const anchor =
+    document.querySelector(`li[data-rank-slot="${from}"] a[draggable]`) ??
+    document.querySelector(`a[data-thread-card="${from}"][draggable]`);
   const section = document.querySelector(`section[data-column-id="${column}"]`);
   const header = section?.querySelector("header");
   if (!anchor || !header) throw new Error(`drag_child_to_header: missing ${from}=${anchor != null} or ${column} header=${header != null}`);

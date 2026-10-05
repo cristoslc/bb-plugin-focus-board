@@ -473,4 +473,47 @@ describe("the column header is the closer detach target (family drag)", () => {
     // A successful drop clears the hover affordances.
     expect(header.className).not.toMatch(/ring-amber-500/);
   });
+
+  /** Full drag onto a column's TITLE strip: dragstart, dragover, drop on the <header>. */
+  function dragToHeader(fromId: string, columnId: string) {
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(cardAnchor(fromId), { dataTransfer: dt });
+    const section = document.querySelector(`section[data-column-id="${columnId}"]`);
+    if (!(section instanceof HTMLElement)) throw new Error(`missing column ${columnId}`);
+    const header = unreadHeader();
+    const over = createEvent.dragOver(header, { dataTransfer: dt });
+    fireEvent(header, over);
+    const drop = createEvent.drop(header, { dataTransfer: dt });
+    fireEvent(header, drop);
+    return { dropAllowed: over.defaultPrevented, dropPrevented: drop.defaultPrevented };
+  }
+
+  it("a top-level card dropped on its own column's title writes nothing", () => {
+    const { props } = renderBoard(twoCardFixture());
+    const { dropAllowed } = dragToHeader("thr_a", "unread");
+    // The section floor already authorizes the hover, so the browser accepts
+    // the drop — the point is that releasing on the TITLE does no write.
+    expect(dropAllowed).toBe(true);
+    expect(props.onRankMove).not.toHaveBeenCalled();
+    expect(props.onDropDone).not.toHaveBeenCalled();
+    expect(props.onDropUnread).not.toHaveBeenCalled();
+    expect(props.onDropPinned).not.toHaveBeenCalled();
+  });
+
+  it("a title drop is state-only cross-lane: done, but no rank order", () => {
+    const doneFiller = thread({ id: "thr_old_done", updatedAt: NOW - 9000 });
+    const { props } = renderBoard(
+      [...twoCardFixture(), doneFiller],
+      { doneIds: new Set<string>(["thr_old_done"]) },
+    );
+    const header = document.querySelector('section[data-column-id="done"] header');
+    if (!(header instanceof HTMLElement)) throw new Error("missing done column header");
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(cardAnchor("thr_a"), { dataTransfer: dt });
+    const over = createEvent.dragOver(header, { dataTransfer: dt });
+    fireEvent(header, over);
+    fireEvent(header, createEvent.drop(header, { dataTransfer: dt }));
+    expect(props.onDropDone).toHaveBeenCalledWith("thr_a");
+    expect(props.onRankMove).not.toHaveBeenCalled();
+  });
 });
