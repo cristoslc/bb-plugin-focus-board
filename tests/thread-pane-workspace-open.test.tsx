@@ -160,6 +160,36 @@ describe("pane header workspace-open menu", () => {
 		);
 	});
 
+	it("the primary icon matches the primary action's kind — a code glyph for the editor", async () => {
+		renderPane();
+		const primary = await screen.findByRole("button", {
+			name: /open workspace in vs code/i,
+		});
+		// The primary action opens the EDITOR, so the glyph is the code icon;
+		// the folder glyph stays on the file-explorer entry in the dropdown.
+		expect(primary.querySelector('[data-icon="Code"]')).not.toBeNull();
+		expect(primary.querySelector('[data-icon="FolderOpen"]')).toBeNull();
+	});
+
+	it("a file-manager primary (no editor installed) keeps the folder glyph", async () => {
+		rpcCallMock.mockImplementation(async (method: string) => {
+			if (method !== "workspace_open_targets") return defaultRpc(method);
+			const available = defaultRpc(method) as {
+				targets: Array<{ kind: string | null }>;
+			};
+			return {
+				...available,
+				targets: available.targets.filter((target) => target.kind !== "editor"),
+			};
+		});
+		renderPane();
+		const primary = await screen.findByRole("button", {
+			name: /open workspace in finder/i,
+		});
+		expect(primary.querySelector('[data-icon="FolderOpen"]')).not.toBeNull();
+		expect(primary.querySelector('[data-icon="Code"]')).toBeNull();
+	});
+
 	it("the dropdown lists editor, file explorer, terminal, new window, and copy link", async () => {
 		renderPane();
 		const primaryProbe = await screen.findByRole("button", {

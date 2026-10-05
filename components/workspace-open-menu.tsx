@@ -71,6 +71,22 @@ function pickTargetOfKind(
 	return targetsOfKind(targets, kind)[0] ?? null;
 }
 
+/** Registry icon per daemon target kind; unknown kinds fall back to a folder. */
+const ICON_FOR_KIND: Record<string, string> = {
+	editor: "Code",
+	"file-manager": "FolderOpen",
+	"default-app": "FolderOpen",
+	"native-app": "FolderOpen",
+	terminal: "Terminal",
+};
+
+function iconForTarget(target: WorkspaceOpenTarget): string {
+	if (target.kind !== null && ICON_FOR_KIND[target.kind] !== undefined) {
+		return ICON_FOR_KIND[target.kind];
+	}
+	return "FolderOpen";
+}
+
 export function WorkspaceOpenMenu({ threadId, threadHref }: WorkspaceOpenMenuProps) {
 	const rpc = useRpc<typeof rpcContract>();
 	const [state, setState] = useState<WorkspaceOpenTargets | null>(null);
@@ -137,7 +153,9 @@ export function WorkspaceOpenMenu({ threadId, threadHref }: WorkspaceOpenMenuPro
 	const absoluteHref = new URL(threadHref, window.location.origin).toString();
 
 	// Workspace destinations ask the daemon; thread destinations are local
-	// to this surface. The dropdown draws a divider between the groups.
+	// to this surface. The dropdown draws a divider between the groups, and
+	// every workspace item's glyph matches its target's kind — the same
+	// mapping the primary icon uses, so icon and action never diverge.
 	const workspaceItems: {
 		id: string;
 		label: string;
@@ -148,7 +166,7 @@ export function WorkspaceOpenMenu({ threadId, threadHref }: WorkspaceOpenMenuPro
 		workspaceItems.push({
 			id: "editor",
 			label: "Open in editor",
-			icon: "Code",
+			icon: iconForTarget(editor),
 			target: editor,
 		});
 	}
@@ -156,7 +174,7 @@ export function WorkspaceOpenMenu({ threadId, threadHref }: WorkspaceOpenMenuPro
 		workspaceItems.push({
 			id: "file-explorer",
 			label: "Open in file explorer",
-			icon: "FolderOpen",
+			icon: iconForTarget(fileExplorer),
 			target: fileExplorer,
 		});
 	}
@@ -164,7 +182,7 @@ export function WorkspaceOpenMenu({ threadId, threadHref }: WorkspaceOpenMenuPro
 		workspaceItems.push({
 			id: "terminal",
 			label: "Open in terminal",
-			icon: "Terminal",
+			icon: iconForTarget(terminal),
 			target: terminal,
 		});
 	}
@@ -205,7 +223,7 @@ export function WorkspaceOpenMenu({ threadId, threadHref }: WorkspaceOpenMenuPro
 					})
 				}
 			>
-				<Icon name="FolderOpen" className="size-4" />
+				<Icon name={iconForTarget(primary)} className="size-4" />
 			</Button>
 			<div className="w-px self-stretch my-1.5 bg-border" aria-hidden />
 			<Button
