@@ -10,6 +10,17 @@ import { rankDragType } from "../lib/rank";
 import { describeWakeAt } from "../lib/snooze";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
 
+/**
+ * The select-with-modifiers gesture on a sweep-mode card click, reduced to
+ * what the board's semantics consume: Shift extends the selection from the
+ * anchor through the clicked card; cmd/ctrl — and a plain click — toggle
+ * just that one. Outside sweep mode modifiers mean browser navigation and
+ * never reach here.
+ */
+export interface SweepClickGesture {
+  shiftKey: boolean;
+}
+
 function relativeTime(timestamp: number, now: number): string {
   const diff = now - timestamp;
   if (diff < 60_000) return "just now";
@@ -60,8 +71,12 @@ interface ThreadCardProps {
    * toggleable, distinct from the selected highlight.
    */
   isSweepSelectable?: boolean;
-  /** Flips the card's sweep-selection membership. Sweep mode only. */
-  onSweepToggle?: (threadId: string) => void;
+  /**
+   * A sweep-mode card click, with the modifiers users select with: Shift
+   * extends the selection from the anchor through this card, cmd/ctrl (and
+   * a plain click) toggle just this one.
+   */
+  onSweepToggle?: (threadId: string, gesture: SweepClickGesture) => void;
   projectName: string;
   menuActions?: readonly CardMenuAction[];
   /** Children that render as nested rows beneath this card, in display order. */
@@ -394,11 +409,13 @@ export function ThreadCard({
           onDragEnd={() => onRankDragStart?.(null)}
           onClick={(event) => {
             // Sweep mode is modal: the click curates the selection, it never
-            // navigates. Even modifier-clicks toggle — the mode owns the
-            // gesture until click-away or Escape ends it.
+            // navigates — not even modifier-clicks, which would otherwise
+            // open a new window from the href. The board reads the gesture:
+            // shift extends the range from the anchor, cmd/ctrl and plain
+            // clicks toggle this one card.
             if (isSweepSelecting) {
               event.preventDefault();
-              onSweepToggle?.(thread.id);
+              onSweepToggle?.(thread.id, { shiftKey: event.shiftKey });
               return;
             }
             // Let modified clicks (middle-click handled natively, cmd/ctrl new

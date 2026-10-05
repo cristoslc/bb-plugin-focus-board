@@ -14,6 +14,7 @@ import {
   SWEEP_SETTLED_WORDS,
   sweepColumnKind,
   sweepDestination,
+  sweepRangeIds,
   sweepRemovesThreads,
   type ArmedSweep,
   type SweepDestination,
@@ -189,6 +190,13 @@ interface BoardProps {
    */
   onSweepToggle?: (threadId: string) => void;
   /**
+   * Adds a shift-click's range to the live selection (union, never
+   * subtractive). The board computes the ids — anchor through the clicked
+   * card in display order, cards that may not join dropped — and reports
+   * them; the caller applies them to `armedSweep`.
+   */
+  onSweepRangeSelect?: (threadIds: readonly string[]) => void;
+  /**
    * Threads that may never join a sweep (live-child parents, the
    * sweep-family contract). Arm-scoped: only the arms whose action removes
    * the thread from the live board (Done → Archive, idle → Done) apply it;
@@ -340,6 +348,7 @@ export function Board({
   onDismissSweepNotice,
   onSweepUndo,
   onSweepToggle,
+  onSweepRangeSelect,
   sweepBlockedIds,
   onSweepArm,
   onSweepDisarm,
@@ -354,6 +363,17 @@ export function Board({
     threadId: string;
     edge: Half;
   } | null>(null);
+
+  // The shift-click anchor: the last card clicked without Shift in the armed
+  // column. Shift extends the selection from it (it stays put — standard
+  // list semantics); plain and cmd/ctrl clicks move it. Reset whenever the
+  // armed column changes or sweep mode ends, so a re-arm never inherits an
+  // old anchor from a previous session.
+  const sweepAnchorRef = useRef<{ columnId: string; threadId: string } | null>(null);
+  const armedColumnId = armedSweep?.columnId ?? null;
+  useEffect(() => {
+    sweepAnchorRef.current = null;
+  }, [armedColumnId]);
 
   // When the thread pane opens (or is resized) the board container shrinks;
   // keep the open thread's card in view by scrolling it into the visible
@@ -687,6 +707,13 @@ export function Board({
           // the board was shuffling a deck (observed 2026-10-01).
           const shownThreads = column.threads;
           const armedSet = isArmed ? new Set(eligible) : null;
+          // May this card join the armed selection? Blocked ids never join
+          // in a removing arm, and a Done column's family projection card
+          // is not a done thread. A direct click on a refused card refuses
+          // loudly (below); inside a shift-range they are skipped silently.
+          const cardMayJoinSweep = (threadId: string): boolean =>
+            !(blockedIds?.has(threadId) ?? false) &&
+            !(column.id === "done" && !doneIds.has(threadId));
           const rankKey = columnRankKey(groupBy, column.id);
           // Seed on first intent: every card is a reorder target for its OWN
           // lane, whether or not that lane has a stored order yet. The drag
@@ -1002,7 +1029,7 @@ export function Board({
                             !(armedSet?.has(thread.id) ?? false) &&
                             !(blockedIds?.has(thread.id) ?? false)
                           }
-                          onSweepToggle={(toggledId) => {
+                          onSweepToggle={(toggledId, gesture) => {
                             if (blockedIds?.has(toggledId) ?? false) {
                               setSweepRefusal(
                                 `"${thread.displayTitle}" still has live children, so it cannot join a sweep.`,
@@ -1015,6 +1042,32 @@ export function Board({
                               );
                               return;
                             }
+                            if (gesture.shiftKey) {
+                              // Shift extends: anchor through this card in
+                              // display order, ids that may not join skipped.
+                              // The anchor itself stays put — only non-shift
+                              // clicks move it.
+                              const anchor =
+                                sweepAnchorRef.current?.columnId === column.id
+                                  ? sweepAnchorRef.current.threadId
+                                  : null;
+                              onSweepRangeSelect?.(
+                                sweepRangeIds(
+                                  shownThreads.map((candidate) => candidate.id),
+                                  anchor,
+                                  toggledId,
+                                  cardMayJoinSweep,
+                                ),
+                              );
+                              return;
+                            }
+                            // Plain and cmd/ctrl clicks toggle one card —
+                            // the mode's curation gesture — and become the
+                            // next shift-click's anchor.
+                            sweepAnchorRef.current = {
+                              columnId: column.id,
+                              threadId: toggledId,
+                            };
                             onSweepToggle?.(toggledId);
                           }}
                           projectName={projectNameFor(thread.projectId)}

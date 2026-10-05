@@ -71,6 +71,7 @@ import {
   sweepColumnKind,
   sweepDestination,
   toggleSweepSelection,
+  addSweepSelection,
   type ArmedSweep,
   type DoneAgeSource,
   type SweepDestination,
@@ -591,6 +592,14 @@ function BoardPage({ subPath }: { subPath: string }) {
   const toggleSweepSelectionFor = useCallback((threadId: string) => {
     setArmedSweep((current) =>
       current === null ? current : toggleSweepSelection(current, threadId),
+    );
+  }, []);
+  // A shift-click's range joins the live selection additively (lib/sweep's
+  // addSweepSelection: union, curated membership untouched). The Board
+  // computes the ids; this only applies them to the armed state.
+  const addSweepSelectionFor = useCallback((threadIds: readonly string[]) => {
+    setArmedSweep((current) =>
+      current === null ? current : addSweepSelection(current, threadIds),
     );
   }, []);
   // The sweep's way out: during a run, stop before the next archive; in an
@@ -1869,6 +1878,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             onDismissSweepNotice={clearSweepNotice}
             onSweepUndo={undoSweepFor}
             onSweepToggle={toggleSweepSelectionFor}
+            onSweepRangeSelect={addSweepSelectionFor}
             sweepBlockedIds={sweepBlockedIds}
             onSweepArm={armSweepFor}
             onSweepDisarm={disarmSweep}

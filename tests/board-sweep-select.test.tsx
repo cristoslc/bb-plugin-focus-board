@@ -51,6 +51,7 @@ function renderBoard(
     onSweepArm: vi.fn(),
     onSweepDisarm: vi.fn(),
     onSweepToggle: vi.fn(),
+    onSweepRangeSelect: vi.fn(),
     ...overrides,
   } as unknown as BoardProps;
   return { props, ...render(<Board {...props} />) };
@@ -230,6 +231,150 @@ describe("clicking cards in sweep mode toggles selection", () => {
     expect(document.querySelector("[data-testid='sweep-refusal']")?.textContent).toContain(
       "live children",
     );
+  });
+});
+
+describe("shift-click selects the range from the anchor", () => {
+  const candidates = ["thr_d1", "thr_d2", "thr_d3", "thr_d4"].map(doneThread);
+
+  it("extends from the last plain-clicked card through the shift-clicked card", () => {
+    const onSweepRangeSelect = vi.fn();
+    const onSweepToggle = vi.fn();
+    renderBoard(candidates, {
+      armedSweep: armSweep("done", []),
+      onSweepToggle,
+      onSweepRangeSelect,
+    });
+    fireEvent.click(cardAnchor("thr_d1"));
+    fireEvent.click(cardAnchor("thr_d3"), { shiftKey: true });
+    expect(onSweepRangeSelect).toHaveBeenCalledWith(["thr_d1", "thr_d2", "thr_d3"]);
+    expect(onSweepToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it("an upward shift-click still reports the range in display order", () => {
+    const onSweepRangeSelect = vi.fn();
+    renderBoard(candidates, {
+      armedSweep: armSweep("done", []),
+      onSweepRangeSelect,
+    });
+    fireEvent.click(cardAnchor("thr_d3"));
+    fireEvent.click(cardAnchor("thr_d1"), { shiftKey: true });
+    expect(onSweepRangeSelect).toHaveBeenCalledWith(["thr_d1", "thr_d2", "thr_d3"]);
+  });
+
+  it("the anchor stays put across shift-clicks, so the range keeps growing", () => {
+    const onSweepRangeSelect = vi.fn();
+    renderBoard(candidates, {
+      armedSweep: armSweep("done", []),
+      onSweepRangeSelect,
+    });
+    fireEvent.click(cardAnchor("thr_d1"));
+    fireEvent.click(cardAnchor("thr_d2"), { shiftKey: true });
+    fireEvent.click(cardAnchor("thr_d4"), { shiftKey: true });
+    expect(onSweepRangeSelect).toHaveBeenLastCalledWith([
+      "thr_d1",
+      "thr_d2",
+      "thr_d3",
+      "thr_d4",
+    ]);
+  });
+
+  it("a shift-click with no anchor yet selects just the clicked card", () => {
+    const onSweepRangeSelect = vi.fn();
+    renderBoard(candidates, {
+      armedSweep: armSweep("done", []),
+      onSweepRangeSelect,
+    });
+    fireEvent.click(cardAnchor("thr_d2"), { shiftKey: true });
+    expect(onSweepRangeSelect).toHaveBeenCalledWith(["thr_d2"]);
+  });
+
+  it("re-arming after a disarm starts a fresh anchor", () => {
+    const onSweepRangeSelect = vi.fn();
+    const { props, rerender } = renderBoard(candidates, {
+      armedSweep: armSweep("done", []),
+      onSweepRangeSelect,
+    });
+    fireEvent.click(cardAnchor("thr_d1"));
+    // Exit sweep mode (click-away) and enter it again: session two's first
+    // shift must not extend from session one's anchor.
+    rerender(<Board {...props} armedSweep={null} />);
+    rerender(<Board {...props} armedSweep={armSweep("done", [])} />);
+    fireEvent.click(cardAnchor("thr_d3"), { shiftKey: true });
+    expect(onSweepRangeSelect).toHaveBeenLastCalledWith(["thr_d3"]);
+  });
+
+  it("shift never removes: clicking over an already-selected run reports it as a plain add", () => {
+    const onSweepRangeSelect = vi.fn();
+    const onSweepToggle = vi.fn();
+    renderBoard(candidates, {
+      armedSweep: armSweep("done", ["thr_d1", "thr_d2", "thr_d3"]),
+      onSweepToggle,
+      onSweepRangeSelect,
+    });
+    fireEvent.click(cardAnchor("thr_d3"), { shiftKey: true });
+    expect(onSweepToggle).not.toHaveBeenCalled();
+    expect(onSweepRangeSelect).toHaveBeenCalledWith(["thr_d3"]);
+  });
+
+  it("cards that may not join are skipped inside the range, without a refusal", () => {
+    const onSweepRangeSelect = vi.fn();
+    renderBoard(candidates, {
+      armedSweep: armSweep("done", []),
+      sweepBlockedIds: new Set(["thr_d2"]),
+      onSweepRangeSelect,
+    });
+    fireEvent.click(cardAnchor("thr_d1"));
+    fireEvent.click(cardAnchor("thr_d3"), { shiftKey: true });
+    expect(onSweepRangeSelect).toHaveBeenCalledWith(["thr_d1", "thr_d3"]);
+    expect(document.querySelector("[data-testid='sweep-refusal']")).toBeNull();
+  });
+
+  it("shift-clicking a card that cannot join refuses loudly and selects nothing", () => {
+    const onSweepRangeSelect = vi.fn();
+    const onSweepToggle = vi.fn();
+    renderBoard(candidates, {
+      armedSweep: armSweep("done", []),
+      sweepBlockedIds: new Set(["thr_d2"]),
+      onSweepToggle,
+      onSweepRangeSelect,
+    });
+    fireEvent.click(cardAnchor("thr_d2"), { shiftKey: true });
+    expect(onSweepRangeSelect).not.toHaveBeenCalled();
+    expect(onSweepToggle).not.toHaveBeenCalled();
+    expect(document.querySelector("[data-testid='sweep-refusal']")?.textContent).toContain(
+      "live children",
+    );
+  });
+});
+
+describe("cmd/ctrl-click toggles a single card", () => {
+  const candidates = ["thr_d1", "thr_d2", "thr_d3"].map(doneThread);
+
+  it("a cmd-click reports a single toggle, not a range", () => {
+    const onSweepRangeSelect = vi.fn();
+    const onSweepToggle = vi.fn();
+    renderBoard(candidates, {
+      armedSweep: armSweep("done", []),
+      onSweepToggle,
+      onSweepRangeSelect,
+    });
+    fireEvent.click(cardAnchor("thr_d2"), { metaKey: true });
+    expect(onSweepToggle).toHaveBeenCalledWith("thr_d2");
+    expect(onSweepRangeSelect).not.toHaveBeenCalled();
+  });
+
+  it("a ctrl-click does the same", () => {
+    const onSweepRangeSelect = vi.fn();
+    const onSweepToggle = vi.fn();
+    renderBoard(candidates, {
+      armedSweep: armSweep("done", []),
+      onSweepToggle,
+      onSweepRangeSelect,
+    });
+    fireEvent.click(cardAnchor("thr_d2"), { ctrlKey: true });
+    expect(onSweepToggle).toHaveBeenCalledWith("thr_d2");
+    expect(onSweepRangeSelect).not.toHaveBeenCalled();
   });
 });
 

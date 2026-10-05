@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Sweep selection takes shift-click and ⌘/Ctrl-click.** Shift-click grabs
+  the run from the last-clicked card through the one you click (cards that
+  cannot join a sweep are skipped); ⌘/Ctrl-click toggles a single card.
+
 ## [0.8.0] - 2026-10-03
 
 ### Added
