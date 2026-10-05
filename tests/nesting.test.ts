@@ -429,6 +429,83 @@ describe("filterFamilies", () => {
     expect(result.kept.map((t) => t.id).sort()).toEqual(["c", "p"]);
     expect(result.dimmedIds.size).toBe(0);
   });
+
+  describe("search over project and branch names", () => {
+    const projectNameFor = (projectId: string) => (projectId === "proj_a" ? "Alpha" : "Beta");
+    const branchedParent = thread({
+      id: "bp",
+      environment: {
+        id: "env_1",
+        name: "checkout",
+        branchName: "feat/walnut",
+        path: null,
+        isWorktree: true,
+        providerId: null,
+        workspaceDisplayKind: null,
+      },
+      updatedAt: NOW - HOUR,
+    });
+    const crossProjectChild = thread({
+      id: "bc",
+      parentThreadId: "bp",
+      projectId: "proj_b",
+      isUnread: true,
+      updatedAt: NOW - 2 * HOUR,
+    });
+
+    it("a search hit on a child's project name keeps the family; parent dimmed", () => {
+      const index = buildFamilyIndex([branchedParent, crossProjectChild]);
+      const result = filterFamilies(
+        [branchedParent, crossProjectChild],
+        index,
+        EMPTY_FILTER,
+        "beta",
+        projectNameFor,
+      );
+      expect(result.kept.map((t) => t.id).sort()).toEqual(["bc", "bp"]);
+      expect(result.dimmedIds.has("bp")).toBe(true);
+      expect(result.dimmedIds.has("bc")).toBe(false);
+    });
+
+    it("a search hit on the parent's branch keeps the family; child dimmed", () => {
+      const index = buildFamilyIndex([branchedParent, crossProjectChild]);
+      const result = filterFamilies(
+        [branchedParent, crossProjectChild],
+        index,
+        EMPTY_FILTER,
+        "walnut",
+        projectNameFor,
+      );
+      expect(result.kept.map((t) => t.id).sort()).toEqual(["bc", "bp"]);
+      expect(result.dimmedIds.has("bc")).toBe(true);
+      expect(result.dimmedIds.has("bp")).toBe(false);
+    });
+
+    it("a project/branch search miss drops the family", () => {
+      const index = buildFamilyIndex([branchedParent, crossProjectChild]);
+      const result = filterFamilies(
+        [branchedParent, crossProjectChild],
+        index,
+        EMPTY_FILTER,
+        "zzz",
+        projectNameFor,
+      );
+      expect(result.kept).toHaveLength(0);
+    });
+
+    it("filterIndividually matches project names and branches per thread", () => {
+      const solo = thread({
+        id: "s",
+        projectId: "proj_b",
+        host: { id: "h1", name: "work-laptop" },
+        updatedAt: NOW - HOUR,
+      });
+      const result = filterIndividually([branchedParent, solo], EMPTY_FILTER, "laptop", projectNameFor);
+      expect(result.kept.map((t) => t.id)).toEqual(["s"]);
+      const branched = filterIndividually([branchedParent, solo], EMPTY_FILTER, "Walnut", projectNameFor);
+      expect(branched.kept.map((t) => t.id)).toEqual(["bp"]);
+    });
+  });
 });
 
 describe("family filtering composes with nesting", () => {

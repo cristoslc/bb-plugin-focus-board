@@ -732,6 +732,13 @@ function BoardPage({ subPath }: { subPath: string }) {
     return { projectIds, providerIds };
   }, [liveThreads]);
 
+  // "Personal" is the board card's label for a thread whose project is not in
+  // the sidebar's project list (bb's default personal project).
+  const projectNameFor = useCallback(
+    (projectId: string) =>
+      projects.find((project) => project.id === projectId)?.name ?? "Personal",
+    [projects],
+  );
   // Family-aware filtering replaces per-thread filtering when nesting is ON:
   // a family passes when any member matches, non-matching members render
   // dimmed (archived members are hidden outright by the family index, so
@@ -743,9 +750,9 @@ function BoardPage({ subPath }: { subPath: string }) {
   const familyFiltered = useMemo(
     () =>
       nestChildren || groupBy === "parent"
-        ? filterFamilies(nonHiddenThreads, familyIndex, filter, search.trim())
-        : filterIndividually(nonHiddenThreads, filter, search.trim()),
-    [nestChildren, groupBy, nonHiddenThreads, familyIndex, filter, search],
+        ? filterFamilies(nonHiddenThreads, familyIndex, filter, search.trim(), projectNameFor)
+        : filterIndividually(nonHiddenThreads, filter, search.trim(), projectNameFor),
+    [nestChildren, groupBy, nonHiddenThreads, familyIndex, filter, search, projectNameFor],
   );
   const filtered = familyFiltered.kept;
 
@@ -1043,13 +1050,6 @@ function BoardPage({ subPath }: { subPath: string }) {
       setProvisionalSpawn(null);
     }
   }, [sidebarThreads, provisionalSpawn]);
-  // "Personal" is the board card's label for a thread whose project is not in
-  // the sidebar's project list (bb's default personal project).
-  const projectNameFor = useCallback(
-    (projectId: string) =>
-      projects.find((project) => project.id === projectId)?.name ?? "Personal",
-    [projects],
-  );
   // Archived riders sit in `searched` when nesting is ON (they stay under
   // their parent); board-level counts stay live-thread counts.
   const boardCount = useMemo(

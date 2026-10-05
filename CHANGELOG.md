@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Toolbar search reaches project names and branches.** The filter box still
+  matches card titles, but now also matches the project and the branch (or
+  machine) a card's footer shows, on parents and nested children alike — a
+  hit on any family member keeps the family on the board with the rest
+  dimmed.
+
 ### Fixed
 
 - **✨ "The thread's active model" no longer lands on a metered catalog

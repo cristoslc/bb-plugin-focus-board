@@ -119,11 +119,29 @@ function ageBucketFor(
   return match ?? buckets[buckets.length - 1];
 }
 
-export function matchesFilter(thread: PluginSidebarThread, query: string): boolean {
+/**
+ * Search predicate for the toolbar's filter box. Matches the thread's own
+ * fields (title and id) PLUS the two fields the card's footer line renders
+ * (ThreadCard's `{projectName} · {branch}` strip): the project's display
+ * name and the branch. Branch derives the same way ThreadCard derives it —
+ * the environment's branch, falling back to the host's name when the thread
+ * has no branch to show. All matches are case-insensitive. Family filtering
+ * runs this over children too, so a hit on a child (title, project, or
+ * branch) keeps the whole family.
+ */
+export function matchesFilter(
+  thread: PluginSidebarThread,
+  query: string,
+  projectNameFor?: (projectId: string) => string,
+): boolean {
   const q = query.toLowerCase();
+  const project = (projectNameFor?.(thread.projectId) ?? "").toLowerCase();
+  const branch = (thread.environment?.branchName ?? thread.host?.name ?? "").toLowerCase();
   return (
     thread.displayTitle.toLowerCase().includes(q) ||
-    thread.id.toLowerCase().includes(q)
+    thread.id.toLowerCase().includes(q) ||
+    (project !== "" && project.includes(q)) ||
+    (branch !== "" && branch.includes(q))
   );
 }
 

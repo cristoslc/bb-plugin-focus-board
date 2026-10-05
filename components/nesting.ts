@@ -713,9 +713,10 @@ export function filterFamilies(
   familyIndex: FamilyIndex,
   filter: FilterState,
   searchQuery: string,
+  projectNameFor?: (projectId: string) => string,
 ): FamilyFilterResult {
   const passes = (thread: PluginSidebarThread): boolean =>
-    threadPassesFilter(thread, filter, searchQuery);
+    threadPassesFilter(thread, filter, searchQuery, projectNameFor);
 
   // Group visible threads into families by their root, so a parent and its
   // descendants pass or fail together.
@@ -753,12 +754,22 @@ export function filterFamilies(
  * members cannot contribute a match (family filtering) and cannot render
  * standalone (individual filtering).
  */
-function threadPassesFilter(thread: PluginSidebarThread, filter: FilterState, searchQuery: string): boolean {
+function threadPassesFilter(
+  thread: PluginSidebarThread,
+  filter: FilterState,
+  searchQuery: string,
+  projectNameFor?: (projectId: string) => string,
+): boolean {
   if (thread.isArchived) return false;
   if (filter.projects.size > 0 && !filter.projects.has(thread.projectId)) return false;
   if (filter.providers.size > 0 && !filter.providers.has(thread.providerId)) return false;
   if (filter.states.size > 0 && !filter.states.has(threadState(thread))) return false;
-  if (searchQuery.trim() !== "" && !matchesFilter(thread, searchQuery.trim())) return false;
+  if (
+    searchQuery.trim() !== "" &&
+    !matchesFilter(thread, searchQuery.trim(), projectNameFor)
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -771,10 +782,11 @@ export function filterIndividually(
   threads: readonly PluginSidebarThread[],
   filter: FilterState,
   searchQuery: string,
+  projectNameFor?: (projectId: string) => string,
 ): FamilyFilterResult {
   const kept: PluginSidebarThread[] = [];
   for (const thread of threads) {
-    if (threadPassesFilter(thread, filter, searchQuery)) kept.push(thread);
+    if (threadPassesFilter(thread, filter, searchQuery, projectNameFor)) kept.push(thread);
   }
   return { kept, dimmedIds: new Set() };
 }

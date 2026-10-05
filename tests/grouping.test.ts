@@ -91,6 +91,40 @@ describe("matchesFilter", () => {
   it("matches ids", () => {
     expect(matchesFilter(t, "abc")).toBe(true);
   });
+
+  it("matches the project name the card's footer shows", () => {
+    const projectNameFor = (projectId: string) => (projectId === "proj_a" ? "Alpha" : "Beta");
+    expect(matchesFilter(thread({ projectId: "proj_a" }), "alpha", projectNameFor)).toBe(true);
+    expect(matchesFilter(thread({ projectId: "proj_b" }), "alpha", projectNameFor)).toBe(false);
+    expect(matchesFilter(thread({ projectId: "proj_b" }), "beta", projectNameFor)).toBe(true);
+  });
+
+  it("falls back to Personal for projects outside a supplied resolver", () => {
+    const projectNameFor = () => "Personal";
+    expect(matchesFilter(t, "personal", projectNameFor)).toBe(true);
+    expect(matchesFilter(t, "alpha", projectNameFor)).toBe(false);
+  });
+
+  it("matches the branch on the card's project line", () => {
+    const branched = thread({
+      environment: {
+        id: "env_1",
+        name: "checkout",
+        branchName: "feat/walnut-rank",
+        path: null,
+        isWorktree: true,
+        providerId: null,
+        workspaceDisplayKind: null,
+      },
+    });
+    expect(matchesFilter(branched, "WALNUT")).toBe(true);
+    expect(matchesFilter(branched, "nope")).toBe(false);
+  });
+
+  it("falls back to the host name when the card shows no branch", () => {
+    const hosted = thread({ host: { id: "h1", name: "work-laptop" } });
+    expect(matchesFilter(hosted, "laptop")).toBe(true);
+  });
 });
 
 describe("columnFor", () => {
