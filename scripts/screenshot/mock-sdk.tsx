@@ -44,6 +44,9 @@ export function definePluginApp(setup: (app: unknown) => void): unknown {
       // the harness, so the registration just has to be accepted.
       sidebarFooterAction: (_config: { id: string }) => undefined,
     },
+    // The app-wide brand-icon registry (the manifest's branding.icon drawn on
+    // host surfaces). Nothing in the harness renders it; accept the record.
+    experimental_icons: { register: (_config: { name: string }) => undefined },
   });
   return { id: "screenshot-mock" };
 }
@@ -185,6 +188,14 @@ export function experimental_useProviders(): unknown {
   return { status: "ready", providers: SIM_PROVIDERS };
 }
 
+/**
+ * The new-thread composer stub. No UAT suite drives the modal, so an inert
+ * component is enough — but the export must exist: the modal imports it from
+ * the SDK specifier this file stands in for, and a missing export refused the
+ * whole module graph (every UAT suite timed out, 2026-10-05).
+ */
+export const experimental_NewThreadComposer: ComponentType<unknown> = () => null;
+
 // One stable object across renders: the app holds `sdk` in effect deps
 // ([sdk]) and its handlers setState on resolve, so a per-render object here
 // is an endless setState→render→new-sdk→setState loop (~1000 renders/s) that
@@ -264,6 +275,13 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     };
   }
   if (method === "rank_list") return { orders: structuredClone(simRanks) };
+  // Mount-time record lists (done/parks/snoozes). Unhandled branches return
+  // {} — harmless for parks (the caller just gets a rejected Object.keys —
+  // an unhandled rejection, not a crash) — but snooze_list's result is
+  // setSnoozeRecords'd VERBATIM, so a missing branch wedges the whole board
+  // render (Object.keys(undefined) in the next memo, 2026-10-05).
+  if (method === "snooze_list") return { snoozes: {} };
+  if (method === "pin_parks_list") return { parks: {} };
   if (method === "thread_autotitle") {
     // Deterministic canned reply: the real server builds the title from the
     // thread's first prompt over bb's selected AI service; a UAT pass
