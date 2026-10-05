@@ -1227,6 +1227,25 @@ export function Board({
                             );
                           }
                         }
+                        onDragLeave={
+                          ranking
+                            ? (event) => {
+                                // The marker is the hover's promise. The
+                                // browser fires dragleave on the slot the
+                                // moment the pointer crosses out of it — up
+                                // to the title strip, into the floor gap,
+                                // across to another column — and the promise
+                                // must die with the hover: a drop on the
+                                // title writes no placement, so a line parked
+                                // there lies about where the card would land.
+                                const into = event.relatedTarget;
+                                if (into instanceof Node && event.currentTarget.contains(into)) {
+                                  return;
+                                }
+                                clearRankDrop();
+                              }
+                            : undefined
+                        }
                         // A drag is mouse-only, so a column also takes Alt+Arrow
                         // from a focused card. Without it the reorder is
                         // unreachable for keyboard and touch.

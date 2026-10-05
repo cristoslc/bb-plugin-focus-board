@@ -292,6 +292,63 @@ const pageHeaderAmber = ({ from, column }) => {
 };
 
 /**
+ * Hover a card edge with a live drag, then (optionally) have the pointer
+ * CROSS OUT of the slot toward the column's title strip, exactly as the
+ * browser reports the boundary crossing (dragleave on the slot with the
+ * header as relatedTarget). Two keys, one page fn: leave=false sets the
+ * insertion line and keeps the drag alive; leave=true fires the crossing.
+ * The leave stage checks the line was actually painted before it declares
+ * anything cleared — a probe that proves nothing is worse than none.
+ */
+const pageHoverHeader = ({ from, to, edge, column, leave }) => {
+  const source = document.querySelector(`li[data-rank-slot="${from}"]`);
+  const target = to !== undefined ? document.querySelector(`li[data-rank-slot="${to}"]`) : null;
+  const section = document.querySelector(`section[data-column-id="${column}"]`);
+  const header = section?.querySelector("header");
+  if (!source || (to !== undefined && !target) || !header) {
+    throw new Error(`hover_header: missing from/${from} to/${to} or ${column} header`);
+  }
+  const transfer = window.__protectedDrag();
+  const anchor = source.querySelector("a[draggable]");
+  transfer._armRead(true);
+  anchor.dispatchEvent(
+    new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: transfer }),
+  );
+  transfer._armRead(false);
+  const lineOn = target ?? source;
+  if (!leave) {
+    const box = lineOn.getBoundingClientRect();
+    const clientY =
+      edge === "before" ? box.top + box.height * 0.2 : box.top + box.height * 0.8;
+    const over = new DragEvent("dragover", {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer: transfer,
+      clientX: box.left + 8,
+      clientY,
+    });
+    lineOn.dispatchEvent(over);
+    return { stage: "hover", dropAllowed: over.defaultPrevented };
+  }
+  const classes = [...lineOn.classList];
+  const wasShown = classes.some((cls) => cls.includes("inset-x-0"));
+  lineOn.dispatchEvent(
+    new DragEvent("dragleave", { bubbles: true, dataTransfer: transfer, relatedTarget: header }),
+  );
+  const box = header.getBoundingClientRect();
+  header.dispatchEvent(
+    new DragEvent("dragover", {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer: transfer,
+      clientX: box.left + box.width / 2,
+      clientY: box.top + box.height / 2,
+    }),
+  );
+  return { stage: "leave", wasShown };
+};
+
+/**
  * Hover a card's chosen half. Split from `pageLineShown` because the dragover
  * sets React state: reading the computed style in the same task would sample
  * the DOM before the commit.
@@ -1206,6 +1263,18 @@ async function check(step, page, gestureResults = []) {
         `last call args ${JSON.stringify(last)}`,
       );
     }
+    if (rule.cleared_line !== undefined) {
+      // The hover's promise must die when the pointer crosses out of the slot
+      // toward the title strip — sample the slot the line was parked on,
+      // without re-hovering (the hover_header gesture already did the leave).
+      const want = rule.cleared_line;
+      await sleep(150);
+      const line = await page.evaluate(pageLineShown, {
+        to: want.to,
+        edge: want.edge ?? "before",
+      });
+      expect("the line cleared when the drag left the card", !line.shown, `still painted: ${line.reason}`);
+    }
     if (rule.insertion_line !== undefined || rule.no_insertion_line !== undefined) {
       // Hover first, then sample after React has committed the line.
       const wants = [rule.insertion_line, rule.no_insertion_line].filter((r) => r !== undefined);
@@ -1277,7 +1346,7 @@ async function runSuite(file, { port, browser }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "drag_child_to_header", "hover", "key", "back", "click", "click_aria", "menu", "scroll", "wheel_pan", "resize", "sleep", "press_escape", "push_url"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "drag_child_to_header", "hover_header", "hover", "key", "back", "click", "click_aria", "menu", "scroll", "wheel_pan", "resize", "sleep", "press_escape", "push_url"];
       let gestureFailed = false;
       // A gesture that cannot even run (its own element is absent — a
       // regression deleted what the step targets) records the step and
@@ -1330,6 +1399,29 @@ async function runSuite(file, { port, browser }) {
           } else if (gesture === "drag_child_to_header") {
             await page.evaluate(pageDragChildToHeader, payload);
             await sleep(200);
+          } else if (gesture === "hover_header") {
+            // Two-stage: hover=false sets the line and keeps the drag alive;
+            // hover=true is the pointer's boundary crossing out of the slot
+            // toward the title. The leave stage self-checks that a line was
+            // even painted — a probe that clears nothing proves nothing.
+            const outcome = await page.evaluate(pageHoverHeader, payload);
+            if (outcome.stage === "leave" && outcome.wasShown === false) {
+              gestureFailed = true;
+              report.steps.push({
+                id: step.id,
+                title: step.title,
+                ok: false,
+                results: [
+                  {
+                    name: "hover_header",
+                    ok: false,
+                    detail: "no insertion line was painted before the leave — the probe would prove nothing",
+                  },
+                ],
+              });
+            } else {
+              await sleep(200);
+            }
           } else if (gesture === "hover") {
             // A hover with a board y-fraction moves the real mouse into that
             // swimlane band (used by the band_hover assertion); other hovers
