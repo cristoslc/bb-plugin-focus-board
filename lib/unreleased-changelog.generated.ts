@@ -7,5 +7,9 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
   {
     "text": "**A drop on a column title never writes an order.** It still detaches a nested child (or applies the column's state change cross-lane), but placement stays with the insertion line beside the cards — the floor below keeps its append.",
     "children": []
+  },
+  {
+    "text": "**The Working lane no longer vanishes when nothing runs.** The Attention board keeps its Working column even when every thread has gone idle; the empty lane reads \"No work in progress\" instead of disappearing.",
+    "children": []
   }
 ];

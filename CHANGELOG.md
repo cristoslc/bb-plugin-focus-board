@@ -20,6 +20,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   nested child (or applies the column's state change cross-lane), but
   placement stays with the insertion line beside the cards — the floor below
   keeps its append.
+- **The Working lane no longer vanishes when nothing runs.** The Attention
+  board keeps its Working column even when every thread has gone idle; the
+  empty lane reads "No work in progress" instead of disappearing.
 
 ## [0.9.0] - 2026-10-05
 
