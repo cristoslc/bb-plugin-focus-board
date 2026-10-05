@@ -5,6 +5,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
+    "text": "**The Done column sorts by activity recency again, most recently active on top.** The idle sweep's fresh stamps no longer vault long-idle threads or family projections up the column, and a stored drag order still wins.",
+    "children": []
+  },
+  {
     "text": "**A double-tap of Escape no longer closes the thread pane.** After the pane stops a running thread or closes, further Escapes inside a short double-click window are swallowed, so a stop double-tap can't cascade into closing the pane.",
     "children": []
   },

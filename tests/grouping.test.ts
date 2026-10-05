@@ -270,54 +270,41 @@ describe("buildColumns", () => {
   });
 
   describe("Done column default sort", () => {
-    it("sorts unranked done cards by doneAt, newest done first (not updatedAt)", () => {
+    it("sorts unranked done cards by activity recency, most recently active first", () => {
       const columns = buildColumns(
         [
-          // updatedAt deliberately contradicts doneAt: done order, not the
-          // board's recency order, is what the column shows by default.
-          thread({ id: "old-done-new-updated", updatedAt: NOW - HOUR }),
-          thread({ id: "new-done", updatedAt: NOW - 3 * DAY }),
-          thread({ id: "mid-done", updatedAt: NOW - 2 * DAY }),
+          // updatedAt deliberately contradicts doneAt: a fresh done stamp
+          // (the idle sweep's mark on a long-idle thread) must not vault a
+          // quiet card above recently active ones — most recently active at
+          // the top is the column's order.
+          thread({ id: "sweep-stamped", updatedAt: NOW - 30 * DAY }),
+          thread({ id: "quiet", updatedAt: NOW - 2 * DAY }),
+          thread({ id: "no-stamp", updatedAt: NOW - 2 * HOUR }),
+          thread({ id: "active", updatedAt: NOW - HOUR }),
         ],
         "status",
         context,
         new Map(),
-        new Set(["old-done-new-updated", "new-done", "mid-done"]),
+        new Set(["sweep-stamped", "quiet", "no-stamp", "active"]),
         NOW,
         {},
         new Map([
-          ["old-done-new-updated", NOW - 5 * DAY],
-          ["new-done", NOW - 1000],
-          ["mid-done", NOW - 2 * DAY],
+          // Fresh sweep stamps contradict activity recency on purpose.
+          ["sweep-stamped", NOW - 1000],
+          ["active", NOW - 5 * DAY],
+          ["quiet", NOW - 2 * DAY],
         ]),
       );
       const done = columns.find((c) => c.id === "done");
       expect(done?.threads.map((t) => t.id)).toEqual([
-        "new-done",
-        "mid-done",
-        "old-done-new-updated",
+        "active",
+        "no-stamp",
+        "quiet",
+        "sweep-stamped",
       ]);
     });
 
-    it("sorts a done card with no recorded doneAt below recorded ones, in derived order", () => {
-      const columns = buildColumns(
-        [
-          thread({ id: "unknown", updatedAt: NOW - HOUR }),
-          thread({ id: "recorded", updatedAt: NOW - 8 * DAY }),
-        ],
-        "status",
-        context,
-        new Map(),
-        new Set(["unknown", "recorded"]),
-        NOW,
-        {},
-        new Map([["recorded", NOW - 2 * DAY]]),
-      );
-      const done = columns.find((c) => c.id === "done");
-      expect(done?.threads.map((t) => t.id)).toEqual(["recorded", "unknown"]);
-    });
-
-    it("applies a stored drag order on top of the doneAt default sort", () => {
+    it("applies a stored drag order on top of the activity default sort", () => {
       const columns = buildColumns(
         [
           thread({ id: "a", updatedAt: NOW - HOUR }),
@@ -330,30 +317,25 @@ describe("buildColumns", () => {
         new Set(["a", "b", "c"]),
         NOW,
         { done: ["c", "b", "a"] },
-        new Map([
-          ["a", NOW - HOUR],
-          ["b", NOW - 2 * HOUR],
-          ["c", NOW - 3 * HOUR],
-        ]),
       );
       const done = columns.find((c) => c.id === "done");
       expect(done?.threads.map((t) => t.id)).toEqual(["c", "b", "a"]);
     });
 
-    it("falls back to the board's derived order when no done times are known", () => {
+    it("floats a pinned done card above unpinned ones, then by activity", () => {
       const columns = buildColumns(
         [
-          thread({ id: "early", updatedAt: NOW - 3 * HOUR }),
-          thread({ id: "late", updatedAt: NOW - HOUR }),
+          thread({ id: "pinned-old", isPinned: true, updatedAt: NOW - 3 * DAY }),
+          thread({ id: "recent", updatedAt: NOW - HOUR }),
         ],
         "status",
         context,
         new Map(),
-        new Set(["early", "late"]),
+        new Set(["pinned-old", "recent"]),
         NOW,
       );
       const done = columns.find((c) => c.id === "done");
-      expect(done?.threads.map((t) => t.id)).toEqual(["late", "early"]);
+      expect(done?.threads.map((t) => t.id)).toEqual(["pinned-old", "recent"]);
     });
   });
 });

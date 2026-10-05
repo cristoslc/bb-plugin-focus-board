@@ -343,9 +343,11 @@ function BoardPage({ subPath }: { subPath: string }) {
     (threadId: string) => doneExtras[threadId]?.keep === true,
     [doneExtras],
   );
-  // Thread id → epoch-ms done stamp, feeding the Done column's default sort
-  // (newest done first). Threads without a record (or the whole map, if
-  // done_list never answered) fall back to the board's derived order.
+  // Thread id → epoch-ms done stamp, feeding the done-children rows under a
+  // done parent's card and the parent-lane board's Done row (both newest
+  // done first). The Done column itself ignores stamps and sorts by
+  // activity recency; the idle sweep's fresh stamps must not vault
+  // long-idle threads to the top of it.
   const doneTimes = useMemo(() => {
     const times = new Map<string, number>();
     for (const [threadId, extra] of Object.entries(doneExtras)) {

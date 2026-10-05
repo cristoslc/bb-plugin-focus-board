@@ -78,9 +78,11 @@ export interface NestingOptions {
    */
   ranks?: RankStore;
   /**
-   * Thread id → epoch-ms done stamp, for the Done column's default sort
-   * (newest done first). Absent for a thread, or an absent map entirely,
-   * leaves that card on the board's derived order.
+   * Thread id → epoch-ms done stamp, for the done-children rows under a done
+   * parent's Done card (newest done first). The Done column itself does not
+   * read stamps: the idle sweep marks long-idle threads Done with a fresh
+   * stamp, so a stamp-ordered column vaults quiet threads above recently
+   * active ones.
    */
   doneTimes?: ReadonlyMap<string, number>;
   /**
@@ -121,7 +123,6 @@ export function assembleBoard(
 ): BoardAssembly {
   const nestingEnabled = options.nestingEnabled ?? true;
   const ranks = options.ranks ?? {};
-  const doneTimes = options.doneTimes ?? new Map<string, number>();
   // Archived threads never take a column slot; the family index drops them
   // too (buildFamilyIndex is the single authoritative hide), so an archived
   // child renders nowhere at all — matching bb's sidebar, where archiving
@@ -137,7 +138,6 @@ export function assembleBoard(
         doneIds,
         now,
         ranks,
-        doneTimes,
       ),
       nestedChildrenByParent: new Map(),
       doneChildrenByParent: new Map(),
@@ -167,7 +167,6 @@ export function assembleBoard(
       doneIds,
       now,
       ranks,
-      doneTimes,
       columnOverrides,
     ),
     visible,
@@ -448,7 +447,8 @@ export function familyColumnOverrides(
  * `childrenByParent` holds each parent's live nested children sorted
  * urgent-first, then in the same order the columns use (pinned-first,
  * newest-first; manual ranks within each tier) — see `sortNestedByColumnRank`;
- * a done parent's rows sort by done recency, the Done column's own order.
+ * a done parent's rows sort by done recency (the Done column itself orders
+ * by activity recency).
  * `doneChildrenByParent` holds each projection's done children sorted newest
  * done first. Grandchildren are never placed separately: the family index
  * flattens every descendant onto the root, so a child that itself has
@@ -521,26 +521,31 @@ export function nestUnderParents(
   // The Done projection: each live parent whose done children moved to the
   // Done space also renders a second card there — the family's projection
   // card — with those children nested under it. A done parent needs no
-  // projection; its own card already sits in the Done column. The projection
-  // sorts by its most recent done child (the family's done recency); with no
-  // stamped child it falls in with the stamp-less cards, below stamped ones,
-  // exactly the rule the Done column applies to a card with no doneAt.
+  // projection; its own card already sits in the Done column. Like every
+  // card in the Done column, projections order by activity recency, not the
+  // done stamp: a projection's recency is its family's most recent touch
+  // (max updatedAt over the parent and its done children), so the idle
+  // sweep's fresh stamps on long-idle children cannot vault the family.
   const projectionThreads = [...doneNested.keys()]
     .map((id) => threadById.get(id))
     .filter((thread): thread is PluginSidebarThread => thread !== undefined);
-  const projectionDoneTimes = new Map(doneTimes);
+  const familyRecency = new Map<string, number>();
   for (const [parentId, children] of doneNested) {
-    let newest: number | undefined;
-    for (const child of children) {
-      const stamp = projectionDoneTimes.get(child.id);
-      if (stamp !== undefined) newest = newest === undefined ? stamp : Math.max(newest, stamp);
-    }
-    if (newest !== undefined) projectionDoneTimes.set(parentId, newest);
+    let recency = threadById.get(parentId)?.updatedAt ?? 0;
+    for (const child of children) recency = Math.max(recency, child.updatedAt);
+    familyRecency.set(parentId, recency);
   }
+  const recencyOf = (thread: PluginSidebarThread): number =>
+    familyRecency.get(thread.id) ?? thread.updatedAt;
   const doneRankOrder = orderForColumn(ranks, columnRankKey(groupBy, "done"));
   const withProjections = (cards: readonly PluginSidebarThread[]): PluginSidebarThread[] =>
     [...cards, ...projectionThreads].sort(
-      compareByRank(doneRankOrder, doneRecencyCompare(projectionDoneTimes)),
+      compareByRank(doneRankOrder, (a, b) => {
+        const aPinned = a.isPinned ? 0 : 1;
+        const bPinned = b.isPinned ? 0 : 1;
+        if (aPinned !== bPinned) return aPinned - bPinned;
+        return recencyOf(b) - recencyOf(a);
+      }),
     );
 
   const outColumns: BoardColumn[] = columns
@@ -642,8 +647,9 @@ function withAttentionFirst(
  * column (or a parent not found in any column) sorts purely by the board's
  * derived order.
  *
- * Rows under a card in the Done column (a done parent's card) read in the
- * Done column's own order instead: newest done first.
+ * Rows under a card in the Done column (a done parent's card) read in
+ * done-recency order instead: newest done first. The Done column itself
+ * orders by activity recency; only these rows keep the done-stamp order.
  */
 function sortNestedByColumnRank(
   nested: Map<string, PluginSidebarThread[]>,

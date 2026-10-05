@@ -981,18 +981,21 @@ describe("assembleBoard — done children project into the Done column (families
     expect(columnOf(result.columns, "d")).toBeUndefined();
   });
 
-  it("the Done projection sorts by its most recent done child", () => {
-    const older = thread({ id: "p1", updatedAt: NOW - 5 * HOUR });
-    const newer = thread({ id: "p2", updatedAt: NOW - 5 * HOUR });
-    const olderDoneChild = thread({ id: "d1", parentThreadId: "p1", updatedAt: NOW - 4 * HOUR });
-    const newerDoneChild = thread({ id: "d2", parentThreadId: "p2", updatedAt: NOW - 3 * HOUR });
+  it("the Done projection sorts by the family's most recent touch, not the done stamp", () => {
+    // A sweep-stamped family (a fresh doneAt on a long-idle child) must not
+    // vault above a family whose members were active more recently.
+    const swept = thread({ id: "p1", updatedAt: NOW - 30 * DAY });
+    const active = thread({ id: "p2", updatedAt: NOW - 5 * HOUR });
+    const sweptChild = thread({ id: "d1", parentThreadId: "p1", updatedAt: NOW - 30 * DAY });
+    const activeChild = thread({ id: "d2", parentThreadId: "p2", updatedAt: NOW - HOUR });
     const doneIds = new Set(["d1", "d2"]);
     const doneTimes = new Map([
-      ["d1", NOW - 4 * HOUR],
-      ["d2", NOW - 3 * HOUR],
+      // Fresh sweep stamps contradict activity recency on purpose.
+      ["d1", NOW - 1000],
+      ["d2", NOW - 4 * HOUR],
     ]);
     const result = assembleBoard(
-      [older, newer, olderDoneChild, newerDoneChild],
+      [swept, active, sweptChild, activeChild],
       "status",
       CONTEXT,
       new Map(),

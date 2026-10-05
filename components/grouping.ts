@@ -162,11 +162,12 @@ function sorted(
 }
 
 /**
- * The Done column's derived order: most recently done first. A thread with no
- * recorded doneAt (marked done but the record is missing, e.g. a fresh board
- * over legacy state) cannot be placed on the done timeline, so it sorts below
- * every recorded one, in the board's derived order — assuming "just now" for
- * an unknown stamp would vault it over cards the operator watched get done.
+ * Most recently done first: the done-children rows under a done parent's
+ * card, and the parent-lane board's Done row (D9). The main board's Done
+ * column does not sort this way — its default is the board's derived order
+ * (activity recency), because the idle sweep stamps a fresh `doneAt` on
+ * long-idle threads and a stamp-based order would vault those quiet threads
+ * to the top of the column.
  */
 export function doneRecencyCompare(
   doneTimes: ReadonlyMap<string, number>,
@@ -244,7 +245,6 @@ export function buildColumns(
   doneIds: ReadonlySet<string> = new Set(),
   now: number = Date.now(),
   ranks: RankStore = {},
-  doneTimes: ReadonlyMap<string, number> = new Map(),
   columnOverrides: ReadonlyMap<string, { id: string; label: string }> = new Map(),
 ): BoardColumn[] {
   // Threads marked Done form their own column, always farthest right on the
@@ -306,18 +306,17 @@ export function buildColumns(
   }
 
   // The Done column renders whenever a card has entered it, at the far right.
-  // Default order is by the done stamp, newest done first; a stored drag
-  // order (rank key "done") rides on top of that default, exactly as in
-  // every other column.
+  // Default order is the board's derived order — pinned first, then most
+  // recently active at top — matching every other column, rather than the
+  // done stamp: the idle sweep marks long-idle threads Done with a fresh
+  // stamp, and a stamp-based order would vault those quiet threads above
+  // recently active ones. A stored drag order (rank key "done") rides on top
+  // of that default, exactly as in every other column.
   if (done.length > 0) {
     columns.push({
       id: "done",
       label: "Done",
-      threads: sorted(
-        done,
-        orderForColumn(ranks, columnRankKey(groupBy, "done")),
-        doneRecencyCompare(doneTimes),
-      ),
+      threads: sorted(done, orderForColumn(ranks, columnRankKey(groupBy, "done"))),
     });
   }
   // A grouping with no buckets at all still shows the flat column.
