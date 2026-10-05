@@ -180,8 +180,8 @@ export function AutotitleFallbackModal({
               </button>
               <p className="mt-1 text-xs text-muted-foreground">
                 {state.data.threadModel.available
-                  ? "Generates in a hidden probe thread using this thread's provider and model; the probe is deleted when done."
-                  : `The thread's model is unavailable: ${state.data.threadModel.reason ?? "no reason given"}. bb plugins cannot invoke a thread's chat model directly — the probe path needs a resolved provider/model and a project to spawn in.`}
+                  ? "Generates in a hidden probe thread on this thread's model when one resolves, else on the same default a new thread here gets; the probe is deleted when done."
+                  : `The thread's model is unavailable: ${state.data.threadModel.reason ?? "no reason given"}. bb plugins cannot invoke a thread's chat model directly — the probe path needs a resolved provider/model or a project to inherit one from.`}
               </p>
             </div>
           </div>

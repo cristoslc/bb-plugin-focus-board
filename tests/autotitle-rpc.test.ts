@@ -358,10 +358,14 @@ describe("thread_autotitle via the thread's own model (hidden probe thread)", ()
 });
 
 describe("thread-model spawn fallback chain", () => {
-  it("spawns with the source thread's provider and no model when bb cannot resolve a pair", async () => {
-    // bb resolves missing-model spawns against the provider's own catalog
-    // default, so cloning just the provider keeps the probe on the same
-    // agent stack without guessing a model.
+  it("spawns by inheriting bb's default chain when no pair resolves, even with a provider on record", async () => {
+    // A provider-only clone lets bb resolve the model against the
+    // provider's own catalog default. On this machine that catalog default
+    // is an openrouter model — the exact metered fall-through the metered
+    // gate had to reject live (HTTP 409 on a title probe, 2026-10-05). The
+    // inherit spawn instead rides bb's own spawn default chain (project
+    // remembered default → global), exactly what a new thread in the
+    // project gets: core-resolved and inside what the gate admits.
     const { callRpc, lastSpawn, deletedProbes } = await setup({
       executionOptions: null,
       threadRow: {
@@ -372,21 +376,21 @@ describe("thread-model spawn fallback chain", () => {
         status: "idle",
         visibility: "visible",
       },
-      probeTimeline: { rows: [{ kind: "conversation", role: "assistant", text: "Provider default title", id: "r2" }], maxSeq: 3 },
+      probeTimeline: { rows: [{ kind: "conversation", role: "assistant", text: "Inherited default title", id: "r2" }], maxSeq: 3 },
     });
     const out = (await callRpc("thread_autotitle", {
       threadId: "thr_x",
       useThreadModel: true,
     })) as { title: string };
-    expect(out).toEqual({ title: "Provider default title" });
+    expect(out).toEqual({ title: "Inherited default title" });
     const spawn = lastSpawn() as Record<string, unknown> | null;
-    expect(spawn).toMatchObject({ providerId: "acp-opencode" });
-    expect("model" in spawn!).toBe(false);
-    expect(spawn?.executionInputSources).toEqual({ providerId: "explicit" });
+    expect(spawn).not.toBeNull();
+    expect(spawn && "providerId" in spawn).toBe(false);
+    expect(spawn && "model" in spawn).toBe(false);
     expect(deletedProbes()).toHaveLength(1);
   });
 
-  it("the services menu reports the provider chain as available", async () => {
+  it("the services menu reports the inherit chain as available with a provider and a project on record", async () => {
     const { callRpc } = await setup({
       executionOptions: null,
       threadRow: {
@@ -404,14 +408,21 @@ describe("thread-model spawn fallback chain", () => {
     expect(out.threadModel.available).toBe(true);
   });
 
-  it("refuses only when there is no resolved pair, no provider, and no project", async () => {
+  it("refuses when no pair resolves and the thread has no project to inherit from, even with a provider on record", async () => {
     const { callRpc, lastSpawn } = await setup({
       executionOptions: null,
-      threadRow: { id: "thr_x", status: "idle" },
+      threadRow: {
+        id: "thr_x",
+        projectId: null,
+        environmentId: "env_1",
+        providerId: "acp-opencode",
+        status: "idle",
+        visibility: "visible",
+      },
     });
     await expect(
       callRpc("thread_autotitle", { threadId: "thr_x", useThreadModel: true }),
-    ).rejects.toThrow(/no resolved provider\/model/i);
+    ).rejects.toThrow(/no project to inherit|no resolved provider\/model/i);
     expect(lastSpawn()).toBeNull();
   });
 });
