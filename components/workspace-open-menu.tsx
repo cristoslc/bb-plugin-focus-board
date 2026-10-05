@@ -239,7 +239,10 @@ export function WorkspaceOpenMenu({
 	];
 
 	return (
-		<div className="inline-flex shrink-0 items-stretch overflow-hidden rounded-md">
+		// No overflow-hidden: the dropdown is a descendant of this wrapper,
+		// and clipping it for rounded corners would hide the menu entirely.
+		// Each half rounds itself instead.
+		<div className="relative inline-flex shrink-0 items-stretch rounded-md">
 			<Button
 				variant="ghost"
 				size={showLabel ? "sm" : "icon"}

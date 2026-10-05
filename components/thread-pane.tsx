@@ -334,12 +334,14 @@ function ActionsMenu({
    * Attached mode: the trigger is the right half of a split control (a
    * caret beside a labeled primary — the same grammar as the open menu),
    * so it renders no wrapper of its own; the split wrapper positions the
-   * menu. Standalone mode keeps the 28px ellipsis button.
+   * menu. Standalone mode keeps its own positioned wrapper and the 28px
+   * ellipsis button — without the wrapper the absolutely-positioned menu
+   * would anchor to the pane instead of dropping under the button.
    */
   attached?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  return (
+  const control = (
     <>
       <Button
         variant="ghost"
@@ -391,6 +393,8 @@ function ActionsMenu({
       ) : null}
     </>
   );
+  if (attached) return control;
+  return <div className="relative">{control}</div>;
 }
 
 export function ThreadPane({
@@ -849,7 +853,10 @@ export function ThreadPane({
             );
           }
           return (
-            <div className="relative inline-flex shrink-0 items-stretch overflow-hidden rounded-md">
+            // No overflow-hidden here: the dropdown the caret opens is a
+            // descendant of this wrapper, and clipping for rounded corners
+            // would clip the menu out of view. The halves round themselves.
+            <div className="relative inline-flex shrink-0 items-stretch rounded-md">
               <Button
                 variant="ghost"
                 size="sm"
