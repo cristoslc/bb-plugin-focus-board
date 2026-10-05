@@ -7,7 +7,8 @@
     "build": "node scripts/generate-unreleased.mjs && node scripts/generate-whats-new.mjs && bb plugin build",
     "test": "node scripts/generate-unreleased.mjs && node scripts/generate-whats-new.mjs && vitest run",
     "uat": "node scripts/uat/run.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "gates": "node scripts/security-gates.mjs"
   },
   "engines": {
     "bb": ">=0.43",
@@ -51,6 +52,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cron-parser": "^5.5.0",
+    "fast-check": "^4.10.2",
     "hono": "^4.11.9",
     "jsdom": "^29.1.1",
     "puppeteer-core": "^25.12.0",

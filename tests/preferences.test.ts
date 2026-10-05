@@ -6,7 +6,9 @@ import {
   escStopsRunningFromSetting,
   nestStoredValue,
   parseCollapsedFamiliesStored,
+  parseGroupStored,
   parseNestStored,
+  parseParentLaneOrderStored,
 } from "../components/preferences";
 
 describe("nesting toggle persistence (R3)", () => {
@@ -48,6 +50,7 @@ describe("collapsed family persistence", () => {
 
   it("defaults to an empty set for null — first visit, everything expanded", () => {
     expect(parseCollapsedFamiliesStored(null).size).toBe(0);
+
   });
 
   it("falls back to an empty set on corrupt JSON", () => {
@@ -79,5 +82,35 @@ describe("Esc-stops-thread setting read side", () => {
     expect(escStopsRunningFromSetting(true)).toBe(true);
     expect(escStopsRunningFromSetting(0)).toBe(true);
     expect(escStopsRunningFromSetting("off")).toBe(true); // wrong type
+  });
+});
+describe("simultaneous corruption (every key garbage at once)", () => {
+  // The 1.0 hardening pass: per-key degradation is pinned above; this pins
+  // the WHOLE-storage case — every persisted preference corrupted in the
+  // same session still degrades to the documented fallbacks, so the board
+  // always renders. The law is per-parser (the storage keys have no shared
+  // read path), so the same garbage list drives every parser at once.
+  const garbage: Array<string | null> = [
+    null,
+    "",
+    "not json",
+    "{",
+    "123",
+    "null",
+    "[1,2,3]",
+    JSON.stringify({ wakeAt: 123 }),
+    JSON.stringify(5),
+  ];
+
+  it("every parser survives the full garbage list and returns its documented fallback", () => {
+    for (const raw of garbage) {
+      expect(parseNestStored(raw)).toBe(true); // default ON
+      expect(parseGroupStored(raw)).toBe("status"); // Attention fallback
+      expect(parseParentLaneOrderStored(raw)).toBe("recency");
+      expect(parseCollapsedFamiliesStored(raw)).toBeInstanceOf(Set);
+      for (const id of parseCollapsedFamiliesStored(raw)) {
+        expect(typeof id).toBe("string");
+      }
+    }
   });
 });

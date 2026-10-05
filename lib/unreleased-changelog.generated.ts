@@ -9,6 +9,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
+    "text": "**Reordering from two boards at once can no longer drop a column's order.** Rank writes now serialize server-side, so a move landing while another panel's write is in flight can no longer revert that panel's column.",
+    "children": []
+  },
+  {
     "text": "**A corrupt snooze record can no longer silence the other wake-ups.** One bad record is skipped with a log line at load instead of stranding every later snooze, and a record that turns unreadable between set and wake now logs instead of crashing the timer.",
     "children": []
   },

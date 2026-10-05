@@ -325,7 +325,9 @@ export const rpcContract = defineRpcContract({
   /**
    * A single move, not a whole-column write: two boards open on the same
    * column each lose only their own move, instead of the second write
-   * clobbering every rank the first one established.
+   * clobbering every rank the first one established. Concurrent moves are
+   * serialized server-side (withRankWriteLock), so an interleave can never
+   * revert the other writer's column.
    */
   rank_move: {
     input: z.object({
@@ -725,6 +727,27 @@ export default async function plugin(bb: BbPluginApi) {
 
   async function writeRanks(store: RankStore): Promise<void> {
     await bb.storage.kv.set(RANK_KV_KEY, rankRowFromStore(store));
+  }
+
+  /**
+   * Rank writes are read-merge-write cycles over one KV row, and the SDK's
+   * KV has no compare-and-swap: two moves interleaving between a read and
+   * its write let the stale spread revert the other writer's column (a
+   * pinned write came back undone under a gated interleave — proven red by
+   * tests/rank-concurrent.test.ts before the lock existed). Every cycle
+   * therefore runs serialized on this in-process queue: all rank writers
+   * are board RPCs in this one server process, and the CLI never writes
+   * ranks. The queue never rejects, so one failed move cannot wedge the
+   * writers behind it.
+   */
+  let rankWriteChain: Promise<unknown> = Promise.resolve();
+  function withRankWriteLock<T>(task: () => Promise<T>): Promise<T> {
+    const run = rankWriteChain.then(task, task);
+    rankWriteChain = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
   }
 
   // --- Snooze: read now, unread later (docs/plans/2026-10-02-snooze.md) ---
@@ -1556,24 +1579,25 @@ export default async function plugin(bb: BbPluginApi) {
       await bb.sdk.threads.update({ threadId, parentThreadId });
       return { threadId, parentThreadId };
     },
-    rank_move: async ({ columnKey, threadId, beforeId, toEnd, visibleIds }) => {
-      const store = await readRanks();
-      const current = orderForColumn(store, columnKey);
-      const next = applyMoveVisible(
-        current,
-        visibleIds,
-        threadId,
-        beforeId,
-        toEnd,
-      );
-      // Skip the write (and the refetch) when the move changes nothing, so
-      // a drop that lands where the card already sits is a no-op everywhere.
-      if (next.join("\u0000") !== current.join("\u0000")) {
-        await writeRanks({ ...store, [columnKey]: next });
-        bb.realtime.publish(RANK_CHANGED, { columnKey });
-      }
-      return { columnKey, order: next };
-    },
+    rank_move: ({ columnKey, threadId, beforeId, toEnd, visibleIds }) =>
+      withRankWriteLock(async () => {
+        const store = await readRanks();
+        const current = orderForColumn(store, columnKey);
+        const next = applyMoveVisible(
+          current,
+          visibleIds,
+          threadId,
+          beforeId,
+          toEnd,
+        );
+        // Skip the write (and the refetch) when the move changes nothing, so
+        // a drop that lands where the card already sits is a no-op everywhere.
+        if (next.join("\u0000") !== current.join("\u0000")) {
+          await writeRanks({ ...store, [columnKey]: next });
+          bb.realtime.publish(RANK_CHANGED, { columnKey });
+        }
+        return { columnKey, order: next };
+      }),
   });
 
   // --- CLI: bb focus-board ---

@@ -84,6 +84,12 @@ merging into `dev`, releasing, changelog writing, or tagging.
   whats-new tests.
 - `npm run build` — the plugin must build into `dist/`. `dist/` is
   gitignored; it is never committed.
+- `npm run gates` — the standing security gates (certification item 10):
+  `npm audit` for the production and dev trees must report 0
+  vulnerabilities, and the dangerous-sink greps over shipped code must
+  find nothing outside the audits' documented allowlists. A violation is
+  either removed or allowlisted with a comment naming the audit that
+  approved it — never silenced.
 
 ## 3. Finalize commit (on the dev lineage)
 

@@ -21,6 +21,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   cloning just the provider. The old path resolved the provider's catalog
   default (an openrouter model here) and the metered gate rejected it with
   a 409.
+- **Reordering from two boards at once can no longer drop a column's
+  order.** Rank writes now serialize server-side, so a move landing while
+  another panel's write is in flight can no longer revert that panel's
+  column.
 - **A corrupt snooze record can no longer silence the other wake-ups.** One
   bad record is skipped with a log line at load instead of stranding every
   later snooze, and a record that turns unreadable between set and wake now
