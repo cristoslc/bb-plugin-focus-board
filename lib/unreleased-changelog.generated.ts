@@ -27,5 +27,17 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
   {
     "text": "The pane-header debug bug button is gone. The scroll instrumentation setting still works, but the log now reaches only the browser console (and the `__focusBoardScrollDebug.dump()` window handle) instead of growing a header button.",
     "children": []
+  },
+  {
+    "text": "**✨ \"New child thread…\" in the card and pane menus.** A thread's context menu (board cards, nested rows) and the pane's actions menu now open the composer preset to spawn a child, and the spawned child opens in the pane nested under its parent. ||||||| c7607ae",
+    "children": []
+  },
+  {
+    "text": "**✨ \"New child thread…\" in the card and pane menus.** A thread's context menu (board cards, nested rows) and the pane's actions menu now open the composer preset to spawn a child, and the spawned child opens in the pane nested under its parent. =======",
+    "children": []
+  },
+  {
+    "text": "**✨ \"New child thread…\" in the card and pane menus.** A thread's context menu (board cards, nested rows) and the pane's actions menu now open the composer preset to spawn a child: the composer seeds itself with the parent's project, the spawned child opens in the pane nested under its parent. >>>>>>> bb/add-thread-menu-features-thr_z8yjt4ri63",
+    "children": []
   }
 ];

@@ -157,6 +157,19 @@ describe("NewThreadModal", () => {
     expect(hint.textContent).toContain("Root epic");
   });
 
+  it("with a parent preset, the composer still receives the project seed", () => {
+    // The seed itself is app-level (lib/new-thread-seed: the parent's
+    // project wins over the filter); the modal's contract is that both the
+    // parent preset and the seed reach the composer at once.
+    renderModal({
+      parentThreadId: "thr_root",
+      parentThreadTitle: "Root epic",
+      defaultProjectId: "proj_home",
+    });
+    expect(lastComposerProps?.defaultProjectId).toBe("proj_home");
+    expect(screen.getByText("New child thread")).toBeTruthy();
+  });
+
   it("without a parent, keeps the plain title and no nesting hint (inverse)", () => {
     renderModal();
     expect(screen.getByText("New thread")).toBeTruthy();
