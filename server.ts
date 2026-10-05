@@ -982,33 +982,51 @@ export default async function plugin(bb: BbPluginApi) {
     | { spawnable: true; kind: "inherit" }
     | { spawnable: false; reason: string };
 
-  async function probeSpawnPlan(threadId: string): Promise<ProbeSpawnPlan> {
+  /**
+   * The source thread row the plan carries back with it: `projectId` gates
+   * the inherit tier, and `environmentId` rides along because both callers
+   * need it for the spawn (the probe reuses the source thread's
+   * environment) — so the callers never re-fetch the row themselves.
+   */
+  type ProbeSourceRow = {
+    projectId?: unknown;
+    environmentId?: unknown;
+  };
+
+  async function probeSpawnPlan(
+    threadId: string,
+  ): Promise<{ plan: ProbeSpawnPlan; source: ProbeSourceRow }> {
     const execution = (await bb.sdk.threads.defaultExecutionOptions({
       threadId,
     })) as unknown as { providerId?: unknown; model?: unknown } | null;
+    // The single source-row fetch per probe invocation: every tier returns
+    // it alongside the plan so callers validate/spawn from this one read.
+    const source = (await bb.sdk.threads.get({ threadId })) as unknown as ProbeSourceRow;
     if (
       execution !== null &&
       typeof execution.providerId === "string" &&
       typeof execution.model === "string"
     ) {
       return {
-        spawnable: true,
-        kind: "pair",
-        providerId: execution.providerId,
-        model: execution.model,
+        plan: {
+          spawnable: true,
+          kind: "pair",
+          providerId: execution.providerId,
+          model: execution.model,
+        },
+        source,
       };
     }
-    const source = (await bb.sdk.threads.get({ threadId })) as unknown as {
-      projectId?: unknown;
-      environmentId?: unknown;
-    };
     if (typeof source?.projectId === "string") {
-      return { spawnable: true, kind: "inherit" };
+      return { plan: { spawnable: true, kind: "inherit" }, source };
     }
     return {
-      spawnable: false,
-      reason:
-        "This thread has no resolved provider/model and no project to inherit a default model from",
+      plan: {
+        spawnable: false,
+        reason:
+          "This thread has no resolved provider/model and no project to inherit a default model from",
+      },
+      source,
     };
   }
 
@@ -1080,12 +1098,8 @@ export default async function plugin(bb: BbPluginApi) {
     threadId: string,
   ): Promise<{ available: boolean; reason: string | null }> {
     try {
-      const plan = await probeSpawnPlan(threadId);
+      const { plan, source } = await probeSpawnPlan(threadId);
       if (!plan.spawnable) return { available: false, reason: plan.reason };
-      const source = (await bb.sdk.threads.get({ threadId })) as unknown as {
-        projectId?: unknown;
-        environmentId?: unknown;
-      };
       if (typeof source?.projectId !== "string") {
         return {
           available: false,
@@ -1115,14 +1129,10 @@ export default async function plugin(bb: BbPluginApi) {
    * only logged so it can never fail the rename itself.
    */
   async function probeThreadModelTitle(threadId: string): Promise<string> {
-    const plan = await probeSpawnPlan(threadId);
+    const { plan, source } = await probeSpawnPlan(threadId);
     if (!plan.spawnable) {
       throw new Error(`thread_autotitle: ${plan.reason}`);
     }
-    const source = (await bb.sdk.threads.get({ threadId })) as unknown as {
-      projectId?: unknown;
-      environmentId?: unknown;
-    };
     if (typeof source?.projectId !== "string") {
       throw new Error(
         `thread_autotitle: thread ${threadId} has no project to spawn a title probe into`,
