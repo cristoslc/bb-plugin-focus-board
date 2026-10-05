@@ -133,6 +133,39 @@ else should ride in it.
   range. Confirm with `gh release view vX.Y.Z`.
 - Remove the temp worktree.
 
+## 4a. Marketplace entry check
+
+Focus Board is listed on the bb community marketplace
+(https://getbb.app/marketplace/focus-board). The listing is an entry file,
+`entries/focus-board.json` in https://github.com/get-bb/marketplace, and
+marketplace installs resolve through its `source.git.range` — every cut
+therefore includes a marketplace check before the cut is reported done:
+
+- Verify the release reaches marketplace installs: fetch
+  `https://raw.githubusercontent.com/get-bb/marketplace/main/entries/focus-board.json`
+  and confirm `source.git.range` covers the version being tagged (`^0.3.1`
+  covers everything below 1.0.0 — a 1.0.0 release would silently stop
+  shipping to marketplace users).
+- Verify the listing still describes the release: the entry's short
+  `description` and the `overview/<plugin-id>.md` it references, checked
+  against the section being renamed in §3. When they drift, open the
+  marketplace PR in the same cut: copy this repo's `PLUGIN_OVERVIEW.md`
+  (kept beside `package.json` for exactly this — it is the author-owned
+  long-form description) verbatim to `overview/focus-board.md`, and refresh
+  the short `description` to match. Only those two fields ever move for a
+  feature refresh; source/brand/tag changes are a fresh review.
+- Marketplace-repo mechanics (learned on the 2026-10-05 refresh, PR #481):
+  a changed entry is validated with `npm ci --ignore-scripts && npm run
+  build && npm test && npm run check` (`gate:v1` is informational for a
+  declared change); a `description` edit is a frozen-v1 field change, so
+  the PR needs the `v1-change` label — the submitter has no label rights
+  on `get-bb/marketplace`, so request the label in the PR body, which must
+  state what the plugin does, the release source and range, the checks
+  that passed, permissions/security facts, and the overview's source commit.
+  Push the submission under a fresh branch name per cut
+  (`submit-focus-board-<date>`), never force-push the original
+  submission branch.
+
 ## 5. What's-new derivation (`WHATS_NEW` in `lib/whats-new.ts`)
 
 - The published feed is scraped from CHANGELOG.md by
