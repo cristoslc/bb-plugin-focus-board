@@ -82,3 +82,16 @@ The branch rebased onto `origin/dev` at `a58d42f` (16 commits landed mid-cycle: 
 4. **Marketplace PR #481's merge** plus the `^1.0.0` range bump riding the cut (item 1's hold point).
 
 Two amendment options would shorten the list honestly: deferring item 6 to a post-1.0 filing (the residual is documented in-plugin either way), or converting the manual cells to a scheduled post-1.0 UAT session. Both are operator calls; neither should be taken silently by the agent.
+
+## Update 2026-10-05 — item 5 closed by automated UAT (operator direction: "execute, but with automated UAT — no operator action")
+
+The operator chose the automation path for item 5's UI cells. Closed as:
+
+- **Archive/unarchive** → `tests/manual/uat-pane-archive.yaml` (3 steps, all pass): the pane opens, Archive in the actions menu removes the card from the board while the pane stays open on the archived thread, and the archived row's menu keeps Unarchive as its only way out. Building this suite caught a real harness gap: the mock SDK's sidebar archive was a no-op and its `subscribe` never published `archived-changed`, so the harness could not have shown an archive at all; the mock now moves threads to an archived set, serves `list({ archived: true })`, and publishes the signal (`30fd04e`).
+- **Phone full-screen** → `tests/manual/uat-pane-phone.yaml` at 390×844 (3 steps, all pass): the pane opens as the full-screen sheet, the compact actions menu carries Full Screen, and choosing it runs the maximize path (the mock's navigation is a no-op — the live hand-off to bb's main view remains the one line the harness cannot draw, noted here).
+- **Click-jump guard, live cell** → covered by the recorded live evidence (`docs/chat-click-jump-2026-09-29.md`: the 2026-09-30 instrumented ten-run verification, the probe script, and the live-verified revert) plus the unit suite pinning the guard. A fresh live repro needs a running bb host with a multi-page transcript; the recorded evidence stands in lieu of operator action.
+- **Parent-board touch momentum** → covered by `uat-parent-lanes`' real wheel-event pan steps and the bounded-glide regression; device-touch physics stays live-only and is recorded as an accepted residual, consistent with the harness having no touch-input pipeline.
+
+Full battery after the changes: 9 suites, 82 steps, all pass; 1078 vitest tests green, `tsc --noEmit` clean, `npm run gates` passing.
+
+**Item 5 is closed.** The certification's remaining gates reduce to: the dev merge (executing now), hold point 3 (upstream bb filing — operator sign-off), and hold point 4 (marketplace PR #481 plus the `^1.0.0` bump riding the cut).
