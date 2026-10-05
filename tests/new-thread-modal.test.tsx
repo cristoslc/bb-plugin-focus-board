@@ -5,7 +5,7 @@
 // the modal (and the composer's draft) on failure.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createElement, type ReactNode } from "react";
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NewThreadModal } from "../components/new-thread-modal";
 import type { NewThreadRequest } from "@get-bb/plugin-sdk/app";
 
@@ -70,7 +70,15 @@ function renderModal(
     open = true,
     defaultProjectId,
     focusRequest,
-  }: { open?: boolean; defaultProjectId?: string; focusRequest?: number } = {},
+    parentThreadId,
+    parentThreadTitle,
+  }: {
+    open?: boolean;
+    defaultProjectId?: string;
+    focusRequest?: number;
+    parentThreadId?: string;
+    parentThreadTitle?: string;
+  } = {},
 ) {
   return render(
     createElement(NewThreadModal, {
@@ -78,6 +86,8 @@ function renderModal(
       onOpenChange,
       defaultProjectId,
       focusRequest,
+      parentThreadId,
+      parentThreadTitle,
       onSpawned,
     }),
   );
@@ -120,6 +130,38 @@ describe("NewThreadModal", () => {
     });
     expect(spawn).toHaveBeenCalledWith(REQUEST);
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("with a parent preset, spawns the submitted request as that thread's child", async () => {
+    renderModal({ parentThreadId: "thr_root", parentThreadTitle: "Root epic" });
+    fireEvent.click(submitButton());
+    await waitFor(() => {
+      expect(onSpawned).toHaveBeenCalledWith(SPAWNED);
+    });
+    // The parent rides on the verbatim request — the child fields (prompt,
+    // project, provider) stay whatever the operator composed.
+    expect(spawn).toHaveBeenCalledWith({
+      projectId: "proj_1",
+      input: [],
+      parentThreadId: "thr_root",
+    });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("with a parent preset, titles the dialog and names the nesting target", () => {
+    renderModal({ parentThreadId: "thr_root", parentThreadTitle: "Root epic" });
+    expect(screen.getByText("New child thread")).toBeTruthy();
+    const hint = document.querySelector('[data-new-child-hint=""]');
+    if (hint === null) throw new Error("parent hint not rendered");
+    expect(hint.textContent).toContain("Will nest under");
+    expect(hint.textContent).toContain("Root epic");
+  });
+
+  it("without a parent, keeps the plain title and no nesting hint (inverse)", () => {
+    renderModal();
+    expect(screen.getByText("New thread")).toBeTruthy();
+    expect(document.querySelector('[data-new-child-hint=""]')).toBeNull();
+    expect(screen.queryByText("New child thread")).toBeNull();
   });
 
   it("on failure keeps the modal open, reports the error, and keeps the draft", async () => {

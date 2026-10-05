@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Icon } from "@/components/ui/icon";
 import type { ThreadPaneThread } from "@/components/thread-pane";
 
 /**
@@ -31,18 +32,31 @@ export interface SpawnedThread {
  * leaves the board (and never opens bb's new-thread window). On submit the
  * request forwards verbatim to `threads.spawn`, which attributes the thread
  * to this plugin; the board opens the spawned thread in the pane.
+ *
+ * A parent preset (`parentThreadId`, from the card/pane "New child thread…"
+ * actions) changes nothing about the compose surface — the child's prompt,
+ * project and provider are the operator's choice as ever — except that the
+ * spawned thread gains `parentThreadId`, making it a child of that thread
+ * (the board nests it under its parent card). The dialog titles itself and
+ * names the parent so the operator can see what will nest where.
  */
 export function NewThreadModal({
   open,
   onOpenChange,
   defaultProjectId,
   focusRequest,
+  parentThreadId,
+  parentThreadTitle,
   onSpawned,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultProjectId?: string;
   focusRequest?: number;
+  /** The thread the new thread will spawn under; absent spawns at the root. */
+  parentThreadId?: string;
+  /** The parent's display title, for the dialog's "will nest under" hint. */
+  parentThreadTitle?: string;
   onSpawned: (thread: SpawnedThread) => void;
 }) {
   const sdk = useSdk();
@@ -58,8 +72,16 @@ export function NewThreadModal({
   // typed.
   const handleSubmit = useCallback(
     async (request: NewThreadRequest) => {
+      // The compose surface does not know about parentage, so the child
+      // parameter rides here: a parent preset adds `parentThreadId` to the
+      // verbatim request — the one field `CreateThreadRequest` takes that
+      // makes the spawned thread a child. No parent preset: the request
+      // forwards verbatim, byte-for-byte the plain new-thread flow.
+      const spawnArgs = parentThreadId !== undefined
+        ? { ...request, parentThreadId }
+        : request;
       try {
-        const thread = await sdk.threads.spawn(request);
+        const thread = await sdk.threads.spawn(spawnArgs);
         onOpenChange(false);
         onSpawned(thread);
       } catch (error) {
@@ -67,7 +89,7 @@ export function NewThreadModal({
         throw error;
       }
     },
-    [sdk, onOpenChange, onSpawned],
+    [sdk, onOpenChange, onSpawned, parentThreadId],
   );
 
   return (
@@ -77,10 +99,25 @@ export function NewThreadModal({
       pane's default. */}
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>New thread</DialogTitle>
+          <DialogTitle>{parentThreadId !== undefined ? "New child thread" : "New thread"}</DialogTitle>
           <DialogDescription>
-            Your draft is saved as you type, even if you close and come back later.
+            {parentThreadId !== undefined
+              ? "Spawns under the named thread. Your draft is saved as you type, even if you close and come back later."
+              : "Your draft is saved as you type, even if you close and come back later."}
           </DialogDescription>
+          {parentThreadId !== undefined ? (
+            // The nesting the submit will produce, named up front: the
+            // operator sees where the child will land before spending the
+            // prompt.
+            <p
+              data-new-child-hint=""
+              className="text-xs font-medium text-muted-foreground"
+            >
+              <Icon name="Fork" className="mr-1 inline size-3.5 align-[-2px]" aria-hidden />
+              Will nest under{" "}
+              <span className="text-foreground">{parentThreadTitle ?? parentThreadId}</span>
+            </p>
+          ) : null}
         </DialogHeader>
         {spawnFailed ? (
           <p role="alert" className="text-sm text-destructive">

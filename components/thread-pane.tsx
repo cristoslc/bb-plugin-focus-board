@@ -110,6 +110,13 @@ interface ThreadPaneProps {
    */
   snoozeMenuItems?: readonly (SnoozeMenuAction | ActionMenuItem)[];
   /**
+   * Opens the board's new-thread composer preset to spawn a child of THIS
+   * pane's thread (the "New child thread…" entry in the actions menu).
+   * Optional: absent when the board cannot open the composer, leaving the
+   * menu exactly as before this prop existed.
+   */
+  onNewChildThread?: () => void;
+  /**
    * The open thread's wake time (epoch ms) while it is snoozed, null/absent
    * otherwise. Drives the header's muted "Snoozed · wakes …" chip, so the
    * open pane says the state the card already carries.
@@ -395,6 +402,7 @@ export function ThreadPane({
   onTogglePinned,
   onToggleUnread,
   snoozeMenuItems,
+  onNewChildThread,
   snoozeWakeAt = null,
   onRename,
   onMaximize,
@@ -818,6 +826,20 @@ export function ThreadPane({
         </Button>
         {(() => {
           const actionItems: (ActionMenuItem | SnoozeMenuAction)[] = [
+            // The family-spawn entry leads: a creation action is categorically
+            // apart from the state toggles below it. Archived rows carry it
+            // too — bb accepts a child of an archived parent (the child
+            // re-roots to render standalone), and the operator's call.
+            ...(onNewChildThread !== undefined
+              ? [
+                  {
+                    id: "new-child",
+                    label: "New child thread…",
+                    icon: "Fork",
+                    run: onNewChildThread,
+                  },
+                ]
+              : []),
             {
               id: "done",
               label: isDone ? "Mark Not Done" : "Mark Done",
