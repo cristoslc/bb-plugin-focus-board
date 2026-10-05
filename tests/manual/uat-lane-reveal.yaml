@@ -62,10 +62,9 @@ steps:
   - id: menu-done-scrolls-done-lane-into-view
     title: Marking a card Done from its right-click menu brings the Done lane into view
     # Done is far right, offscreen at this viewport: the card must not read
-    # as vanishing. Done order: stamped members first (recency of the stamp
-    # — the harness seeds stamps on the done fixtures), then the fresh, not
-    # yet stamped card; the projection card rides with the stamped ones (the
-    # family's done work renders as its own card in Done).
+    # as vanishing. Done order: the activity-recency rule puts the most
+    # recently ACTIVE card on top — the just-marked fixture leads, and the
+    # seeded stamped fixtures follow in their fixture order.
     goto: "?groupBy=status"
     assert_before_drag:
       - column: done
@@ -74,7 +73,7 @@ steps:
     assert:
       - rpc_called_method: done_set
       - column: done
-        ordered: [thr_pane_padding, thr_license, thr_proj_family, thr_rpc_auth]
+        ordered: [thr_rpc_auth, thr_pane_padding, thr_license, thr_proj_family]
       - column_card_visible: thr_rpc_auth
 
   - id: menu-unpin-scrolls-destination-lane-into-view

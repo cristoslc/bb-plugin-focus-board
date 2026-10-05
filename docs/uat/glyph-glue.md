@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-10-05T18:18:08.089Z by `npm run uat`._
+_Generated 2026-10-05T18:23:22.266Z by `npm run uat`._
 
 ## glyph-glue
 
