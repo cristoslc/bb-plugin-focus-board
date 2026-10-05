@@ -68,6 +68,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **✨ "New child thread…" in the card and pane menus.** A thread's context menu (board cards, nested rows) and the pane's actions menu now open the composer preset to spawn a child: the composer seeds itself with the parent's project, the spawned child opens in the pane nested under its parent.
   - **The child starts where the parent runs.** When the parent's checkout is a worktree, the composer's environment picker is seeded to reuse that worktree, so the child lands in the parent's checkout instead of a fresh project-default one; other checkouts keep bb's own default.
 
+- **Drop a card onto a card to nest it.** The middle third of a card is now
+  the nest zone: the drop re-parents that thread under the target (the top
+  and bottom thirds still reorder as before), and the card menu's Make
+  Top-Level detaches a child again.
+
 ## [0.8.0] - 2026-10-03
 
 ### Added

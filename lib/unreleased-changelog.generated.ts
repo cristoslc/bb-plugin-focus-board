@@ -33,5 +33,9 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": [
       "**The child starts where the parent runs.** When the parent's checkout is a worktree, the composer's environment picker is seeded to reuse that worktree, so the child lands in the parent's checkout instead of a fresh project-default one; other checkouts keep bb's own default."
     ]
+  },
+  {
+    "text": "**Drop a card onto a card to nest it.** The middle third of a card is now the nest zone: the drop re-parents that thread under the target (the top and bottom thirds still reorder as before), and the card menu's Make Top-Level detaches a child again.",
+    "children": []
   }
 ];

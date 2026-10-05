@@ -27,6 +27,13 @@ export interface FamilyIndex {
   childrenByParent: ReadonlyMap<string, readonly PluginSidebarThread[]>;
   /** Child id → its parent's id; absent for roots (including cycle members and orphans). */
   parentOf: ReadonlyMap<string, string>;
+  /**
+   * Child id → its RAW parent id — before the two-level display flattening
+   * re-homes grandchildren onto roots. The re-parent guard must walk real
+   * chains (a grandchild onto its grandparent is a change, not a no-op), so
+   * the flattened map cannot serve there.
+   */
+  rawParentOf: ReadonlyMap<string, string>;
   /** Visible threads that are not nested under any parent, in input order. */
   rootIds: ReadonlySet<string>;
 }
@@ -284,7 +291,7 @@ export function buildFamilyIndex(threads: readonly PluginSidebarThread[]): Famil
   const rootIds = new Set(
     visible.filter((thread) => !displayParentOf.has(thread.id)).map((thread) => thread.id),
   );
-  return { childrenByParent, parentOf: displayParentOf, rootIds };
+  return { childrenByParent, parentOf: displayParentOf, rawParentOf: parentOf, rootIds };
 }
 
 /**

@@ -35,6 +35,10 @@ import {
   moveTargetFor,
   type RankStore,
 } from "../lib/rank";
+import { reparentRefusalFromParents } from "../lib/reparent";
+
+/** The parent map absents itself when the caller has no nesting data. */
+const EMPTY_PARENT_OF: ReadonlyMap<string, string> = new Map();
 
 /**
  * Drag payload keys.
@@ -57,6 +61,14 @@ const RANK_ERROR_AUTO_DISMISS_MS = 10_000;
 
 /** Where an insertion line would land: before or after the hovered card. */
 type Half = "before" | "after";
+/**
+ * Where a drop on a card lands. The before/after edges are the insertion
+ * line the board always had; `onto` is the card's middle third — dropping
+ * there nests the dragged card UNDER the hovered card instead of beside it.
+ * The nest zone is offered only when the caller wired a re-parent write and
+ * the guard allows the edge (never onto itself, never closing a family loop).
+ */
+type DropZone = Half | "onto";
 
 /**
  * The dragged card, for a DROP.
@@ -136,6 +148,22 @@ interface BoardProps {
     toEnd: boolean,
     visibleIds: readonly string[],
   ) => void;
+  /**
+   * Drop a card ONTO a card: make the dropped thread a child of the target.
+   * The write goes to the caller (the RPC lives app-side); the board has
+   * already refused the illegal edges — a drop onto itself or onto the
+   * dropped card's own descendant. Optional: without it the card's middle
+   * third is just another insertion edge, exactly as before nesting existed.
+   */
+  onReparent?: (childId: string, parentThreadId: string) => Promise<void>;
+  /**
+   * The RAW parent edges (child id → parent id), not the display index's
+   * two-level flattened map: the nest guard must see real chains, so a
+   * grandchild dropped onto its grandparent still counts as a change.
+   * Absent → every nest-in-flight edge reads as allowed, because the board
+   * cannot know; the caller (and the RPC handler) still re-check.
+   */
+  rawParentOf?: ReadonlyMap<string, string>;
   /** Drop a card onto the Done column. */
   onDropDone: (threadId: string) => void;
   /** Drop a card onto the Unread column (Attention grouping only). */
@@ -335,6 +363,8 @@ export function Board({
   onClosePane,
   rankStore,
   onRankMove,
+  onReparent,
+  rawParentOf,
   onDropDone,
   onDropUnread,
   onDropPinned,
@@ -356,12 +386,15 @@ export function Board({
   onSweepCancel,
 }: BoardProps) {
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
-  // { columnId, threadId, edge } of the insertion line while a ranked card
-  // is dragged over a ranked column. Null when no reorder is in flight.
+  // { columnId, threadId, zone } for the drop the cursor is over while a
+  // ranked card is dragged over a ranked column. `zone` is an insertion edge
+  // ("before"/"after") or the nest zone ("onto") — a drop in the hovered
+  // card's middle third that nests the dragged card under it. Null when no
+  // drop is in flight.
   const [rankDrop, setRankDrop] = useState<{
     columnId: string;
     threadId: string;
-    edge: Half;
+    zone: DropZone;
   } | null>(null);
 
   // The shift-click anchor: the last card clicked without Shift in the armed
@@ -580,6 +613,58 @@ export function Board({
     const after = displayAfterMove(visibleIds, threadId, beforeId, toEnd);
     setAnnouncement(
       `Moved to position ${after.indexOf(threadId) + 1} of ${after.length} in ${column.label}.`,
+    );
+  }
+
+  /**
+   * Where does a hover or drop over this card land? The before/after halves
+   * are the insertion edges the board always had; the middle third nests the
+   * dragged card UNDER this card — offered only when a re-parent write is
+   * wired and the guard permits this pair (never onto itself, never closing
+   * a family loop), so a refused nest falls back to the edge split instead
+   * of advertising a drop that would refuse.
+   *
+   * `childId` is the dragged card: the live ref mid-drag (the payload is
+   * write-only until the drop), the payload at drop time.
+   */
+  function dropZoneFor(
+    event: React.DragEvent,
+    childId: string | null,
+    targetId: string,
+  ): DropZone {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const y = event.clientY - rect.top;
+    const edge: Half = y < rect.height / 2 ? "before" : "after";
+    if (
+      onReparent === undefined ||
+      childId === null ||
+      childId === "" ||
+      childId === targetId ||
+      reparentRefusalFromParents(rawParentOf ?? EMPTY_PARENT_OF, childId, targetId) !== null
+    ) {
+      return edge;
+    }
+    if (y < rect.height / 3) return "before";
+    if (y > (rect.height * 2) / 3) return "after";
+    return "onto";
+  }
+
+  /**
+   * The nest drop: hand the pair to the caller's write. The guard ran twice
+   * already (at dragover, and again in the RPC handler against its own fresh
+   * rows); a rejected write still reports on screen — the board must not
+   * silently eat a gesture, the same failure mode the drag path shipped
+   * twice before this.
+   */
+  function commitNest(childId: string, target: PluginSidebarThread): void {
+    const write = onReparent;
+    if (write === undefined) return;
+    void write(childId, target.id).then(
+      () => setAnnouncement(`Nested as a child of "${target.displayTitle}".`),
+      (error: unknown) =>
+        reportRefusal(
+          error instanceof Error ? error.message : "the re-parent write failed.",
+        ),
     );
   }
   // Done, Unread, and Pinned lanes accept state-change drops; Unread exists
@@ -851,9 +936,10 @@ export function Board({
                       <li
                         key={thread.id}
                         data-rank-slot={ranking ? thread.id : undefined}
-                        // Every card is a drop target for its own lane's drag;
-                        // the hovered card decides which of its two edges the
-                        // insertion line lands on.
+                        // Every card is a drop target for its own lane's
+                        // drag; the hovered card decides which of its two
+                        // edges the insertion line lands on, or whether the
+                        // middle third offers nesting instead.
                         onDragOver={
                           (event) => {
                             if (!ranking) return;
@@ -868,26 +954,30 @@ export function Board({
                               // idle buckets) keep refusing: membership
                               // there is the thread's own data — state, age,
                               // project — not a slot the board can honour.
-                              if (draggingIdRef.current === null || !isDropTarget) return;
+                              // The nest zone is the one exception to the
+                              // state-change gate: nesting is a family
+                              // write, not lane membership, so it is
+                              // offered over any card.
+                              const zone = dropZoneFor(
+                                event,
+                                draggingIdRef.current,
+                                thread.id,
+                              );
+                              if (zone !== "onto" && (draggingIdRef.current === null || !isDropTarget)) return;
                               event.preventDefault();
                               event.dataTransfer.dropEffect = "move";
-                              const rect = event.currentTarget.getBoundingClientRect();
-                              const edge: Half =
-                                event.clientY - rect.top < rect.height / 2 ? "before" : "after";
                               setRankDrop((current) =>
                                 current?.columnId === column.id &&
                                 current?.threadId === thread.id &&
-                                current?.edge === edge
+                                current?.zone === zone
                                   ? current
-                                  : { columnId: column.id, threadId: thread.id, edge },
+                                  : { columnId: column.id, threadId: thread.id, zone },
                               );
                               return;
                             }
                             event.preventDefault();
                             event.dataTransfer.dropEffect = "move";
-                            const rect = event.currentTarget.getBoundingClientRect();
-                            const edge: Half =
-                              event.clientY - rect.top < rect.height / 2 ? "before" : "after";
+                            const zone = dropZoneFor(event, draggingIdRef.current, thread.id);
                             if (draggingIdRef.current === thread.id) {
                               clearRankDrop();
                               return;
@@ -895,15 +985,34 @@ export function Board({
                             setRankDrop((current) =>
                               current?.columnId === column.id &&
                               current?.threadId === thread.id &&
-                              current?.edge === edge
+                              current?.zone === zone
                                 ? current
-                                : { columnId: column.id, threadId: thread.id, edge },
+                                : { columnId: column.id, threadId: thread.id, zone },
                             );
                           }
                         }
                         onDrop={
                           (event) => {
                             if (!ranking) return;
+                            // The payload is readable only here; zone math
+                            // re-reads the live position (the last dragover
+                            // can land on a different card than the one the
+                            // state was set on) and re-runs the guard on the
+                            // real dropped id — the ref the dragover used can
+                            // name a card the payload contradicts.
+                            const droppedId = draggedIdFor(event, draggingIdRef.current);
+                            const zone = dropZoneFor(event, droppedId, thread.id);
+                            if (zone === "onto") {
+                              event.preventDefault();
+                              // Claim the event so the column's own handler
+                              // — the append or state-change path — does not
+                              // also fire for this drop.
+                              event.stopPropagation();
+                              clearRankDrop();
+                              commitNest(droppedId, thread);
+                              return;
+                            }
+                            const edge: Half = zone;
                             if (!isLaneDrag(event.dataTransfer.types, rankKey)) {
                               // A cross-lane drop ON a card: the state change
                               // and the ranked position the line showed happen
@@ -913,17 +1022,11 @@ export function Board({
                               // drags, or a foreign drag could write an order
                               // for a card the lane never held.
                               if (draggingIdRef.current === null || !isDropTarget) return;
-                              const droppedId = draggedIdFor(event, draggingIdRef.current);
                               event.preventDefault();
                               // Claim the event so the column's own handler —
                               // the unpositioned state-change path — does not
                               // also fire for this drop.
                               event.stopPropagation();
-                              // Live position, not React state, per the
-                              // same-lane case below.
-                              const rect = event.currentTarget.getBoundingClientRect();
-                              const edge: Half =
-                                event.clientY - rect.top < rect.height / 2 ? "before" : "after";
                               clearRankDrop();
                               if (droppedId === "") return;
                               // The state change first — the card joins the
@@ -947,26 +1050,18 @@ export function Board({
                               return;
                             }
                             event.preventDefault();
-                            const threadId = draggedIdFor(event, draggingIdRef.current);
                             // The drop bubbles to the column's own handler,
                             // which treats a same-lane drag as "append". Claim
                             // the event so one drop is one move, not an
                             // insert plus an append.
                             event.stopPropagation();
-                            // Read the edge from the live drag position, not
-                            // from React state: the last dragover before a
-                            // drop can land on a different card than the one
-                            // that was hovered when the state was set.
-                            const rect = event.currentTarget.getBoundingClientRect();
-                            const edge: Half =
-                              event.clientY - rect.top < rect.height / 2 ? "before" : "after";
                             clearRankDrop();
-                            if (threadId === "") return;
+                            if (droppedId === "") return;
                             const target = moveTargetFor(
                               shownThreads.map((candidate) => candidate.id),
                               thread.id,
                               edge,
-                              threadId,
+                              droppedId,
                             );
                             if (target === null) {
                               reportRefusal(
@@ -976,7 +1071,7 @@ export function Board({
                             }
                             commitMove(
                               column,
-                              threadId,
+                              droppedId,
                               target.beforeId,
                               target.toEnd,
                               shownThreads.map((candidate) => candidate.id),
@@ -1009,9 +1104,14 @@ export function Board({
                         className={cn(
                           "relative",
                           rankDrop?.columnId === column.id && rankDrop.threadId === thread.id && (
-                            rankDrop.edge === "before"
-                              ? "before:absolute before:inset-x-0 before:-top-0.5 before:h-0.5 before:rounded-full before:bg-ring"
-                              : "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-ring"
+                            rankDrop.zone === "onto"
+                              // The nest zone: a ring around the whole card,
+                              // not an insertion line — the drop is "into"
+                              // this card, not beside it.
+                              ? "after:absolute after:inset-0 after:rounded-lg after:ring-2 after:ring-ring"
+                              : rankDrop.zone === "before"
+                                ? "before:absolute before:inset-x-0 before:-top-0.5 before:h-0.5 before:rounded-full before:bg-ring"
+                                : "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-ring"
                           ),
                         )}
                       >

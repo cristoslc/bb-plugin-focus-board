@@ -296,6 +296,28 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   if (method === "rank_list") return { orders: structuredClone(simRanks) };
   if (method === "pin_parks_list") return { parks: {} };
   if (method === "snooze_list") return { snoozes: {} };
+  if (method === "thread_reparent") {
+    // The server's semantics, abbreviated for the harness: the real handler
+    // re-checks lib/reparent against fresh rows, then calls threads.update
+    // and bb's host pushes the changed thread back over the sidebar bridge.
+    // The mock IS the whole chain, so it rewrites the simulated sidebar row
+    // and re-renders — the board then nests the card via the normal
+    // buildFamilyIndex pass. Refusals throw, the way the real RPC's
+    // PluginCliError does.
+    const { threadId, parentThreadId } = args as {
+      threadId: string;
+      parentThreadId: string | null;
+    };
+    const target = simThreads.find((candidate) => candidate.id === parentThreadId);
+    if (parentThreadId !== null && target === undefined) {
+      throw new Error("the target card is no longer on the board.");
+    }
+    simThreads = simThreads.map((candidate) =>
+      candidate.id === threadId ? { ...candidate, parentThreadId } : candidate,
+    );
+    mockRender();
+    return { threadId, parentThreadId };
+  }
   if (method === "thread_autotitle") {
     // Deterministic canned reply: the real server builds the title from the
     // thread's first prompt over bb's selected AI service; a UAT pass

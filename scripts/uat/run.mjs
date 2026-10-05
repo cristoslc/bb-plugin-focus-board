@@ -121,7 +121,10 @@ const pageDrag = ({ from, to, edge }) => {
   if (!carried) return { dropped: false, reason: "drag payload carried no rank marker" };
 
   const box = target.getBoundingClientRect();
-  const clientY = edge === "before" ? box.top + box.height * 0.2 : box.top + box.height * 0.8;
+  const clientY =
+    edge === "onto" ? box.top + box.height * 0.5
+    : edge === "before" ? box.top + box.height * 0.2
+    : box.top + box.height * 0.8;
   const point = { bubbles: true, cancelable: true, dataTransfer: transfer, clientX: box.left + 8, clientY };
 
   // Protected mode: the payload is unreadable while the pointer moves.
@@ -193,7 +196,10 @@ const pageHover = ({ from, to, edge }) => {
     new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: transfer }),
   );
   const box = target.getBoundingClientRect();
-  const clientY = edge === "before" ? box.top + box.height * 0.2 : box.top + box.height * 0.8;
+  const clientY =
+    edge === "onto" ? box.top + box.height * 0.5
+    : edge === "before" ? box.top + box.height * 0.2
+    : box.top + box.height * 0.8;
   transfer._armRead(false);
   const over = new DragEvent("dragover", {
     bubbles: true,
@@ -218,6 +224,23 @@ const pageLineShown = ({ to, edge }) => {
 };
 
 /**
+ * Is the nest ring rendered around that card? The middle third of a card is
+ * the drop-ONTO zone; while hovering it the card rings (and NO insertion
+ * line shows, because a drop there nests instead of reordering).
+ */
+const pageNestRing = ({ to }) => {
+  const target = document.querySelector(`li[data-rank-slot="${to}"]`);
+  if (!target) return { shown: false, reason: "no slot" };
+  const ringed = [...target.classList].some((cls) => cls.startsWith("after:ring"));
+  return {
+    shown: ringed,
+    reason: ringed
+      ? "card rings for a nest drop"
+      : `no ring on the slot (classes: ${[...target.classList].join(" ")})`,
+  };
+};
+
+/**
  * A drop whose payload carries no card id — the shape of the failure where the
  * board cannot attribute the gesture to a card. The rank type is still set, so
  * the drop is accepted, but the id is empty.
@@ -236,7 +259,10 @@ const pageDragUnidentified = ({ from, to, edge }) => {
   // Strip the id, keeping the lane marker: the lane is known, the card is not.
   transfer.clearData("text/focus-board-id");
   const box = target.getBoundingClientRect();
-  const clientY = edge === "before" ? box.top + box.height * 0.2 : box.top + box.height * 0.8;
+  const clientY =
+    edge === "onto" ? box.top + box.height * 0.5
+    : edge === "before" ? box.top + box.height * 0.2
+    : box.top + box.height * 0.8;
   const point = { bubbles: true, cancelable: true, dataTransfer: transfer, clientX: box.left + 8, clientY };
   transfer._armRead(false);
   target.dispatchEvent(new DragEvent("dragover", point));
@@ -985,6 +1011,44 @@ async function check(step, page, gestureResults = []) {
         method,
       );
       expect(`no ${method} call`, calls.length === 0, `${calls.length} call(s) made`);
+    }
+    if (rule.nest_ring !== undefined) {
+      // Hover first (the ring rides the dragover commit), then sample.
+      const want = rule.nest_ring; // { to: id, shown: boolean }
+      const hoverOutcome = await page.evaluate(pageHover, {
+        from: want.from,
+        to: want.to,
+        edge: "onto",
+      });
+      await sleep(150);
+      const shown = await page.evaluate(pageNestRing, { to: want.to });
+      expect(
+        want.shown ? "nest ring visible on the hovered card" : "no nest ring",
+        shown.shown === want.shown,
+        shown.reason,
+      );
+      if (want.shown) {
+        // A hovered nest zone must also be a permitted drop — some handler
+        // called preventDefault — or a real browser refuses the drop with
+        // only "can't drop" for an explanation.
+        expect(
+          "drop permitted during nest hover",
+          hoverOutcome.dropAllowed !== false,
+          "no dragover handler called preventDefault on the nest zone",
+        );
+      }
+    }
+    if (rule.nested_row !== undefined) {
+      const want = rule.nested_row; // { id: threadId, shown: boolean }
+      const found = await page.evaluate((id) => {
+        const row = document.querySelector(`[data-nested-rows] [data-thread-card="${id}"]`);
+        return { found: row !== null };
+      }, want.id);
+      expect(
+        want.shown ? `nested row under the family card (${want.id})` : `no nested row (${want.id})`,
+        found.found === want.shown,
+        `nested-row slot ${want.shown ? "absent" : "present"}`,
+      );
     }
     if (rule.insertion_line !== undefined || rule.no_insertion_line !== undefined) {
       // Hover first, then sample after React has committed the line.
