@@ -39,6 +39,7 @@ import {
 import { buildParentLanes } from "./components/parent-lanes";
 import { ParentLaneBoard } from "./components/parent-lane-board";
 import { doneAtToEpochMs } from "./lib/done-metadata";
+import { newThreadSeedProjectId } from "./lib/new-thread-seed";
 import { SnoozeDialog } from "./components/snooze-dialog";
 import {
   snoozeMenuActions,
@@ -976,14 +977,6 @@ function BoardPage({ subPath }: { subPath: string }) {
 
   const anyFilterActive =
     filter.projects.size > 0 || filter.providers.size > 0 || filter.states.size > 0 || searchActive;
-  // When exactly one project is selected in the filter, new threads created
-  // from the board land in that project. Stale ids (project deleted since
-  // the filter was persisted) fall back to bb's default project pick.
-  const newThreadProjectId = useMemo(() => {
-    if (filter.projects.size !== 1) return undefined;
-    const projectId = [...filter.projects][0];
-    return projects.some((project) => project.id === projectId) ? projectId : undefined;
-  }, [filter.projects, projects]);
   // The board's own new-thread composer: a modal over the board and pane, so
   // composing never leaves the surface and bb's new-thread window stays out
   // of the way. The nonce re-focuses the composer editor on every open.
@@ -1010,13 +1003,28 @@ function BoardPage({ subPath }: { subPath: string }) {
   // The composer dialog's "will nest under" hint names the parent. A parent
   // that left the board (deleted) while the modal is open falls back to its
   // id — the spelling degrades, the spawn still carries the parent.
+  const newThreadParent = useMemo(() => {
+    if (newThreadParentId === null) return undefined;
+    return threads.find((candidate) => candidate.id === newThreadParentId);
+  }, [newThreadParentId, threads]);
   const newThreadParentTitle = useMemo(() => {
     if (newThreadParentId === null) return undefined;
-    return (
-      threads.find((candidate) => candidate.id === newThreadParentId)?.displayTitle ??
-      newThreadParentId
-    );
-  }, [newThreadParentId, threads]);
+    return newThreadParent?.displayTitle ?? newThreadParentId;
+  }, [newThreadParentId, newThreadParent]);
+  // The composer's project seed (lib/new-thread-seed): a child preset copies
+  // its PARENT'S project, so the family keeps landing in one place; without
+  // a preset the single filter-selected project seeds, stale ids guarded
+  // (they fall back to bb's default project pick).
+  const newThreadProjectId = useMemo(
+    () =>
+      newThreadSeedProjectId({
+        parentProjectId: newThreadParent?.projectId,
+        filterProjectId:
+          filter.projects.size === 1 ? [...filter.projects][0] : undefined,
+        knownProjectIds: projects.map((project) => project.id),
+      }),
+    [newThreadParent, filter.projects, projects],
+  );
   // A freshly spawned thread is not in the sidebar cache on the tick the
   // pane route opens, and the pane only renders for a resolvable thread.
   // The spawn result stands in until the cache carries the thread (this row
