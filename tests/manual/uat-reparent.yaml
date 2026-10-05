@@ -102,3 +102,22 @@ steps:
       - reparent_called: { threadId: thr_rpc_auth, parentThreadId: thr_uat_queue }
       - nested_row: { id: thr_rpc_auth, shown: true }
       - rank_slots: { column: unread, count: 2 }
+
+  # The floor can be a long scroll away. The column's TITLE strip is the near
+  # detach target: it grows while a drag flies, rings amber on hover, and the
+  # drop bubbles into the section's floor handlers (detach, nothing else).
+  - id: header-hover-rings-amber-and-grows
+    title: Hovering a dragged child over a column title rings it amber and grows it
+    goto: "?groupBy=status"
+    drag: { from: thr_rpc_auth, to: thr_uat_queue, edge: onto }
+    header_amber: { from: thr_rpc_auth, column: unread, shown: true, grown: true }
+
+  - id: header-drop-detaches
+    title: Dropping a child on a column title detaches it (rpc parentThreadId null)
+    goto: "?groupBy=status"
+    drag: { from: thr_rpc_auth, to: thr_uat_queue, edge: onto }
+    drag_child_to_header: { from: thr_rpc_auth, column: unread }
+    assert:
+      - reparent_called: { threadId: thr_rpc_auth, parentThreadId: null }
+      - nested_row: { id: thr_rpc_auth, shown: false }
+      - rank_slots: { column: unread, count: 3 }

@@ -67,11 +67,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   distinct from the top/bottom thirds' ordinary insertion line, so a family
   drop never masquerades as a lane drop — and the drop re-parents the
   thread under the target.
-  - **Drag a nested child onto any column floor to top-level it again.**
-    Nested rows drag like cards now, the floor rings amber for the family
-    detach, and dragging the child back onto a card re-nests it — nest and
-    detach are each other's undo; the card menu's Make Top-Level detaches
-    too.
+  - **Drag a nested child onto any column header or floor to top-level it
+    again.** Nested rows drag like cards now, the hovered title strip grows
+    a notch and rings amber for the family detach (the floor works too), and
+    dragging the child back onto a card re-nests it — nest and detach are
+    each other's undo; the card menu's Make Top-Level detaches too.
 
 - **Mark Unread joins the pane's actions as one attached split control.**
   The header's split menus no longer clip: their carets now open visible

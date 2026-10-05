@@ -261,15 +261,24 @@ describe("drop onto a card to nest it", () => {
     expect(props.onRankMove).toHaveBeenCalled();
   });
 });
+function familyFixture(): PluginSidebarThread[] {
+  return [
+    thread({ id: "thr_a", isUnread: true, updatedAt: NOW - 5000 }),
+    thread({ id: "thr_b", isUnread: true, updatedAt: NOW - 1000 }),
+  ];
+}
+const [childThread, parentThread] = familyFixture();
+
+function nestedRowAnchor(childId: string): HTMLElement {
+  const anchor = document.querySelector(
+    `[data-nested-rows] a[data-thread-card="${childId}"]`,
+  );
+  if (!(anchor instanceof HTMLElement)) throw new Error(`missing nested row ${childId}`);
+  return anchor;
+}
+
 describe("drag a child off its family: the column floor detaches", () => {
   // thr_b renders as the only top-level slot; thr_a lives as its nested row.
-  function familyFixture(): PluginSidebarThread[] {
-    return [
-      thread({ id: "thr_a", isUnread: true, updatedAt: NOW - 5000 }),
-      thread({ id: "thr_b", isUnread: true, updatedAt: NOW - 1000 }),
-    ];
-  }
-  const [childThread, parentThread] = familyFixture();
 
   function renderFamily(onReparent: unknown = vi.fn().mockResolvedValue(undefined)) {
     return renderBoard([parentThread], {
@@ -279,14 +288,6 @@ describe("drag a child off its family: the column floor detaches", () => {
       rawParentOf: new Map<string, string>([["thr_a", "thr_b"]]),
       onReparent,
     }) as { props: BoardProps };
-  }
-
-  function nestedRowAnchor(childId: string): HTMLElement {
-    const anchor = document.querySelector(
-      `[data-nested-rows] a[data-thread-card="${childId}"]`,
-    );
-    if (!(anchor instanceof HTMLElement)) throw new Error(`missing nested row ${childId}`);
-    return anchor;
   }
 
   /** dragstart on the child row, dragover and drop on the column section itself. */
@@ -401,5 +402,75 @@ describe("drag a child off its family: the column floor detaches", () => {
       const live = document.querySelector('[aria-live="polite"]');
       expect(live?.textContent ?? "").toMatch(/Drag it onto a card to nest it back/);
     });
+  });
+});
+
+describe("the column header is the closer detach target (family drag)", () => {
+  const [childThread, parentThread] = familyFixture();
+
+  function nestedRowAnchor(childId: string): HTMLElement {
+    const anchor = document.querySelector(
+      `[data-nested-rows] a[data-thread-card="${childId}"]`,
+    );
+    if (!(anchor instanceof HTMLElement)) throw new Error(`missing nested row ${childId}`);
+    return anchor;
+  }
+
+  function renderFamily(onReparent: unknown = vi.fn().mockResolvedValue(undefined)) {
+    return renderBoard([parentThread], {
+      nestedChildrenByParent: new Map<string, readonly PluginSidebarThread[]>([
+        ["thr_b", [childThread]],
+      ]),
+      rawParentOf: new Map<string, string>([["thr_a", "thr_b"]]),
+      onReparent,
+    }) as { props: BoardProps };
+  }
+
+  function unreadHeader(): HTMLElement {
+    const header = document.querySelector(
+      'section[data-column-id="unread"] header',
+    );
+    if (!(header instanceof HTMLElement)) throw new Error("missing unread column header");
+    return header;
+  }
+
+  it("grows a column header while a drag is in flight, and settles after", () => {
+    renderFamily();
+    const header = unreadHeader();
+    expect(header.className).not.toMatch(/pb-2\.5/);
+    fireEvent.dragStart(nestedRowAnchor("thr_a"), { dataTransfer: makeDataTransfer() });
+    expect(header.className).toMatch(/pb-2\.5/);
+    fireEvent.dragEnd(nestedRowAnchor("thr_a"));
+    expect(header.className).not.toMatch(/pb-2\.5/);
+  });
+
+  it("rings the hovered header amber, not the lane color", () => {
+    renderFamily();
+    const header = unreadHeader();
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(nestedRowAnchor("thr_a"), { dataTransfer: dt });
+    fireEvent(header, createEvent.dragOver(header, { dataTransfer: dt }));
+    expect(header.className).toMatch(/ring-amber-500/);
+    expect(header.className).not.toMatch(/ring-ring/);
+    fireEvent(header, createEvent.dragLeave(header, { dataTransfer: dt }));
+    expect(header.className).not.toMatch(/ring-amber-500/);
+  });
+
+  it("releasing a child on the header un-nests it with no rank move", () => {
+    const onReparent = vi.fn().mockResolvedValue(undefined);
+    const { props } = renderFamily(onReparent);
+    const header = unreadHeader();
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(nestedRowAnchor("thr_a"), { dataTransfer: dt });
+    fireEvent(header, createEvent.dragOver(header, { dataTransfer: dt }));
+    // The header sits inside the section, so the drop bubbles to the
+    // section's own handler — this pins that the header drop detaches the
+    // child and never issues a rank move.
+    expect(header.className).toMatch(/ring-amber-500/);
+    fireEvent(header, createEvent.drop(header, { dataTransfer: dt }));
+    expect(onReparent).toHaveBeenCalledWith("thr_a", null);
+    expect(props.onRankMove).not.toHaveBeenCalled();
+    // A successful drop clears the hover affordances.
+    expect(header.className).not.toMatch(/ring-amber-500/);
   });
 });
