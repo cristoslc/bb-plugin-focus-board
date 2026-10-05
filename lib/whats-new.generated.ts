@@ -40,7 +40,7 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
       {
         "lead": "Drop a card onto a card to nest it.",
         "children": [
-          "Drag a nested child onto any column floor to top-level it again."
+          "Drag a nested child onto any column header or floor to top-level it again."
         ]
       },
       {
