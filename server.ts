@@ -960,20 +960,25 @@ export default async function plugin(bb: BbPluginApi) {
   }
 
   /**
-   * How a title probe spawns, in a 3-tier fallback chain — bb's
+   * How a title probe spawns, in a 2-tier fallback chain — bb's
    * defaultExecutionOptions can return null live (its route fails
    * capability validation on empty input) even for threads that run fine,
    * so the chain keeps the probe meaningful:
    * 1. a resolved provider/model pair → clone both explicitly;
-   * 2. the source row's providerId → clone that (bb resolves the
-   *    provider's catalog default model at spawn);
-   * 3. nothing → a plain hidden child inherits bb's own spawn default
+   * 2. nothing → a plain hidden child inherits bb's own spawn default
    *    chain (project remembered default → global), exactly what a new
    *    thread in the project gets.
+   *
+   * The old middle tier cloned the providerId alone, letting bb resolve
+   * the model against the provider's catalog default — which here is an
+   * openrouter model, the metered fall-through the metered gate had to
+   * reject live (409 on a vikunja-pwa-fork title probe). Inheriting rides
+   * the same core-resolved chain any new thread gets, so the probe never
+   * lands on a catalog default the project's remembered default would
+   * have avoided.
    */
   type ProbeSpawnPlan =
     | { spawnable: true; kind: "pair"; providerId: string; model: string }
-    | { spawnable: true; kind: "provider"; providerId: string }
     | { spawnable: true; kind: "inherit" }
     | { spawnable: false; reason: string };
 
@@ -996,17 +1001,14 @@ export default async function plugin(bb: BbPluginApi) {
     const source = (await bb.sdk.threads.get({ threadId })) as unknown as {
       projectId?: unknown;
       environmentId?: unknown;
-      providerId?: unknown;
     };
-    if (typeof source?.providerId === "string") {
-      return { spawnable: true, kind: "provider", providerId: source.providerId };
-    }
     if (typeof source?.projectId === "string") {
       return { spawnable: true, kind: "inherit" };
     }
     return {
       spawnable: false,
-      reason: "This thread has no resolved provider/model to probe with",
+      reason:
+        "This thread has no resolved provider/model and no project to inherit a default model from",
     };
   }
 
@@ -1138,9 +1140,7 @@ export default async function plugin(bb: BbPluginApi) {
       );
     }
     // Per-tier spawn args: the pair clones both fields explicitly, the
-    // provider tier names only the provider (bb resolves that provider's
-    // catalog default model at spawn), the inherit tier passes nothing and
-    // rides bb's own spawn default chain.
+    // inherit tier passes nothing and rides bb's own spawn default chain.
     const executionArgs: Record<string, unknown> =
       plan.kind === "pair"
         ? {
@@ -1148,18 +1148,11 @@ export default async function plugin(bb: BbPluginApi) {
             model: plan.model,
             executionInputSources: { providerId: "explicit", model: "explicit" },
           }
-        : plan.kind === "provider"
-          ? {
-              providerId: plan.providerId,
-              executionInputSources: { providerId: "explicit" },
-            }
-          : {};
+        : {};
     const execution =
       plan.kind === "pair"
         ? { providerId: plan.providerId, model: plan.model }
-        : plan.kind === "provider"
-          ? { providerId: plan.providerId, model: "provider default" }
-          : { providerId: "bb default chain", model: "bb default chain" };
+        : { providerId: "bb default chain", model: "bb default chain" };
     const probe = (await bb.sdk.threads.spawn({
       projectId: source.projectId,
       environment: {

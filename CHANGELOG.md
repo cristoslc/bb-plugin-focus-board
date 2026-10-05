@@ -5,6 +5,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **✨ "The thread's active model" no longer lands on a metered catalog
+  default.** When the thread's model can't be cloned, the title probe now
+  inherits the same spawn default chain a new thread gets instead of
+  cloning just the provider. The old path resolved the provider's catalog
+  default (an openrouter model here) and the metered gate rejected it with
+  a 409.
+
 ### Changed
 
 - **A drop on a column title never writes an order.** It still detaches a

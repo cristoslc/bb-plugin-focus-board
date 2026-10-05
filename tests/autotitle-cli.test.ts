@@ -122,7 +122,7 @@ describe("bb focus-board autotitle probe", () => {
     });
     const result = await harness.behavior.runCli(["autotitle", "probe", "thr_x"]);
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatch(/no resolved provider\/model to probe with/);
+    expect(result.stderr).toMatch(/no resolved provider\/model|no project to inherit/);
   });
 });
 describe("bb focus-board autotitle prompt", () => {
