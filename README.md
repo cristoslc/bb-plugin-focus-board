@@ -6,6 +6,7 @@
 
 <p align="center">
   <a href="#install"><img alt="bb plugin" src="https://img.shields.io/badge/install%20with-bb%20plugin-8a2be2"></a>
+  <a href="https://getbb.app/marketplace/focus-board"><img alt="community marketplace" src="https://img.shields.io/badge/community%20marketplace-focus--board-8a2be2"></a>
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A518-339933">
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/cristoslc/bb-plugin-focus-board"></a>
 </p>
@@ -70,17 +71,21 @@ Finer behavior notes (hand-ordering rules, Escape handling, pin behavior, pane h
 
 ## Install
 
-Install straight from GitHub, no clone needed:
+Focus Board is listed on the bb community marketplace
+([getbb.app/marketplace/focus-board](https://getbb.app/marketplace/focus-board)),
+so the short name installs it:
 
 ```sh
-bb plugin install https://github.com/cristoslc/bb-plugin-focus-board
+bb plugin install focus-board
 ```
 
 To update later, run the same command again (add `--yes` to skip the
-confirmation prompt). To pin a version:
+confirmation prompt). Straight from GitHub works too, with or without a
+pinned tag:
 
 ```sh
-bb plugin install git:https://github.com/cristoslc/bb-plugin-focus-board@v0.3.1
+bb plugin install https://github.com/cristoslc/bb-plugin-focus-board
+bb plugin install git:https://github.com/cristoslc/bb-plugin-focus-board@v0.8.0
 ```
 
 ## Configuration
