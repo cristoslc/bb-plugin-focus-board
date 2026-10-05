@@ -88,8 +88,12 @@ pinned tag:
 
 ```sh
 bb plugin install https://github.com/cristoslc/bb-plugin-focus-board
-bb plugin install git:https://github.com/cristoslc/bb-plugin-focus-board@v0.8.0
+bb plugin install git:https://github.com/cristoslc/bb-plugin-focus-board@<tag>
 ```
+
+With the upcoming 1.0 release, the CLI, stored state, and realtime payload
+shapes become stable commitments — the details live in
+[docs/compatibility-1.0.md](docs/compatibility-1.0.md).
 
 ## Configuration
 
