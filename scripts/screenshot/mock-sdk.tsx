@@ -44,6 +44,11 @@ export function definePluginApp(setup: (app: unknown) => void): unknown {
       // the harness, so the registration just has to be accepted.
       sidebarFooterAction: (_config: { id: string }) => undefined,
     },
+    // The brand-icon registration (app.tsx FocusBoardAppIcon): no host
+    // surface renders icons in the harness, so accept and drop it.
+    experimental_icons: {
+      register: (_registration: { name: string; component: ComponentType }) => undefined,
+    },
   });
   return { id: "screenshot-mock" };
 }
@@ -232,6 +237,31 @@ export function useSdk(): unknown {
 }
 
 /**
+ * A stub new-thread composer: the real one is bb's host compose surface,
+ * which the harness has no host for. Renders a marker the pane/board shots
+ * can show and a button that fires onSubmit with a minimal request, the
+ * same recording contract the modal's unit-test stub uses. The mock SDK
+ * must track every specifier app.tsx imports from '@get-bb/plugin-sdk/app'
+ * or the harness fails to boot (it did: the ✨ child-thread composer import
+ * was missing here and the harness rendered an empty root).
+ */
+export function experimental_NewThreadComposer(props: Record<string, unknown>): ReactNode {
+  return (
+    <button
+      type="button"
+      data-mock-composer=""
+      onClick={() => {
+        const submit = props.onSubmit as ((request: unknown) => void) | undefined;
+        void submit?.({ projectId: "proj_1", input: [] });
+      }}
+      style={{ padding: "4px 8px", fontSize: 12 }}
+    >
+      Mock composer
+    </button>
+  );
+}
+
+/**
  * In-memory rank store for the harness, mirroring the server's KV row:
  * columnKey → sparse ordered id list. Seeded from `?ranks=` (a JSON object)
  * so a UAT pass can start from a ranked column, and mutated by rank_move the
@@ -264,6 +294,8 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     };
   }
   if (method === "rank_list") return { orders: structuredClone(simRanks) };
+  if (method === "pin_parks_list") return { parks: {} };
+  if (method === "snooze_list") return { snoozes: {} };
   if (method === "thread_autotitle") {
     // Deterministic canned reply: the real server builds the title from the
     // thread's first prompt over bb's selected AI service; a UAT pass
