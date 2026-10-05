@@ -143,9 +143,14 @@ therefore includes a marketplace check before the cut is reported done:
 
 - Verify the release reaches marketplace installs: fetch
   `https://raw.githubusercontent.com/get-bb/marketplace/main/entries/focus-board.json`
-  and confirm `source.git.range` covers the version being tagged (`^0.3.1`
-  covers everything below 1.0.0 — a 1.0.0 release would silently stop
-  shipping to marketplace users).
+  and confirm `source.git.range` covers the version being tagged. Caret
+  semantics on a 0.x range pin the minor (`^0.3.1` means `>=0.3.1 <0.4.0`;
+  the `^0.3.1` covers-everything-below-1.0.0 assumption written here
+  first was wrong — caught the same day by the §4a check itself), so
+  **bump the range in the marketplace PR every cut**, to `^<released
+  version>` — the file-manager and doc-review entries carry
+  `^0.9.1`/`^0.3.0` from doing exactly that per release. PR #481 rides
+  the `^0.3.1` → `^0.9.0` bump with v0.9.0.
 - Verify the listing still describes the release: the entry's short
   `description` and the `overview/<plugin-id>.md` it references, checked
   against the section being renamed in §3. When they drift, open the
