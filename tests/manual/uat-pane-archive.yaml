@@ -1,0 +1,31 @@
+suite: pane-archive
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5182
+defaults:
+  groupBy: status
+  theme: dark
+steps:
+  - id: open-the-pane
+    title: Clicking a card opens its pane
+    goto: "?groupBy=status"
+    click: { card: thr_review_pr }
+    assert:
+      - pane: { threadId: thr_review_pr }
+      - text_visible: "Review PR #14"
+  - id: archive-from-the-pane-actions
+    title: Archive in the pane's actions menu removes the card from the board; the pane stays open on the archived thread
+    gestures:
+      - click_aria: { label: "More thread actions" }
+      - click_aria: { label: "Archive" }
+    assert:
+      - pane: { open: true }
+      - text_visible: "Review PR #14"
+      - column: unread
+        ordered: [thr_rpc_auth, thr_uat_queue]
+  - id: the-archived-row-offers-unarchive
+    title: An archived row's menu keeps its Unarchive (its only way out) and drops the Pin entry
+    gestures:
+      - click_aria: { label: "More thread actions" }
+    assert:
+      - text_visible: "Unarchive"

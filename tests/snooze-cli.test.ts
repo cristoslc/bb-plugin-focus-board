@@ -151,6 +151,19 @@ describe("bb focus-board snooze CLI", () => {
       expect(lastRead.get("thr_a") ?? null).toBeNull();
     });
 
+    it("rejects a duration that overflows the Date range BEFORE the read mark (no side effect)", async () => {
+      // Security audit 2026-10-05 finding 7: +100000000w overflowed into an
+      // Invalid Date that reached the wake stamp only after writeSnooze had
+      // already marked the thread read — a side effect with no snooze.
+      await load();
+      listedThreads = [makeThreadResponse({ id: "thr_a", title: "Alpha" })];
+      const result = await harness.behavior.runCli(["snooze", "set", "+100000000w", "thr_a"]);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("invalid wake time");
+      expect(lastRead.get("thr_a") ?? null).toBeNull();
+      expect(metadata.get("thr_a")?.[SNOOZE_METADATA_KEY]).toBeUndefined();
+    });
+
     it("snoozes several threads in one invocation", async () => {
       await load();
       listedThreads = [

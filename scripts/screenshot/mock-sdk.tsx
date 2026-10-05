@@ -164,6 +164,18 @@ export function experimental_useSidebarThreads(): unknown {
 /** A copy the mock actions can rewrite; the constant stays pristine. */
 let simThreads: readonly SimThread[] = SIM_THREADS;
 
+/** Threads archived in the harness; `threads.list({ archived: true })` serves these. */
+let simArchived: readonly SimThread[] = [];
+
+/** Realtime subscribers (the app subscribes with `{ event, callback }`). */
+type MockSubscribeArgs = { event: string; callback: (event: { entity: string; changes: string[] }) => void };
+const mockSubscribers = new Set<MockSubscribeArgs>();
+function mockPublishArchivedChanged(): void {
+  for (const subscriber of mockSubscribers) {
+    subscriber.callback({ entity: "thread", changes: ["archived-changed"] });
+  }
+}
+
 export function experimental_useSidebarThreadActions(): unknown {
   return {
     open: () => {},
@@ -181,7 +193,23 @@ export function experimental_useSidebarThreadActions(): unknown {
     },
     setRead: async () => {},
     rename: async () => {},
-    archive: () => {},
+    // The pane's actions menu archives through this sidebar hook (the
+    // sweep's awaited archive rides sdk.threads.archive below). Mirror the
+    // real host: move the thread out of the simulated sidebar into the
+    // archived set and re-render, so the gesture visibly archives and the
+    // pane's archived lookup can keep the thread resolvable.
+    archive: (threadId: string) => {
+      (globalThis as unknown as { __mockArchives?: number }).__mockArchives =
+        ((globalThis as unknown as { __mockArchives?: number }).__mockArchives ?? 0) + 1;
+      const moved = simThreads.find((candidate) => candidate.id === threadId);
+      simThreads = simThreads.filter((candidate) => candidate.id !== threadId);
+      if (moved !== undefined) {
+        simArchived = [...simArchived, moved];
+      }
+      mockPublishArchivedChanged();
+      mockRender();
+      return { ok: true as const };
+    },
     requestDelete: () => {},
   };
 }
@@ -196,9 +224,24 @@ export function experimental_useProviders(): unknown {
 // eventually wedges the page. The real host returns a stable client; the
 // mock must too.
 const mockSdk = {
-  subscribe: () => () => {},
+  subscribe: (args: MockSubscribeArgs) => {
+    mockSubscribers.add(args);
+    return () => mockSubscribers.delete(args);
+  },
   threads: {
-    list: async () => [],
+    // The app's archived lookup calls `list({ archived: true })` to keep an
+    // archived thread's pane resolvable; the rows carry the sidebar's
+    // title/titleFallback/href shape. Everything else keeps the historic
+    // empty list (the board reads the sidebar through the hooks above).
+    list: async (args?: { archived?: boolean }) =>
+      args?.archived === true
+        ? simArchived.map((thread) => ({
+            id: thread.id,
+            title: thread.displayTitle,
+            titleFallback: null,
+            href: null,
+          }))
+        : [],
     // The pane resolves the thread's environment once (the inline-code
     // decoration gates on it); mirror the fixture's own environment id.
     get: async ({ threadId }: { threadId: string }) => {
@@ -206,11 +249,26 @@ const mockSdk = {
       const environment = sim?.environment as { id?: string } | null;
       return { environmentId: environment?.id ?? null };
     },
-    unarchive: async () => {},
-    // The awaited archive the sweep runner uses; the mock drops the thread
-    // from the simulated sidebar so the harness sweep visibly empties.
+    // Restore the most recent archived copy of the thread to the live list.
+    unarchive: async ({ threadId }: { threadId: string }) => {
+      const restored = [...simArchived].reverse().find((candidate) => candidate.id === threadId);
+      if (restored !== undefined) {
+        simArchived = simArchived.filter((candidate) => candidate.id !== threadId);
+        simThreads = [...simThreads, restored];
+        mockPublishArchivedChanged();
+        mockRender();
+      }
+      return { ok: true as const };
+    },
+    // The awaited archive the sweep runner uses; the mock moves the thread
+    // to the archived set so the harness sweep visibly empties.
     archive: async ({ threadId }: { threadId: string }) => {
+      const moved = simThreads.find((candidate) => candidate.id === threadId);
       simThreads = simThreads.filter((candidate) => candidate.id !== threadId);
+      if (moved !== undefined) {
+        simArchived = [...simArchived, moved];
+      }
+      mockPublishArchivedChanged();
       mockRender();
       return { ok: true as const, archivedThreadIds: [threadId] };
     },

@@ -128,6 +128,16 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   holding as the viewport shrinks; the probe refuses to pass vacuously when
   the span never wrapped.
 
+- `uat-pane-archive.yaml` — the thread pane's archive path: opening the
+  pane, Archive in the actions menu removes the card from the board while
+  the pane stays open on the archived thread (the archived lookup keeps it
+  resolvable), and the archived row's menu keeps its Unarchive as its only
+  way out.
+- `uat-pane-phone.yaml` — the phone pane at a 390×844 viewport: a card
+  opens the full-screen sheet, the compact actions menu carries Full Screen
+  (the standalone button is dropped on compact), and choosing it runs the
+  maximize path (the mock's navigation is a no-op, so the pane stays).
+
 ## Notes
 
 - The first step is the one every other step used to assume. A suite that

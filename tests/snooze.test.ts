@@ -95,6 +95,14 @@ describe("parseWhenArg (CLI)", () => {
     expect(parseWhenArg("2026-10-02T09:00:00.000Z", now)).toBeNull();
     expect(parseWhenArg("2026-10-02T10:00:00.000Z", now)).toBeNull();
   });
+
+  it("rejects a relative duration that overflows the Date range (before any side effect)", () => {
+    // 100,000,000 weeks ≈ 1.9 million years: Date arithmetic overflows to
+    // Invalid Date, and an Invalid Date must never reach the wake stamp.
+    expect(parseWhenArg("+100000000w", now)).toBeNull();
+    expect(parseWhenArg("+10000000000d", now)).toBeNull();
+    expect(parseWhenArg("+100000000000h", now)).toBeNull();
+  });
 });
 
 describe("describeWakeAt", () => {
