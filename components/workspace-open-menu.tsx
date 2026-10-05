@@ -26,7 +26,26 @@ interface WorkspaceOpenMenuProps {
 	threadId: string;
 	/** The thread's app-relative URL for the new-window and copy-link entries. */
 	threadHref: string;
+	/**
+	 * The pane's "open in the main view" action (bb's pane maximize), offered
+	 * in the dropdown's thread group beside the new-window entry.
+	 */
+	onMaximize: () => void;
+	/**
+	 * Show the "Open in editor" text beside the primary icon. The pane turns
+	 * this on only when it is wide enough to afford the label without
+	 * starving the title (see OPEN_LABEL_MIN_PANE_WIDTH).
+	 */
+	showLabel?: boolean;
 }
+
+/**
+ * Minimum pane width (px) at which the primary open button grows a visible
+ * "Open in editor" label. At the pane's 320–900px resize range the default
+ * 480px width keeps the control icon-only: the label costs ~60px, which at
+ * the default width comes straight out of an already-truncating title.
+ */
+export const OPEN_LABEL_MIN_PANE_WIDTH = 560;
 
 /** The app's own workspace-target preference key (workspace-open-target-preference). */
 const WORKSPACE_TARGET_PREFERENCE_KEY = "bb.workspaceOpenTarget";
@@ -87,7 +106,12 @@ function iconForTarget(target: WorkspaceOpenTarget): string {
 	return "FolderOpen";
 }
 
-export function WorkspaceOpenMenu({ threadId, threadHref }: WorkspaceOpenMenuProps) {
+export function WorkspaceOpenMenu({
+	threadId,
+	threadHref,
+	onMaximize,
+	showLabel = false,
+}: WorkspaceOpenMenuProps) {
 	const rpc = useRpc<typeof rpcContract>();
 	const [state, setState] = useState<WorkspaceOpenTargets | null>(null);
 	const [open, setOpen] = useState(false);
@@ -188,6 +212,13 @@ export function WorkspaceOpenMenu({ threadId, threadHref }: WorkspaceOpenMenuPro
 	}
 	const threadItems: { id: string; label: string; icon: string; run: () => void }[] = [
 		{
+			id: "maximize",
+			label: "Maximize pane",
+			icon: "Maximize2",
+			// bb's own term for opening this pane's thread in the main view.
+			run: onMaximize,
+		},
+		{
 			id: "new-window",
 			label: "Open in new window",
 			icon: "NewTab",
@@ -211,8 +242,12 @@ export function WorkspaceOpenMenu({ threadId, threadHref }: WorkspaceOpenMenuPro
 		<div className="inline-flex shrink-0 items-stretch overflow-hidden rounded-md">
 			<Button
 				variant="ghost"
-				size="icon"
-				className={cn(HEADER_ICON_BUTTON_CLASS, "rounded-r-none")}
+				size={showLabel ? "sm" : "icon"}
+				className={
+					showLabel
+						? "h-7 shrink-0 gap-1.5 rounded-r-none px-2 text-xs text-muted-foreground hover:text-foreground"
+						: cn(HEADER_ICON_BUTTON_CLASS, "rounded-r-none")
+				}
 				aria-label={`Open workspace in ${primary.label}`}
 				// The menu stays up while the ask is in flight: closing on a
 				// failure would read as a dead button, so only success closes —
@@ -224,6 +259,7 @@ export function WorkspaceOpenMenu({ threadId, threadHref }: WorkspaceOpenMenuPro
 				}
 			>
 				<Icon name={iconForTarget(primary)} className="size-4" />
+				{showLabel ? <span className="whitespace-nowrap">Open in editor</span> : null}
 			</Button>
 			<div className="w-px self-stretch my-1.5 bg-border" aria-hidden />
 			<Button

@@ -106,6 +106,7 @@ beforeEach(() => {
 });
 
 function renderPane() {
+	const onMaximize = vi.fn();
 	render(
 		createElement(ThreadPane, {
 			thread: {
@@ -123,11 +124,12 @@ function renderPane() {
 			onTogglePinned: () => {},
 			onToggleUnread: () => {},
 			onRename: async () => {},
-			onMaximize: () => {},
+			onMaximize,
 			onClose: () => {},
 			escStopsRunningThread: true,
 		}),
 	);
+	return { onMaximize };
 }
 
 describe("pane header debug button removal", () => {
@@ -137,6 +139,22 @@ describe("pane header debug button removal", () => {
 		expect(
 			screen.queryByRole("button", { name: /copy pane scroll debug log/i }),
 		).toBeNull();
+	});
+});
+
+describe("pane header chrome", () => {
+	it("the desktop header has no standalone full-screen button", () => {
+		renderPane();
+		expect(
+			screen.queryByRole("button", { name: /open thread full screen/i }),
+		).toBeNull();
+	});
+
+	it("the actions menu reads as an ellipsis, not a floating caret", () => {
+		renderPane();
+		const trigger = screen.getByRole("button", { name: "More thread actions" });
+		expect(trigger.querySelector('[data-icon="More"]')).not.toBeNull();
+		expect(trigger.querySelector('[data-icon="ChevronDown"]')).toBeNull();
 	});
 });
 
@@ -280,6 +298,40 @@ describe("pane header workspace-open menu", () => {
 		} finally {
 			// Nothing to restore: the clipboard stub dies with this jsdom window.
 		}
+	});
+
+	it("the dropdown offers Maximize pane just before Open in new window, and maximizes on click", async () => {
+		const { onMaximize } = renderPane();
+		fireEvent.click(
+			await screen.findByRole("button", { name: /more places to open/i }),
+		);
+		const maximize = screen.getByRole("menuitem", { name: "Maximize pane" });
+		const newWindow = screen.getByRole("menuitem", {
+			name: "Open in new window",
+		});
+		// bb's own term, sitting next to the other thread destinations.
+		expect(
+			maximize.compareDocumentPosition(newWindow) &
+				Node.DOCUMENT_POSITION_FOLLOWING,
+		).toBeTruthy();
+		fireEvent.click(maximize);
+		expect(onMaximize).toHaveBeenCalledTimes(1);
+	});
+
+	it("the open control reads 'Open in editor' on a wide pane, icon-only at the default width", async () => {
+		renderPane();
+		const primary = await screen.findByRole("button", {
+			name: /open workspace in vs code/i,
+		});
+		expect(primary.textContent).not.toContain("Open in editor");
+
+		cleanup();
+		window.localStorage.setItem("focus-board:paneWidth", "700");
+		renderPane();
+		const labeled = await screen.findByRole("button", {
+			name: /open workspace in vs code/i,
+		});
+		expect(labeled.textContent).toContain("Open in editor");
 	});
 
 	it("a failed open keeps the menu open and shows the daemon's message", async () => {

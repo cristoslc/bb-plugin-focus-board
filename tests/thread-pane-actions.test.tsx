@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 // The thread pane header on a phone (compact viewport): the full-screen
 // button is hidden there, so the "More thread actions" menu must carry a
-// Full Screen item to reach the main view; on desktop the button is visible
-// and the menu does not duplicate it.
+// Full Screen item to reach the main view; on desktop there is no
+// standalone full-screen button either — the action lives in the open
+// dropdown as "Maximize pane", and the menu does not duplicate it.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createElement, type ReactNode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -102,9 +103,9 @@ describe("compact viewport thread pane header", () => {
 });
 
 describe("desktop thread pane header", () => {
-  it("keeps the full-screen button but not a duplicate menu item", () => {
+  it("has no standalone full-screen button — the action moved to the open dropdown", () => {
     renderPane({ compact: false });
-    expect(screen.getByLabelText("Open thread full screen")).toBeTruthy();
+    expect(screen.queryByLabelText("Open thread full screen")).toBeNull();
     expect(more()).toBeTruthy();
     openActionsMenu();
     expect(screen.queryByRole("menuitem", { name: "Full Screen" })).toBeNull();
