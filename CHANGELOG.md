@@ -7,10 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **Drop a card onto a card to nest it.** The middle third of a card is now
-  the nest zone: the drop re-parents that thread under the target (the top
-  and bottom thirds still reorder as before), and the card menu's Make
-  Top-Level detaches a child again.
+- **Drop a card onto a card to nest it.** The hovered target rings amber — a
+  deliberate contrast with the top/bottom thirds' ordinary insertion line, so
+  a family drop never masquerades as a lane drop — and the drop re-parents
+  the thread under the target; the card menu's Make Top-Level detaches a
+  child again.
 
 ## [0.8.0] - 2026-10-03
 

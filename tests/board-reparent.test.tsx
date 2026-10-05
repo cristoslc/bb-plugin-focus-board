@@ -163,7 +163,7 @@ describe("drop onto a card to nest it", () => {
     expect(props.onRankMove).toHaveBeenCalled();
   });
 
-  it("hovering the nest zone rings the card instead of the insertion line", () => {
+  it("hovering the nest zone rings the card amber, not the lane color", () => {
     const onReparent = vi.fn().mockResolvedValue(undefined);
     renderBoard(twoCardFixture(), { onReparent, rawParentOf: new Map() });
     const dt = makeDataTransfer();
@@ -174,6 +174,11 @@ describe("drop onto a card to nest it", () => {
     Object.defineProperty(over, "clientY", { value: 150 });
     fireEvent(slot, over);
     expect(slot.className).toMatch(/after:ring-2/);
+    // Amber marks the family write; the lane affordance keeps the theme's
+    // ring color, so the two reads are distinguishable at a glance.
+    expect(slot.className).toMatch(/after:ring-amber-500/);
+    expect(slot.className).toMatch(/after:bg-amber-500\/10/);
+    expect(slot.className).not.toMatch(/after:ring-ring/);
     expect(slot.className).not.toMatch(/after:inset-x-0/);
   });
 
