@@ -10,6 +10,7 @@ import {
   useBbNavigate,
   useRpc,
   useSdk,
+  useSettings,
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
@@ -17,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { describeWakeAt } from "@/lib/snooze";
 import type { SnoozeMenuAction } from "@/lib/snooze";
-import { COARSE_POINTER_HEADER_ICON_BUTTON_CLASS } from "@/components/ui/coarse-pointer-sizing";
 import { PendingInteractionCard } from "@/components/pending-interaction-card";
 import { DecidedQuestionsCard } from "@/components/decided-questions-card";
 import {
@@ -37,14 +37,14 @@ import {
 } from "@/components/chat-jump-guard";
 import { attachScrollDebug } from "@/components/scroll-debug";
 import { AutotitleFallbackModal } from "@/components/autotitle-fallback-modal";
+import { WorkspaceOpenMenu } from "@/components/workspace-open-menu";
+import { HEADER_ICON_BUTTON_CLASS } from "@/lib/pane-chrome";
 import type {
   AutotitleFallbackState,
   AutotitleTarget,
 } from "@/lib/autotitle";
-
-// Shared header-button classes: a 28px ghost icon button that grows to a
-// 36px touch target on coarse pointers (phones), matching bb's own headers.
-const HEADER_ICON_BUTTON_CLASS = `${COARSE_POINTER_HEADER_ICON_BUTTON_CLASS} shrink-0 text-muted-foreground hover:text-foreground`;
+// The header buttons share lib/pane-chrome's class so the workspace-open
+// menu can render matching buttons without importing this module back.
 
 const PANE_WIDTH_KEY = "focus-board:paneWidth";
 const PANE_MIN_WIDTH = 320;
@@ -74,6 +74,11 @@ export interface ThreadPaneThread {
   isUnread: boolean;
   /** Drives the actions menu's Pin/Unpin entry, the card menu's wording. */
   isPinned: boolean;
+  /**
+   * The thread's app-relative URL (the sidebar row's href) for the open
+   * menu's "Open in new window" and "Copy thread link" destinations.
+   */
+  href: string;
 }
 
 interface ThreadPaneProps {
@@ -114,8 +119,6 @@ interface ThreadPaneProps {
    * handling and close the pane — or stop the thread — underneath the modal.
    */
   escapeSuppressed?: boolean;
-  /** Debug: attach the scroll-instrumentation session to this pane's transcript (ships off). */
-  scrollDebug?: boolean;
 }
 
 interface ActionMenuItem {
@@ -378,7 +381,6 @@ export function ThreadPane({
   thread,
   isArchived,
   isDone,
-  scrollDebug = false,
   onToggleDone,
   onToggleArchived,
   onTogglePinned,
@@ -396,6 +398,11 @@ export function ThreadPane({
   const sdk = useSdk();
   const navigate = useBbNavigate();
   const rpc = useRpc<typeof rpcContract>();
+  // The developer scroll instrumentation (setting "Developer: instrument
+  // pane chat scrolling (debug)") is read here instead of threaded through
+  // a prop: its only remaining output is console-side, so no caller needs
+  // to know about it.
+  const scrollDebug = useSettings().values?.scrollDebugInstrumentation === true;
   const dragStateRef = useRef<{ pointerId: number; startX: number; startWidth: number } | null>(
     null,
   );
@@ -573,7 +580,6 @@ export function ThreadPane({
   // docs/chat-click-jump-2026-09-29.md, where this module is covered too).
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const chatJumpGuardRef = useRef<ChatClickJumpGuard | null>(null);
-  const scrollDebugSessionRef = useRef<ReturnType<typeof attachScrollDebug> | null>(null);
   const onChatBodyClickCapture = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
       chatJumpGuardRef.current?.onChatClickCapture(event);
@@ -595,8 +601,9 @@ export function ThreadPane({
   // through the config panel in a developer environment. This is the
   // persistent version of the ad-hoc probe instrumentation: every scroll
   // write with its stack, event stream, and 1 Hz geometry samples in a
-  // bounded log, with a copy affordance in the header and a window
-  // handle for automation to read. Detach restores everything.
+  // bounded log. The log is console-side only — the pane header carries no
+  // debug button; automation reads `__focusBoardScrollDebug.dump()`.
+  // Detach restores everything.
   useEffect(() => {
     if (!scrollDebug) return;
     const root = chatBodyRef.current;
@@ -612,13 +619,9 @@ export function ThreadPane({
     if (view !== null) {
       (view as Record<string, unknown> & typeof view)["__focusBoardScrollDebug"] = session;
     }
-    // Expose a copy affordance for the operator: the header button gets a
-    // fresher copy from this ref each click.
-    scrollDebugSessionRef.current = session;
     return () => {
       session.detach();
       if (view !== null) delete (view as Record<string, unknown> & typeof view)["__focusBoardScrollDebug"];
-      scrollDebugSessionRef.current = null;
     };
   }, [scrollDebug, thread.id, isCompact]);
 
@@ -830,29 +833,16 @@ export function ThreadPane({
           </Button>
         ) : null}
         {(() => {
-          // Debug-mode affordance: copying the bounded instrumentation log
-          // (setting "Developer: instrument pane chat scrolling"). Rendered
-          // only while the debug session may be attached.
-          if (!scrollDebug) return null;
+          // The pane's take on the main view's workspace-open button: an
+          // icon that opens the thread's workspace in the preferred editor
+          // plus a dropdown (file explorer, terminal, new window, copy
+          // link). Renders nothing when no local open applies — no
+          // workspace, daemon down, or the workspace on another host.
           return (
-            <Button
-              variant="ghost"
-              size="icon"
-              className={HEADER_ICON_BUTTON_CLASS}
-              aria-label="Copy pane scroll debug log"
-              onClick={() => {
-                const session = scrollDebugSessionRef.current;
-                if (session === null) return;
-                void navigator.clipboard
-                  ?.writeText(session.dump())
-                  .catch(() => {
-                    console.debug("[focus-board:scroll-debug dump]");
-                    console.debug(session.dump());
-                  });
-              }}
-            >
-              <Icon name="Bug" className="size-4" />
-            </Button>
+            <WorkspaceOpenMenu
+              threadId={thread.id}
+              threadHref={thread.href}
+            />
           );
         })()}
         <Button

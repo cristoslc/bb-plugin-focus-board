@@ -206,11 +206,6 @@ function BoardPage({ subPath }: { subPath: string }) {
   const escStopsRunningThread = escStopsRunningFromSetting(
     settingValues?.escStopsRunningThread,
   );
-  // Strictly opt-in: only a stored true instruments (debug ships off).
-  // Off for every stable build's default; enabled from the config panel
-  // in a developer environment for the click-jump investigation
-  // (docs/chat-click-jump-2026-09-29.md).
-  const scrollDebug = settingValues?.scrollDebugInstrumentation === true;
 
   // The board's "needs you" state rides the sidebar's `hasPendingInteraction`
   // flag, but the sidebar cache can lag behind an answered question: the
@@ -448,7 +443,12 @@ function BoardPage({ subPath }: { subPath: string }) {
   // from the SDK list is enough.
   const [archiveTick, setArchiveTick] = useState(0);
   const [archivedThreads, setArchivedThreads] = useState<
-    readonly { id: string; title: string | null; titleFallback: string | null }[]
+    readonly {
+      id: string;
+      title: string | null;
+      titleFallback: string | null;
+      href: string | null;
+    }[]
   >([]);
   useEffect(() => {
     const unsubscribe = sdk.subscribe({
@@ -473,6 +473,10 @@ function BoardPage({ subPath }: { subPath: string }) {
                 id: thread.id,
                 title: thread.title,
                 titleFallback: thread.titleFallback,
+                // The pane's open menu reuses the row href for its
+                // new-window and copy-link destinations; archived rows from
+                // older SDK views may not carry one.
+                href: "href" in thread && typeof thread.href === "string" ? thread.href : null,
               })),
             );
           }
@@ -1045,6 +1049,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           status: openThreadActive.status,
           isUnread: openThreadActive.isUnread,
           isPinned: openThreadActive.isPinned,
+          href: openThreadActive.href,
         }
       : openThreadArchived !== null
         ? {
@@ -1054,6 +1059,9 @@ function BoardPage({ subPath }: { subPath: string }) {
             status: "idle",
             isUnread: false,
             isPinned: false,
+            // Older stored archived rows predate href; the app-relative
+            // thread route is the same URL the sidebar row carries.
+            href: openThreadArchived.href ?? `/threads/${openThreadArchived.id}`,
           }
         : provisionalSpawn !== null && provisionalSpawn.id === openThreadId
           ? {
@@ -1062,6 +1070,7 @@ function BoardPage({ subPath }: { subPath: string }) {
               status: provisionalSpawn.status,
               isUnread: false,
               isPinned: false,
+              href: `/threads/${provisionalSpawn.id}`,
             }
           : null;
 
@@ -2012,7 +2021,6 @@ function BoardPage({ subPath }: { subPath: string }) {
           onClose={closeThreadPane}
           escapeSuppressed={newThreadOpen}
           escStopsRunningThread={escStopsRunningThread}
-          scrollDebug={scrollDebug}
         />
       )}
       <NewThreadModal

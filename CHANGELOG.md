@@ -5,6 +5,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Open menu in the thread pane header.** The pane header carries an
+  open button in the style of the main thread view's workspace button: the
+  icon opens the thread's workspace folder in your preferred editor, and
+  the dropdown lists Open in editor, Open in file explorer, Open in
+  terminal, Open in new window, and Copy thread link. It works from remote
+  sessions too — the open runs on the machine the workspace lives on — and
+  hides itself when there is no workspace, the host daemon is down, or the
+  workspace lives on another host.
+
+### Changed
+
+- The pane-header debug bug button is gone. The scroll instrumentation
+  setting still works, but the log now reaches only the browser console
+  (and the `__focusBoardScrollDebug.dump()` window handle) instead of
+  growing a header button.
+
 ## [0.8.0] - 2026-10-03
 
 ### Added
