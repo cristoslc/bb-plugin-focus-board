@@ -261,3 +261,145 @@ describe("drop onto a card to nest it", () => {
     expect(props.onRankMove).toHaveBeenCalled();
   });
 });
+describe("drag a child off its family: the column floor detaches", () => {
+  // thr_b renders as the only top-level slot; thr_a lives as its nested row.
+  function familyFixture(): PluginSidebarThread[] {
+    return [
+      thread({ id: "thr_a", isUnread: true, updatedAt: NOW - 5000 }),
+      thread({ id: "thr_b", isUnread: true, updatedAt: NOW - 1000 }),
+    ];
+  }
+  const [childThread, parentThread] = familyFixture();
+
+  function renderFamily(onReparent: unknown = vi.fn().mockResolvedValue(undefined)) {
+    return renderBoard([parentThread], {
+      nestedChildrenByParent: new Map<string, readonly PluginSidebarThread[]>([
+        ["thr_b", [childThread]],
+      ]),
+      rawParentOf: new Map<string, string>([["thr_a", "thr_b"]]),
+      onReparent,
+    }) as { props: BoardProps };
+  }
+
+  function nestedRowAnchor(childId: string): HTMLElement {
+    const anchor = document.querySelector(
+      `[data-nested-rows] a[data-thread-card="${childId}"]`,
+    );
+    if (!(anchor instanceof HTMLElement)) throw new Error(`missing nested row ${childId}`);
+    return anchor;
+  }
+
+  /** dragstart on the child row, dragover and drop on the column section itself. */
+  function dragToFloor(fromId: string, columnId: string, viaAnchor?: HTMLElement) {
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(viaAnchor ?? nestedRowAnchor(fromId), { dataTransfer: dt });
+    const section = document.querySelector(`section[data-column-id="${columnId}"]`);
+    if (!(section instanceof HTMLElement)) throw new Error(`missing column ${columnId}`);
+    const over = createEvent.dragOver(section, { dataTransfer: dt });
+    fireEvent(section, over);
+    const drop = createEvent.drop(section, { dataTransfer: dt });
+    fireEvent(section, drop);
+    return { dropAllowed: over.defaultPrevented };
+  }
+
+  it("a nested child row is draggable and rides its lane's type", () => {
+    renderFamily();
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(nestedRowAnchor("thr_a"), { dataTransfer: dt });
+    expect(dt.types).toContain("text/focus-board-id");
+    expect(dt.types).toContain("application/x-focus-board-rank:status:unread");
+  });
+
+  it("releasing a child on its own lane's floor un-nests it and makes no rank move", () => {
+    const onReparent = vi.fn().mockResolvedValue(undefined);
+    const { props } = renderFamily(onReparent);
+    const { dropAllowed } = dragToFloor("thr_a", "unread");
+    // The child was never a visible slot in this lane, so there is no rank
+    // to move: the detach IS the write.
+    expect(dropAllowed).toBe(true);
+    expect(onReparent).toHaveBeenCalledWith("thr_a", null);
+    expect(props.onRankMove).not.toHaveBeenCalled();
+  });
+
+  it("a child dropped on the Done floor detaches and marks done in one gesture", () => {
+    const onReparent = vi.fn().mockResolvedValue(undefined);
+    const doneFiller = thread({ id: "thr_old_done", updatedAt: NOW - 9000 });
+    const { props } = renderBoard([parentThread, doneFiller], {
+      doneIds: new Set<string>(["thr_old_done"]),
+      nestedChildrenByParent: new Map<string, readonly PluginSidebarThread[]>([
+        ["thr_b", [childThread]],
+      ]),
+      rawParentOf: new Map<string, string>([["thr_a", "thr_b"]]),
+      onReparent,
+    });
+    const section = document.querySelector('section[data-column-id="done"]');
+    if (!(section instanceof HTMLElement)) throw new Error("missing done column");
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(nestedRowAnchor("thr_a"), { dataTransfer: dt });
+    const over = createEvent.dragOver(section, { dataTransfer: dt });
+    fireEvent(section, over);
+    const drop = createEvent.drop(section, { dataTransfer: dt });
+    fireEvent(section, drop);
+    expect(over.defaultPrevented).toBe(true);
+    expect(props.onDropDone).toHaveBeenCalledWith("thr_a");
+    expect(onReparent).toHaveBeenCalledWith("thr_a", null);
+  });
+
+  it("a child dropped on a non-lane column's floor detaches with no lane write", () => {
+    const onReparent = vi.fn().mockResolvedValue(undefined);
+    const { props } = renderBoard([parentThread], {
+      groupBy: "project" as const,
+      columns: buildColumns([parentThread], "project", context as never, new Map(), new Set<string>(), NOW, {}),
+      nestedChildrenByParent: new Map<string, readonly PluginSidebarThread[]>([
+        ["thr_b", [childThread]],
+      ]),
+      rawParentOf: new Map<string, string>([["thr_a", "thr_b"]]),
+      onReparent,
+    });
+    const { dropAllowed } = dragToFloor("thr_a", "proj_a");
+    expect(dropAllowed).toBe(true);
+    expect(onReparent).toHaveBeenCalledWith("thr_a", null);
+    expect(props.onDropDone).not.toHaveBeenCalled();
+    expect(props.onDropUnread).not.toHaveBeenCalled();
+    expect(props.onDropPinned).not.toHaveBeenCalled();
+    expect(props.onRankMove).not.toHaveBeenCalled();
+  });
+
+  it("a top-level card's floor drop keeps the plain append, never a detach", () => {
+    const onReparent = vi.fn().mockResolvedValue(undefined);
+    const { props } = renderBoard(twoCardFixture(), { onReparent, rawParentOf: new Map() });
+    const section = document.querySelector('section[data-column-id="unread"]');
+    if (!(section instanceof HTMLElement)) throw new Error("missing unread column");
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(cardAnchor("thr_a"), { dataTransfer: dt });
+    const over = createEvent.dragOver(section, { dataTransfer: dt });
+    fireEvent(section, over);
+    const drop = createEvent.drop(section, { dataTransfer: dt });
+    fireEvent(section, drop);
+    expect(over.defaultPrevented).toBe(true);
+    expect(props.onRankMove).toHaveBeenCalled();
+    expect(onReparent).not.toHaveBeenCalled();
+  });
+
+  it("the floor glows amber under a nested child, stays lane-colored otherwise", () => {
+    const onReparent = vi.fn().mockResolvedValue(undefined);
+    renderFamily(onReparent);
+    const section = document.querySelector('section[data-column-id="unread"]');
+    if (!(section instanceof HTMLElement)) throw new Error("missing unread column");
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(nestedRowAnchor("thr_a"), { dataTransfer: dt });
+    fireEvent(section, createEvent.dragOver(section, { dataTransfer: dt }));
+    expect(section.className).toMatch(/ring-amber-500/);
+    expect(section.className).not.toMatch(/ring-ring/);
+  });
+
+  it("the detach announcement names the way back", async () => {
+    renderFamily();
+    dragToFloor("thr_a", "unread");
+    // The write resolves on a microtask; the announcement follows it.
+    await vi.waitFor(() => {
+      const live = document.querySelector('[aria-live="polite"]');
+      expect(live?.textContent ?? "").toMatch(/Drag it onto a card to nest it back/);
+    });
+  });
+});

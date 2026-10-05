@@ -103,6 +103,9 @@ export function columnIsRanked(store: RankStore, columnKey: string): boolean {
  */
 export const RANK_DRAG_TYPE_PREFIX = "application/x-focus-board-rank:";
 
+/** Drag payload key for the moved card's id; readable at drop time. */
+export const DRAG_ID_KEY = "text/focus-board-id";
+
 export const rankDragType = (rankKey: string): string =>
   `${RANK_DRAG_TYPE_PREFIX}${rankKey.toLowerCase()}`;
 
