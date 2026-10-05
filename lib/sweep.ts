@@ -251,6 +251,51 @@ export function toggleSweepSelection(armed: ArmedSweep, threadId: string): Armed
     : { ...armed, threadIds: [...armed.threadIds, threadId] };
 }
 
+/**
+ * The ids a shift-click selects: the contiguous run from the anchor through
+ * the clicked card, in the column's display order whichever end was clicked.
+ * The ids are the run in display order; `mayJoin` drops cards that cannot
+ * join a sweep (blocked live-child parents, Done projections) without
+ * breaking the span. No anchor — or an anchor that has left the column —
+ * falls back to the clicked card alone; a clicked card that itself may not
+ * join selects nothing (the board refuses it loudly before calling here).
+ */
+export function sweepRangeIds(
+  columnThreadIds: readonly string[],
+  anchorId: string | null,
+  clickedId: string,
+  mayJoin: (threadId: string) => boolean = () => true,
+): string[] {
+  const clickedAt = columnThreadIds.indexOf(clickedId);
+  if (clickedAt === -1) return [];
+  if (!mayJoin(clickedId)) return [];
+  const anchorAt = anchorId === null ? -1 : columnThreadIds.indexOf(anchorId);
+  if (anchorAt === -1) return mayJoin(clickedId) ? [clickedId] : [];
+  const from = Math.min(anchorAt, clickedAt);
+  const to = Math.max(anchorAt, clickedAt);
+  return columnThreadIds
+    .slice(from, to + 1)
+    .filter(mayJoin);
+}
+
+/**
+ * Add ids to the live sweep selection without touching membership already
+ * curated: the shift-click gesture is additive, never subtractive. Existing
+ * ids keep their order; new ids append in the order given. When nothing is
+ * new the same object returns, so a state updater can bail out of the
+ * re-render.
+ */
+export function addSweepSelection(
+  armed: ArmedSweep,
+  threadIds: readonly string[],
+): ArmedSweep {
+  const selected = new Set(armed.threadIds);
+  const added = threadIds.filter((id) => !selected.has(id));
+  return added.length === 0
+    ? armed
+    : { ...armed, threadIds: [...armed.threadIds, ...added] };
+}
+
 export interface SweepRunFailure {
   threadId: string;
   message: string;

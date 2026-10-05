@@ -11,7 +11,9 @@ import {
   sweepCandidatesForIdleColumn,
   sweepColumnKind,
   sweepDestination,
+  sweepRangeIds,
   sweepRemovesThreads,
+  addSweepSelection,
   toggleSweepSelection,
 } from "../lib/sweep";
 
@@ -457,5 +459,57 @@ describe("threshold defaults", () => {
   it("uses 2 days for both arms", () => {
     expect(DEFAULT_DONE_ARCHIVE_MS).toBe(2 * DAY_MS);
     expect(DEFAULT_IDLE_ARCHIVE_MS).toBe(2 * DAY_MS);
+  });
+});
+
+describe("shift-click range ids", () => {
+  const order = ["a", "b", "c", "d", "e"];
+
+  it("spans the anchor through the clicked card, in display order either way", () => {
+    expect(sweepRangeIds(order, "a", "c")).toEqual(["a", "b", "c"]);
+    expect(sweepRangeIds(order, "c", "a")).toEqual(["a", "b", "c"]);
+  });
+
+  it("an anchor equal to the clicked card selects just that card", () => {
+    expect(sweepRangeIds(order, "b", "b")).toEqual(["b"]);
+  });
+
+  it("no anchor yet selects just the clicked card", () => {
+    expect(sweepRangeIds(order, null, "d")).toEqual(["d"]);
+  });
+
+  it("an anchor that left the column falls back to the clicked card alone", () => {
+    expect(sweepRangeIds(order, "gone", "d")).toEqual(["d"]);
+  });
+
+  it("cards that may not join are skipped without breaking the span", () => {
+    expect(sweepRangeIds(order, "a", "e", (id) => id !== "c")).toEqual([
+      "a",
+      "b",
+      "d",
+      "e",
+    ]);
+  });
+
+  it("a clicked card that may not join selects nothing", () => {
+    expect(sweepRangeIds(order, "a", "c", (id) => id !== "c")).toEqual([]);
+  });
+});
+
+describe("addSweepSelection", () => {
+  it("appends new ids after the live selection, deduplicated, order kept", () => {
+    const armed = armSweep("done", ["a", "b"]);
+    expect(addSweepSelection(armed, ["c", "a", "d"]).threadIds).toEqual([
+      "a",
+      "b",
+      "c",
+      "d",
+    ]);
+  });
+
+  it("no new ids returns the same armed object, so state need not update", () => {
+    const armed = armSweep("done", ["a"]);
+    expect(addSweepSelection(armed, ["a"])).toBe(armed);
+    expect(addSweepSelection(armed, [])).toBe(armed);
   });
 });

@@ -5,6 +5,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
+    "text": "**Sweep selection takes shift-click and ⌘/Ctrl-click.** Shift-click grabs the run from the last-clicked card through the one you click (cards that cannot join a sweep are skipped); ⌘/Ctrl-click toggles a single card.",
+    "children": []
+  },
+  {
     "text": "**The Done column sorts by activity recency again, most recently active on top.** The idle sweep's fresh stamps no longer vault long-idle threads or family projections up the column, and a stored drag order still wins.",
     "children": []
   },
