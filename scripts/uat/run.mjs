@@ -180,6 +180,58 @@ const pageDragToColumn = ({ from, column }) => {
 };
 
 /**
+ * Drag a nested child row (or any card anchor) onto a whole column's floor.
+ * Split from `pageDragToColumn` because the child anchor is NOT inside its
+ * own li[data-rank-slot] — it renders inside the parent's nested rows — so
+ * the slot-anchored lookup cannot find it.
+ */
+const pageDragChildToFloor = ({ from, column }) => {
+  const anchor = document.querySelector(`a[data-thread-card="${from}"][draggable]`);
+  const section = document.querySelector(`section[data-column-id="${column}"]`);
+  if (!anchor || !section) throw new Error(`drag_child_to_floor: missing ${from}=${anchor != null} or ${column}=${section != null}`);
+  const dt = new DataTransfer();
+  anchor.dispatchEvent(new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: dt }));
+  const box = section.getBoundingClientRect();
+  const point = {
+    bubbles: true,
+    cancelable: true,
+    dataTransfer: dt,
+    clientX: box.left + box.width / 2,
+    clientY: box.bottom - 12,
+  };
+  section.dispatchEvent(new DragEvent("dragover", point));
+  section.dispatchEvent(new DragEvent("drop", point));
+  anchor.dispatchEvent(new DragEvent("dragend", { bubbles: true, dataTransfer: dt }));
+  return { ok: true, dropAllowed: true };
+};
+
+/** Hover a child over a column floor: does the amber family affordance show? */
+const pageFloorAmber = ({ from, column }) => {
+  const anchor = document.querySelector(`a[data-thread-card="${from}"][draggable]`);
+  const section = document.querySelector(`section[data-column-id="${column}"]`);
+  if (!anchor || !section) throw new Error(`floor_amber: missing ${from} or ${column}`);
+  const dt = new DataTransfer();
+  anchor.dispatchEvent(new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: dt }));
+  const box = section.getBoundingClientRect();
+  section.dispatchEvent(new DragEvent("dragover", {
+    bubbles: true,
+    cancelable: true,
+    dataTransfer: dt,
+    clientX: box.left + box.width / 2,
+    clientY: box.bottom - 12,
+  }));
+  const ambered = [...section.classList].some((cls) => cls.startsWith("ring-amber"));
+  const result = {
+    shown: ambered,
+    reason: ambered
+      ? "floor rings amber for a family detach drop"
+      : `no amber on the floor (classes: ${[...section.classList].join(" ")})`,
+  };
+  anchor.dispatchEvent(new DragEvent("dragend", { bubbles: true, dataTransfer: dt }));
+  return result;
+};
+
+/**
  * Hover a card's chosen half. Split from `pageLineShown` because the dragover
  * sets React state: reading the computed style in the same task would sample
  * the DOM before the commit.
@@ -1053,6 +1105,36 @@ async function check(step, page, gestureResults = []) {
         `nested-row slot ${want.shown ? "absent" : "present"}`,
       );
     }
+    if (rule.floor_amber !== undefined) {
+      // Hover a child over the floor (the amber rides the dragover commit),
+      // sample, then clean the drag up — no drop is performed.
+      const want = rule.floor_amber; // { from: threadId, column, shown: boolean }
+      const shown = await page.evaluate(pageFloorAmber, want);
+      expect(
+        want.shown ? "floor rings amber for the family detach hover" : "no amber floor ring",
+        shown.shown === want.shown,
+        shown.reason,
+      );
+    }
+    if (rule.reparent_called !== undefined) {
+      // The last thread_reparent call's args must carry every key/value given
+      // — child drops assert {threadId, parentThreadId: null} this way.
+      const want = rule.reparent_called;
+      const last = await page.evaluate(() => {
+        const calls = globalThis
+          .__uat.calls()
+          .filter((call) => call.method === "thread_reparent");
+        return calls.at(-1)?.args ?? null;
+      });
+      const hit =
+        last !== null &&
+        Object.entries(want).every(([k, v]) => last[k] === v);
+      expect(
+        `thread_reparent ${JSON.stringify(want)}`,
+        hit,
+        `last call args ${JSON.stringify(last)}`,
+      );
+    }
     if (rule.insertion_line !== undefined || rule.no_insertion_line !== undefined) {
       // Hover first, then sample after React has committed the line.
       const wants = [rule.insertion_line, rule.no_insertion_line].filter((r) => r !== undefined);
@@ -1124,16 +1206,30 @@ async function runSuite(file, { port, browser }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "hover", "key", "back", "click", "click_aria", "menu", "scroll", "wheel_pan", "resize", "sleep", "press_escape", "push_url"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "hover", "key", "back", "click", "click_aria", "menu", "scroll", "wheel_pan", "resize", "sleep", "press_escape", "push_url"];
       let gestureFailed = false;
       // A gesture that cannot even run (its own element is absent — a
       // regression deleted what the step targets) records the step and
       // moves on; a hard crash here would take the whole suite down
       // instead of naming the one step that broke.
       try {
-        for (const gesture of Object.keys(step).filter((key) => GESTURE_ORDER.includes(key))) {
+        // An explicit `gestures:` list runs its entries in ARRAY order — the
+        // shape a round-trip step needs (nest, then detach, then nest again),
+        // which cannot be spelled with one key per gesture kind. Each entry
+        // holds one gesture key; the key-per-step kinds keep their
+        // GESTURE_ORDER habit inside a single entry.
+        const orderedGestures = step.gestures !== undefined
+          ? step.gestures.flatMap((entry) =>
+              Object.entries(entry)
+                .filter(([key]) => GESTURE_ORDER.includes(key))
+                .map(([key, value]) => [key, value]),
+            )
+          : Object.keys(step)
+              .filter((key) => GESTURE_ORDER.includes(key))
+              .map((key) => [key, step[key]]);
+        for (const [gesture, payload] of orderedGestures) {
           if (gesture === "drag") {
-            const outcome = await page.evaluate(pageDrag, step.drag);
+            const outcome = await page.evaluate(pageDrag, payload);
             if (outcome.dropped === false) {
               gestureFailed = true;
               report.steps.push({ id: step.id, title: step.title, ok: false, results: [
@@ -1153,16 +1249,19 @@ async function runSuite(file, { port, browser }) {
               await sleep(200);
             }
           } else if (gesture === "drag_unidentified") {
-            await page.evaluate(pageDragUnidentified, step.drag_unidentified);
+            await page.evaluate(pageDragUnidentified, payload);
             await sleep(200);
           } else if (gesture === "drag_to_column") {
-            await page.evaluate(pageDragToColumn, step.drag_to_column);
+            await page.evaluate(pageDragToColumn, payload);
+            await sleep(200);
+          } else if (gesture === "drag_child_to_floor") {
+            await page.evaluate(pageDragChildToFloor, payload);
             await sleep(200);
           } else if (gesture === "hover") {
             // A hover with a board y-fraction moves the real mouse into that
             // swimlane band (used by the band_hover assertion); other hovers
             // carry their own assertion-side evaluation already.
-            if (step.hover && step.hover.board_y !== undefined) {
+            if (payload && payload.board_y !== undefined) {
               const rect = await page.evaluate(() => {
                 const board = document.querySelector("[data-parent-board]");
                 if (!board) return null;
@@ -1170,12 +1269,12 @@ async function runSuite(file, { port, browser }) {
                 return { top: box.top, height: box.height, left: box.left + box.width / 2 };
               });
               if (rect === null) throw new Error("no [data-parent-board] to hover");
-              const y = rect.top + rect.height * Number(step.hover.board_y);
+              const y = rect.top + rect.height * Number(payload.board_y);
               await page.mouse.move(rect.left, y);
               await sleep(120);
             }
           } else if (gesture === "key") {
-            await page.evaluate(pageKey, step.key);
+            await page.evaluate(pageKey, payload);
             await sleep(200);
           } else if (gesture === "back") {
             // A popstate re-renders React, and the pane effect runs after the
@@ -1183,40 +1282,40 @@ async function runSuite(file, { port, browser }) {
             await page.evaluate(pageGoBack);
             await sleep(300);
           } else if (gesture === "click") {
-            await page.evaluate(pageClickCard, step.click);
+            await page.evaluate(pageClickCard, payload);
             await sleep(300);
           } else if (gesture === "click_aria") {
-            await page.evaluate(pageClickAria, step.click_aria);
+            await page.evaluate(pageClickAria, payload);
             await sleep(300);
           } else if (gesture === "menu") {
             // Right-click a card and choose an item (e.g. "Pin"): the menu is
             // the same surface a live operator uses, and the state change that
             // follows (setPinned → board re-render → keep/reveal scroll) needs
             // the mock's async settle before assertions sample the DOM.
-            await page.evaluate(pageMenu, step.menu);
+            await page.evaluate(pageMenu, payload);
             await sleep(500);
           } else if (gesture === "scroll") {
-            await page.evaluate(pageBoardScroll, step.scroll);
+            await page.evaluate(pageBoardScroll, payload);
             // The board settles on a 200ms quiet-period debounce plus a smooth
             // pin glide before it re-locks; give it room before assertions.
             // settle_ms: 0 skips the wait so a following click lands while the
             // glide is in flight (the click-during-glide adversarial step).
-            await sleep(Math.max(0, Number(step.scroll.settle_ms ?? 1200)));
+            await sleep(Math.max(0, Number(payload?.settle_ms ?? 1200)));
           } else if (gesture === "wheel_pan") {
             // A real wheel pan through the input pipeline (the same path the
             // operator's trackpad uses), then a settle wait.
-            await wheelPan(page, step.wheel_pan.dx ?? 130);
-            await sleep(Math.max(0, Number(step.wheel_pan.settle_ms ?? 2500)));
+            await wheelPan(page, payload?.dx ?? 130);
+            await sleep(Math.max(0, Number(payload?.settle_ms ?? 2500)));
           } else if (gesture === "resize") {
             // A viewport change while the lock is held re-runs the layout; let
             // the resize observer commit before assertions sample the DOM.
-            await page.setViewport({ width: step.resize.width, height: step.resize.height });
+            await page.setViewport({ width: payload.width, height: payload.height });
             await sleep(800);
           } else if (gesture === "sleep") {
             // A wait between gestures, for multi-phase board reactions (pin
             // glide, recut, post-recut corrections) that no single event
             // boundary covers.
-            await sleep(Math.max(0, Number(step.sleep) || 0));
+            await sleep(Math.max(0, Number(payload) || 0));
           } else if (gesture === "press_escape") {
             // The pane listens on document capture, so a bubbling keydown from
             // the body reaches it — the same path a real Escape takes.
@@ -1231,7 +1330,7 @@ async function runSuite(file, { port, browser }) {
             // a link-out to main bb. The app's own state is untouched by it.
             await page.evaluate(
               (url) => history.pushState(null, "", url),
-              step.push_url,
+              payload,
             );
             await sleep(200);
           }

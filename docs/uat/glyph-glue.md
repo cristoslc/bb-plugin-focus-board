@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-09-30T02:58:53.067Z by `npm run uat`._
+_Generated 2026-10-05T18:18:08.089Z by `npm run uat`._
 
 ## glyph-glue
 
-Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-glyph-glue.yaml` · theme dark
+Source: `tests/manual/uat-glyph-glue.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

@@ -6,7 +6,7 @@ import { threadState, THREAD_STATE_LABELS } from "./grouping";
 import { findTicketRefs, resolveRepoSlug, type TicketRef } from "@/lib/tickets";
 import type { GitHubItemStatus } from "@/lib/tracker-status";
 
-import { rankDragType } from "../lib/rank";
+import { DRAG_ID_KEY, rankDragType } from "../lib/rank";
 import { describeWakeAt } from "../lib/snooze";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
 
@@ -186,6 +186,8 @@ function ChildRow({
   onOpenThread,
   menuActions,
   snoozeFor,
+  rankKey,
+  onRankDragStart,
 }: {
   child: PluginSidebarThread;
   /** A done child row dims, as does any child of a done parent. */
@@ -196,16 +198,40 @@ function ChildRow({
   menuActions?: readonly CardMenuAction[];
   /** Snooze wake lookup, for the row's little clock marker. */
   snoozeFor?: (threadId: string) => number | null;
+  /** The parent slot's lane rides along so dropping the child on any lane's
+   * floor (its own via the same type, another via the lane mismatch) can
+   * read the gesture. */
+  rankKey?: string;
+  onRankDragStart?: (threadId: string | null) => void;
 }) {
   const now = Date.now();
   const childSnoozeWakeAt = snoozeFor?.(child.id) ?? null;
+  const childSnoozed = childSnoozeWakeAt !== null;
   const row = (
     <a
       href={child.href}
       data-thread-card={child.id}
       data-snoozed={childSnoozeWakeAt !== null ? "" : undefined}
-      draggable={false}
+      draggable={!childSnoozed}
       aria-current={isActive ? "true" : undefined}
+      onDragStart={(event) => {
+        // A snoozed child refuses drag (`draggable={!childSnoozed}` above);
+        // the guard keeps the refusal true even where the attribute is not
+        // enforced, so nothing can drag a sleeping card anywhere.
+        if (childSnoozed) {
+          event.preventDefault();
+          return;
+        }
+        // The un-parent gesture: the child row is a drag source, so dropping
+        // it on a column floor detaches it (board.tsx's floor handlers).
+        event.dataTransfer.setData(DRAG_ID_KEY, child.id);
+        if (rankKey !== undefined) {
+          event.dataTransfer.setData(rankDragType(rankKey), "");
+          onRankDragStart?.(child.id);
+        }
+        event.dataTransfer.effectAllowed = "move";
+      }}
+      onDragEnd={() => onRankDragStart?.(null)}
       onClick={(event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
@@ -214,8 +240,9 @@ function ChildRow({
       className={cn(
         // Fat row: a compact card-like container — the full title wraps over
         // up to 2 lines (parent cards use line-clamp-2; children match). No
-        // branch line, no project line, no drag handle: children stay
-        // visually subordinate to parent cards.
+        // branch line, no project line. The whole row is the drag handle:
+        // dragging it off a family card and releasing over a column floor
+        // un-nests it.
         "block rounded-md border border-border/50 bg-muted/40 px-2 py-1.5 text-left",
         "transition-colors hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         "opacity-70 hover:opacity-100",
@@ -579,6 +606,8 @@ export function ThreadCard({
                         onOpenThread={onOpenThread}
                         menuActions={childMenuActions?.(child)}
                         snoozeFor={snoozeFor}
+                        rankKey={rankKey}
+                        onRankDragStart={onRankDragStart}
                       />
                     </li>
                   );

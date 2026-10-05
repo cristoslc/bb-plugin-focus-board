@@ -31,6 +31,7 @@ import {
   columnIsRanked,
   columnRankKey,
   displayAfterMove,
+  DRAG_ID_KEY,
   isLaneDrag,
   moveTargetFor,
   type RankStore,
@@ -41,10 +42,6 @@ import { reparentRefusalFromParents } from "../lib/reparent";
 const EMPTY_PARENT_OF: ReadonlyMap<string, string> = new Map();
 
 /**
- * Drag payload keys.
- *
- * `DRAG_ID_KEY` carries the moved card and is readable at drop time.
- *
  * The lane the drag came from is carried in the MIME **type name**, not in a
  * payload value. A real browser holds the drag payload write-only until the
  * drop: `getData` returns "" during `dragover`, so any handler that decides
@@ -53,8 +50,9 @@ const EMPTY_PARENT_OF: ReadonlyMap<string, string> = new Map();
  * stays readable for the whole drag, so the lane is discoverable exactly when
  * the drop has to be authorised. Reading the lane from the type name is the
  * difference between a reorder that works and one that does nothing.
+ * (`DRAG_ID_KEY` comes from lib/rank, shared with the nested child rows,
+ * which are drag sources too — dropping one on a floor detaches it.)
  */
-const DRAG_ID_KEY = "text/focus-board-id";
 
 /** How long a refusal banner stays on screen before auto-dismissing. */
 const RANK_ERROR_AUTO_DISMISS_MS = 10_000;
@@ -155,7 +153,7 @@ interface BoardProps {
    * dropped card's own descendant. Optional: without it the card's middle
    * third is just another insertion edge, exactly as before nesting existed.
    */
-  onReparent?: (childId: string, parentThreadId: string) => Promise<void>;
+  onReparent?: (childId: string, parentThreadId: string | null) => Promise<void>;
   /**
    * The RAW parent edges (child id → parent id), not the display index's
    * two-level flattened map: the nest guard must see real chains, so a
@@ -386,6 +384,11 @@ export function Board({
   onSweepCancel,
 }: BoardProps) {
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  // The column floor an UNNEST hover lights up (amber). Kept separate from
+  // dragOverColumn so the two affordances cannot argue over ring color: the
+  // family write wins wherever both apply, because the drop's family effect
+  // is the surprising half.
+  const [familyFloorColumn, setFamilyFloorColumn] = useState<string | null>(null);
   // { columnId, threadId, zone } for the drop the cursor is over while a
   // ranked card is dragged over a ranked column. `zone` is an insertion edge
   // ("before"/"after") or the nest zone ("onto") — a drop in the hovered
@@ -667,6 +670,31 @@ export function Board({
         ),
     );
   }
+
+  /**
+   * The detach drop: releasing a nested child on a column floor un-nests it.
+   * The inverse gesture exists by construction — dragging the card back onto
+   * its former parent re-nests — and the announcement says so, because an
+   * undo nobody can find is not an undo.
+   */
+  function commitUnnest(childId: string): void {
+    const write = onReparent;
+    if (write === undefined) return;
+    void write(childId, null).then(
+      () =>
+        setAnnouncement(
+          "Top-level again — it is no longer nested as a child. Drag it onto a card to nest it back.",
+        ),
+      (error: unknown) =>
+        reportRefusal(
+          error instanceof Error ? error.message : "the re-parent write failed.",
+        ),
+    );
+  }
+
+  /** The live parent of `threadId`, or null for a top-level card. */
+  const liveParentOf = (threadId: string): string | null =>
+    rawParentOf?.get(threadId) ?? null;
   // Done, Unread, and Pinned lanes accept state-change drops; Unread exists
   // as a column only in the Attention grouping, and Pinned only once a card
   // is in it. Pinned without a handler stays a plain no-drop lane: dropping
@@ -813,46 +841,101 @@ export function Board({
               data-column-ordered={isOrdered}
               aria-label={`${column.label}, ${column.threads.length} threads`}
               onDragOver={(event) => {
-                // Same-lane drag: the lane's own empty space accepts the drop
-                // as an append, so the column must allow the event.
+                // A nested child dragged over THIS floor is a detach hover: the
+                // family write rides any column, state gate or not — the same
+                // rule the card nest zone follows in non-state lanes.
+                const draggedId = draggingIdRef.current;
+                const childOf =
+                  draggedId !== null && draggedId !== "" ? liveParentOf(draggedId) : null;
                 if (ranking && isLaneDrag(event.dataTransfer.types, rankKey)) {
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "move";
+                  if (childOf !== null && onReparent !== undefined) {
+                    setFamilyFloorColumn(column.id);
+                  }
                   return;
                 }
-                if (!isDropTarget) return;
+                if (!isDropTarget) {
+                  if (childOf !== null && onReparent !== undefined) {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                    setFamilyFloorColumn(column.id);
+                  }
+                  return;
+                }
                 event.preventDefault();
                 event.dataTransfer.dropEffect = "move";
                 setDragOverColumn(column.id);
+                if (childOf !== null && onReparent !== undefined) {
+                  setFamilyFloorColumn(column.id);
+                }
               }}
-              onDragLeave={isDropTarget ? () => setDragOverColumn((c) => (c === column.id ? null : c)) : undefined}
+              onDragLeave={
+                isDropTarget || onReparent !== undefined
+                  ? () => {
+                      setDragOverColumn((c) => (c === column.id ? null : c));
+                      setFamilyFloorColumn((c) => (c === column.id ? null : c));
+                    }
+                  : undefined
+              }
               onDrop={(event) => {
                 const threadId = draggedIdFor(event, draggingIdRef.current);
+                const childOf = threadId === "" ? null : liveParentOf(threadId);
+                const releaseFloor = () => {
+                  setDragOverColumn(null);
+                  setFamilyFloorColumn(null);
+                };
                 if (ranking && isLaneDrag(event.dataTransfer.types, rankKey)) {
                   // Released over the lane's empty space below the last card:
                   // append. A drop ON a card was already claimed by that
                   // card's own handler, which stops propagation.
                   event.preventDefault();
                   clearRankDrop();
+                  releaseFloor();
                   if (threadId !== "") {
-                    commitMove(
-                      column,
-                      threadId,
-                      null,
-                      true,
-                      shownThreads.map((candidate) => candidate.id),
-                    );
+                    if (childOf !== null && onReparent !== undefined) {
+                      // A child released on a floor never keeps its family:
+                      // the whole point of dragging it out is leaving it. The
+                      // child was no visible slot in this lane, so there is
+                      // no rank to move either — the detach IS the write.
+                      commitUnnest(threadId);
+                    } else {
+                      commitMove(
+                        column,
+                        threadId,
+                        null,
+                        true,
+                        shownThreads.map((candidate) => candidate.id),
+                      );
+                    }
                   }
                   return;
                 }
-                if (!isDropTarget) return;
+                if (!isDropTarget) {
+                  // The floor still takes a nested child — the detach — even
+                  // where no lane write exists, so the gesture works in the
+                  // project/provider/machine views too.
+                  if (childOf !== null && onReparent !== undefined && threadId !== "") {
+                    event.preventDefault();
+                    releaseFloor();
+                    commitUnnest(threadId);
+                  }
+                  return;
+                }
                 event.preventDefault();
-                setDragOverColumn(null);
-                if (threadId !== "") dropHandler(threadId);
+                releaseFloor();
+                if (threadId === "") return;
+                dropHandler(threadId);
+                if (childOf !== null && onReparent !== undefined) commitUnnest(threadId);
               }}
               className={cn(
                 "flex h-full min-h-0 w-64 shrink-0 flex-col rounded-lg transition-colors",
-                dragOverColumn === column.id && "bg-accent/60 ring-2 ring-ring",
+                familyFloorColumn === column.id
+                  // Amber is the family drop color — the same signal the nest
+                  // ring on cards gives — so "un-nests on release" is legible
+                  // before the drop happens.
+                  ? "bg-accent/60 ring-2 ring-amber-500"
+                  : dragOverColumn === column.id && "bg-accent/60 ring-2 ring-ring",
               )}
             >
               <header className="flex items-baseline gap-1.5 px-1 pb-1.5">

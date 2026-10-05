@@ -68,3 +68,37 @@ steps:
     assert:
       - nested_row: { id: thr_rpc_auth, shown: false }
       - rank_slots: { column: unread, count: 3 }
+
+  # Dragged-off children: the nested rows are draggable, and releasing a child
+  # on any column floor detaches it. Amber marks the family write so it reads
+  # differently from a lane drop. The detach's undo is the nest gesture itself
+  # — one E2E proves the round trip.
+  - id: child-drag-shows-amber-floor
+    title: Hovering a dragged child over a column floor rings the floor amber
+    goto: "?groupBy=status"
+    drag: { from: thr_rpc_auth, to: thr_uat_queue, edge: onto }
+    floor_amber: { from: thr_rpc_auth, column: unread, shown: true }
+
+  - id: floor-drop-detaches
+    title: Dropping a child on a column floor detaches it (rpc parentThreadId null)
+    goto: "?groupBy=status"
+    drag: { from: thr_rpc_auth, to: thr_uat_queue, edge: onto }
+    drag_child_to_floor: { from: thr_rpc_auth, column: unread }
+    assert:
+      - reparent_called: { threadId: thr_rpc_auth, parentThreadId: null }
+      - nested_row: { id: thr_rpc_auth, shown: false }
+      - rank_slots: { column: unread, count: 3 }
+
+  - id: drag-back-undoes-the-detach
+    title: Dragging the card back onto its former parent re-nests it
+    goto: "?groupBy=status"
+    gestures:
+      # The full round trip in one board state: nest, detach by floor drop,
+      # then the undo gesture — dragging the card back onto its former parent.
+      - drag: { from: thr_rpc_auth, to: thr_uat_queue, edge: onto }
+      - drag_child_to_floor: { from: thr_rpc_auth, column: unread }
+      - drag: { from: thr_rpc_auth, to: thr_uat_queue, edge: onto }
+    assert:
+      - reparent_called: { threadId: thr_rpc_auth, parentThreadId: thr_uat_queue }
+      - nested_row: { id: thr_rpc_auth, shown: true }
+      - rank_slots: { column: unread, count: 2 }
