@@ -44,6 +44,7 @@ import {
   stampSnooze,
   type SnoozeRecord,
 } from "./lib/snooze";
+import { reparentRefusal } from "./lib/reparent";
 import {
   RANK_KV_KEY,
   applyMoveVisible,
@@ -228,6 +229,25 @@ export const rpcContract = defineRpcContract({
   sweep_keep_set: {
     input: z.object({ threadId: z.string().min(1), keep: z.boolean() }),
     output: z.object({ threadId: z.string().min(1), keep: z.boolean() }),
+  },
+
+  /**
+   * Re-parenting: drop a card onto a card (nest it), or detach a card back
+   * to top level (`parentThreadId: null`). The handler re-checks
+   * lib/reparent's rules against its own fresh thread rows — the board's map
+   * is stale the moment any other surface moves a family — and a loop write
+   * (a card under its own child) would corrupt bb's own sidebar tree, so a
+   * refused gesture throws and the board says why on screen.
+   */
+  thread_reparent: {
+    input: z.object({
+      threadId: z.string().min(1),
+      parentThreadId: z.string().min(1).nullable(),
+    }),
+    output: z.object({
+      threadId: z.string().min(1),
+      parentThreadId: z.string().min(1).nullable(),
+    }),
   },
 
   rank_list: {
@@ -962,6 +982,23 @@ export default async function plugin(bb: BbPluginApi) {
     rank_list: async () => {
       const store = await readRanks();
       return { orders: rankRowFromStore(store) };
+    },
+    thread_reparent: async ({ threadId, parentThreadId }) => {
+      // Validate against fresh rows, not the board's map — a family some
+      // other surface moved between the dragover and the drop must not get
+      // a second write on top. (list({}) returns live rows; an archived id
+      // reads as a missing one, which refuses too.)
+      const rows = await bb.sdk.threads.list({});
+      // list({}) returns live rows; archivedAt is the row's archive stamp.
+      const live = rows.map((row) => ({
+        id: row.id,
+        parentThreadId: row.parentThreadId,
+        isArchived: (row as { archivedAt?: number | null }).archivedAt != null,
+      }));
+      const refusal = reparentRefusal(live, threadId, parentThreadId);
+      if (refusal !== null) throw new PluginCliError(refusal);
+      await bb.sdk.threads.update({ threadId, parentThreadId });
+      return { threadId, parentThreadId };
     },
     rank_move: async ({ columnKey, threadId, beforeId, toEnd, visibleIds }) => {
       const store = await readRanks();

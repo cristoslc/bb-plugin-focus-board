@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Drop a card onto a card to nest it.** The middle third of a card is now
+  the nest zone: the drop re-parents that thread under the target (the top
+  and bottom thirds still reorder as before), and the card menu's Make
+  Top-Level detaches a child again.
+
 ## [0.8.0] - 2026-10-03
 
 ### Added

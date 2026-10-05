@@ -1725,6 +1725,24 @@ function BoardPage({ subPath }: { subPath: string }) {
           },
         },
         ...snoozeEntries,
+        ...(thread.parentThreadId !== null && thread.parentThreadId !== ""
+          ? [
+              {
+                id: "unnest",
+                label: "Make Top-Level",
+                icon: "FolderMinus",
+                run: () => {
+                  // The drop-onto gesture's undo: detach from the family.
+                  // Failure mirrors the neighbors — silent — because bb's
+                  // own action errors ride the host toast, and a missed
+                  // detach write leaves the card exactly as it rendered.
+                  void rpc
+                    .call("thread_reparent", { threadId: thread.id, parentThreadId: null })
+                    .catch(() => {});
+                },
+              } satisfies CardMenuAction,
+            ]
+          : []),
         {
           id: "sweep-keep",
           label: doneAgeSource.kept(thread.id) ? "Allow sweep" : "Keep from sweep",
@@ -1918,6 +1936,16 @@ function BoardPage({ subPath }: { subPath: string }) {
               }
             }}
             rankStore={ranks}
+            rawParentOf={familyIndex.rawParentOf}
+            onReparent={(childId, parentThreadId) =>
+              // The host owns the write (threads.update → thread:changed →
+              // the sidebar hook refetches → nesting re-derives). The board
+              // surfaces rejections; the guard re-checked fresh rows
+              // server-side, so a rejection means stale UI data.
+              rpc.call("thread_reparent", { threadId: childId, parentThreadId }).then(
+                () => undefined,
+              )
+            }
             onRankMove={(columnKey, threadId, beforeId, toEnd, visibleIds) => {
               // Optimistic: the card snaps to its slot immediately, and the
               // rank-changed refetch confirms. A rejected write settles back

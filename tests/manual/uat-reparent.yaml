@@ -1,0 +1,70 @@
+# Operator-assisted E2E: dropping a card onto another card nests it.
+#
+# The middle third of a card is the drop-ONTO zone: a drop there re-parents
+# the dropped thread under the target (a real HTML5 drag gesture against the
+# mounted app, exactly like uat-rank). The top and bottom thirds keep the
+# insertion-line reorder, so the pre-nesting gestures still behave. The card
+# menu's "Make Top-Level" is the undo.
+#
+# Run: npm run uat -- tests/manual/uat-reparent.yaml
+#
+# The Unread lane's three simulated cards (recency order, no ranks stored):
+#   thr_rpc_auth (26m) · thr_uat_queue (2h) · thr_review_pr (3h)
+# The Pinned lane's cards: thr_ship_release, thr_roadmap.
+suite: drop-onto-to-nest
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5173
+defaults:
+  groupBy: status
+  theme: dark
+
+steps:
+  - id: hover-middle-rings
+    title: Hovering a card's middle third rings it and permits the drop
+    goto: "?groupBy=status"
+    assert:
+      - nest_ring: { from: thr_rpc_auth, to: thr_uat_queue, shown: true }
+
+  - id: middle-drop-nests
+    title: Dropping onto a card's middle nests the dropped card under the target
+    # The mock's thread_reparent rewrites the simulated sidebar row, the way
+    # the real chain (rpc → server → threads.update → host push) does — the
+    # board then nests the card through its normal family pass. The child
+    # stops being a top-level slot and renders as a row on the family card.
+    goto: "?groupBy=status"
+    drag: { from: thr_rpc_auth, to: thr_uat_queue, edge: onto }
+    assert:
+      - rpc_called_method: thread_reparent
+      - rank_slots: { column: unread, count: 2 }
+      - nested_row: { id: thr_rpc_auth, shown: true }
+
+  - id: edge-drop-still-reorders
+    title: Dropping on a card's top third still reorders, not nests
+    goto: "?groupBy=status"
+    drag: { from: thr_review_pr, to: thr_rpc_auth, edge: before }
+    assert:
+      - rpc_not_called: thread_reparent
+      - column_ordered: { column: unread, ordered: true }
+      - rank_slots: { column: unread, count: 3 }
+      - nested_row: { id: thr_review_pr, shown: false }
+
+  - id: cross-lane-onto-nests-without-pin
+    title: Dropping onto a Pinned card's middle nests it; it does not pin
+    # The nest zone is the exception to the state-change gates: nesting is a
+    # family write, not lane membership. The state handlers must stay out of
+    # the gesture.
+    goto: "?groupBy=status"
+    drag: { from: thr_rpc_auth, to: thr_ship_release, edge: onto }
+    assert:
+      - rpc_called_method: thread_reparent
+      - nested_row: { id: thr_rpc_auth, shown: true }
+
+  - id: menu-undoes-the-nest
+    title: The card menu's Make Top-Level detaches the nested child again
+    goto: "?groupBy=status"
+    drag: { from: thr_rpc_auth, to: thr_uat_queue, edge: onto }
+    menu: { card: thr_rpc_auth, item: "Make Top-Level" }
+    assert:
+      - nested_row: { id: thr_rpc_auth, shown: false }
+      - rank_slots: { column: unread, count: 3 }

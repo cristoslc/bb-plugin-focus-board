@@ -61,7 +61,7 @@ The board lives in bb's sidebar as a nav panel and updates in real time as your 
   "Open in main view" fallback.
 =======
 - **Group and filter** — lanes by Attention, Last activity, Project, Provider, Machine, or Parent thread; filter and search by state, project, provider, or title.
-- **Drag to act** — hand-order a column, or drop a card on Pinned, Unread, or Done to change its state in the same drag. Subthreads nest under their parent card.
+- **Drag to act** — hand-order a column, drop a card on Pinned, Unread, or Done to change its state in the same drag, or drop it onto a card's middle to nest it as that thread's child; the card menu's Make Top-Level detaches again.
 - **Thread pane** — open a card to read and reply beside the board; full screen on phone. Agent questions are answered right from the pane.
 - **Sweep** stale Done threads to Archive and long-idle threads to Done, in two clicks; swept idle threads resurface in Done and archive later.
 - **Ticket chips** with GitHub status dots when the official GitHub plugin is installed.
