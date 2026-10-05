@@ -44,6 +44,7 @@ export function NewThreadModal({
   open,
   onOpenChange,
   defaultProjectId,
+  defaultEnvironment,
   focusRequest,
   parentThreadId,
   parentThreadTitle,
@@ -52,6 +53,12 @@ export function NewThreadModal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultProjectId?: string;
+  /**
+   * Seeds the composer's environment picker (from the preset parent's
+   * worktree checkout, so the child lands where the parent runs); absent
+   * seeds nothing and the composer resolves its own default.
+   */
+  defaultEnvironment?: NewThreadRequest["environment"];
   focusRequest?: number;
   /** The thread the new thread will spawn under; absent spawns at the root. */
   parentThreadId?: string;
@@ -127,6 +134,7 @@ export function NewThreadModal({
         <div className="max-h-[70vh] min-h-0 overflow-y-auto">
           <NewThreadComposer
             defaultProjectId={defaultProjectId}
+            {...(defaultEnvironment !== undefined ? { defaultEnvironment } : {})}
             focusRequest={focusRequest}
             onSubmit={handleSubmit}
           />

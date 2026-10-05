@@ -29,3 +29,36 @@ export function newThreadSeedProjectId({
   }
   return undefined;
 }
+
+/**
+ * Which environment the board's new-thread composer is seeded with for a
+ * child thread.
+ *
+ * A parent whose environment is a git worktree seeds the composer's
+ * round-trippable `reuse` variant — the child starts in the parent's
+ * checkout, not the project-default one. Everything else seeds nothing:
+ * a plain checkout, a provider machine, or an unknown worktree kind
+ * (`isWorktree: null`) cannot be expressed from a sidebar row without
+ * guessing a host or provider, and the composer's own default for the
+ * already-seeded project is the honest fallback. A stale `environmentId`
+ * degrades the same way inside the composer (its documented fallback
+ * resolves a default checkout when the reused worktree has no
+ * unarchived threads).
+ */
+export function newThreadSeedEnvironment({
+  parentEnvironment,
+}: {
+  /** The preset parent's environment record; undefined when absent. */
+  parentEnvironment?:
+    | { id: string | null; isWorktree: boolean | null }
+    | null
+    | undefined;
+}): { type: "reuse"; environmentId: string } | undefined {
+  if (
+    parentEnvironment?.id != null &&
+    parentEnvironment.isWorktree === true
+  ) {
+    return { type: "reuse", environmentId: parentEnvironment.id };
+  }
+  return undefined;
+}
