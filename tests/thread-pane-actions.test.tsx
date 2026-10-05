@@ -41,11 +41,13 @@ function renderPane({
   pinned = false,
   archived = false,
   onTogglePinned = noop,
+  onNewChildThread,
 }: {
   compact: boolean;
   pinned?: boolean;
   archived?: boolean;
   onTogglePinned?: () => void;
+  onNewChildThread?: () => void;
 }) {
   return render(
     createElement(
@@ -69,6 +71,7 @@ function renderPane({
         onMaximize,
         onClose: noop,
         escStopsRunningThread: false,
+        onNewChildThread,
       }),
     ),
   );
@@ -228,5 +231,40 @@ describe("pin entry in the actions menu", () => {
     openActionsMenu();
     expect(screen.queryByRole("menuitem", { name: "Pin" })).toBeNull();
     expect(screen.queryByRole("menuitem", { name: "Unpin" })).toBeNull();
+  });
+});
+
+describe("new child thread entry in the actions menu", () => {
+  const onNewChildThread = vi.fn();
+  beforeEach(() => {
+    onNewChildThread.mockClear();
+  });
+
+  it("leads the menu and opens the child composer on click", () => {
+    renderPane({ compact: false, onNewChildThread });
+    openActionsMenu();
+    // The creation entry leads the state toggles: it is categorically apart
+    // from Mark Done / Pin / Archive.
+    const menu = screen.getByRole("menu");
+    const labels = Array.from(menu.querySelectorAll("[role='menuitem']")).map(
+      (item) => item.textContent,
+    );
+    expect(labels[0]).toBe("New child thread…");
+    fireEvent.click(screen.getByRole("menuitem", { name: "New child thread…" }));
+    expect(onNewChildThread).toHaveBeenCalledTimes(1);
+    // The menu closes on selection, leaving no stale overlay.
+    expect(screen.queryByRole("menuitem", { name: "New child thread…" })).toBeNull();
+  });
+
+  it("an archived thread's pane still offers the child spawn", () => {
+    renderPane({ compact: false, archived: true, onNewChildThread });
+    openActionsMenu();
+    expect(screen.getByRole("menuitem", { name: "New child thread…" })).toBeTruthy();
+  });
+
+  it("without the prop the menu carries no child entry (back-compat)", () => {
+    renderPane({ compact: false });
+    openActionsMenu();
+    expect(screen.queryByRole("menuitem", { name: "New child thread…" })).toBeNull();
   });
 });

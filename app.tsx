@@ -989,10 +989,34 @@ function BoardPage({ subPath }: { subPath: string }) {
   // of the way. The nonce re-focuses the composer editor on every open.
   const [newThreadOpen, setNewThreadOpen] = useState(false);
   const [composerFocusRequest, setComposerFocusRequest] = useState(0);
+  // The thread the composer will spawn a child of, or null for a plain
+  // root thread: the "New child thread…" menu actions set it, the toolbar's
+  // New Thread clears it. Held as an id, not a thread row — the sidebar
+  // cache can refresh underneath and the title resolves fresh at render.
+  const [newThreadParentId, setNewThreadParentId] = useState<string | null>(null);
   const openNewThread = useCallback(() => {
     setComposerFocusRequest((nonce) => nonce + 1);
+    setNewThreadParentId(null);
     setNewThreadOpen(true);
   }, []);
+  // The child-spawn entry point the card and pane menus share: same composer,
+  // same pane-open flow after the spawn, just preset to nest the result
+  // under the acted-on thread.
+  const openNewChildThread = useCallback((threadId: string) => {
+    setComposerFocusRequest((nonce) => nonce + 1);
+    setNewThreadParentId(threadId);
+    setNewThreadOpen(true);
+  }, []);
+  // The composer dialog's "will nest under" hint names the parent. A parent
+  // that left the board (deleted) while the modal is open falls back to its
+  // id — the spelling degrades, the spawn still carries the parent.
+  const newThreadParentTitle = useMemo(() => {
+    if (newThreadParentId === null) return undefined;
+    return (
+      threads.find((candidate) => candidate.id === newThreadParentId)?.displayTitle ??
+      newThreadParentId
+    );
+  }, [newThreadParentId, threads]);
   // A freshly spawned thread is not in the sidebar cache on the tick the
   // pane route opens, and the pane only renders for a resolvable thread.
   // The spawn result stands in until the cache carries the thread (this row
@@ -1643,6 +1667,12 @@ function BoardPage({ subPath }: { subPath: string }) {
           },
         },
         {
+          id: "new-child",
+          label: "New child thread…",
+          icon: "Fork",
+          run: () => openNewChildThread(thread.id),
+        },
+        {
           id: "pin",
           label: thread.isPinned ? "Unpin" : "Pin",
           icon: thread.isPinned ? "PinOff" : "Pin",
@@ -1771,7 +1801,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         },
       ];
     },
-    [actions, applyUnreadStateEffects, clearParkPin, clearSnooze, doneAgeSource, doneIds, exitPinnedLane, requestReveal, restoreParkedPin, rpc, setDoneExtras, setDoneIds, setSnoozeDialogFor, snoozeUntil, snoozedIds, sdk],
+    [actions, applyUnreadStateEffects, clearParkPin, clearSnooze, doneAgeSource, doneIds, exitPinnedLane, openNewChildThread, requestReveal, restoreParkedPin, rpc, setDoneExtras, setDoneIds, setSnoozeDialogFor, snoozeUntil, snoozedIds, sdk],
   );
 
   if (status === "loading" && threads.length === 0) {
@@ -1994,6 +2024,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             clearSnooze: () => clearSnooze(openThread.id),
             openPicker: () => setSnoozeDialogFor(openThread.id),
           })}
+          onNewChildThread={() => openNewChildThread(openThread.id)}
           onToggleUnread={() => {
             if (openThreadId === null || openThreadActive === null) return;
             // Current intent: a state change lifts any snooze first.
@@ -2020,6 +2051,8 @@ function BoardPage({ subPath }: { subPath: string }) {
         onOpenChange={setNewThreadOpen}
         defaultProjectId={newThreadProjectId}
         focusRequest={composerFocusRequest}
+        parentThreadId={newThreadParentId ?? undefined}
+        parentThreadTitle={newThreadParentTitle}
         onSpawned={handleSpawnedThread}
       />
       <WhatsNewModal

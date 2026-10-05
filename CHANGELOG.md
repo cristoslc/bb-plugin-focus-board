@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **✨ "New child thread…" in the card and pane menus.** A thread's context menu (board cards, nested rows) and the pane's actions menu now open the composer preset to spawn a child, and the spawned child opens in the pane nested under its parent.
+
 ## [0.8.0] - 2026-10-03
 
 ### Added
