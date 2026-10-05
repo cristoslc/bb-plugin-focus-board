@@ -223,3 +223,26 @@ steps:
     key: { card: thr_rpc_auth, key: ArrowDown, alt: true }
     assert:
       - live_region: "Moved to position 2 of 3 in Unread."
+
+  - id: title-drop-skips-the-rank
+    title: Dropping a card on its own column's title writes no order
+    # The title strip is the family detach target, not a placement. A
+    # same-lane release on the title must therefore be a no-op: the card
+    # stays where it was, no order is written, nothing announces a move.
+    # Dropping beside a card keeps the rank bar (insertion line) behavior.
+    goto: "?groupBy=status"
+    drag_child_to_header: { from: thr_review_pr, column: unread }
+    assert:
+      - rpc_not_called: rank_move
+      - rank_slots: { column: unread, count: 3 }
+
+  - id: title-drop-is-state-only-cross-lane
+    title: Dropping an Unread card on the Pinned title pins without ranking
+    # Cross-lane, the title carries the STATE change only — the card joins
+    # Pinned but gets no rank order; placement stays the job of the
+    # insertion line beside the cards.
+    goto: "?groupBy=status"
+    drag_child_to_header: { from: thr_review_pr, column: pinned }
+    assert:
+      - rpc_not_called: rank_move
+      - rank_slots: { column: unread, count: 2 }

@@ -948,6 +948,35 @@ export function Board({
                   setFamilyHeaderColumn((c) => (c === column.id ? null : c));
                   setFamilyFloorColumn((c) => (c === column.id ? null : c));
                 }}
+                onDrop={(event) => {
+                  // A release on the TITLE is not a placement: no rank move,
+                  // no floor append. stopPropagation keeps the section's
+                  // floor handler (state + rank in one gesture) out of it —
+                  // dropping beside the cards (insertion line) stays the way
+                  // to both change state AND place the card.
+                  const threadId = draggedIdFor(event, draggingIdRef.current);
+                  const childOf = threadId === "" ? null : liveParentOf(threadId);
+                  const releaseFloor = () => {
+                    setDragOverColumn(null);
+                    setFamilyFloorColumn(null);
+                    setFamilyHeaderColumn(null);
+                  };
+                  event.preventDefault();
+                  event.stopPropagation();
+                  releaseFloor();
+                  if (threadId === "") return;
+                  if (childOf !== null && onReparent !== undefined) {
+                    commitUnnest(threadId);
+                    return;
+                  }
+                  if (isDropTarget && !isLaneDrag(event.dataTransfer.types, rankKey)) {
+                    // Cross-lane release on the title: the state change only
+                    // — the card keeps its lane membership, so the operator
+                    // drags it beside a card when placement matters.
+                    dropHandler(threadId);
+                  }
+                  // Same-lane top-level: a deliberate no-op.
+                }}
               >
                 <h3 className="truncate text-[11px] font-medium text-muted-foreground">
                   {column.label}

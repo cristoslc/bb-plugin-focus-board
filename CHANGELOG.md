@@ -17,7 +17,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   again.** Nested rows drag like cards now, the hovered title strip grows a
   notch and rings amber for the family detach (the floor works too) —
   dragging the child back onto a card re-nests it, so nest and detach are
-  each other's undo.
+  each other's undo. A release on a title never writes an order — amber
+  marks the scope of the family change, and placement still belongs to the
+  insertion line beside the cards.
 
 ## [0.8.0] - 2026-10-03
 
