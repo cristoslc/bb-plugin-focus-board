@@ -2,7 +2,7 @@
 title: Certification — intent to make Focus Board 1.0.0 release-ready
 date: 2026-10-05
 certifiedVersion: 0.9.0
-result: intent-certified
+result: intent-certified; readiness verdict 2026-10-05: conditional (see Verdict)
 holdPoints: 4
 ---
 
@@ -60,3 +60,25 @@ Still open on this certification: item 1 (marketplace PR #481 merge, then the 1.
 ## Update 2026-10-05 — rebased on current `dev`
 
 The branch rebased onto `origin/dev` at `a58d42f` (16 commits landed mid-cycle: toolbar search, the title probe's spawn-default-chain fix, the column-title drop rule, the Working-lane retention). Conflict resolutions: the changelog `[Unreleased]` group merged dev's four bullets with this branch's three Fixed bullets; `lib/unreleased-changelog.generated.ts` regenerated from the merged group; the probe residual comment re-based on dev's fixed execution fallback in `server.ts`. Certification SHA references updated to the rebased lineage (pre-rebase SHAs kept in parentheses). Verification on the rebased tree: 1078 tests across 74 files green (dev's new suites ride along), `tsc --noEmit` clean, `npm run gates` passing, build green.
+
+## Verdict 2026-10-05 — release readiness of the branch as it stands
+
+**Result: conditional. The engineering is done; the 1.0.0 finalize commit is not yet licensed.** Measured against this certification's Definition of 1.0.0-ready, on the rebased branch (`e2364cf` + `906e0aa`, 8 commits ahead of `origin/dev` at `a58d42f`, worktree clean):
+
+| Definition clause | State |
+|---|---|
+| Items 2–3 land on `dev` | **Blocked on the dev merge** — complete on this branch (`4e4b158`), `dev` does not carry them yet |
+| Item 4: audit nothing above low, remediated red-first | **Met** (`2c0afb5` + `67d22fb`) |
+| Items 5–7 land on `dev` | **Partially blocked** — item 5's CLI half and item 7's README half are on the branch; item 5's operator/UI manual cells and item 6's upstream bb filing are not done |
+| Full suite + typecheck green on the release branch | **Met** — 1078/1078 across 74 files, `tsc --noEmit` clean, `npm run gates` passing, build green |
+| Item 8 (scale fixture) | Optional, non-gating, not done |
+| Item 1 (marketplace range) | By design rides the 1.0.0 cut; PR #481's merge should precede or accompany it |
+
+**What stands between the branch and a licensed finalize commit — all operator-side, none of it code:**
+
+1. **The dev merge** (agent-executable on the operator's word): lands items 2, 3, 4, 9, 10, the CLI half of 5, and the README half of 7 on `dev`.
+2. **The operator/UI manual pass** (item 5's remainder): phone full-screen, pane archive/unarchive, the click-jump guard in a live window, parent-board touch momentum — operator-assisted by nature.
+3. **The upstream bb filing** (item 6): a hold point; the write-up in `docs/chat-click-jump-2026-09-29.md` is ready. The definition makes this a gate, so either the operator authorizes the filing, or the operator amends the definition to defer it past 1.0.0 with the write-up linked from the release notes.
+4. **Marketplace PR #481's merge** plus the `^1.0.0` range bump riding the cut (item 1's hold point).
+
+Two amendment options would shorten the list honestly: deferring item 6 to a post-1.0 filing (the residual is documented in-plugin either way), or converting the manual cells to a scheduled post-1.0 UAT session. Both are operator calls; neither should be taken silently by the agent.
