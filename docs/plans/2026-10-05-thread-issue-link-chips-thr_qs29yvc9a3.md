@@ -49,8 +49,7 @@ Realtime channel `link-changed`. Plugin metadata writes emit no thread realtime 
 ## Docs
 
 - `docs/test-coverage-matrix.md`: rows for unit A-D tests.
-- `README.md` + `PLUGIN_OVERVIEW.md`: feature bullet (linked-issue chips with live dots) and CLI section entry. (`docs/api_to_audit.md` does not exist in this repo; the agent tool and the three RPC methods are documented here, in the coverage-matrix row, in the README/PLUGIN_OVERVIEW bullets instead.)
-- `README.md` + `PLUGIN_OVERVIEW.md`: feature bullet (linked-issue chips with live dots) and CLI section entry.
+- `README.md` + `PLUGIN_OVERVIEW.md`: feature bullet (linked-issue chips with live dots) and CLI section entry. There is no separate API-audit doc in this repo ("See docs/api_to_audit.md" in the SDK typings points at the host's own doc); the agent tool and the three RPC methods are documented here, in the coverage-matrix row, and in the README/PLUGIN_OVERVIEW bullets instead.
 - `CHANGELOG.md`: `[Unreleased]` bullets ride the merge into `dev` per the repo release rules; the drafted bullet is "Board cards show a GitHub-issue chip for threads linked via the new agent tool, CLI, or RPC, with live OPEN/CLOSED/MERGED status dots."
 - Generated `lib/whats-new.generated.ts` is release-time generated, never hand-edited.
 
