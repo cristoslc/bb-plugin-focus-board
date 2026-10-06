@@ -49,7 +49,7 @@ afterEach(cleanup);
 describe("ticket chip icons — provider glyph", () => {
   it("a #N ref under a GitHub repo leads with the GitHub brand mark", async () => {
     renderCard("resolve #17: surface a thread's ticket");
-    await chipIcon("Github");
+    await chipIcon("GithubMark");
     expect(chip().getAttribute("href")).toBe(`${BASE}/issues/17`);
     expect(chip().textContent).toContain("#17");
   });
@@ -57,36 +57,35 @@ describe("ticket chip icons — provider glyph", () => {
   it("a PROJ-123 key ref falls back to the generic ticket mark", async () => {
     renderCard("Fix PROJ-123 render bug");
     await chipIcon("Ticket");
-    const github = chip().querySelector('[data-icon="Github"]');
+    const github = chip().querySelector('[data-icon="GithubMark"]');
     expect(github).toBeNull();
   });
 });
 
 describe("ticket chip icons — issue vs PR glyph", () => {
-  it("a kindless #N ref renders the issue glyph before status lands", async () => {
+  it("a kindless #N ref renders the open-issue glyph before status lands", async () => {
     renderCard("resolve #17: surface a thread's ticket");
-    await chipIcon("CircleDot");
+    await chipIcon("IssueOpen");
   });
 
   it("a /pull/ URL renders the PR glyph even before status lands", async () => {
     renderCard(`merged https://github.com/owner/repo/pull/45`);
-    await chipIcon("GitPullRequest");
-    const issueGlyph = chip().querySelector('[data-icon="CircleDot"]');
+    await chipIcon("PullRequest");
+    const issueGlyph = chip().querySelector('[data-icon="IssueOpen"]');
     expect(issueGlyph).toBeNull();
   });
 
   it("a PROJ-123 key ref renders the issue glyph (keys are never PRs)", async () => {
     renderCard("Fix PROJ-123 render bug");
-    await chipIcon("CircleDot");
+    await chipIcon("IssueOpen");
   });
 
-  it("live open-issue status colors the issue glyph emerald", async () => {
+  it("live open-issue status colors the open-issue glyph emerald", async () => {
     renderCard("resolve #17", {
       statusFor: (repo, num) =>
         repo === "owner/repo" && num === 17 ? { kind: "issue", state: "OPEN" } : undefined,
     });
-    const glyph = await chipIcon("CircleDot");
-    // SVG elements expose className as SVGAnimatedString; read the attribute.
+    const glyph = await chipIcon("IssueOpen");
     expect(glyph.getAttribute("class")).toContain("text-emerald-500");
     expect(glyph.getAttribute("aria-label")).toBe("issue OPEN");
   });
@@ -96,7 +95,7 @@ describe("ticket chip icons — issue vs PR glyph", () => {
       statusFor: (repo, num) =>
         repo === "owner/repo" && num === 17 ? { kind: "pull", state: "MERGED" } : undefined,
     });
-    const glyph = await chipIcon("GitMerge");
+    const glyph = await chipIcon("Merge");
     expect(glyph.getAttribute("class")).toContain("text-purple-500");
     expect(glyph.getAttribute("aria-label")).toBe("pull MERGED");
   });
@@ -106,7 +105,16 @@ describe("ticket chip icons — issue vs PR glyph", () => {
       statusFor: (repo, num) =>
         repo === "owner/repo" && num === 17 ? { kind: "pull", state: "CLOSED" } : undefined,
     });
-    const glyph = await chipIcon("GitPullRequestClosed");
+    const glyph = await chipIcon("PullRequestClosed");
+    expect(glyph.getAttribute("class")).toContain("text-muted-foreground/50");
+  });
+
+  it("live closed-issue status swaps in the closed-issue glyph muted", async () => {
+    renderCard("resolve #17", {
+      statusFor: (repo, num) =>
+        repo === "owner/repo" && num === 17 ? { kind: "issue", state: "CLOSED" } : undefined,
+    });
+    const glyph = await chipIcon("IssueClosed");
     expect(glyph.getAttribute("class")).toContain("text-muted-foreground/50");
   });
 });

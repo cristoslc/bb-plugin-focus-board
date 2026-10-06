@@ -144,11 +144,13 @@ export const NESTED_ROWS_SCROLL_THRESHOLD = 5;
 /**
  * Small clickable ticket chip; inert (span) when the ref has no href.
  *
- * Two glyphs lead the ref text: the source's provider mark (the GitHub
- * brand; a generic ticket mark when the source cannot be named — PROJ-123
- * keys carry no provider signal), then the issue-vs-PR glyph. The kind
- * glyph doubles as the state signal once live status lands — open emerald,
- * merged purple, closed muted — absorbing the old bare state dot.
+ * Two glyphs lead the ref text: the source's provider mark (GitHub's own
+ * octocat; a generic ticket mark when the source cannot be named — PROJ-123
+ * keys carry no provider signal), then the issue-vs-PR glyph drawn with
+ * GitHub's own octicon shapes (the same language GitHub.com and VS Code
+ * use). The kind glyph doubles as the state signal once live status lands —
+ * open emerald, merged purple, closed muted — absorbing the old bare state
+ * dot.
  */
 function TicketChip({
   ticket,
@@ -158,7 +160,7 @@ function TicketChip({
   status: GitHubItemStatus | undefined;
 }) {
   const className = cn(
-    "inline-flex h-4 items-center gap-0.5 rounded bg-muted px-1 font-mono text-[10px] leading-none text-muted-foreground",
+    "inline-flex h-5 items-center gap-1 rounded bg-muted px-1 font-mono text-[10px] leading-none text-muted-foreground",
     ticket.href && "hover:bg-accent hover:text-foreground",
   );
   // Issue vs PR: live status is exact; before it lands (or for refs the
@@ -169,15 +171,15 @@ function TicketChip({
   const kindIconName =
     kind === "pull"
       ? (status?.state === "MERGED"
-          ? "GitMerge"
+          ? "Merge"
           : status?.state === "CLOSED"
-            ? "GitPullRequestClosed"
-            : "GitPullRequest")
-      : "CircleDot";
+            ? "PullRequestClosed"
+            : "PullRequest")
+      : (status?.state === "CLOSED" ? "IssueClosed" : "IssueOpen");
   const provider = (
     <Icon
-      name={ticket.tracker === "github" ? "Github" : "Ticket"}
-      className="size-2.5 shrink-0 opacity-80"
+      name={ticket.tracker === "github" ? "GithubMark" : "Ticket"}
+      className="size-3 shrink-0"
       aria-hidden
     />
   );
@@ -185,7 +187,7 @@ function TicketChip({
     <Icon
       name={kindIconName}
       className={cn(
-        "size-2.5 shrink-0",
+        "size-3 shrink-0",
         status === undefined ? undefined : (STATUS_ICON_CLASS[status.state] ?? "text-muted-foreground/30"),
       )}
       aria-label={status === undefined ? undefined : `${kind} ${status.state}`}
