@@ -1,11 +1,10 @@
-// One-step "surface a thread's controlled browser tab" from the board
-// (issue #17).
+// The board card's "Reveal browser tab" action contract (issue #17).
 //
-// bb's documented reveal contract (`bb guide browser`): the side panel
-// opens and selects the tab only when the OWNING thread is already
-// focused; otherwise nothing changes on screen. Worse for scripts and
-// agents, the surface still answers `{ok: true}` when it no-ops, so a
-// caller cannot tell success from a silent no-op — the reporting thread
+// bb's own reveal contract (`bb guide browser`): the side panel opens
+// and selects the tab only when the OWNING thread is already focused;
+// otherwise nothing changes on screen. Worse for scripts and agents,
+// the surface still answers `{ok: true}` when it no-ops, so a caller
+// cannot tell success from a silent no-op — the reporting thread
 // watched `bb browser reveal` return ok while `bb browser tabs` kept
 // `presentation: "hidden"`.
 //
@@ -17,13 +16,18 @@
 //      owned by the thread (read-only, cheap, no side effects);
 //   2. if none, stop — no navigation, no reveal calls, no guessing;
 //   3. focus the owning thread's conversation view FIRST (the reveal
-//      precondition), briefly settle (the router applies the focus
-//      asynchronously), then reveal each owned tab;
-//   4. re-read the presentation truth and re-reveal whatever still
-//      shows "hidden", a bounded number of times — the core's `{ok:
-//      true}` is not trusted as evidence;
-//   5. report the final truth: `revealed` vs `stillHidden` per tab, so
-//      the caller can be honest with the operator.
+//      precondition), let the focus settle, then reveal each owned tab.
+//
+// Deliberately NO post-reveal verification: live evidence (2026-10-06,
+// this thread, a 2-second poll log) shows `list_tabs`' `presentation`
+// is a recorded creation attribute, not live panel visibility — it
+// stayed "hidden" through a reveal that visibly opened the panel, and
+// `create --reveal` reported "hidden" at creation. There is no
+// observable success signal in the SDK, so the module claims none: it
+// reports what it targeted and lets the opened side panel be the
+// feedback. Blank shell tabs (the automation session's about:blank
+// carrier) are skipped when a real page tab exists, so the panel's
+// selection lands on something with actual content.
 //
 // Everything runs over injected ports; the SDK adapter
 // (`buildBrowserRevealPorts`) is the only piece that touches the real
@@ -48,13 +52,13 @@ export interface BrowserRevealPorts {
    * thread; the orchestrator additionally filters on it defensively.
    */
   threadTabs(scope: BrowserRevealScope): Promise<
-    Array<{ tabId: string; threadId: string; presentation: BrowserTabPresentation }>
+    Array<{ tabId: string; threadId: string; url: string; presentation: BrowserTabPresentation }>
   >;
   /** Bring one tab's side panel forward (may no-op when focus hasn't landed). */
   reveal(scope: BrowserRevealScope & { tabId: string }): Promise<void>;
   /** Focus the thread's conversation view — the reveal precondition. */
   focusThread(threadId: string): void;
-  /** Injectable wait (post-focus settle and between reveal attempts). */
+  /** Injectable wait (post-focus settle). */
   delay(ms: number): Promise<void>;
 }
 
@@ -65,6 +69,7 @@ export interface BrowserTabRecord {
   instanceId: string;
   tabId: string;
   threadId: string;
+  url: string;
   presentation: BrowserTabPresentation;
 }
 
@@ -72,10 +77,8 @@ export interface BrowserRevealResult {
   threadId: string;
   /** The thread's controlled tabs at scan time. */
   discovered: BrowserTabRecord[];
-  /** Tabs whose presentation read "reveal" at the final verification. */
-  revealed: BrowserTabRecord[];
-  /** Tabs that stayed "hidden" through every attempt the bounds allow. */
-  stillHidden: BrowserTabRecord[];
+  /** The tabs the reveal gesture was actually fired for. */
+  targeted: BrowserTabRecord[];
 }
 
 /** The board banner's payload for a reveal gesture the operator must hear about. */
@@ -84,39 +87,26 @@ export interface BrowserRevealNotice {
 }
 
 /**
- * Wait between the focus call and the first reveal: bb's router applies
+ * Wait between the focus call and the reveal: bb's router applies
  * `navigate.toThread` asynchronously, and the host checks focus at
  * reveal time — too early is the race the action exists to absorb.
  */
 export const REVEAL_SETTLE_MS = 300;
-/** Wait between a no-op reveal attempt and the next one. */
-export const REVEAL_RETRY_DELAY_MS = 300;
-/** Total reveal rounds per tab: one initial + this many-1 retries. */
-export const REVEAL_VERIFY_ATTEMPTS = 4;
 
 /**
- * Discover, focus, reveal, verify — see the module header. Throws when
- * listing fails (fail loud: the caller reports the named failure rather
- * than an empty-looking success).
+ * Discover, focus, reveal — see the module header. Throws when listing
+ * fails (fail loud: the caller reports the named failure rather than an
+ * empty-looking success).
  */
 export async function revealThreadBrowserTabs(
   ports: BrowserRevealPorts,
   threadId: string,
 ): Promise<BrowserRevealResult> {
-  const empty: BrowserRevealResult = {
-    threadId,
-    discovered: [],
-    revealed: [],
-    stillHidden: [],
-  };
-
   const hostIds = await ports.connectedHostIds();
-  const readerScopes: BrowserRevealScope[] = [];
   const discovered: BrowserTabRecord[] = [];
   for (const hostId of hostIds) {
     for (const { generation, instanceId } of await ports.instances(hostId)) {
       const where = { hostId, generation, instanceId, threadId };
-      readerScopes.push(where);
       for (const entry of await ports.threadTabs(where)) {
         if (entry.threadId !== threadId) continue;
         discovered.push({ ...where, ...entry });
@@ -124,9 +114,9 @@ export async function revealThreadBrowserTabs(
     }
   }
   if (discovered.length === 0) {
-    // No controlled tab owns — or is owned by — this thread. Navigating
-    // away from the board for nothing would itself be a silent no-op.
-    return empty;
+    // Navigating away from the board for nothing would itself be a
+    // silent no-op; the caller tells the operator instead.
+    return { threadId, discovered, targeted: [] };
   }
 
   // The reveal precondition, done by us: the board's surface IS the
@@ -134,38 +124,29 @@ export async function revealThreadBrowserTabs(
   ports.focusThread(threadId);
   await ports.delay(REVEAL_SETTLE_MS);
 
-  let final = discovered;
-  let pending = discovered;
-  for (let attempt = 1; attempt <= REVEAL_VERIFY_ATTEMPTS; attempt += 1) {
-    if (attempt > 1) await ports.delay(REVEAL_RETRY_DELAY_MS);
-    for (const entry of pending) {
-      await ports.reveal({
-        hostId: entry.hostId,
-        generation: entry.generation,
-        instanceId: entry.instanceId,
-        tabId: entry.tabId,
-        threadId,
-      });
-    }
-    // Re-read the truth; the core's {ok:true} proves nothing.
-    const fresh: BrowserTabRecord[] = [];
-    for (const reader of readerScopes) {
-      for (const entry of await ports.threadTabs(reader)) {
-        if (entry.threadId !== threadId) continue;
-        fresh.push({ ...reader, tabId: entry.tabId, threadId, presentation: entry.presentation });
-      }
-    }
-    final = fresh;
-    pending = fresh.filter((entry) => entry.presentation !== "reveal");
-    if (pending.length === 0) break;
+  // Blank shell tabs carry no content; when a real page tab exists,
+  // skip the blanks so the panel's final selection lands on the page.
+  const withContent = discovered.filter((entry) => !isBlankTabUrl(entry.url));
+  const targeted = withContent.length > 0 ? withContent : discovered;
+  for (const entry of targeted) {
+    await ports.reveal({
+      hostId: entry.hostId,
+      generation: entry.generation,
+      instanceId: entry.instanceId,
+      tabId: entry.tabId,
+      threadId,
+    });
   }
+  return { threadId, discovered, targeted };
+}
 
-  return {
-    threadId,
-    discovered,
-    revealed: final.filter((entry) => entry.presentation === "reveal"),
-    stillHidden: final.filter((entry) => entry.presentation === "hidden"),
-  };
+/**
+ * About:blank (and empty) tabs are the automation session's carriers,
+ * not pages. Pinned so the reveal gesture never parks the operator's
+ * selection on an empty tab when real ones exist.
+ */
+export function isBlankTabUrl(url: string): boolean {
+  return url === "" || url === "about:blank";
 }
 
 /** Minimal structural views of the SDK surfaces the adapter reads. */
@@ -178,7 +159,13 @@ export interface BrowserRevealSdkLike {
       instances: Array<{ generation: string; instanceId: string }>;
     }>;
     listTabs(scope: BrowserRevealScope): Promise<{
-      tabs: Array<{ tabId: string; threadId: string; presentation: BrowserTabPresentation }>;
+      tabs: Array<{
+        tabId: string;
+        threadId: string;
+        url: string;
+        title: string;
+        presentation: BrowserTabPresentation;
+      }>;
     }>;
     revealTab(scope: BrowserRevealScope & { tabId: string }): Promise<{ ok: true }>;
   };
@@ -210,9 +197,10 @@ export function buildBrowserRevealPorts(
     },
     async threadTabs(scope) {
       const result = await sdk.experimental_desktopBrowsers.listTabs(scope);
-      return result.tabs.map(({ tabId, threadId, presentation }) => ({
+      return result.tabs.map(({ tabId, threadId, url, presentation }) => ({
         tabId,
         threadId,
+        url,
         presentation,
       }));
     },
