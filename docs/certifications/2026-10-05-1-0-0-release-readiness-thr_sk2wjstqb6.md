@@ -2,8 +2,8 @@
 title: Certification — intent to make Focus Board 1.0.0 release-ready
 date: 2026-10-05
 certifiedVersion: 0.9.0
-result: intent-certified; readiness verdict 2026-10-05: conditional (see Verdict)
-holdPoints: 4
+result: ready-to-finalize; verdict 2026-10-05 rev 2: all certification items closed — upstream filing exists (get-bb/bb#4793), finalize licensed (operator holds: 1.0.0 finalize/tag, marketplace pair)
+holdPoints: 2
 ---
 
 # Certification — 1.0.0 release-readiness intent
@@ -101,3 +101,26 @@ Full battery after the changes: 9 suites, 82 steps, all pass; 1078 vitest tests 
 The branch merged into `dev` in the main checkout (`a4cb09a`, merge commit, per the spoke's branch model) and pushed (`a58d42f..a4cb09a` on `origin/dev`). Verify on the merged tree: 1078 tests across 74 files green (after a `npm install` in the main checkout picked up the fast-check dev dependency the merge carries), `tsc --noEmit` clean, `npm run gates` passing, build green, `bb plugin reload focus-board` ran, and `bb plugin list` reports `focus-board@0.9.1-dev running` from the main checkout path. With this merge, definition clauses "items 2–3 land on dev" and the branch halves of items 5 and 7 are satisfied on `dev` itself; item 4 was already met; items 9 and 10 are on `dev`.
 
 **Remaining to a licensed 1.0.0 finalize (both hold points, both operator-gated):** the upstream bb filing of the scroll-shell bug (item 6 — or an operator amendment deferring it), and the marketplace pair: PR #481's merge plus the `^1.0.0` range bump and listing refresh riding the cut (item 1). The finalize commit itself remains intent-and-wait.
+
+## Update 2026-10-05 — lineage unified and a fresh dev-tree audit finding caught by the gates
+
+After the demo-surface commits (`321db3f`, `bc74547`), the branch merged into `dev` again (`d23e0c0`), and the standing gates caught a **new high** in the dev dependency tree the same day: `npm audit` reported `source-map-js` 1.0.0–1.2.1 (GHSA-68fv-2mgg-jv7q, event-loop DoS) in both checkouts (identical lock state; dev-tree only, via jsdom and the vite/vitest chains). Remediated lockfile-only (`npm audit fix`, 1.2.1 → 1.2.2, commit `406a71b`); no shipped dependency changed, so no changelog bullet. dev could not fast-forward past its own merge commit, so `origin/dev` was merged into the branch (clean), the battery re-verified, and the main checkout fast-forwarded to a shared head. **Since then `dev` and the branch are the same lineage (`ab5b643` on origin) — new branch commits fast-forward into `dev` directly.**
+
+## Verdict 2026-10-05 rev 2 — certification closed; result: ready-to-finalize
+
+The operator challenged item 6's hold ("why is the click-jump host bug gating the release?"), and the investigation it triggered resolved the question: **the upstream filing already exists.** [get-bb/bb#4793](https://github.com/get-bb/bb/issues/4793) ("Chat view gets displaced when a stale 'load older rows' scroll anchor is consumed on a later commit") is live on GitHub in OPEN state with the full review-ready report — mechanism, natural-gesture replications, the staged shape, suggested fixes, and the minified-symbol mapping against the host's `bottom-anchored-scroll-body.tsx`. The definition's item-6 clause ("file the write-up upstream", an intent-and-wait hold) is therefore **satisfied and no longer a finalize dependency**: there is nothing left to tie to an issue number — the issue number exists, and `compatibility-1.0.md` already records the guard as deliberate with its deletion condition.
+
+The operator's three questions, answered in the record:
+
+1. **Why was it gating?** A drafting error in this certification: the clause was written against the gap analysis's "filing ready" state, before the filing's existence was re-verified today. It should never have read as a gate once #4793 was live; this update supersedes it.
+2. **Is our code doing anything?** Yes — an active, live-verified mitigation, not a no-op. `components/chat-jump-guard.ts` (wired in `thread-pane.tsx`, pinned by a 17-case unit suite) reverts the host's post-click clamp with a counter-wheel when the reader is scrolled up by ≥96px, and stays silent for legit at-bottom clicks; the 2026-10-03 live verification shows the revert landing correctly in a real bb window.
+3. **State the mitigation honestly:** the guard does **not** cover the original upward-displacement shape at a pinned-to-bottom reader — arming requires that ≥96px scrolled-up state, so at-bottom clicks leave it inert. That residual belongs to the same host defect and is unreachable from the plugin (bb's page-shell scroll manager is not exposed through the SDK). The guard ships as a **documented partial mitigation that gets deleted the moment bb ships the fix** — not as a permanent fixture and not as a no-op.
+
+The `scrollDebugInstrumentation` setting is not part of this picture: it is a developer-only tool that ships OFF by default, never a shipped-hot workaround.
+
+**Certification state: every definition item is closed on `dev` (items 1's bump and 7's description text ride the cut itself; item 8 stays optional and non-gating). The full battery on the unified lineage: 1078 tests across 74 files green, `tsc --noEmit` clean, `npm run gates` passing (audit 0/0 → 1.2.2 locked), build green.**
+
+Hold points after this update (renumbered in the front matter: 4 → 2, hold 3 closed by the #4793 filing, old hold 4 standing as a post-1.0 policy rather than a release gate):
+
+1. **The 1.0.0 finalize commit, signed tag, and GitHub Release** — the semver promise goes live; intent-and-wait per the release spoke.
+2. **The marketplace pair** — PR #481's merge into `get-bb/marketplace`, then the `^1.0.0` range bump and listing refresh riding the 1.0.0 cut (item 1's hold point, unchanged).
