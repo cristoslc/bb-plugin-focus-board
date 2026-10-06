@@ -1673,10 +1673,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   // the side panel when the OWNING thread is already focused, and answers
   // {ok:true} even when it no-ops silently — unusable from the board, where
   // the owning thread is by definition not focused. The orchestrator
-  // (lib/browser-reveal) discovers first, focuses the thread, then reveals
-  // and re-verifies against the presentation truth. Every outcome the
-  // operator must hear about lands on the board banner; a full surface
-  // says nothing (the side panel IS it, and the board is backgrounded).
+  // (lib/browser-reveal) discovers first, focuses the thread, settles, then
+  // reveals in a single pass. Outcomes the operator must hear about (a
+  // thread with no controlled tab, a listing failure) land on the board
+  // banner; success says nothing, the side panel IS it.
   const runBrowserReveal = useCallback(
     async (thread: PluginSidebarThread) => {
       setBrowserNotice(null);
@@ -1694,18 +1694,11 @@ function BoardPage({ subPath }: { subPath: string }) {
         });
         return;
       }
-      if (result.stillHidden.length > 0) {
-        const subject =
-          result.stillHidden.length === 1
-            ? "The browser tab stayed"
-            : `${result.stillHidden.length} browser tabs stayed`;
-        // bb core no-ops with ok:true when the owning thread never took
-        // focus; the retries here absorbed the ordinary race, and this is
-        // the residue honest enough to name.
-        setBrowserNotice({
-          message: `${subject} hidden after the reveal attempts — open the thread's conversation view and run bb browser reveal from there.`,
-        });
-      }
+      // No completion banner on purpose: bb gives no observable success
+      // signal (list_tabs' `presentation` is a recorded creation
+      // attribute, not live visibility — 2026-10-06 poll evidence), so
+      // the plugin claims nothing; the opened side panel IS the
+      // feedback.
     },
     [navigate, sdk],
   );

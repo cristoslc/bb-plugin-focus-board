@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **The pane's question form keeps half-answered questions alive.** Picks and free text survive a reload or a thread switch and restore with the open tab, then clear once the question is submitted or dismissed — the same recovery the new-thread composer gives prompts.
-- **Card menus now surface a thread's controlled browser tab.** "Reveal browser tab" discovers the thread's desktop-browser tabs, focuses the owning thread, reveals the panel, and re-checks the result — bb answers `ok` even when the reveal no-ops, so a tab that never surfaces is reported on the board instead of swallowed.
+- **Card menus now surface a thread's controlled browser tab.** "Reveal browser tab" discovers the thread's desktop-browser tabs, focuses the owning thread, and opens the side panel on the page's tab — blank carrier tabs skipped — one click straight from the board. bb offers no honest success signal here (it answers `ok` even when the reveal no-ops, and `tabs`' `presentation` field never reflects live visibility), so the gesture claims nothing; the opened panel is the feedback.
   ([#17](https://github.com/cristoslc/bb-plugin-focus-board/issues/17))
 
 ### Changed
