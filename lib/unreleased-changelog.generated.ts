@@ -5,6 +5,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
+    "text": "**The pane's actions menu now leads with the state toggles.** Mark Done and Pin sit at the top, Snooze keeps its divider, and \"New child thread…\" moved down below the snooze entry, away from the everyday toggles.",
+    "children": []
+  },
+  {
     "text": "**Mobile thread pane: thread actions drop from a split caret, like Open in.** The standalone ⋯ button next to the Mark Read toggle is gone — an icon-only toggle, a hairline divider, and an attached ChevronDown caret now use the same grammar as the Open in menu at every width. ([#14](https://github.com/cristoslc/bb-plugin-focus-board/issues/14))",
     "children": []
   }
