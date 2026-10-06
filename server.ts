@@ -25,6 +25,15 @@ import {
   type DoneRecord,
 } from "./lib/done-metadata";
 import {
+  LINK_METADATA_KEY,
+  clearLinkedIssues,
+  linkHref,
+  parseGithubItemUrl,
+  parseLinkedIssues,
+  stampLinkedIssues,
+  type ThreadLink,
+} from "./lib/link-metadata";
+import {
   ARCHIVE_UNITS,
   DEFAULT_ARCHIVE_UNIT,
   DEFAULT_ARCHIVE_VALUE,
@@ -103,6 +112,16 @@ const COLUMN_KEY_SCHEMA = z
   .max(200)
   .regex(/^(?!__proto__$)[^\x00-\x1f\x7f]+$/, "not a column key");
 
+/** One board-linked GitHub item, exactly the lib/link-metadata ThreadLink round-trip. */
+const LINK_RECORD_SCHEMA = z.object({
+  repo: z.string().min(1),
+  issue: z.number().int().positive(),
+  kind: z.enum(["issue", "pull"]),
+  href: z.string().refine((value) => /^https:\/\/github\.com\//.test(value), "GitHub URL"),
+  createdAt: z.string(),
+  source: z.enum(["agent", "operator", "auto"]),
+});
+
 export const rpcContract = defineRpcContract({
   done_list: {
     input: z.null(),
@@ -117,6 +136,35 @@ export const rpcContract = defineRpcContract({
   done_set: {
     input: z.object({ threadId: z.string().min(1), done: z.boolean() }),
     output: z.object({ done: z.boolean() }),
+  },
+  /**
+   * Board-linked GitHub items (issue #13): per-thread plugin metadata key
+   * "linkedIssues" → ThreadLink[], first entry primary (lib/link-metadata).
+   * The builtin GitHub plugin persists its own thread↔issue links in bb.db
+   * rows under another plugin's namespace, which focus-board cannot read
+   * (no cross-plugin surface in BbPluginApi), so the board keeps its own
+   * record and renders chips from title/branch text refs merged with these.
+   */
+  link_list: {
+    input: z.null(),
+    output: z.object({ links: z.record(z.string(), z.array(LINK_RECORD_SCHEMA)) }),
+  },
+  link_set: {
+    input: z.object({
+      threadId: z.string().min(1),
+      repo: z.string().min(1),
+      number: z.number().int().positive(),
+      kind: z.enum(["issue", "pull"]),
+      source: z.enum(["agent", "operator", "auto"]),
+    }),
+    output: z.object({ threadId: z.string(), link: LINK_RECORD_SCHEMA }),
+  },
+  link_clear: {
+    input: z.object({
+      threadId: z.string().min(1),
+      number: z.number().int().positive().optional(),
+    }),
+    output: z.object({ threadId: z.string(), cleared: z.boolean() }),
   },
   // Parked-pin record store: the lane-exit unpin writes a park marker here
   // (see lib/pin-park.ts), and the state writes that bring the card back to
@@ -363,6 +411,9 @@ const DONE_CHANGED = "done-changed";
 /** Realtime signal after every snooze set/clear/wake. Payload is
  *  { threadId }; consumers refetch the record map. */
 const SNOOZE_CHANGED = "snooze-changed";
+/** Realtime signal after every link set/clear. Payload is { threadIds };
+ *  consumers refetch the record map. */
+const LINK_CHANGED = "link-changed";
 /** Realtime signal after a rank write. Payload names the column; boards
  *  refetch the whole store, so a stale payload cannot desync an order. */
 const RANK_CHANGED = "rank-changed";
@@ -602,6 +653,59 @@ export default async function plugin(bb: BbPluginApi) {
         remove: [PIN_PARK_METADATA_KEY],
       });
     }
+  }
+
+  // Linked GitHub items (issue #13): the chip feed that works when neither
+  // the title nor the branch name carries a text ticket ref.
+
+  async function readLinkedIssues(threadId: string): Promise<ThreadLink[] | null> {
+    // Same cast contract as readDoneRecord above: getPluginMetadata returns
+    // an untyped namespace record; parseLinkedIssues validates the shape.
+    const namespace = await bb.sdk.threads.getPluginMetadata({ threadId });
+    const value = (namespace as Record<string, JsonValue>)[LINK_METADATA_KEY];
+    return parseLinkedIssues(value);
+  }
+
+  async function writeLinkedIssues(threadId: string, links: ThreadLink[] | null): Promise<void> {
+    if (links === null) {
+      await bb.sdk.threads.updatePluginMetadata({
+        threadId,
+        remove: [LINK_METADATA_KEY],
+      });
+      return;
+    }
+    await bb.sdk.threads.updatePluginMetadata({
+      threadId,
+      set: { [LINK_METADATA_KEY]: links },
+    });
+  }
+
+  async function publishLinksChanged(threadIds: string[]): Promise<void> {
+    bb.realtime.publish(LINK_CHANGED, { threadIds });
+  }
+
+  /**
+   * Resolve the repo slug a link targets: an explicit `owner/repo` argument
+   * wins, else the thread's project remote (fail loud when the project has
+   * no GitHub remote — never link against a guessed repo).
+   */
+  async function resolveLinkRepo(threadId: string, repoArg: string | undefined): Promise<string> {
+    if (repoArg !== undefined) return repoArg;
+    const thread = await bb.sdk.threads.get({ threadId });
+    const project = await bb.sdk.projects.get({
+      projectId: thread.projectId,
+    });
+    const slug = resolveRepoSlug(project.gitRemoteUrl);
+    if (slug === null) {
+      throw new PluginCliError(
+        `cannot resolve a GitHub repo for thread ${threadId}`,
+        {
+          code: "invalid_value",
+          hint: `Project ${project.name} has no GitHub remote. Pass --repo owner/repo explicitly.`,
+        },
+      );
+    }
+    return slug;
   }
 
   /**
@@ -1354,6 +1458,37 @@ export default async function plugin(bb: BbPluginApi) {
       bb.realtime.publish(DONE_CHANGED, { threadId, done });
       return { done };
     },
+    link_list: async () => {
+      // The live list only, like pin_parks_list: a link on an archived
+      // thread has no chip to drive (the card is not on the board).
+      const rows = await bb.sdk.threads.list({});
+      const links: Record<string, ThreadLink[]> = {};
+      for (const row of rows) {
+        const record = await readLinkedIssues(row.id);
+        if (record !== null && record.length > 0) links[row.id] = record;
+      }
+      return { links };
+    },
+    link_set: async ({ threadId, repo, number, kind, source }) => {
+      const existing = await readLinkedIssues(threadId);
+      const link: ThreadLink = {
+        repo,
+        issue: number,
+        kind,
+        href: linkHref(repo, kind, number),
+        createdAt: new Date().toISOString(),
+        source,
+      };
+      await writeLinkedIssues(threadId, stampLinkedIssues(existing, link));
+      await publishLinksChanged([threadId]);
+      return { threadId, link };
+    },
+    link_clear: async ({ threadId, number }) => {
+      const existing = await readLinkedIssues(threadId);
+      await writeLinkedIssues(threadId, clearLinkedIssues(existing, number));
+      await publishLinksChanged([threadId]);
+      return { threadId, cleared: true };
+    },
     pin_parks_list: async () => {
       // The live list only: a park on an archived thread has no consumer —
       // un-archiving returns the thread through done state, not a pin — and
@@ -1771,6 +1906,158 @@ export default async function plugin(bb: BbPluginApi) {
       const stdout = input.options.json
         ? JSON.stringify({ cleared }, null, 2) + "\n"
         : cleared.map((id) => `cleared ${id}`).join("\n") + "\n";
+      return { exitCode: 0, stdout };
+    },
+  });
+
+  // Board-linked GitHub items: list/set/clear over the linkedIssues
+  // metadata key. The CLI is the operator's fallback when no agent tool is
+  // in the session (issue #13's repro had no agent-side surface at all).
+  const linkList = cliCommand({
+    summary: "List threads with linked GitHub issues/PRs",
+    options: {
+      json: { type: "boolean", description: "Emit machine-readable JSON" },
+    },
+    async run(_input) {
+      const { rows: candidates } = await listCandidateThreads();
+      const rows: Array<{
+        id: string;
+        title: string | null;
+        links: ThreadLink[];
+      }> = [];
+      for (const thread of candidates) {
+        const links = await readLinkedIssues(thread.id);
+        if (links === null || links.length === 0) continue;
+        rows.push({
+          id: thread.id,
+          title: thread.title ?? thread.titleFallback,
+          links,
+        });
+      }
+      const stdout = _input.options.json
+        ? JSON.stringify(rows, null, 2) + "\n"
+        : rows.length === 0
+          ? "No threads carry linked GitHub issues.\n"
+          : rows
+              .map(
+                (row) =>
+                  `${row.id}\t${row.links
+                    .map((link) => `${link.repo}#${link.issue}${link.kind === "pull" ? " (pull)" : ""}`)
+                    .join(", ")}\t${row.title ?? "(untitled)"}`,
+              )
+              .join("\n") + "\n";
+      return { exitCode: 0, stdout };
+    },
+  });
+
+  const linkSet = cliCommand({
+    summary: "Link a thread to a GitHub issue or PR (sets its card chip)",
+    description:
+      "Give the full GitHub issue/PR URL, or a bare number (resolved against the thread's project remote, or an explicit --repo owner/repo). --pull marks the target a pull request when passing a bare number.",
+    positionals: [
+      {
+        name: "thread-id",
+        description: "Thread to link",
+        required: true,
+      },
+      {
+        name: "number-or-url",
+        description: "GitHub issue/PR URL, or a bare issue number",
+        required: true,
+      },
+    ],
+    options: {
+      repo: {
+        type: "string",
+        description: "Explicit owner/repo slug (bare-number form only)",
+      },
+      pull: {
+        type: "boolean",
+        description: "The number is a pull request, not an issue",
+      },
+      json: { type: "boolean", description: "Emit machine-readable JSON" },
+    },
+    async run(input) {
+      const [threadId, target] = [
+        input.positionals["thread-id"] as string,
+        input.positionals["number-or-url"] as string,
+      ];
+      const parsed = parseGithubItemUrl(target);
+      const kind = parsed !== null ? parsed.kind : input.options.pull === true ? "pull" : "issue";
+      const repo =
+        parsed !== null
+          ? parsed.repo
+          : await resolveLinkRepo(threadId, input.options.repo);
+      const number =
+        parsed !== null ? parsed.issue : Number(/^#?(\d+)$/.exec(target)?.[1]);
+      if (!(Number.isInteger(number) && number > 0)) {
+        throw new PluginCliError(`invalid issue or PR '${target}'`, {
+          code: "invalid_value",
+          hint: "Pass a full GitHub URL, or a positive integer (#12 or 12).",
+        });
+      }
+      const link: ThreadLink = {
+        repo,
+        issue: number,
+        kind,
+        href: linkHref(repo, kind, number),
+        createdAt: new Date().toISOString(),
+        source: "operator",
+      };
+      await writeLinkedIssues(
+        threadId,
+        stampLinkedIssues(await readLinkedIssues(threadId), link),
+      );
+      await publishLinksChanged([threadId]);
+      const stdout = input.options.json
+        ? JSON.stringify({ threadId, link }, null, 2) + "\n"
+        : `linked ${threadId} → ${linkHref(repo, kind, number)}\n`;
+      return { exitCode: 0, stdout };
+    },
+  });
+
+  const linkClear = cliCommand({
+    summary: "Clear a thread's linked GitHub issues/PRs",
+    description:
+      "With issue/PR numbers, clears exactly those links; without, clears every link on the thread. Idempotent either way.",
+    positionals: [
+      {
+        name: "thread-id",
+        description: "Thread to unlink",
+        required: true,
+      },
+      {
+        name: "number",
+        description: "Issue/PR numbers to clear (all links when omitted)",
+        variadic: true,
+      },
+    ],
+    options: {
+      json: { type: "boolean", description: "Emit machine-readable JSON" },
+    },
+    async run(input) {
+      const threadId = input.positionals["thread-id"] as string;
+      const numbers = (input.positionals["number"] ?? []).map((raw) => {
+        const parsed = Number(/^#?(\d+)$/.exec(raw)?.[1]);
+        if (!(Number.isInteger(parsed) && parsed > 0)) {
+          throw new PluginCliError(`invalid issue or PR '${raw}'`, {
+            code: "invalid_value",
+            hint: "Pass positive integers (#12 or 12), or none to clear everything.",
+          });
+        }
+        return parsed;
+      });
+      let links = await readLinkedIssues(threadId);
+      if (numbers.length === 0) {
+        links = null;
+      } else {
+        for (const number of numbers) links = clearLinkedIssues(links, number);
+      }
+      await writeLinkedIssues(threadId, links);
+      await publishLinksChanged([threadId]);
+      const stdout = input.options.json
+        ? JSON.stringify({ threadId, cleared: numbers }, null, 2) + "\n"
+        : `cleared links on ${threadId}\n`;
       return { exitCode: 0, stdout };
     },
   });
@@ -2288,11 +2575,14 @@ export default async function plugin(bb: BbPluginApi) {
       name: "focus-board",
       summary: "Manage the Focus Board plugin's own state",
       description:
-        "Done list/mark/clear, snooze list/set/clear, autotitle availability/probe diagnostics, sweep (archive old Done + long-idle, dry-run by default), and the sweep thresholds.",
+        "Done list/mark/clear, linked GitHub issues (link list/set/clear), snooze list/set/clear, autotitle availability/probe diagnostics, sweep (archive old Done + long-idle, dry-run by default), and the sweep thresholds.",
       commands: {
         "done list": doneList,
         "done mark": doneMark,
         "done clear": doneClear,
+        "link list": linkList,
+        "link set": linkSet,
+        "link clear": linkClear,
         "snooze list": snoozeList,
         "snooze set": snoozeSet,
         "snooze clear": snoozeClear,

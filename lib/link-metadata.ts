@@ -41,6 +41,25 @@ export function linkHref(repo: string, kind: "issue" | "pull", issue: number): s
   return `https://github.com/${repo}/${kind === "pull" ? "pull" : "issues"}/${issue}`;
 }
 
+/**
+ * Parse a full GitHub issue/PR URL into its repo, number, and kind. Null on
+ * anything else (the caller fails loud about the bad input, not silently).
+ */
+export function parseGithubItemUrl(
+  url: string,
+): { repo: string; issue: number; kind: "issue" | "pull" } | null {
+  const match = url.match(
+    /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+?)\/(issues|pull)\/(\d+)\/?$/,
+  );
+  if (match === null) return null;
+  const [, owner, repo, kind, issue] = match;
+  return {
+    repo: `${owner}/${repo}`,
+    issue: Number(issue),
+    kind: kind === "pull" ? "pull" : "issue",
+  };
+}
+
 function parseLink(value: JsonValue, index: number): ThreadLink {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     const got = Array.isArray(value) ? "array" : typeof value;
