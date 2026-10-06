@@ -34,10 +34,7 @@ The board lives in bb's sidebar as a nav panel and updates in real time as your 
 - **Thread pane** — open a card to read and reply beside the board; full screen on phone. Agent questions are answered right from the pane, and the header's menu opens the workspace in your editor, file explorer, or terminal.
 - **Snooze** — "Snooze…" reads a thread now and marks it unread again at the time you pick.
 - **Sweep** — every lane carries a sweep with its own destination: stale Done threads archive, long-idle threads move to Done, Pinned unpins, Unread marks read. Shift-click and ⌘/Ctrl-click multi-select before sweeping.
-- **Drag to act** — hand-order a column, drop a card on Pinned, Unread, or Done to change its state in the same drag, drop it onto a card's middle to nest it as that thread's child, or drag a nested child onto any column header or floor to top-level it again (title strips grow and ring amber during family drags; a title drop never writes an order — placement is the insertion line's job; drag it back onto a card to re-nest); the card menu's Make Top-Level detaches too.
-- **Thread pane** — open a card to read and reply beside the board; full screen on phone. Agent questions are answered right from the pane.
-- **Sweep** stale Done threads to Archive and long-idle threads to Done, in two clicks; swept idle threads resurface in Done and archive later.
-- **Ticket chips** with GitHub status dots when the official GitHub plugin is installed.
+- **Ticket chips** for issue and PR refs in the title or branch, with GitHub status dots when the official GitHub plugin is installed. A thread whose text names nothing can still carry a chip: the board's own link store ties a thread to an item explicitly (the `focus_board_link_issue` agent tool, or `bb focus-board link set`).
 - **What's new** — a 🎁 toolbar button lists recent changes after an update.
 
 Finer behavior notes (hand-ordering rules, Escape handling, pin behavior, pane history) live in [docs/features.md](docs/features.md).
@@ -119,6 +116,9 @@ The plugin registers one `bb` subcommand for managing its own state:
 bb focus-board done list [--json]
 bb focus-board done mark <thread-id>...
 bb focus-board done clear <thread-id>...
+bb focus-board link list [--json]
+bb focus-board link set <thread-id> <number-or-url> [--repo owner/repo] [--pull]
+bb focus-board link clear <thread-id> [<number>...]
 bb focus-board snooze list
 bb focus-board snooze set <when> <thread-id>...   # +<N>m|h|d|w or a future timestamp
 bb focus-board snooze clear <thread-id>...
@@ -135,9 +135,9 @@ exits 1.
 ## Data and privacy
 
 The board reads bb's live thread view through the plugin SDK and writes only
-pin state, read state, and Done marks through bb's own stores — never thread
-content. For ticket status dots it reads the official GitHub plugin's local
-cache read-only. Nothing leaves your machine.
+pin state, read state, Done marks, and per-thread issue/PR links through bb's
+own stores — never thread content. For ticket status dots it reads the
+official GitHub plugin's local cache read-only. Nothing leaves your machine.
 
 ## Development
 
