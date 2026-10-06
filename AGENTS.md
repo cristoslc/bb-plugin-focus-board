@@ -14,6 +14,10 @@ harness loads `dist/app.css`) and uses the system Chrome, so set `CHROME_PATH`
 if it is not in the default place. Run a single suite with
 `npm run uat -- tests/manual/uat-rank.yaml`. Reports land in `docs/uat/`.
 
+## node_modules — never a symlink in any checkout
+
+Never create or retarget a `node_modules` symlink inside this repo's checkouts. The worktrees' shared-deps shortcut (`ln -s <main>/node_modules node_modules`) is exactly what made the plugin board vanish three times: when that command runs with its cwd set to the main checkout, `node_modules` points at itself, every import in the frontend bundle fails to resolve, and bb serves a board that silently disappears. If a worktree needs dependencies, run `npm ci` there. If the board vanishes, check `ls -la <main>/node_modules` for a symlink (especially one pointing at itself), then `rm node_modules && npm ci && bb plugin reload focus-board`. The guard test `tests/node-modules-guard.test.ts` fails loudly whenever repo-root `node_modules` is a symlink.
+
 ## Release
 
 Releasing a new plugin version: work merges into `dev` (the integration
