@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **The pane's question form keeps half-answered questions alive.** Picks and free text survive a reload or a thread switch and restore with the open tab, then clear once the question is submitted or dismissed — the same recovery the new-thread composer gives prompts.
 
+### Changed
+
+- **The pane's actions menu now leads with the state toggles.** Mark Done and Pin sit at the top, Snooze keeps its divider, and "New child thread…" moved down below the snooze entry, away from the everyday toggles.
+
 ### Fixed
 
 - **Mobile thread pane: thread actions drop from a split caret, like Open

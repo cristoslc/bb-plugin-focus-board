@@ -843,28 +843,20 @@ export function ThreadPane({
           // caret opening the thread-actions menu (done, pin, snooze,
           // archive). No floating ellipsis at any width.
           const actionItems: (ActionMenuItem | SnoozeMenuAction)[] = [
-            // The family-spawn entry leads: a creation action is categorically
-            // apart from the state toggles below it. Archived rows carry it
+            // State toggles first, in the menu's frequency-of-use order: the
+            // done toggle, then the pin (an archived row pins nothing —
+            // its only way out is Unarchive), the snooze entry under its
+            // divider, then the family-spawn entry ("New child thread…")
+            // behind the snooze: a creation action stays categorically
+            // apart from the state toggles. Archived rows carry it
             // too — bb accepts a child of an archived parent (the child
             // re-roots to render standalone), and the operator's call.
-            ...(onNewChildThread !== undefined
-              ? [
-                  {
-                    id: "new-child",
-                    label: "New child thread…",
-                    icon: "Fork",
-                    run: onNewChildThread,
-                  },
-                ]
-              : []),
             {
               id: "done",
               label: isDone ? "Mark Not Done" : "Mark Done",
               icon: isDone ? "CircleCheck" : "Check",
               run: () => onToggleDone(!isDone),
             },
-            // Pin sits after the done toggle. An archived row pins nothing:
-            // its only way out is Unarchive.
             ...(isArchived
               ? []
               : [
@@ -875,8 +867,17 @@ export function ThreadPane({
                     run: onTogglePinned,
                   },
                 ]),
-            // The single snooze entry (Snooze… / Edit snooze…), then archive.
             ...(snoozeMenuItems ?? []),
+            ...(onNewChildThread !== undefined
+              ? [
+                  {
+                    id: "new-child",
+                    label: "New child thread…",
+                    icon: "Fork",
+                    run: onNewChildThread,
+                  },
+                ]
+              : []),
             {
               id: "archive",
               label: isArchived ? "Unarchive" : "Archive",

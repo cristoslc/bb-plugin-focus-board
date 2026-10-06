@@ -44,12 +44,14 @@ function renderPane({
   archived = false,
   onTogglePinned = noop,
   onNewChildThread,
+  snoozeMenuItems,
 }: {
   compact: boolean;
   pinned?: boolean;
   archived?: boolean;
   onTogglePinned?: () => void;
   onNewChildThread?: () => void;
+  snoozeMenuItems?: Parameters<typeof ThreadPane>[0]["snoozeMenuItems"];
 }) {
   return render(
     createElement(
@@ -74,6 +76,7 @@ function renderPane({
         onClose: noop,
         escStopsRunningThread: false,
         onNewChildThread,
+        snoozeMenuItems,
       }),
     ),
   );
@@ -277,20 +280,39 @@ describe("new child thread entry in the actions menu", () => {
     onNewChildThread.mockClear();
   });
 
-  it("leads the menu and opens the child composer on click", () => {
+  it("sits below the snooze entry and opens the child composer on click", () => {
     renderPane({ compact: false, onNewChildThread });
     openActionsMenu();
-    // The creation entry leads the state toggles: it is categorically apart
-    // from Mark Done / Pin / Archive.
+    // The state toggles lead the menu in frequency-of-use order (Done,
+    // Pin); the creation entry trails the snooze, categorically apart
+    // from Mark Done / Pin.
     const menu = screen.getByRole("menu");
     const labels = Array.from(menu.querySelectorAll("[role='menuitem']")).map(
       (item) => item.textContent,
     );
-    expect(labels[0]).toBe("New child thread…");
+    expect(labels).toEqual(["Mark Done", "Pin", "New child thread…", "Archive"]);
     fireEvent.click(screen.getByRole("menuitem", { name: "New child thread…" }));
     expect(onNewChildThread).toHaveBeenCalledTimes(1);
     // The menu closes on selection, leaving no stale overlay.
     expect(screen.queryByRole("menuitem", { name: "New child thread…" })).toBeNull();
+  });
+
+  it("with snooze, the child spawn trails the snooze entry", () => {
+    renderPane({
+      compact: false,
+      onNewChildThread,
+      snoozeMenuItems: snoozeMenuActions({
+        snoozed: false,
+        clearSnooze: vi.fn(),
+        openPicker: vi.fn(),
+      }),
+    });
+    openActionsMenu();
+    const menu = screen.getByRole("menu");
+    const labels = Array.from(menu.querySelectorAll("[role='menuitem']")).map(
+      (item) => item.textContent,
+    );
+    expect(labels).toEqual(["Mark Done", "Pin", "Snooze…", "New child thread…", "Archive"]);
   });
 
   it("an archived thread's pane still offers the child spawn", () => {
