@@ -5,6 +5,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
+    "text": "**Card menus now surface a thread's controlled browser tab.** \"Reveal browser tab\" discovers the thread's desktop-browser tabs, focuses the owning thread, reveals the panel, and re-checks the result — bb answers `ok` even when the reveal no-ops, so a tab that never surfaces is reported on the board instead of swallowed. ([#17](https://github.com/cristoslc/bb-plugin-focus-board/issues/17))",
+    "children": []
+  },
+  {
     "text": "**The pane's actions menu now leads with the state toggles.** Mark Done and Pin sit at the top, Snooze keeps its divider, and \"New child thread…\" moved down below the snooze entry, away from the everyday toggles.",
     "children": []
   },

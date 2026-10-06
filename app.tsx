@@ -56,6 +56,12 @@ import {
   paneThreadIdFromSubPath,
 } from "./lib/pane-route";
 import { applyMoveVisible, orderForColumn, type RankStore } from "./lib/rank";
+import {
+  buildBrowserRevealPorts,
+  revealThreadBrowserTabs,
+  type BrowserRevealNotice,
+  type BrowserRevealResult,
+} from "./lib/browser-reveal";
 import { pinStateChangeFromEvent, readStateChangeFromEvent } from "./lib/pin-park";
 import {
   DEFAULT_DONE_ARCHIVE_MS,
@@ -190,6 +196,13 @@ function readStoredList(key: string): string[] {
     // localStorage can throw in embedded contexts; fall through to default.
   }
   return [];
+}
+
+/** The banner copy naming why the desktop browser could not be reached. */
+function browserReachFailure(error: unknown): string {
+  return `Reaching the desktop browser failed: ${
+    error instanceof Error ? error.message : String(error)
+  }`;
 }
 
 function BoardPage({ subPath }: { subPath: string }) {
@@ -581,6 +594,11 @@ function BoardPage({ subPath }: { subPath: string }) {
   const [sweepNotice, setSweepNotice] = useState<SweepNotice | null>(null);
   // Stable dismiss: the Board's auto-dismiss timer effect keys on it.
   const clearSweepNotice = useCallback(() => setSweepNotice(null), []);
+  // The browser-reveal gesture's honest outcome (a thread with no
+  // controlled tab, a stuck-hidden tab, a listing failure). Null when
+  // everything surfaced — the side panel itself is that feedback.
+  const [browserNotice, setBrowserNotice] = useState<BrowserRevealNotice | null>(null);
+  const clearBrowserNotice = useCallback(() => setBrowserNotice(null), []);
   const disarmSweep = useCallback(() => setArmedSweep(null), []);
   // Click-away and Escape disarm only an idle arm — and only from outside
   // the armed column: its cards' clicks toggle the sweep selection, so the
@@ -1651,6 +1669,47 @@ function BoardPage({ subPath }: { subPath: string }) {
     }
   }, [applyUnreadStateEffects, sdk]);
 
+  // The one-step browser-tab reveal (issue #17): bb's reveal only opens
+  // the side panel when the OWNING thread is already focused, and answers
+  // {ok:true} even when it no-ops silently — unusable from the board, where
+  // the owning thread is by definition not focused. The orchestrator
+  // (lib/browser-reveal) discovers first, focuses the thread, then reveals
+  // and re-verifies against the presentation truth. Every outcome the
+  // operator must hear about lands on the board banner; a full surface
+  // says nothing (the side panel IS it, and the board is backgrounded).
+  const runBrowserReveal = useCallback(
+    async (thread: PluginSidebarThread) => {
+      setBrowserNotice(null);
+      const ports = buildBrowserRevealPorts(sdk, navigate);
+      let result: BrowserRevealResult;
+      try {
+        result = await revealThreadBrowserTabs(ports, thread.id);
+      } catch (error) {
+        setBrowserNotice({ message: browserReachFailure(error) });
+        return;
+      }
+      if (result.discovered.length === 0) {
+        setBrowserNotice({
+          message: `No controlled browser tab belongs to "${thread.displayTitle}" — start one with bb browser-automation.`,
+        });
+        return;
+      }
+      if (result.stillHidden.length > 0) {
+        const subject =
+          result.stillHidden.length === 1
+            ? "The browser tab stayed"
+            : `${result.stillHidden.length} browser tabs stayed`;
+        // bb core no-ops with ok:true when the owning thread never took
+        // focus; the retries here absorbed the ordinary race, and this is
+        // the residue honest enough to name.
+        setBrowserNotice({
+          message: `${subject} hidden after the reveal attempts — open the thread's conversation view and run bb browser reveal from there.`,
+        });
+      }
+    },
+    [navigate, sdk],
+  );
+
   const menuActionsFor = useCallback(
     (thread: PluginSidebarThread): CardMenuAction[] => {
       const isThreadDone = doneIds.has(thread.id);
@@ -1678,6 +1737,20 @@ function BoardPage({ subPath }: { subPath: string }) {
               "_blank",
               "noopener",
             );
+          },
+        },
+        {
+          id: "reveal-browser-tab",
+          label: "Reveal browser tab",
+          icon: "Browser",
+          run: () => {
+            // Discover → focus → reveal → verify happens in
+            // lib/browser-reveal; the board banner reports anything the
+            // operator must hear about — even a throw, so the click never
+            // reads as one the board ignored.
+            runBrowserReveal(thread).catch((error) => {
+              setBrowserNotice({ message: browserReachFailure(error) });
+            });
           },
         },
         {
@@ -1833,7 +1906,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         },
       ];
     },
-    [actions, applyUnreadStateEffects, clearParkPin, clearSnooze, doneAgeSource, doneIds, exitPinnedLane, openNewChildThread, requestReveal, restoreParkedPin, rpc, setDoneExtras, setDoneIds, setSnoozeDialogFor, snoozeUntil, snoozedIds, sdk],
+    [actions, applyUnreadStateEffects, clearParkPin, clearSnooze, doneAgeSource, doneIds, exitPinnedLane, openNewChildThread, requestReveal, restoreParkedPin, runBrowserReveal, rpc, setDoneExtras, setDoneIds, setSnoozeDialogFor, snoozeUntil, snoozedIds, sdk],
   );
 
   if (status === "loading" && threads.length === 0) {
@@ -1929,6 +2002,8 @@ function BoardPage({ subPath }: { subPath: string }) {
             sweepRun={sweepRun}
             sweepNotice={sweepNotice}
             onDismissSweepNotice={clearSweepNotice}
+            browserNotice={browserNotice}
+            onDismissBrowserNotice={clearBrowserNotice}
             onSweepUndo={undoSweepFor}
             onSweepToggle={toggleSweepSelectionFor}
             onSweepRangeSelect={addSweepSelectionFor}
