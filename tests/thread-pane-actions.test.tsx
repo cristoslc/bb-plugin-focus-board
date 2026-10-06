@@ -91,20 +91,39 @@ describe("compact viewport thread pane header", () => {
     expect(screen.queryByLabelText("Open thread full screen")).toBeNull();
   });
 
-  it("the standalone actions trigger reads as an ellipsis, not a caret", () => {
+  it("the actions trigger reads as an attached caret, not a standalone ellipsis", () => {
     renderPane({ compact: true });
     const trigger = screen.getByRole("button", { name: "More thread actions" });
-    expect(trigger.querySelector('[data-icon="More"]')).not.toBeNull();
-    expect(trigger.querySelector('[data-icon="ChevronDown"]')).toBeNull();
+    // Same split grammar as the "Open in" menu: the caret drops the menu,
+    // an ellipsis is only the pre-#14 standalone shape.
+    expect(trigger.querySelector('[data-icon="ChevronDown"]')).not.toBeNull();
+    expect(trigger.querySelector('[data-icon="More"]')).toBeNull();
   });
 
-  it("the standalone actions menu keeps its own positioning wrapper", () => {
+  it("the caret trigger is attached to the read-state toggle as a split control", () => {
     renderPane({ compact: true });
     const trigger = screen.getByRole("button", { name: "More thread actions" });
-    // The dropdown is absolutely positioned against its wrapper; without
-    // the wrapper it drifts to the pane's top-right corner instead of
-    // dropping under the button.
-    expect(trigger.parentElement?.className).toContain("relative");
+    const wrapper = trigger.parentElement;
+    // The dropdown anchors to the split wrapper the same way the standalone
+    // wrapper did; without a relative ancestor it drifts to the pane's
+    // top-right corner instead of dropping under the caret.
+    expect(wrapper?.className).toContain("relative");
+    expect(wrapper?.className).toContain("rounded-md");
+    // Hairline divider between the halves, as in the open-menu split.
+    expect(wrapper?.querySelectorAll(".bg-border")).toHaveLength(1);
+    // Icon-only read-state toggle as the primary, open on the caret side.
+    const primary = wrapper?.querySelector('button[aria-label^="Mark thread"]');
+    expect(primary).toBeTruthy();
+    expect(primary?.className).toContain("rounded-r-none");
+    expect(trigger.className).toContain("rounded-l-none");
+  });
+
+  it("the compact caret opens the same menu carrying the read-state items plus Full Screen", () => {
+    renderPane({ compact: true });
+    openActionsMenu();
+    expect(screen.getByRole("menuitem", { name: "Full Screen" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Mark Done" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Archive" })).toBeTruthy();
   });
 
   it("offers Full Screen in the actions menu and maximizes on click", () => {

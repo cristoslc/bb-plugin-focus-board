@@ -896,18 +896,23 @@ export function ThreadPane({
               run: onMaximize,
             });
             return (
-              <>
+              // Same split grammar as the open menu at every width: the
+              // icon-only read-state toggle is the primary, a hairline
+              // divider, then the attached caret dropping the menu. No
+              // overflow-hidden — the halves round themselves.
+              <div className="relative inline-flex shrink-0 items-stretch rounded-md">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={HEADER_ICON_BUTTON_CLASS}
+                  className={cn(HEADER_ICON_BUTTON_CLASS, "rounded-r-none")}
                   aria-label={thread.isUnread ? "Mark thread read" : "Mark thread unread"}
                   onClick={onToggleUnread}
                 >
                   <Icon name={thread.isUnread ? "MailOpen" : "Mail"} className="size-4" />
                 </Button>
-                <ActionsMenu items={actionItems} />
-              </>
+                <div className="w-px self-stretch my-1.5 bg-border" aria-hidden />
+                <ActionsMenu items={actionItems} attached />
+              </div>
             );
           }
           return (

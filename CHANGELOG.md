@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Mobile thread pane: thread actions drop from a split caret, like Open
+  in.** The standalone ⋯ button next to the Mark Read toggle is gone — an
+  icon-only toggle, a hairline divider, and an attached ChevronDown caret
+  now use the same grammar as the Open in menu at every width.
+  ([#14](https://github.com/cristoslc/bb-plugin-focus-board/issues/14))
+
 ## [1.0.0] - 2026-10-05
 
 ### Added
