@@ -4,8 +4,11 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "build": "node scripts/generate-unreleased.mjs && node scripts/generate-whats-new.mjs && bb plugin build",
+    "pretest": "node scripts/check-node-modules.mjs",
     "test": "node scripts/generate-unreleased.mjs && node scripts/generate-whats-new.mjs && vitest run",
+    "prebuild": "node scripts/check-node-modules.mjs",
+    "build": "node scripts/generate-unreleased.mjs && node scripts/generate-whats-new.mjs && bb plugin build",
+    "preuat": "node scripts/check-node-modules.mjs",
     "uat": "node scripts/uat/run.mjs",
     "typecheck": "tsc --noEmit",
     "gates": "node scripts/security-gates.mjs"
