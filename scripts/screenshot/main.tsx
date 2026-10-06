@@ -31,6 +31,16 @@ if (lastSeenVersion !== null) {
   window.localStorage.setItem("focus-board:lastSeenVersion", lastSeenVersion);
 }
 
+// Seed the persisted collapsed-family store: `?collapsed=id1,id2` folds those
+// family cards in the shot (the COLLAPSED_FAMILIES_KEY list the app's fold
+// toggle writes). Absent → empty, so a stale value from an earlier page load
+// can't leak into a run.
+const collapsed = params.get("collapsed");
+window.localStorage.setItem(
+  "focus-board:collapsedFamilies",
+  JSON.stringify(collapsed === null ? [] : collapsed.split(",").filter(Boolean)),
+);
+
 // Seed the harness's rank store before the app's first rank_list call, so a
 // UAT pass can start from a column that already has a stored order.
 const seedRanks = params.get("ranks");
