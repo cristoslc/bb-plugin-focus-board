@@ -61,9 +61,9 @@ const SHOTS = [
   // over its status-dot strip) and unfolded, in addition to all the base
   // elements the fixture covers. UAT suites never set the flag and keep the
   // base fixture their lane and column-order assertions are pinned to.
-  { name: "board-thread-pane", viewport: "desktop", pane: true, query: "?groupBy=status&demo=1&collapsed=thr_demo_needs" },
-  { name: "phone-board", viewport: "phone", pane: false, query: "?groupBy=status&demo=1&collapsed=thr_demo_needs" },
-  { name: "phone-thread-pane", viewport: "phone", pane: true, query: "?groupBy=status&demo=1&collapsed=thr_demo_needs" },
+  { name: "board-thread-pane", viewport: "desktop", pane: true, query: "?groupBy=status&demo=1&collapsed=thr_demo_needs,thr_demo_work" },
+  { name: "phone-board", viewport: "phone", pane: false, query: "?groupBy=status&demo=1&collapsed=thr_demo_needs,thr_demo_work" },
+  { name: "phone-thread-pane", viewport: "phone", pane: true, query: "?groupBy=status&demo=1&collapsed=thr_demo_needs,thr_demo_work" },
 ];
 
 async function captureAll() {
