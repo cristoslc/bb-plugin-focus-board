@@ -9,6 +9,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import puppeteer from "puppeteer-core";
 
+const PHONE = { width: 390, height: 844, deviceScaleFactor: 2 }; // iPhone 14-ish
+
 const CHROME = process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const BASE = process.env.HARNESS_URL ?? "http://localhost:5173/";
 const OUT = new URL("../../docs/screenshots/repro-markread-mobile/", import.meta.url).pathname;
@@ -16,12 +18,12 @@ const OUT = new URL("../../docs/screenshots/repro-markread-mobile/", import.meta
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: true,
-  defaultViewport: { width: 390, height: 844, deviceScaleFactor: 2 },
+  defaultViewport: PHONE,
   args: ["--hide-scrollbars"],
 });
 
 const page = await browser.newPage();
-await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 });
+await page.setViewport(PHONE);
 await page.goto(`${BASE}?groupBy=status&demo=1`, {
   waitUntil: "domcontentloaded",
   timeout: 60_000,
@@ -57,6 +59,7 @@ const evidence = await page.evaluate(() => {
   };
 });
 
+await mkdir(OUT, { recursive: true });
 await writeFile(`${OUT}evidence.json`, JSON.stringify(evidence, null, 2));
 await page.screenshot({ path: `${OUT}phone-thread-pane.png`, fullPage: false });
 

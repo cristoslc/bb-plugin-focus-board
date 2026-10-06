@@ -836,12 +836,12 @@ export function ThreadPane({
         ) : null}
         {(() => {
           // The read-state toggle and the thread actions are one family, so
-          // on desktop they render as ONE split control — the same grammar
-          // as the open menu: labeled primary (Mark Unread / Mark Read) on
-          // the left, attached caret opening the thread-actions menu (done,
-          // pin, snooze, archive) on the right. No floating ellipsis. The
-          // compact header keeps the icon toggle plus the standalone ⋯
-          // menu, since there is no room for a labeled split there.
+          // they render as ONE split control at every width — the same
+          // grammar as the open menu. On compact there is no room for a
+          // labeled primary, so the split goes icon-only (Mail / MailOpen
+          // toggle, rounded open toward the divider), then the attached
+          // caret opening the thread-actions menu (done, pin, snooze,
+          // archive). No floating ellipsis at any width.
           const actionItems: (ActionMenuItem | SnoozeMenuAction)[] = [
             // The family-spawn entry leads: a creation action is categorically
             // apart from the state toggles below it. Archived rows carry it
