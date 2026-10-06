@@ -836,12 +836,12 @@ export function ThreadPane({
         ) : null}
         {(() => {
           // The read-state toggle and the thread actions are one family, so
-          // on desktop they render as ONE split control — the same grammar
-          // as the open menu: labeled primary (Mark Unread / Mark Read) on
-          // the left, attached caret opening the thread-actions menu (done,
-          // pin, snooze, archive) on the right. No floating ellipsis. The
-          // compact header keeps the icon toggle plus the standalone ⋯
-          // menu, since there is no room for a labeled split there.
+          // they render as ONE split control at every width — the same
+          // grammar as the open menu. On compact there is no room for a
+          // labeled primary, so the split goes icon-only (Mail / MailOpen
+          // toggle, rounded open toward the divider), then the attached
+          // caret opening the thread-actions menu (done, pin, snooze,
+          // archive). No floating ellipsis at any width.
           const actionItems: (ActionMenuItem | SnoozeMenuAction)[] = [
             // The family-spawn entry leads: a creation action is categorically
             // apart from the state toggles below it. Archived rows carry it
@@ -896,18 +896,23 @@ export function ThreadPane({
               run: onMaximize,
             });
             return (
-              <>
+              // Same split grammar as the open menu at every width: the
+              // icon-only read-state toggle is the primary, a hairline
+              // divider, then the attached caret dropping the menu. No
+              // overflow-hidden — the halves round themselves.
+              <div className="relative inline-flex shrink-0 items-stretch rounded-md">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={HEADER_ICON_BUTTON_CLASS}
+                  className={cn(HEADER_ICON_BUTTON_CLASS, "rounded-r-none")}
                   aria-label={thread.isUnread ? "Mark thread read" : "Mark thread unread"}
                   onClick={onToggleUnread}
                 >
                   <Icon name={thread.isUnread ? "MailOpen" : "Mail"} className="size-4" />
                 </Button>
-                <ActionsMenu items={actionItems} />
-              </>
+                <div className="w-px self-stretch my-1.5 bg-border" aria-hidden />
+                <ActionsMenu items={actionItems} attached />
+              </div>
             );
           }
           return (
