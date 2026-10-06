@@ -160,15 +160,32 @@ export function linkedTicketRefs(
   const known = new Set(
     textRefs.filter((ref) => ref.href !== undefined).map((ref) => ref.href!),
   );
+  const seen = new Set<string>();
   const refs: TicketRef[] = [];
   for (const link of links) {
     if (known.has(link.href)) continue;
+    // Chip rows key chips by raw text, and "#12" can repeat across repos —
+    // stampLinkedIssues dedupes per repo+number but not across repos. First
+    // entry wins (the array's primary link is first).
+    const raw = `#${link.issue}`;
+    if (seen.has(raw)) continue;
+    seen.add(raw);
     refs.push({
-      raw: `#${link.issue}`,
+      raw,
       tracker: "github",
       number: link.issue,
       href: link.href,
     });
   }
   return refs;
+}
+
+/**
+ * "owner/repo#number" strings for a thread's links, the batched
+ * tracker_status lookup key (app.tsx groups visible refs per repo).
+ */
+export function linkedRefKeys(
+  links: ThreadLink[] | null | undefined,
+): string[] {
+  return (links ?? []).map((link) => `${link.repo}#${link.issue}`);
 }

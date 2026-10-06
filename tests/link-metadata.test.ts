@@ -6,6 +6,7 @@ import {
   linkHref,
   parseLinkedIssues,
   linkedTicketRefs,
+  linkedRefKeys,
   clearLinkedIssues,
   stampLinkedIssues,
   type ThreadLink,
@@ -188,5 +189,36 @@ describe("linkedTicketRefs (chip merge)", () => {
 describe("key contract", () => {
   it("uses the documented metadata key", () => {
     expect(LINK_METADATA_KEY).toBe("linkedIssues");
+  });
+});
+
+describe("raw-dedupe among emitted links", () => {
+  it("emits one chip per raw text: a cross-repo same-number pair keeps the primary", () => {
+    // stampLinkedIssues dedupes per repo+number, but two different repos can
+    // still carry the same number; both would emit raw "#12" and the chip row
+    // keys chips by raw. First entry (primary) wins.
+    const cross = { ...LINK, href: "https://github.com/other/repo/issues/12", createdAt: "2026-10-05T23:00:00.000Z" };
+    const refs = linkedTicketRefs([LINK, cross]);
+    expect(refs).toHaveLength(1);
+    expect(refs[0].href).toBe(LINK.href);
+  });
+
+  it("dedupes against an emitted ref, not just the input order", () => {
+    const newer = { ...LINK, createdAt: "2026-10-05T23:00:00.000Z" };
+    expect(linkedTicketRefs([newer, LINK] as ThreadLink[])).toHaveLength(1);
+  });
+});
+
+describe("linkedRefKeys", () => {
+  it("maps links to owner-repo#number strings for the status fetch", () => {
+    expect(linkedRefKeys([LINK, OTHER])).toEqual([
+      "cristoslc/bb-plugin-focus-board#12",
+      "cristoslc/bb-plugin-focus-board#9",
+    ]);
+  });
+
+  it("returns nothing for an absent or empty record", () => {
+    expect(linkedRefKeys(null)).toEqual([]);
+    expect(linkedRefKeys([])).toEqual([]);
   });
 });
