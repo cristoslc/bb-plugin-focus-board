@@ -40,6 +40,8 @@ import Coffee02Icon from "@hugeicons/core-free-icons/Coffee02Icon";
 import CollapseIcon from "@hugeicons/core-free-icons/CollapseIcon";
 import DashedLine02Icon from "@hugeicons/core-free-icons/DashedLine02Icon";
 import DateTimeIcon from "@hugeicons/core-free-icons/DateTimeIcon";
+import CircleDotIcon from "@hugeicons/core-free-icons/CircleDotIcon";
+import TicketIcon from "@hugeicons/core-free-icons/Ticket01Icon";
 import DiscordIcon from "@hugeicons/core-free-icons/DiscordIcon";
 import DragDropHorizontalIcon from "@hugeicons/core-free-icons/DragDropHorizontalIcon";
 import DragDropVerticalIcon from "@hugeicons/core-free-icons/DragDropVerticalIcon";
@@ -247,6 +249,7 @@ export const EXTENDED_ICON_MAP: ExtendedIconMap = {
   ChevronsDown: ArrowDownDoubleIcon,
   ChevronsUp: ArrowUpDoubleIcon,
   CircleArrowShrink: CircleArrowShrink01Icon,
+  CircleDot: CircleDotIcon,
   Clean: CleanIcon,
   Clock: Clock01Icon,
   ClockArrowUp: ClockArrowUpIcon,
@@ -334,6 +337,7 @@ export const EXTENDED_ICON_MAP: ExtendedIconMap = {
   Star: StarIcon,
   Terminal: ComputerTerminal01Icon,
   TextWrap: TextWrapIcon,
+  Ticket: TicketIcon,
   TimeSchedule: TimeScheduleIcon,
   UserRound: UserIcon,
   ZoomIn: ZoomInAreaIcon,

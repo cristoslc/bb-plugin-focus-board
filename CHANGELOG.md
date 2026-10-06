@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Ticket chips say their source and their kind at a glance.** Each chip
+  now leads with its provider mark — GitHub's brand, or a generic ticket
+  glyph when the source can't be named — followed by the issue-vs-PR glyph,
+  whose open/merged/closed color takes over the old bare state dot.
+
 ## [1.0.0] - 2026-10-05
 
 ### Added
