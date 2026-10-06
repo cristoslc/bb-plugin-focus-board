@@ -13,6 +13,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
+    "text": "**Ticket chips say their source and their kind at a glance.** Each chip now leads with its provider mark — GitHub's own mark, or a generic ticket glyph when the source can't be named — followed by the issue-vs-PR glyph, whose open/merged/closed color takes over the old bare state dot.",
+    "children": []
+  },
+  {
     "text": "**Mobile thread pane: thread actions drop from a split caret, like Open in.** The standalone ⋯ button next to the Mark Read toggle is gone — an icon-only toggle, a hairline divider, and an attached ChevronDown caret now use the same grammar as the Open in menu at every width. ([#14](https://github.com/cristoslc/bb-plugin-focus-board/issues/14))",
     "children": []
   }

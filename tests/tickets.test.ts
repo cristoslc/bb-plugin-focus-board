@@ -103,25 +103,36 @@ describe("findTicketRefs — #N hash refs", () => {
 });
 
 describe("findTicketRefs — GitHub URL forms", () => {
-  it("matches an issue URL", () => {
+  it("matches an issue URL and marks it kind issue", () => {
     expect(findTicketRefs("see https://github.com/owner/repo/issues/123")).toEqual([
       {
         raw: "https://github.com/owner/repo/issues/123",
         tracker: "github",
+        kind: "issue",
         number: 123,
         href: "https://github.com/owner/repo/issues/123",
       },
     ]);
   });
 
-  it("matches a pull URL", () => {
+  it("matches a pull URL and marks it kind pull", () => {
     expect(findTicketRefs("https://github.com/owner/repo/pull/45#discussion")).toEqual([
       {
         raw: "https://github.com/owner/repo/pull/45",
         tracker: "github",
+        kind: "pull",
         number: 45,
         href: "https://github.com/owner/repo/pull/45",
       },
+    ]);
+  });
+
+  it("leaves plain #N refs kindless — status resolves issue vs PR later", () => {
+    // A bare "#17" sits in the shared GitHub number space (issues and PRs
+    // share it), so the text alone cannot say; the ref stays kindless and
+    // the chip defaults to the issue glyph until live status corrects it.
+    expect(findTicketRefs("resolve #17", { repoHrefBase: BASE })).toEqual([
+      { raw: "#17", tracker: "github", number: 17, href: `${BASE}/issues/17` },
     ]);
   });
 

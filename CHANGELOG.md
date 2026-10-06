@@ -14,6 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - **The pane's actions menu now leads with the state toggles.** Mark Done and Pin sit at the top, Snooze keeps its divider, and "New child thread…" moved down below the snooze entry, away from the everyday toggles.
+- **Ticket chips say their source and their kind at a glance.** Each chip now leads with its provider mark — GitHub's own mark, or a generic ticket glyph when the source can't be named — followed by the issue-vs-PR glyph, whose open/merged/closed color takes over the old bare state dot.
 
 ### Fixed
 

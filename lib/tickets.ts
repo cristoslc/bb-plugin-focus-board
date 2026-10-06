@@ -22,6 +22,13 @@ export interface TicketRef {
   raw: string;
   /** "generic" for PROJ-123 style keys, "github" for #N and GitHub URLs. */
   tracker: "generic" | "github";
+  /**
+   * Issue vs PR when the raw text itself implies it (GitHub URL refs).
+   * Plain "#N" refs stay kindless — issues and PRs share GitHub's number
+   * space — and the chip defaults to the issue glyph until live status
+   * corrects it.
+   */
+  kind?: "issue" | "pull";
   /** Issue/PR number for numeric refs (#123, GitHub URL forms). */
   number?: number;
   /** Project key for PROJ-123 style refs, e.g. "PROJ". */
@@ -51,9 +58,10 @@ const KEY_REF = /\b([A-Z][A-Z0-9]*[A-Z]|[A-Z][A-Z0-9]{1,})-(\d+)\b(?![-\w])/g;
 // #0 is rejected below.
 const HASH_REF = /(?<![#a-zA-Z])#(\d+)/g;
 
-// Full GitHub issue/PR URLs. The trailing fragment is allowed in the text
-// but not captured into the ref.
-const GITHUB_URL = /(?<raw>https:\/\/github\.com\/(?<owner>[\w.-]+)\/(?<repo>[\w.-]+)\/(?:issues|pull)\/(?<num>\d+))(?:#[^\s]*)?/g;
+// Full GitHub issue/PR URLs. The path segment is captured (issues|pull) so
+// the ref can carry its issue-vs-PR kind. The trailing fragment is allowed
+// in the text but not captured into the ref.
+const GITHUB_URL = /(?<raw>https:\/\/github\.com\/(?<owner>[\w.-]+)\/(?<repo>[\w.-]+)\/(?<kind>issues|pull)\/(?<num>\d+))(?:#[^\s]*)?/g;
 
 function pushUnique(refs: TicketRef[], ref: TicketRef): void {
   if (!refs.some((existing) => existing.raw === ref.raw)) refs.push(ref);
@@ -74,10 +82,15 @@ export function findTicketRefs(title: string, options: TicketRefOptions = {}): T
     if (!text) return;
 
     for (const match of text.matchAll(GITHUB_URL)) {
-      const { raw, num } = match.groups as { raw: string; num: string };
+      const { raw, num, kind } = match.groups as {
+        raw: string;
+        num: string;
+        kind: "issues" | "pull";
+      };
       pushUnique(refs, {
         raw,
         tracker: "github",
+        kind: kind === "pull" ? "pull" : "issue",
         number: Number(num),
         href: raw,
       });
