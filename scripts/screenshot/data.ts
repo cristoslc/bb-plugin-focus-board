@@ -61,7 +61,7 @@ export const SIM_DONE_RECORDS: Record<string, { doneAt: string }> = {
   thr_proj_done: { doneAt: new Date(SIM_NOW - 13 * DAY).toISOString() },
 };
 
-type SimThread = Record<string, unknown> & {
+export type SimThread = Record<string, unknown> & {
   id: string;
   updatedAt: number;
 };
@@ -391,5 +391,127 @@ export const SIM_THREADS: readonly SimThread[] = [
     displayTitle: "Add MIT license",
     updatedAt: SIM_NOW - 4 * DAY,
     lastReadAt: SIM_NOW - 4 * DAY,
+  }),
+];
+
+/**
+ * Demo-mode extras (`?demo=1`): three fresh families so screenshot runs show
+ * nested child threads folded and unfolded inside the attention lanes. The
+ * base fixture's families are deliberately 9–17 days old to keep the
+ * parent-lane UAT lanes stable, so they never surface in an attention
+ * column; these land in the lanes a new board shows on arrival.
+ *
+ * Column placement follows nesting.ts's rules: the Working and Unread
+ * families lift on an active/unread child (`familyColumnOverrides`), while
+ * the Needs-you family lifts on its parent's OWN pending-interaction state —
+ * an attention child un-nests to its own card instead of lifting the family,
+ * so the family itself carries the flag.
+ */
+export const SIM_DEMO_THREADS: readonly SimThread[] = [
+  // Family A — Working (lifted by its two active children), expanded in the
+  // shots: a parent card with three nested child rows visible.
+  thread({
+    id: "thr_demo_work",
+    displayTitle: "Cut the 1.0.0 release branch",
+    updatedAt: SIM_NOW - 30 * MINUTE,
+    lastReadAt: SIM_NOW - 30 * MINUTE,
+    environment: boardEnv("release/1.0.0"),
+  }),
+  thread({
+    id: "thr_demo_work_c0",
+    displayTitle: "Regenerate the what's-new gift from the changelog",
+    parentThreadId: "thr_demo_work",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 40 * 1000,
+    environment: boardEnv("release/1.0.0"),
+  }),
+  thread({
+    id: "thr_demo_work_c1",
+    displayTitle: "Smoke the marketplace install range",
+    parentThreadId: "thr_demo_work",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 3 * MINUTE,
+    environment: boardEnv("release/1.0.0"),
+  }),
+  thread({
+    id: "thr_demo_work_c2",
+    displayTitle: "Sweep the stale done fixtures",
+    parentThreadId: "thr_demo_work",
+    updatedAt: SIM_NOW - 18 * MINUTE,
+    lastReadAt: SIM_NOW - 18 * MINUTE,
+    environment: boardEnv("release/1.0.0"),
+  }),
+
+  // Family B — Needs you (lifted by the parent's own pending interaction),
+  // collapsed in the shots: a "3 child threads" fold over a status dot strip
+  // whose dots span working, unread, and idle colors.
+  thread({
+    id: "thr_demo_needs",
+    displayTitle: "Migrate the household ledger schema",
+    hasPendingInteraction: true,
+    indicatorLabel: "Thread needs user input",
+    latestAttentionAt: SIM_NOW - 9 * MINUTE,
+    updatedAt: SIM_NOW - 9 * MINUTE,
+    lastReadAt: SIM_NOW - 25 * MINUTE,
+  }),
+  thread({
+    id: "thr_demo_needs_c0",
+    displayTitle: "Backfill the ledger rows in batches",
+    parentThreadId: "thr_demo_needs",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 4 * MINUTE,
+    environment: boardEnv("feat/ledger-migrate"),
+  }),
+  thread({
+    id: "thr_demo_needs_c1",
+    displayTitle: "Audit the legacy ledger rows",
+    parentThreadId: "thr_demo_needs",
+    isUnread: true,
+    lastReadAt: SIM_NOW - 40 * MINUTE,
+    updatedAt: SIM_NOW - 20 * MINUTE,
+  }),
+  thread({
+    id: "thr_demo_needs_c2",
+    displayTitle: "Tag the schema version",
+    parentThreadId: "thr_demo_needs",
+    updatedAt: SIM_NOW - 35 * MINUTE,
+    lastReadAt: SIM_NOW - 35 * MINUTE,
+  }),
+
+  // Family C — Unread (lifted by its unread child), expanded, on another
+  // project with a different provider so the nested rows also carry the
+  // project/provider variety the loose cards show.
+  thread({
+    id: "thr_demo_unread",
+    displayTitle: "Research the realtime sidebar bridge",
+    updatedAt: SIM_NOW - 3 * HOUR,
+    lastReadAt: SIM_NOW - 3 * HOUR,
+    projectId: "proj_web",
+    providerId: "codex",
+    href: `/projects/web/threads/${"thr_demo_unread"}`,
+  }),
+  thread({
+    id: "thr_demo_unread_c0",
+    displayTitle: "Benchmark the archived-changed bridge",
+    parentThreadId: "thr_demo_unread",
+    isUnread: true,
+    lastReadAt: SIM_NOW - 90 * MINUTE,
+    updatedAt: SIM_NOW - 50 * MINUTE,
+    projectId: "proj_web",
+    providerId: "codex",
+    href: `/projects/web/threads/${"thr_demo_unread_c0"}`,
+  }),
+  thread({
+    id: "thr_demo_unread_c1",
+    displayTitle: "Sketch the subscribe fan-out",
+    parentThreadId: "thr_demo_unread",
+    updatedAt: SIM_NOW - 2 * HOUR,
+    lastReadAt: SIM_NOW - 2 * HOUR,
+    projectId: "proj_web",
+    providerId: "codex",
+    href: `/projects/web/threads/${"thr_demo_unread_c1"}`,
   }),
 ];

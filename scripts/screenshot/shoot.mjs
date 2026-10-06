@@ -55,18 +55,24 @@ async function openPermissionsPane(target) {
 // Emulation.setTouchEmulationEnabled), failing roughly two runs in three. One
 // page per shot removes the repeated emulation flips entirely.
 const SHOTS = [
-  { name: "board-thread-pane", viewport: "desktop", pane: true },
-  { name: "phone-board", viewport: "phone", pane: false },
-  { name: "phone-thread-pane", viewport: "phone", pane: true },
+  // The screenshots are the demo surface: `?demo=1` adds the fresh demo
+  // families (data.ts SIM_DEMO_THREADS) and `?collapsed=` folds one of them,
+  // so every shot shows nested child threads both folded ("N child threads"
+  // over its status-dot strip) and unfolded, in addition to all the base
+  // elements the fixture covers. UAT suites never set the flag and keep the
+  // base fixture their lane and column-order assertions are pinned to.
+  { name: "board-thread-pane", viewport: "desktop", pane: true, query: "?groupBy=status&demo=1&collapsed=thr_demo_needs" },
+  { name: "phone-board", viewport: "phone", pane: false, query: "?groupBy=status&demo=1&collapsed=thr_demo_needs" },
+  { name: "phone-thread-pane", viewport: "phone", pane: true, query: "?groupBy=status&demo=1&collapsed=thr_demo_needs" },
 ];
 
 async function captureAll() {
-  for (const { name, viewport, pane } of SHOTS) {
+  for (const { name, viewport, pane, query } of SHOTS) {
     console.log(`  ${name}`);
     const shotPage = await browser.newPage();
     try {
       await shotPage.setViewport(VIEWPORTS[viewport]);
-      await goto(shotPage, "?groupBy=status");
+      await goto(shotPage, query);
       if (pane) await openPermissionsPane(shotPage);
       await shotPage.screenshot({
         path: `${OUT}${name}-${currentTheme}.png`,

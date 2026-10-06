@@ -9,7 +9,7 @@
  */
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
-import { SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES } from "./data";
+import { SIM_DEMO_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, type SimThread } from "./data";
 import { applyMoveVisible } from "../../lib/rank";
 // Pure constants only — lib/sweep would drag components/grouping into the
 // mock, whose SDK-app import this file itself stands in for (cycle).
@@ -161,8 +161,15 @@ export function experimental_useSidebarThreads(): unknown {
   };
 }
 
-/** A copy the mock actions can rewrite; the constant stays pristine. */
-let simThreads: readonly SimThread[] = SIM_THREADS;
+/** A copy the mock actions can rewrite; the constant stays pristine. In
+ *  screenshot demo mode (`?demo=1`) it also gains the fresh demo families
+ *  (data.ts SIM_DEMO_THREADS) so shots show nested child threads folded and
+ *  unfolded in the attention lanes. UAT suites never set the flag, so their
+ *  lane and column-order assertions see exactly the base fixture. */
+const DEMO_MODE = new URLSearchParams(window.location.search).get("demo") === "1";
+let simThreads: readonly SimThread[] = DEMO_MODE
+  ? [...SIM_THREADS, ...SIM_DEMO_THREADS]
+  : SIM_THREADS;
 
 /** Threads archived in the harness; `threads.list({ archived: true })` serves these. */
 let simArchived: readonly SimThread[] = [];
@@ -245,7 +252,7 @@ const mockSdk = {
     // The pane resolves the thread's environment once (the inline-code
     // decoration gates on it); mirror the fixture's own environment id.
     get: async ({ threadId }: { threadId: string }) => {
-      const sim = SIM_THREADS.find((candidate) => candidate.id === threadId);
+      const sim = simThreads.find((candidate) => candidate.id === threadId);
       const environment = sim?.environment as { id?: string } | null;
       return { environmentId: environment?.id ?? null };
     },
