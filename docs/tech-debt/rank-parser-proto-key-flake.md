@@ -1,6 +1,9 @@
 # Rank parser drops `__proto__` keys across the persist/parse round-trip
 
-Status: open (fix planned — test-first, see Part 2 of the #14 follow-up)
+Status: fixed in commit 3a260a85ea4ec136492e7d11130ac466d36410f1
+(branch `bb/fix-rank-store-proto-key-flake`, 2026-10-05 — test-first:
+deterministic failing test added in the same commit and confirmed red
+before the fix landed)
 
 ## Observed failure
 
