@@ -78,6 +78,11 @@ export interface BrowserRevealResult {
   stillHidden: BrowserTabRecord[];
 }
 
+/** The board banner's payload for a reveal gesture the operator must hear about. */
+export interface BrowserRevealNotice {
+  message: string;
+}
+
 /**
  * Wait between the focus call and the first reveal: bb's router applies
  * `navigate.toThread` asynchronously, and the host checks focus at
