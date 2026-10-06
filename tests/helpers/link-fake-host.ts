@@ -14,11 +14,23 @@ export type LinkTestHost = {
   callRpc: (method: string, input?: unknown) => Promise<unknown>;
 };
 
-export async function setup(opts: { threads?: string[] } = {}): Promise<LinkTestHost> {
+export async function setup(opts: {
+  threads?: string[];
+  /** gitRemoteUrl the stubbed projects.get returns (null = no remote). */
+  projectRemote?: string | null;
+} = {}): Promise<LinkTestHost> {
   const meta = new Map<string, JsonValue>();
+  const remote = "projectRemote" in opts ? opts.projectRemote : "https://github.com/a/b.git";
   const host: FakePluginHost = createFakePluginHost({
     pluginId: "focus-board",
     sdk: {
+      projects: {
+        get: async (_args: { projectId: string }) => ({
+          id: "project-test",
+          name: "Test project",
+          gitRemoteUrl: remote,
+        }),
+      },
       threads: {
         list: async () => (opts.threads ?? []).map((id) => ({ id })),
         getPluginMetadata: async (args: { threadId: string }) =>

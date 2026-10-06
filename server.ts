@@ -2570,6 +2570,97 @@ export default async function plugin(bb: BbPluginApi) {
     },
   });
 
+  // Board-linked GitHub items: the agent surface (issue #13). The tool's
+  // `instructions` nudge — the AGENTS.md-style push — rides with the tool's
+  // presence in the session's tool set, so any thread's agent learns to link
+  // what it files, without text pasted into every repo's AGENTS.md.
+  const LINK_AGENT_TOOL = "focus_board_link_issue";
+  bb.agents.registerTool({
+    name: LINK_AGENT_TOOL,
+    description:
+      "Link this bb thread to a GitHub issue or pull request so the Focus Board card shows a chip with a live status dot. Call it right after you open or file the issue or PR, passing its URL.",
+    instructions: [
+      "Linking work to GitHub: whenever you open or file a GitHub issue or",
+      "pull request for this thread's work, call focus_board_link_issue with",
+      "the returned URL so the Focus Board card carries its chip (number,",
+      "kind, and live status dot). One call per item; call focus_board_link_issue",
+      "with no arguments is invalid, and a bare number needs a GitHub remote",
+      "on the thread's project, so prefer the URL form.",
+    ].join("\n"),
+    parameters: z
+      .object({
+        url: z.string().optional(),
+        number: z.number().int().positive().optional(),
+        kind: z.enum(["issue", "pull"]).optional(),
+      })
+      .superRefine((value, refineCtx) => {
+        if ((value.url === undefined) === (value.number === undefined)) {
+          refineCtx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Pass exactly one of url or number.",
+          });
+        }
+        if (value.url !== undefined && !/^https:\/\/github\.com\//.test(value.url)) {
+          refineCtx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "url must be a GitHub issue or PR URL.",
+          });
+        }
+      }),
+    execute: async (params, ctx) => {
+      const linkError = (text: string) => ({
+        content: [{ type: "text" as const, text }],
+        isError: true as const,
+      });
+      const parsed =
+        params.url !== undefined ? parseGithubItemUrl(params.url) : null;
+      let repo: string;
+      let number: number;
+      let kind: "issue" | "pull";
+      if (parsed !== null) {
+        ({ repo, issue: number, kind } = parsed);
+      } else if (params.number !== undefined) {
+        number = params.number;
+        kind = params.kind ?? "issue";
+        // Repo from the thread's project remote only; never guessed. The
+        // URL form is preferred precisely because bare numbers need this.
+        const project = await bb.sdk.projects.get({ projectId: ctx.projectId });
+        const slug = resolveRepoSlug(project.gitRemoteUrl);
+        if (slug === null) {
+          return linkError(
+            `Cannot link to a GitHub item: project ${ctx.projectId} has no GitHub remote. Pass the full GitHub issue or PR URL instead.`,
+          );
+        }
+        repo = slug;
+      } else {
+        return linkError(
+          `${params.url} is not a GitHub issue or PR URL (https://github.com/<owner>/<repo>/(issues|pull)/<n>).`,
+        );
+      }
+      const link: ThreadLink = {
+        repo,
+        issue: number,
+        kind,
+        href: linkHref(repo, kind, number),
+        createdAt: new Date().toISOString(),
+        source: "agent",
+      };
+      await writeLinkedIssues(
+        ctx.threadId,
+        stampLinkedIssues(await readLinkedIssues(ctx.threadId), link),
+      );
+      await publishLinksChanged([ctx.threadId]);
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Linked this thread to ${link.href}; the Focus Board card now carries the chip.`,
+          },
+        ],
+      };
+    },
+  });
+
   bb.cli.register(
     defineCli({
       name: "focus-board",
