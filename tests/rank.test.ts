@@ -64,6 +64,32 @@ describe("rank store parsing", () => {
       { "status:unread": ["thr_a", "thr_b"] },
     );
   });
+
+  it("carries a persisted __proto__ key through parse → persist → parse as an identity", () => {
+    // Deterministic pin of the fast-check flake: JSON.parse (like the KV
+    // row read) makes "__proto__" an OWN property, so a persisted row can
+    // legitimately carry it in. The parse must treat it as an ordinary
+    // string key — never invoke Object.prototype's __proto__ accessor,
+    // which would drop the entry AND re-point the store's prototype.
+    const persistedRow = JSON.parse(
+      '{"__proto__":["thr_x"],"pinned":["thr_a"]}',
+    ) as Record<string, string[]>;
+
+    const parsed = parseRankStore(persistedRow);
+    // An own data property, not a prototype change: the key survives and
+    // the parsed store is still a plain object.
+    expect(Object.hasOwn(parsed, "__proto__")).toBe(true);
+    expect(Object.getPrototypeOf(parsed)).toBe(Object.prototype);
+    expect(parsed["__proto__"]).toEqual(["thr_x"]);
+
+    const reparsed = parseRankStore(rankRowFromStore(parsed));
+    expect(Object.hasOwn(reparsed, "__proto__")).toBe(true);
+    expect(reparsed).toEqual(persistedRow);
+
+    // The parser must not pollute Object.prototype for its own object or
+    // for unrelated object literals.
+    expect(Object.hasOwn({} as object, "__proto__")).toBe(false);
+  });
 });
 
 describe("applyMove", () => {

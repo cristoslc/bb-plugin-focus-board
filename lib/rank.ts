@@ -62,7 +62,19 @@ export function parseRankStore(raw: unknown): RankStore {
     }
     // De-duplicate defensively: a repeat would make index lookups
     // order-dependent for no benefit.
-    out[columnKey] = [...new Set(value as string[])];
+    // Defined as an explicit own data property, never assigned: with a
+    // plain `out[columnKey] = ...` assignment, a column key of "__proto__"
+    // invokes Object.prototype's accessor instead — the column would
+    // silently vanish from the store AND the store's own prototype would
+    // be re-pointed at the order array. JSON.parse (what the KV row read
+    // is) can deliver such a key as a genuine own property, so the parse
+    // must treat it like any other string key.
+    Object.defineProperty(out, columnKey, {
+      value: [...new Set(value as string[])],
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
   }
   return out;
 }
