@@ -32,6 +32,13 @@ host app involved.
   toggling the `dark` class per pass: board with the thread pane open
   (1920x1080), plus board and thread pane at phone size (390x844) —
   `name-dark.png` / `name-light.png` files.
+- `repro-markread-mobile.mjs` — one-shot headless repro for the mobile
+  thread-actions bug (#14): opens a thread pane at phone size (390x844),
+  dumps the pane header's control list to
+  `docs/screenshots/repro-markread-mobile/evidence.json`, and captures
+  `phone-thread-pane.png`. Run the vite harness first (same as above),
+  then `node scripts/screenshot/repro-markread-mobile.mjs`; honors the
+  same `CHROME_PATH` and `HARNESS_URL` overrides.
 
 Regenerate the screenshots:
 

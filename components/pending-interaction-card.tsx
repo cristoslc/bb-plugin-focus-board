@@ -37,6 +37,12 @@ import { cn } from "@/lib/utils";
  * advances / submits, a collapsible banner so the transcript stays readable,
  * and a height-capped, internally-scrolling body. Payloads the pane cannot
  * render fall back to a pointer at the main view.
+ *
+ * Partial answers survive a reload or thread switch: the form mirrors them
+ * into localStorage keyed by interaction id (bb persists composer drafts in
+ * the host, but the SDK keeps nothing for question answers), writes as the
+ * user works, and clears when the interaction settles. A draft can never leak
+ * into a different question.
  */
 
 type InteractionsListResult = Awaited<
@@ -207,6 +213,161 @@ export function buildAnswers(
 /** Tab label for a question; the host defaults to "Question N". */
 export function tabLabel(question: QuestionSpec, index: number): string {
   return question.shortLabel ?? `Question ${index + 1}`;
+}
+
+// ---------------------------------------------------------------------------
+// Draft persistence
+//
+// bb's host composer persists its draft (the new-thread modal's "saved as you
+// type" promise), but nothing in the SDK or the interaction record does that
+// for question answers: a reload or thread switch remounts this card and
+// React state is gone. So the card mirrors answer state into localStorage,
+// keyed by interaction id — the id stays stable across reloads (the re-fetched
+// pending row carries it), and keying by it means a different later question
+// can never inherit an earlier one's answers. Storage can throw in embedded
+// contexts, so every access is best-effort: the form still works, just
+// without recovery.
+// ---------------------------------------------------------------------------
+
+const QUESTION_DRAFT_PREFIX = "focus-board:questionDraft:";
+
+/** The storage key for one interaction's in-progress answers. */
+export function questionDraftKey(threadId: string, interactionId: string): string {
+  return `${QUESTION_DRAFT_PREFIX}${threadId}:${interactionId}`;
+}
+
+interface QuestionDraft {
+  states: Record<string, QuestionAnswerState>;
+  step: number;
+}
+
+/** Stored-shape check; null for anything else (draft unusable, start blank). */
+function parseDraftState(value: unknown): QuestionAnswerState | null {
+  if (!isRecord(value)) return null;
+  if (
+    !Array.isArray(value.selected) ||
+    !value.selected.every((entry) => typeof entry === "string")
+  ) {
+    return null;
+  }
+  if (typeof value.otherSelected !== "boolean") return null;
+  if (typeof value.otherText !== "string") return null;
+  return {
+    selected: value.selected,
+    otherSelected: value.otherSelected,
+    // The textarea caps at MAX_FREE_TEXT_LENGTH on every keystroke; slice
+    // here too so a draft written before any cap change stays in bounds.
+    otherText: value.otherText.slice(0, MAX_FREE_TEXT_LENGTH),
+  };
+}
+
+/**
+ * Reads one interaction's draft, validated against the questions it hydrates:
+ * unknown questions, stored questions, and stale selections are dropped (the
+ * form filters orphans before submitting; hydration filters the same way).
+ * Null means "nothing usable" — the form opens blank, never partially.
+ */
+export function readQuestionDraft(
+  key: string,
+  questions: QuestionSpec[],
+): QuestionDraft | null {
+  let raw: string | null;
+  try {
+    raw = window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+  if (raw === null) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!isRecord(parsed) || parsed.v !== 1 || !isRecord(parsed.states)) return null;
+  const storedStates = parsed.states;
+  const states: Record<string, QuestionAnswerState> = {};
+  for (const question of questions) {
+    const stored = parseDraftState(storedStates[question.id]);
+    if (stored === null) return null;
+    states[question.id] = {
+      ...stored,
+      selected: knownSelections(question, stored.selected),
+    };
+  }
+  const step =
+    typeof parsed.step === "number" &&
+    Number.isInteger(parsed.step) &&
+    parsed.step >= 0
+      ? Math.min(parsed.step, questions.length - 1)
+      : 0;
+  return { states, step };
+}
+
+/** Best-effort write; a failed write just loses persistence, not the form. */
+export function writeQuestionDraft(
+  key: string,
+  states: Record<string, QuestionAnswerState>,
+  step: number,
+): void {
+  try {
+    window.localStorage.setItem(key, JSON.stringify({ v: 1, states, step }));
+  } catch {
+    // Best effort only; the form still works without persistence.
+  }
+}
+
+/** Removes one interaction's draft (on submit, dismiss, or settle). */
+export function clearQuestionDraft(key: string): void {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // Best effort only.
+  }
+}
+
+/**
+ * Removes the drafts of this thread's interactions the list reports as
+ * settled (any non-pending status). Deliberately does NOT remove keys whose
+ * interaction id the list did not return — a truncated/missing row cannot be
+ * told apart from one still pending but not shown — and the explicit clears
+ * above cover the common settle paths, so at most a rare timed-out draft
+ * lingers until its row surfaces as settled.
+ */
+export function clearSettledQuestionDrafts(
+  threadId: string,
+  rows: readonly { id: string; status: string }[],
+): void {
+  const prefix = `${QUESTION_DRAFT_PREFIX}${threadId}:`;
+  let settled: Set<string> | null = null;
+  for (const row of rows) {
+    if (row.status === "pending" || row.status === "resolving") continue;
+    (settled ??= new Set()).add(row.id);
+  }
+  if (settled === null) return;
+  try {
+    const doomed = Object.keys(window.localStorage).filter(
+      (key) => key.startsWith(prefix) && settled.has(key.slice(prefix.length)),
+    );
+    for (const key of doomed) {
+      try {
+        window.localStorage.removeItem(key);
+      } catch {
+        // Keep sweeping; a stuck key is only stale junk.
+      }
+    }
+  } catch {
+    // Best effort only.
+  }
+}
+
+/** The blank per-question state map a form starts from. */
+function freshAnswerStates(
+  questions: QuestionSpec[],
+): Record<string, QuestionAnswerState> {
+  const initial: Record<string, QuestionAnswerState> = {};
+  for (const question of questions) initial[question.id] = initialAnswerState(question);
+  return initial;
 }
 
 /**
@@ -381,6 +542,7 @@ function QuestionForm({
   onSubmit,
   onCancel,
   cancelCancelsForm,
+  draftKey,
 }: {
   questions: QuestionSpec[];
   disabled: boolean;
@@ -388,16 +550,31 @@ function QuestionForm({
   onCancel: () => void;
   /** Labels the footer cancel: Dismiss (cancellable plugin form) vs Stop turn. */
   cancelCancelsForm: boolean;
+  /** The storage key this form's draft hydrates from and writes to. */
+  draftKey: string;
 }) {
   const coarse = usePointerCoarse();
+  // One read per mount: the stored draft seeds both the answer states and
+  // the open tab. Null means no stored draft (or unusable) — start blank.
+  const [hydratedDraft] = useState(() => readQuestionDraft(draftKey, questions));
   const [states, setStates] = useState<Record<string, QuestionAnswerState>>(() => {
-    const initial: Record<string, QuestionAnswerState> = {};
-    for (const question of questions) initial[question.id] = initialAnswerState(question);
-    return initial;
+    return hydratedDraft?.states ?? freshAnswerStates(questions);
   });
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(() => hydratedDraft?.step ?? 0);
   const [submitting, setSubmitting] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Mirror answer changes into storage as they happen, so a reload loses
+  // nothing typed. The first effect run is the mount itself — nothing to save
+  // (and a pre-interaction key must not appear); every later run is a change.
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    writeQuestionDraft(draftKey, states, step);
+  }, [draftKey, states, step]);
 
   const current = visibleQuestion(questions, step);
   const first = step === 0;
@@ -680,12 +857,24 @@ export function PendingInteractionCard({ threadId, onOpenInMainView }: PendingIn
                 (typeof row.payload.kind === "string" && row.payload.kind.includes("/"))),
           ) ?? null;
       setInteraction(pending);
-      setActionError(null);
+      // Errors are per-interaction: a refresh answering with the same pending
+      // interaction keeps any error raised since (the failed-submit case);
+      // one that swaps or empties it clears what would be stale.
+      const nextId = pending?.id ?? null;
+      if (interactionIdRef.current !== nextId) setActionError(null);
+      interactionIdRef.current = nextId;
+      // Interactions the host reports settled no longer need their drafts
+      // (they were never submitted from this pane).
+      clearSettledQuestionDrafts(threadId, rows);
     } catch {
       // Unknown/unavailable thread — no card rather than a broken pane.
       setInteraction(null);
     }
   }, [sdk, threadId]);
+
+  // Which pending interaction the card currently reflects; errors belong to
+  // one interaction, so refresh clears them only when a different one arrives.
+  const interactionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     setInteraction(null);
@@ -753,6 +942,9 @@ export function PendingInteractionCard({ threadId, onOpenInMainView }: PendingIn
             value: { answers },
           });
         }
+        // Answered: the draft has nowhere to go. Cleared only on success — a
+        // failed submit leaves the interaction pending and the answers kept.
+        clearQuestionDraft(questionDraftKey(threadId, interaction.id));
       } catch (cause) {
         setActionError(
           cause instanceof Error && cause.message.length > 0
@@ -778,6 +970,9 @@ export function PendingInteractionCard({ threadId, onOpenInMainView }: PendingIn
         // out means stopping the turn, exactly like the host's form.
         await sdk.threads.stop({ threadId });
       }
+      // Dismissed without answering: a fresh look at the same interaction
+      // should not inherit these, so the draft goes on success only.
+      clearQuestionDraft(questionDraftKey(threadId, interaction.id));
     } catch (cause) {
       setActionError(
         cause instanceof Error && cause.message.length > 0
@@ -865,6 +1060,7 @@ export function PendingInteractionCard({ threadId, onOpenInMainView }: PendingIn
               questions={questionData.questions}
               disabled={busy}
               cancelCancelsForm={dismissCancelsForm}
+              draftKey={questionDraftKey(threadId, interaction.id)}
               onCancel={() => void dismiss()}
               onSubmit={(answers) => void submitAnswer(answers)}
             />

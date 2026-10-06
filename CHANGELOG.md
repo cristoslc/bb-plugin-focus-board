@@ -5,12 +5,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **The pane's question form keeps half-answered questions alive.** Picks and free text survive a reload or a thread switch and restore with the open tab, then clear once the question is submitted or dismissed — the same recovery the new-thread composer gives prompts.
+- **Card menus now surface a thread's controlled browser tab.** "Reveal browser tab" discovers the thread's desktop-browser tabs, focuses the owning thread, and opens the side panel on the page's tab — blank carrier tabs skipped — one click straight from the board. bb offers no honest success signal here (it answers `ok` even when the reveal no-ops, and `tabs`' `presentation` field never reflects live visibility), so the gesture claims nothing; the opened panel is the feedback.
+  ([#17](https://github.com/cristoslc/bb-plugin-focus-board/issues/17))
+
 ### Changed
 
-- **Ticket chips say their source and their kind at a glance.** Each chip
-  now leads with its provider mark — GitHub's brand, or a generic ticket
-  glyph when the source can't be named — followed by the issue-vs-PR glyph,
-  whose open/merged/closed color takes over the old bare state dot.
+- **The pane's actions menu now leads with the state toggles.** Mark Done and Pin sit at the top, Snooze keeps its divider, and "New child thread…" moved down below the snooze entry, away from the everyday toggles.
+- **Ticket chips say their source and their kind at a glance.** Each chip now leads with its provider mark — GitHub's own mark, or a generic ticket glyph when the source can't be named — followed by the issue-vs-PR glyph, whose open/merged/closed color takes over the old bare state dot.
+
+### Fixed
+
+- **Mobile thread pane: thread actions drop from a split caret, like Open
+  in.** The standalone ⋯ button next to the Mark Read toggle is gone — an
+  icon-only toggle, a hairline divider, and an attached ChevronDown caret
+  now use the same grammar as the Open in menu at every width.
+  ([#14](https://github.com/cristoslc/bb-plugin-focus-board/issues/14))
 
 ## [1.0.0] - 2026-10-05
 

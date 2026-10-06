@@ -24,6 +24,7 @@ import {
 import { ThreadCard } from "./thread-card";
 import { containerSlideX, listScrollY } from "./board-scroll";
 import type { CardMenuAction } from "./thread-card-menu";
+import type { BrowserRevealNotice } from "@/lib/browser-reveal";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import {
@@ -205,6 +206,13 @@ interface BoardProps {
   /** A finished sweep's failure summary; null hides the banner. */
   sweepNotice?: SweepNotice | null;
   onDismissSweepNotice?: () => void;
+  /**
+   * The browser-reveal gesture's honest outcome on the operator's board
+   * surface (a thread with no controlled tab, a stuck-hidden tab, or a
+   * listing failure); null hides the banner.
+   */
+  browserNotice?: BrowserRevealNotice | null;
+  onDismissBrowserNotice?: () => void;
   /** Reverses a cancelled run's settled ids per their arm's destination. */
   onSweepUndo?: (
     threadIds: readonly string[],
@@ -374,6 +382,8 @@ export function Board({
   sweepRun = null,
   sweepNotice = null,
   onDismissSweepNotice,
+  browserNotice = null,
+  onDismissBrowserNotice,
   onSweepUndo,
   onSweepToggle,
   onSweepRangeSelect,
@@ -552,6 +562,17 @@ export function Board({
     );
     return () => clearTimeout(timer);
   }, [sweepNotice, onDismissSweepNotice]);
+
+  // The browser reveal's report expires the same way: a dead notice that
+  // squats on the board would be the same "ignoring the operator" look.
+  useEffect(() => {
+    if (browserNotice === null || browserNotice === undefined) return;
+    const timer = setTimeout(
+      () => onDismissBrowserNotice?.(),
+      RANK_ERROR_AUTO_DISMISS_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [browserNotice, onDismissBrowserNotice]);
 
   // A sweep-mode click on a thread that may not join a sweep (live-child
   // parent) refuses on screen: a click that silently does nothing reads as
@@ -779,6 +800,24 @@ export function Board({
               <Icon name="X" className="size-3" aria-hidden />
             </button>
           </span>
+        </div>
+      ) : null}
+      {browserNotice !== null ? (
+        <div
+          role="status"
+          data-testid="browser-reveal-notice"
+          className="mx-3 mb-1 flex items-center justify-between gap-2 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-400"
+        >
+          <p className="min-w-0">{browserNotice.message}</p>
+          <button
+            type="button"
+            onClick={() => onDismissBrowserNotice?.()}
+            aria-label="Dismiss browser notice"
+            title="Dismiss"
+            className="rounded p-0.5 text-amber-700/70 transition-colors hover:bg-amber-500/10 hover:text-amber-700 focus-visible:outline focus-visible:outline-1 focus-visible:outline-amber-600 dark:text-amber-400/70 dark:hover:text-amber-400"
+          >
+            <Icon name="X" className="size-3" aria-hidden />
+          </button>
         </div>
       ) : null}
       {sweepRefusal !== null ? (
