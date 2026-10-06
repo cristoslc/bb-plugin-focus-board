@@ -106,12 +106,12 @@ export async function revealThreadBrowserTabs(
   };
 
   const hostIds = await ports.connectedHostIds();
-  const readers: BrowserTabRecord[] = [];
+  const readerScopes: BrowserRevealScope[] = [];
   const discovered: BrowserTabRecord[] = [];
   for (const hostId of hostIds) {
     for (const { generation, instanceId } of await ports.instances(hostId)) {
       const where = { hostId, generation, instanceId, threadId };
-      readers.push({ ...where, tabId: "", threadId });
+      readerScopes.push(where);
       for (const entry of await ports.threadTabs(where)) {
         if (entry.threadId !== threadId) continue;
         discovered.push({ ...where, ...entry });
@@ -144,7 +144,7 @@ export async function revealThreadBrowserTabs(
     }
     // Re-read the truth; the core's {ok:true} proves nothing.
     const fresh: BrowserTabRecord[] = [];
-    for (const reader of readers) {
+    for (const reader of readerScopes) {
       for (const entry of await ports.threadTabs(reader)) {
         if (entry.threadId !== threadId) continue;
         fresh.push({ ...reader, tabId: entry.tabId, threadId, presentation: entry.presentation });
