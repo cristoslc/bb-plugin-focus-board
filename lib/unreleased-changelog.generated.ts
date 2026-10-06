@@ -9,6 +9,13 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
+    "text": "**Board cards carry linked-issue chips.** A thread tied to a GitHub issue or pull request in the board's own link store shows its `#N` chip with a live status dot, even when the title and branch name say nothing (issue [#13](https://github.com/cristoslc/bb-plugin-focus-board/issues/13)).",
+    "children": [
+      "**Agents are nudged to link.** The `focus_board_link_issue` tool rides thread instructions and asks agents to call it right after they open or file an issue or PR.",
+      "**The CLI links too.** `bb focus-board link list|set|clear` manages the store by hand."
+    ]
+  },
+  {
     "text": "**The pane's actions menu now leads with the state toggles.** Mark Done and Pin sit at the top, Snooze keeps its divider, and \"New child thread…\" moved down below the snooze entry, away from the everyday toggles.",
     "children": []
   },
