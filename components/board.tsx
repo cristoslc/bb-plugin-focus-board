@@ -22,6 +22,7 @@ import {
   type SweepRunView,
 } from "../lib/sweep";
 import { ThreadCard } from "./thread-card";
+import type { ThreadLink } from "../lib/link-metadata";
 import { containerSlideX, listScrollY } from "./board-scroll";
 import type { CardMenuAction } from "./thread-card-menu";
 import type { BrowserRevealNotice } from "@/lib/browser-reveal";
@@ -122,6 +123,8 @@ interface BoardProps {
   statusFor?: (repo: string | null, number: number | undefined) =>
     | { kind: string; state: string }
     | undefined;
+  /** The board's own GitHub links per thread id (metadata "linkedIssues"). */
+  linkedIssuesFor?: (threadId: string) => ThreadLink[] | undefined;
   onOpenThread: (threadId: string) => void;
   /** Close the open thread pane when the operator clicks empty board area. */
   onClosePane?: () => void;
@@ -364,6 +367,7 @@ export function Board({
   projectNameFor,
   repoBaseFor,
   statusFor,
+  linkedIssuesFor,
   onOpenThread,
   onNewTask,
   onClosePane,
@@ -1388,6 +1392,7 @@ export function Board({
                           projectName={projectNameFor(thread.projectId)}
                           repoHrefBase={repoBaseFor(thread.projectId) ?? undefined}
                           statusFor={statusFor}
+                          linkedIssues={linkedIssuesFor?.(thread.id)}
                           menuActions={menuActionsFor(thread)}
                           childThreads={
                             isDoneProjection

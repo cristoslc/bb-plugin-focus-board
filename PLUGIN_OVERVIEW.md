@@ -10,16 +10,16 @@ Focus Board is a nav panel in the bb sidebar that shows all your threads as a ka
 - **Auto-rename**: the pane's title editor can title the thread from its opening prompt with bb's AI services, falling back to the thread's own model when the pinned service can't.
 - **Snooze**: "Snooze…" reads a thread now and marks it unread again at the time you pick.
 - **Sweep**: every lane carries a sweep with its own destination — stale Done threads archive, long-idle threads move to Done, Pinned unpins, Unread marks read. Shift-click and Cmd/Ctrl-click multi-select before sweeping.
-- **Ticket chips** with GitHub status dots when the official GitHub plugin is installed.
+- **Ticket chips** for issue and PR refs in the title or branch, with GitHub status dots when the official GitHub plugin is installed. A thread whose text names nothing can still carry a chip: the board's own link store ties a thread to an item explicitly (the `focus_board_link_issue` agent tool, or `bb focus-board link set`).
 - **What's new**: a gift toolbar button lists recent changes after an update.
 
 ## How it works
 
-The board writes only pin state, read state, and Done marks through bb's own stores — never thread content. Sweep thresholds are configurable in Settings → Installed plugins or with the CLI, and any thread can be exempted with a per-card "Keep from sweep" override.
+The board writes only pin state, read state, Done marks, and per-thread issue/PR links through bb's own stores — never thread content. Sweep thresholds are configurable in Settings → Installed plugins or with the CLI, and any thread can be exempted with a per-card "Keep from sweep" override.
 
 ## CLI
 
-The plugin registers one `bb` subcommand, `bb focus-board`, for managing its own state: `done list|mark|clear`, `snooze list|set|clear`, `autotitle availability|prompt|probe`, `sweep`, and `config show|set`. All commands accept `--json`, and the sweep never archives without `--confirm`.
+The plugin registers one `bb` subcommand, `bb focus-board`, for managing its own state: `done list|mark|clear`, `link list|set|clear`, `snooze list|set|clear`, `autotitle availability|prompt|probe`, `sweep`, and `config show|set`. All commands accept `--json`, and the sweep never archives without `--confirm`.
 
 ## Requirements
 

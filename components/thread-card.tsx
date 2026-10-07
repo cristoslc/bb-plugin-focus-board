@@ -7,6 +7,7 @@ import { findTicketRefs, resolveRepoSlug, type TicketRef } from "@/lib/tickets";
 import type { GitHubItemStatus } from "@/lib/tracker-status";
 
 import { DRAG_ID_KEY, rankDragType } from "../lib/rank";
+import { linkedTicketRefs, type ThreadLink } from "../lib/link-metadata";
 import { describeWakeAt } from "../lib/snooze";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
 
@@ -124,6 +125,12 @@ interface ThreadCardProps {
   repoHrefBase?: string;
   /** GitHub cache status lookup (repo slug + number), when wired. */
   statusFor?: (repo: string | null, number: number | undefined) => GitHubItemStatus | undefined;
+  /**
+   * The board's own links for this thread (metadata key "linkedIssues"):
+   * GitHub items a thread's text never names, from the link CLI / tool.
+   * They join the chip row like text refs — see lib/link-metadata.ts.
+   */
+  linkedIssues?: ThreadLink[];
   // Ruler+wrap mini variant: fits the 136×92 context card grid.
   compact?: boolean;
 }
@@ -348,6 +355,7 @@ export function ThreadCard({
   projectName,
   repoHrefBase,
   statusFor,
+  linkedIssues,
   menuActions,
   childThreads,
   childCount,
@@ -375,10 +383,16 @@ export function ThreadCard({
   };
   const branch = thread.environment?.branchName ?? thread.host?.name ?? "";
   const repo = repoHrefBase === undefined ? null : resolveRepoSlug(repoHrefBase);
-  const ticketRefs = findTicketRefs(thread.displayTitle, {
+  const scannedTicketRefs = findTicketRefs(thread.displayTitle, {
     extraText: branch,
     repoHrefBase,
   });
+  // Links the board itself stores (issue #13) join the text-scan chips: a
+  // thread linked to an item its title and branch never name still shows the
+  // chip. href-dedupe inside keeps the scan's richer chip when identical.
+  const ticketRefs = scannedTicketRefs.concat(
+    linkedTicketRefs(linkedIssues, scannedTicketRefs),
+  );
   const children = childThreads ?? [];
   // The chip counts every visible child (prop from the raw family index);
   // fall back to the nested rows when the caller does not supply it.

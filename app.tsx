@@ -12,6 +12,7 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { findTicketRefs, resolveRepoSlug } from "./lib/tickets";
+import { linkedRefKeys, type ThreadLink } from "./lib/link-metadata";
 import { installHostLinkGlue } from "./components/host-link-glue";
 import { FocusBoardAppIcon } from "./components/ui/icon";
 import type { rpcContract } from "./server";
@@ -283,6 +284,11 @@ function BoardPage({ subPath }: { subPath: string }) {
   );
 
   const [doneIds, setDoneIds] = useState<ReadonlySet<string>>(new Set());
+  // The board's own GitHub links (metadata "linkedIssues"): the chip surface
+  // for items a thread's text never names (issue #13 — no cross-plugin read
+  // of the GitHub plugin's link rows exists). Record<string, ThreadLink[]>;
+  // a thread absent from it carries no linked chips.
+  const [linksByThread, setLinksByThread] = useState<Record<string, ThreadLink[]>>({});
   // Pinned-pin parks: a lane-exit unpin parks the pin (thread metadata via
   // RPC) so the writes that bring the card back to the operator — Mark Not
   // Done, Mark Unread — can restore it. Local optimistic state drives the
@@ -316,6 +322,10 @@ function BoardPage({ subPath }: { subPath: string }) {
         }),
       () => {}, // Settings are optional; defaults apply when unreachable.
     );
+    rpc.call("link_list").then(
+      (result) => setLinksByThread(result.links),
+      () => {}, // Links are optional state; the board works without them.
+    );
   }, [rpc]);
   useRealtime("done-changed", () => {
     rpc.call("done_list").then(
@@ -338,6 +348,15 @@ function BoardPage({ subPath }: { subPath: string }) {
           idleArchiveMs: result.idleArchiveMs,
         }),
       () => {},
+    );
+  });
+  // The board's own link signal mirrors done-changed: every open panel
+  // refetches the map, so a link written by the agent tool or the CLI
+  // converges on the card that is already on screen.
+  useRealtime("link-changed", () => {
+    rpc.call("link_list").then(
+      (result) => setLinksByThread(result.links),
+      () => {}, // Links are optional state; the board works without them.
     );
   });
   // The board's snapshot is the DoneAgeSource implementation: stamps for
@@ -927,15 +946,22 @@ function BoardPage({ subPath }: { subPath: string }) {
         .flatMap((thread) => {
           const repoBase = repoBaseByProject[thread.projectId];
           const repo = repoBase === undefined ? null : resolveRepoSlug(repoBase);
-          if (repo === null) return [];
           const branch = thread.environment?.branchName ?? thread.host?.name ?? "";
-          return findTicketRefs(thread.displayTitle, { extraText: branch })
-            .filter((ref) => ref.number !== undefined)
-            .map((ref) => `${repo}#${ref.number}`);
+          // Text refs group under the thread's project repo; the board's own
+          // links carry their repo slug, so a link still batches a status
+          // lookup even when the project remote is not GitHub.
+          return repo === null
+            ? linkedRefKeys(linksByThread[thread.id])
+            : [
+                ...findTicketRefs(thread.displayTitle, { extraText: branch })
+                  .filter((ref) => ref.number !== undefined)
+                  .map((ref) => `${repo}#${ref.number}`),
+                ...linkedRefKeys(linksByThread[thread.id]),
+              ];
         })
         .sort()
         .join(","),
-    [liveThreads, repoBaseByProject],
+    [liveThreads, repoBaseByProject, linksByThread],
   );
   useEffect(() => {
     if (visibleRefKey === "") {
@@ -1955,6 +1981,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             projectNameFor={projectNameFor}
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
+            linkedIssuesFor={(threadId) => linksByThread[threadId]}
             parentLaneOrder={parentLaneOrder}
             onParentLaneOrderChange={persistParentLaneOrder}
             onOpenThread={openThreadCard}
@@ -1986,6 +2013,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             projectNameFor={projectNameFor}
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
+            linkedIssuesFor={(threadId) => linksByThread[threadId]}
             onOpenThread={openThreadCard}
             onClosePane={closeThreadPane}
             onNewTask={openNewThread}
