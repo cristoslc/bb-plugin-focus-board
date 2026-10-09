@@ -131,4 +131,82 @@ describe("validateTrackerUrls", () => {
     });
     expect(fetched).toBe(0);
   });
+
+  // Probe boundary (security audit 2026-10-09): the text ref that drives the
+  // HTTP existence check comes from an untrusted thread title/branch, so the
+  // check must never spend a request on loopback/private hosts, must not
+  // follow redirects (a redirect could carry the probe anywhere, and login
+  // walls must not confirm existence), and must confirm on 2xx only.
+  it("a loopback https ref is refused without spending a fetch", async () => {
+    const refs = [
+      "https://localhost/owner/repo/issues/1",
+      "https://app.localhost/owner/repo/issues/2",
+      "https://127.0.0.1/owner/repo/issues/3",
+    ];
+    const d = deps({});
+    expect(await validateTrackerUrls(refs, d)).toEqual({
+      [refs[0]]: { confirmed: false },
+      [refs[1]]: { confirmed: false },
+      [refs[2]]: { confirmed: false },
+    });
+    expect(d.fetchedUrls).toEqual([]);
+  });
+
+  it("a private-range or link-local https IP ref is refused without a fetch", async () => {
+    const refs = [
+      "https://10.0.0.5/owner/repo/issues/1",
+      "https://172.16.3.9/owner/repo/issues/2",
+      "https://192.168.1.10/owner/repo/issues/3",
+      "https://169.254.2.7/owner/repo/issues/4",
+      "https://[::1]/owner/repo/issues/5",
+    ];
+    const d = deps({});
+    expect(await validateTrackerUrls(refs, d)).toEqual({
+      [refs[0]]: { confirmed: false },
+      [refs[1]]: { confirmed: false },
+      [refs[2]]: { confirmed: false },
+      [refs[3]]: { confirmed: false },
+      [refs[4]]: { confirmed: false },
+    });
+    expect(d.fetchedUrls).toEqual([]);
+  });
+
+  it("a refused ref caches as unconfirmed with the short TTL", async () => {
+    const ref = "https://localhost/owner/repo/issues/1";
+    const key = `tracker-validate:${ref}`;
+    const kv: Record<string, { ok: boolean; at: number }> = {};
+    const now = 10_000_000;
+    const d = deps({
+      kvGet: async (k) => kv[k],
+      kvSet: async (k, v) => { kv[k] = v; },
+      now: () => now,
+    });
+    expect(await validateTrackerUrls([ref], d)).toEqual({ [ref]: { confirmed: false } });
+    expect(kv[key]).toEqual({ ok: false, at: now });
+  });
+
+  it("the existence check follows no redirects (manual redirect at the seam)", async () => {
+    let seenRedirect: string | undefined;
+    const d = deps({
+      fetchImpl: async (url, init) => {
+        seenRedirect = init?.redirect;
+        return { status: 200 };
+      },
+    });
+    expect(await validateTrackerUrls([FORGEJO_ISSUE], d)).toEqual({
+      [FORGEJO_ISSUE]: { confirmed: true },
+    });
+    expect(seenRedirect).toBe("manual");
+  });
+
+  it("a redirect response (or an opaque redirect) never confirms the item", async () => {
+    const d = deps({ fetchImpl: async () => ({ status: 0 }) });
+    expect(await validateTrackerUrls([FORGEJO_ISSUE], d)).toEqual({
+      [FORGEJO_ISSUE]: { confirmed: false },
+    });
+    const moved = deps({ fetchImpl: async () => ({ status: 302 }) });
+    expect(await validateTrackerUrls([FORGEJO_ISSUE], moved)).toEqual({
+      [FORGEJO_ISSUE]: { confirmed: false },
+    });
+  });
 });

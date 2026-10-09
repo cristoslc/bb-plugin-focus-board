@@ -149,33 +149,13 @@ therefore includes a marketplace check before the cut is reported done:
 
 - Verify the release reaches marketplace installs: fetch
   `https://raw.githubusercontent.com/get-bb/marketplace/main/entries/focus-board.json`
-  and confirm `source.git.range` covers the version being tagged. Caret
-  semantics on a 0.x range pin the minor (`^0.3.1` means `>=0.3.1 <0.4.0`;
-  the `^0.3.1` covers-everything-below-1.0.0 assumption written here
-  first was wrong — caught the same day by the §4a check itself), so
-  **bump the range in the marketplace PR every cut**, to `^<released
-  version>` — the file-manager and doc-review entries carry
-  `^0.9.1`/`^0.3.0` from doing exactly that per release. PR #481 rides
-  the `^0.3.1` → `^0.9.0` bump with v0.9.0.
-- Verify the listing still describes the release: the entry's short
-  `description` and the `overview/<plugin-id>.md` it references, checked
-  against the section being renamed in §3. When they drift, open the
-  marketplace PR in the same cut: copy this repo's `PLUGIN_OVERVIEW.md`
-  (kept beside `package.json` for exactly this — it is the author-owned
-  long-form description) verbatim to `overview/focus-board.md`, and refresh
-  the short `description` to match. Only those two fields ever move for a
-  feature refresh; source/brand/tag changes are a fresh review.
+  and confirm `source.git.range` covers the version being tagged. The range
+  is a tracking contract, not a per-release pin: the marketplace README says "Use a new marketplace pull request for a source, name, or brand change", and the bb `submit-a-plugin` skill says "A compatible release within an existing tracking range usually needs no new marketplace pull request" — compatible releases are meant to flow without any marketplace PR. Whether a bump is required follows caret semantics, which differ by major: on 0.x a caret pins the minor (`^0.3.1` means `>=0.3.1 <0.4.0` — the "`^0.3.1` covers everything below 1.0.0" assumption written here first was wrong, caught the same day by this check), so every 0.x minor cut must raise the range; from 1.0 on, a caret pins only the major, so `^1.0.0` already covers 1.1.0 and every later 1.x cut. Bump the range only when the released version falls outside it: every 0.x minor, each major, and any deliberate floor raise. The per-cut bump mandate that stood here until v1.1.0 (2026-10-09) was leftover 0.x rigor — the file-manager and doc-review entries that carried the pattern (`^0.9.1`, `^0.3.0`) were cut while their plugins were 0.x, where the bump was functionally required; PR #481's `^0.3.1` → `^0.9.0` bump rode v0.9.0 before this repo hit 1.0.
+- Verify the listing still describes the release: the entry's short `description` and the `overview/<plugin-id>.md` it references, checked against the section being renamed in §3. This is a drift check, not a churn obligation — an in-range release needs no PR when the listing already covers it. The lever that keeps it that way: `PLUGIN_OVERVIEW.md` is written as a fixed set of capability pillars — "What you get" is a handful of bold-led bullets, rewritten only when a release opens a capability the page lacks, never one bullet per feature; per-release detail lives in CHANGELOG.md, which the page links to, and in the What's-new feed (the page said so itself since the 2026-10-09 rewrite, 3524 → 2841 chars against the marketplace's hard 4000-char overview cap). The Oct 8 link-chip landing drift the marketplace copy ("`link list|set|clear`" missing from its CLI line) is the cautionary example: it required a listing fix one release later. When drift is user-visible wrong (the store page names a command or behavior that shipped or vanished), open the marketplace PR in the same cut: copy this repo's `PLUGIN_OVERVIEW.md` (kept beside `package.json` for exactly this — it is the author-owned long-form description) verbatim to `overview/focus-board.md`, and refresh the short `description` to match. Only those two fields ever move for a feature refresh; source/brand/tag changes are a fresh review.
 - Marketplace-repo mechanics (learned on the 2026-10-05 refresh, PR #481):
   a changed entry is validated with `npm ci --ignore-scripts && npm run
   build && npm test && npm run check` (`gate:v1` is informational for a
-  declared change); a `description` edit is a frozen-v1 field change, so
-  the PR needs the `v1-change` label — the submitter has no label rights
-  on `get-bb/marketplace`, so request the label in the PR body, which must
-  state what the plugin does, the release source and range, the checks
-  that passed, permissions/security facts, and the overview's source commit.
-  Push the submission under a fresh branch name per cut
-  (`submit-focus-board-<date>`), never force-push the original
-  submission branch.
+  declared change); a `description` edit is a frozen-v1 field change (the frozen-v1 document holds only `id`, `displayName`, `description`, `icon`, `tags`, `author`, `source`), so a PR touching one of those needs the `v1-change` label; an `overview/`-only edit is not a v1 field and passes the gate without it — batch a description refresh with the overview copy when both drift, since one PR carrying both costs one review. The submitter has no label rights on `get-bb/marketplace`, so when the `v1-change` label is needed, request it in the PR body, which must state what the plugin does, the release source and range, the checks that passed, permissions/security facts, and the overview's source commit. Push the submission under a fresh branch name per cut (`submit-focus-board-<date>`), never force-push the original submission branch.
 
 ## 5. What's-new derivation (`WHATS_NEW` in `lib/whats-new.ts`)
 
