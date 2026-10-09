@@ -83,6 +83,21 @@ export function viewportLockedCols(
   return Math.max(1, Math.floor(viewportBudget(viewportWidth, railWidth) / (RULER.w + GAP)));
 }
 
+/** True when the viewport is too narrow to fit even the floored locked lane
+ *  (one ruler column) past the rail, the rail→lane gap, and chrome — the
+ *  point where the width cap bottoms out and a lane still overflows. The
+ *  board answers with no snap-to on scroll (the pan rests where the operator
+ *  leaves it) and header clicks select lanes instead (issue #22 follow-up).
+ *  The locked lane's floor binds before any context lane's: one ruler column
+ *  (224px) is wider than one mini column (144px), so this single check covers
+ *  every lane kind. */
+export function laneOverflowsViewport(
+  viewportWidth: number,
+  railWidth: number = RAIL_W_DEFAULT,
+): boolean {
+  return viewportBudget(viewportWidth, railWidth) < lockedLaneWidth(1);
+}
+
 /** Mini-card rows that fit one shared band of the given height. */
 function miniRowsForBand(bandHeight: number): number {
   const inner = bandHeight - CELL_PAD * 2;

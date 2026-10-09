@@ -14,6 +14,7 @@ import {
   predictedStart,
   viewportContextCols,
   viewportLockedCols,
+  laneOverflowsViewport,
   wallTrim,
 } from "../components/parent-lane-layout";
 import { thread } from "./thread-fixture";
@@ -187,7 +188,7 @@ describe("computeParentLaneLayout", () => {
     expect(viewportContextCols(4000, RAIL_W)).toBe(CONTEXT_MAX_COLS);
   });
 
-  it("a locked lane never exceeds the viewport budget, however many cards its busiest band holds", () => {
+  it("the locked lane never exceeds the viewport budget, however many cards its busiest band holds", () => {
     // 20 working cards at a 900px viewport: the uncapped content-driven
     // width would be ceil(20 / 2) = 10 ruler columns = 2240px (issue #22).
     const lanes = familyLanes([20, 1, 0, 0]);
@@ -225,6 +226,26 @@ describe("computeParentLaneLayout", () => {
     const lanes = familyLanes([7, 1, 1, 0]);
     const layout = computeParentLaneLayout(lanes, 0, VIEWPORT, RAIL_W);
     expect(layout.laneWidths[0]).toBe(4 * RULER.w + 3 * GAP + CELL_PAD * 2);
+  });
+});
+
+describe("laneOverflowsViewport", () => {
+  it("holds when the viewport budget cannot fit even the floored ruler column", () => {
+    // Budget = vw - rail - gap - chrome; one ruler column is 224px wide, so
+    // the boundary sits at 404px viewport.
+    expect(laneOverflowsViewport(403, RAIL_W)).toBe(true);
+    expect(laneOverflowsViewport(300, RAIL_W)).toBe(true);
+  });
+
+  it("clears at the exact boundary where one ruler column fits", () => {
+    expect(laneOverflowsViewport(404, RAIL_W)).toBe(false);
+    expect(laneOverflowsViewport(1280, RAIL_W)).toBe(false);
+  });
+
+  it("binds on the locked lane's floor before any context lane overflows", () => {
+    // At 350px the locked lane (224px floor) overflows while a one-column
+    // context lane (144px) still fits — the locked floor is the binding case.
+    expect(laneOverflowsViewport(350, RAIL_W)).toBe(true);
   });
 });
 
