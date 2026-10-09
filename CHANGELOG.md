@@ -5,15 +5,36 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **The pane's question form keeps half-answered questions alive.** Picks and free text survive a reload or a thread switch and restore with the open tab, then clear once the question is submitted or dismissed — the same recovery the new-thread composer gives prompts.
+- **Card menus now surface a thread's controlled browser tab.** "Reveal browser tab" discovers the thread's desktop-browser tabs, focuses the owning thread, and opens the side panel on the page's tab — blank carrier tabs skipped — one click straight from the board. bb offers no honest success signal here (it answers `ok` even when the reveal no-ops, and `tabs`' `presentation` field never reflects live visibility), so the gesture claims nothing; the opened panel is the feedback.
+  ([#17](https://github.com/cristoslc/bb-plugin-focus-board/issues/17))
+- **Board cards carry linked-issue chips.** A thread tied to a GitHub issue or pull request in the board's own link store shows its `#N` chip with a live status dot, even when the title and branch name say nothing (issue [#13](https://github.com/cristoslc/bb-plugin-focus-board/issues/13)).
+  - **Agents are nudged to link.** The `focus_board_link_issue` tool rides thread instructions and asks agents to call it right after they open or file an issue or PR.
+  - **The CLI links too.** `bb focus-board link list|set|clear` manages the store by hand.
+- **Board links reach any tracker.** `link set` and the agent tool accept any https tracker URL (with an optional chip label), forgejo remotes build their own `…/issues/N` chips, and non-GitHub chips show the site's favicon.
+- **PR chips and issue chips are distinct glyphs.** A link's stored issue-vs-PR kind now rides the chip, so a linked PR shows the PR glyph immediately (merging into the purple merge glyph when status lands) instead of the issue glyph; external tracker chips name their own site's favicon and no longer don a GitHub issue glyph.
+
+### Changed
+
+- **The pane's actions menu now leads with the state toggles.** Mark Done and Pin sit at the top, Snooze keeps its divider, and "New child thread…" moved down below the snooze entry, away from the everyday toggles.
+- **Ticket chips say their source and their kind at a glance.** Each chip now leads with its provider mark — GitHub's own mark, or a generic ticket glyph when the source can't be named — followed by the issue-vs-PR glyph, whose open/merged/closed color takes over the old bare state dot.
+
 ### Fixed
 
-- **The selected parent's lane stays inside the viewport.** A busy parent
-  used to compute unbounded ruler columns and run its lane off the right
-  edge; the lane now caps columns to the viewport budget and wraps surplus
-  cards downward into the bands. On any scrollport still too narrow to fit a
-  single lane (nothing left to wrap), snap-to on scroll switch off instead:
-  panning rests free and header clicks select lanes. Reported in
-  [issue #22](https://github.com/cristoslc/bb-plugin-focus-board/issues/22).
+- **The selected parent's lane stays inside the viewport.** A lane's ruler
+  columns now cap to the viewport budget and surplus cards wrap downward
+  into the bands; on scrollports too narrow to fit a single lane at all,
+  snap-to on scroll is off and header clicks select lanes.
+  ([#22](https://github.com/cristoslc/bb-plugin-focus-board/issues/22))
+- **The board no longer silently vanishes when a checkout's node_modules goes bad.** `npm test`, `npm run build`, and `npm run uat` now abort at a preflight guard whenever repo-root node_modules is a symlink, with the repair printed in the error; `scripts/node-modules-watchdog.sh` carries the self-healing bb automation that checks the main checkout every 5 minutes (its `/Users/cristos/code` path is a symlink alias to the same directory, not a second checkout), and AGENTS.md forbids node_modules symlinks outright.
+- **Word-shaped ticket keys no longer chip.** `PROJ-123`-style text matched with nothing able to validate it, so impostor chips like GLM-5 appeared; only refs GitHub can confirm (`#N`, issue/PR URLs) and the board's own links chip now.
+- **Mobile thread pane: thread actions drop from a split caret, like Open
+  in.** The standalone ⋯ button next to the Mark Read toggle is gone — an
+  icon-only toggle, a hairline divider, and an attached ChevronDown caret
+  now use the same grammar as the Open in menu at every width.
+  ([#14](https://github.com/cristoslc/bb-plugin-focus-board/issues/14))
 
 ## [1.0.0] - 2026-10-05
 

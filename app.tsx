@@ -11,7 +11,13 @@ import {
   useSettings,
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
-import { findTicketRefs, resolveRepoSlug } from "./lib/tickets";
+import { findTicketRefs, forgejoItemBase, resolveRepoSlug } from "./lib/tickets";
+import {
+  linkedRefKeys,
+  parseLinkedIssues,
+  type ThreadLink,
+} from "./lib/link-metadata";
+import type { JsonValue } from "@get-bb/plugin-sdk";
 import { installHostLinkGlue } from "./components/host-link-glue";
 import { FocusBoardAppIcon } from "./components/ui/icon";
 import type { rpcContract } from "./server";
@@ -56,6 +62,12 @@ import {
   paneThreadIdFromSubPath,
 } from "./lib/pane-route";
 import { applyMoveVisible, orderForColumn, type RankStore } from "./lib/rank";
+import {
+  buildBrowserRevealPorts,
+  revealThreadBrowserTabs,
+  type BrowserRevealNotice,
+  type BrowserRevealResult,
+} from "./lib/browser-reveal";
 import { pinStateChangeFromEvent, readStateChangeFromEvent } from "./lib/pin-park";
 import {
   DEFAULT_DONE_ARCHIVE_MS,
@@ -192,6 +204,13 @@ function readStoredList(key: string): string[] {
   return [];
 }
 
+/** The banner copy naming why the desktop browser could not be reached. */
+function browserReachFailure(error: unknown): string {
+  return `Reaching the desktop browser failed: ${
+    error instanceof Error ? error.message : String(error)
+  }`;
+}
+
 function BoardPage({ subPath }: { subPath: string }) {
   const { status, threads: sidebarThreads, projects } = experimental_useSidebarThreads();
   const actions = experimental_useSidebarThreadActions();
@@ -270,6 +289,25 @@ function BoardPage({ subPath }: { subPath: string }) {
   );
 
   const [doneIds, setDoneIds] = useState<ReadonlySet<string>>(new Set());
+  // The board's own GitHub links (metadata "linkedIssues"): the chip surface
+  // for items a thread's text never names (issue #13 — no cross-plugin read
+  // of the GitHub plugin's link rows exists). Record<string, ThreadLink[]>;
+  // a thread absent from it carries no linked chips.
+  const [linksByThread, setLinksByThread] = useState<Record<string, ThreadLink[]>>({});
+  // The RPC contract's link records tolerate a legacy GitHub record without
+  // its tracker tag; parse normalizes each thread's array into ThreadLink[]
+  // (and fails loud on anything malformed, never coerces).
+  const linksFromRpc = useCallback(
+    (result: { links: Record<string, unknown> }) => {
+      const out: Record<string, ThreadLink[]> = {};
+      for (const [threadId, links] of Object.entries(result.links)) {
+        const parsed = parseLinkedIssues(links as JsonValue);
+        if (parsed !== null) out[threadId] = parsed;
+      }
+      return out;
+    },
+    [],
+  );
   // Pinned-pin parks: a lane-exit unpin parks the pin (thread metadata via
   // RPC) so the writes that bring the card back to the operator — Mark Not
   // Done, Mark Unread — can restore it. Local optimistic state drives the
@@ -303,6 +341,10 @@ function BoardPage({ subPath }: { subPath: string }) {
         }),
       () => {}, // Settings are optional; defaults apply when unreachable.
     );
+    rpc.call("link_list").then(
+      (result) => setLinksByThread(linksFromRpc(result)),
+      () => {}, // Links are optional state; the board works without them.
+    );
   }, [rpc]);
   useRealtime("done-changed", () => {
     rpc.call("done_list").then(
@@ -325,6 +367,15 @@ function BoardPage({ subPath }: { subPath: string }) {
           idleArchiveMs: result.idleArchiveMs,
         }),
       () => {},
+    );
+  });
+  // The board's own link signal mirrors done-changed: every open panel
+  // refetches the map, so a link written by the agent tool or the CLI
+  // converges on the card that is already on screen.
+  useRealtime("link-changed", () => {
+    rpc.call("link_list").then(
+      (result) => setLinksByThread(linksFromRpc(result)),
+      () => {}, // Links are optional state; the board works without them.
     );
   });
   // The board's snapshot is the DoneAgeSource implementation: stamps for
@@ -502,7 +553,8 @@ function BoardPage({ subPath }: { subPath: string }) {
       ),
     ),
   );
-  // GitHub repo base per project, for ticket-chip link-outs. Best-effort:
+  // Tracker item base per project, for ticket-chip link-outs: GitHub slug
+  // when the remote resolves as one, forgejo base otherwise. Best-effort:
   // a failed or non-GitHub lookup just means chips render without links.
   // Re-runs when the sidebar project list changes (new project, or a
   // late-arriving remote) so the map is never a stale one-shot snapshot.
@@ -517,7 +569,14 @@ function BoardPage({ subPath }: { subPath: string }) {
           const next: Record<string, string> = {};
           for (const project of projectList) {
             const slug = resolveRepoSlug(project.gitRemoteUrl);
-            if (slug !== null) next[project.id] = `https://github.com/${slug}`;
+            if (slug !== null) {
+              next[project.id] = `https://github.com/${slug}`;
+            } else {
+              // Forgejo/Cove remote: the base item URLs build on, so #N text
+              // refs gain hrefs and ride tracker_validate like GitHub ones.
+              const base = forgejoItemBase(project.gitRemoteUrl);
+              if (base !== null) next[project.id] = base;
+            }
           }
           setRepoBaseByProject(next);
         },
@@ -581,6 +640,11 @@ function BoardPage({ subPath }: { subPath: string }) {
   const [sweepNotice, setSweepNotice] = useState<SweepNotice | null>(null);
   // Stable dismiss: the Board's auto-dismiss timer effect keys on it.
   const clearSweepNotice = useCallback(() => setSweepNotice(null), []);
+  // The browser-reveal gesture's honest outcome (a thread with no
+  // controlled tab, a stuck-hidden tab, a listing failure). Null when
+  // everything surfaced — the side panel itself is that feedback.
+  const [browserNotice, setBrowserNotice] = useState<BrowserRevealNotice | null>(null);
+  const clearBrowserNotice = useCallback(() => setBrowserNotice(null), []);
   const disarmSweep = useCallback(() => setArmedSweep(null), []);
   // Click-away and Escape disarm only an idle arm — and only from outside
   // the armed column: its cards' clicks toggle the sweep selection, so the
@@ -909,16 +973,72 @@ function BoardPage({ subPath }: { subPath: string }) {
         .flatMap((thread) => {
           const repoBase = repoBaseByProject[thread.projectId];
           const repo = repoBase === undefined ? null : resolveRepoSlug(repoBase);
-          if (repo === null) return [];
           const branch = thread.environment?.branchName ?? thread.host?.name ?? "";
-          return findTicketRefs(thread.displayTitle, { extraText: branch })
-            .filter((ref) => ref.number !== undefined)
-            .map((ref) => `${repo}#${ref.number}`);
+          // Text refs group under the thread's project repo; the board's own
+          // links carry their repo slug, so a link still batches a status
+          // lookup even when the project remote is not GitHub.
+          return repo === null
+            ? linkedRefKeys(linksByThread[thread.id])
+            : [
+                ...findTicketRefs(thread.displayTitle, { extraText: branch })
+                  .filter((ref) => ref.number !== undefined)
+                  .map((ref) => `${repo}#${ref.number}`),
+                ...linkedRefKeys(linksByThread[thread.id]),
+              ];
         })
+        .sort()
+        .join(","),
+    [liveThreads, repoBaseByProject, linksByThread],
+  );
+  // Text-ref hrefs across visible threads, the tracker_validate batch (the
+  // chip rule: a #N/URL in text chips only when the item is confirmed).
+  // Sorted-join mirrors visibleRefKey: cheap string equality as the effect
+  // dep, safe join (https hrefs carry no commas).
+  const textRefHrefsKey = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          liveThreads.flatMap((thread) => {
+            const repoBase = repoBaseByProject[thread.projectId];
+            const branch = thread.environment?.branchName ?? thread.host?.name ?? "";
+            return findTicketRefs(thread.displayTitle, {
+              extraText: branch,
+              ...(repoBase !== undefined ? { repoHrefBase: repoBase } : {}),
+            })
+              .map((ref) => ref.href)
+              .filter((href): href is string => href !== undefined);
+          }),
+        ),
+      )
         .sort()
         .join(","),
     [liveThreads, repoBaseByProject],
   );
+  const [validatedHrefs, setValidatedHrefs] = useState<ReadonlySet<string>>(new Set());
+  useEffect(() => {
+    if (textRefHrefsKey === "") {
+      setValidatedHrefs(new Set());
+      return;
+    }
+    let cancelled = false;
+    const urls = textRefHrefsKey.split(",");
+    rpc.call("tracker_validate", { urls }).then(
+      (result) => {
+        if (cancelled) return;
+        setValidatedHrefs(
+          new Set(
+            Object.entries(result.results)
+              .filter(([, verdict]) => verdict.confirmed)
+              .map(([url]) => url),
+          ),
+        );
+      },
+      () => {}, // Validation optional; an empty set just holds text chips back.
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [rpc, textRefHrefsKey]);
   useEffect(() => {
     if (visibleRefKey === "") {
       setTicketStatuses({});
@@ -1651,6 +1771,40 @@ function BoardPage({ subPath }: { subPath: string }) {
     }
   }, [applyUnreadStateEffects, sdk]);
 
+  // The one-step browser-tab reveal (issue #17): bb's reveal only opens
+  // the side panel when the OWNING thread is already focused, and answers
+  // {ok:true} even when it no-ops silently — unusable from the board, where
+  // the owning thread is by definition not focused. The orchestrator
+  // (lib/browser-reveal) discovers first, focuses the thread, settles, then
+  // reveals in a single pass. Outcomes the operator must hear about (a
+  // thread with no controlled tab, a listing failure) land on the board
+  // banner; success says nothing, the side panel IS it.
+  const runBrowserReveal = useCallback(
+    async (thread: PluginSidebarThread) => {
+      setBrowserNotice(null);
+      const ports = buildBrowserRevealPorts(sdk, navigate);
+      let result: BrowserRevealResult;
+      try {
+        result = await revealThreadBrowserTabs(ports, thread.id);
+      } catch (error) {
+        setBrowserNotice({ message: browserReachFailure(error) });
+        return;
+      }
+      if (result.discovered.length === 0) {
+        setBrowserNotice({
+          message: `No controlled browser tab belongs to "${thread.displayTitle}" — start one with bb browser-automation.`,
+        });
+        return;
+      }
+      // No completion banner on purpose: bb gives no observable success
+      // signal (list_tabs' `presentation` is a recorded creation
+      // attribute, not live visibility — 2026-10-06 poll evidence), so
+      // the plugin claims nothing; the opened side panel IS the
+      // feedback.
+    },
+    [navigate, sdk],
+  );
+
   const menuActionsFor = useCallback(
     (thread: PluginSidebarThread): CardMenuAction[] => {
       const isThreadDone = doneIds.has(thread.id);
@@ -1678,6 +1832,20 @@ function BoardPage({ subPath }: { subPath: string }) {
               "_blank",
               "noopener",
             );
+          },
+        },
+        {
+          id: "reveal-browser-tab",
+          label: "Reveal browser tab",
+          icon: "Browser",
+          run: () => {
+            // Discover → focus → reveal → verify happens in
+            // lib/browser-reveal; the board banner reports anything the
+            // operator must hear about — even a throw, so the click never
+            // reads as one the board ignored.
+            runBrowserReveal(thread).catch((error) => {
+              setBrowserNotice({ message: browserReachFailure(error) });
+            });
           },
         },
         {
@@ -1833,7 +2001,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         },
       ];
     },
-    [actions, applyUnreadStateEffects, clearParkPin, clearSnooze, doneAgeSource, doneIds, exitPinnedLane, openNewChildThread, requestReveal, restoreParkedPin, rpc, setDoneExtras, setDoneIds, setSnoozeDialogFor, snoozeUntil, snoozedIds, sdk],
+    [actions, applyUnreadStateEffects, clearParkPin, clearSnooze, doneAgeSource, doneIds, exitPinnedLane, openNewChildThread, requestReveal, restoreParkedPin, runBrowserReveal, rpc, setDoneExtras, setDoneIds, setSnoozeDialogFor, snoozeUntil, snoozedIds, sdk],
   );
 
   if (status === "loading" && threads.length === 0) {
@@ -1889,6 +2057,8 @@ function BoardPage({ subPath }: { subPath: string }) {
             projectNameFor={projectNameFor}
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
+            linkedIssuesFor={(threadId) => linksByThread[threadId]}
+            validatedHrefs={validatedHrefs}
             parentLaneOrder={parentLaneOrder}
             onParentLaneOrderChange={persistParentLaneOrder}
             onOpenThread={openThreadCard}
@@ -1920,6 +2090,8 @@ function BoardPage({ subPath }: { subPath: string }) {
             projectNameFor={projectNameFor}
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
+            linkedIssuesFor={(threadId) => linksByThread[threadId]}
+            validatedHrefs={validatedHrefs}
             onOpenThread={openThreadCard}
             onClosePane={closeThreadPane}
             onNewTask={openNewThread}
@@ -1929,6 +2101,8 @@ function BoardPage({ subPath }: { subPath: string }) {
             sweepRun={sweepRun}
             sweepNotice={sweepNotice}
             onDismissSweepNotice={clearSweepNotice}
+            browserNotice={browserNotice}
+            onDismissBrowserNotice={clearBrowserNotice}
             onSweepUndo={undoSweepFor}
             onSweepToggle={toggleSweepSelectionFor}
             onSweepRangeSelect={addSweepSelectionFor}

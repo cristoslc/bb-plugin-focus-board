@@ -7,6 +7,7 @@ import { findTicketRefs, resolveRepoSlug, type TicketRef } from "@/lib/tickets";
 import type { GitHubItemStatus } from "@/lib/tracker-status";
 
 import { DRAG_ID_KEY, rankDragType } from "../lib/rank";
+import { linkedTicketRefs, type ThreadLink } from "../lib/link-metadata";
 import { describeWakeAt } from "../lib/snooze";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
 
@@ -124,15 +125,29 @@ interface ThreadCardProps {
   repoHrefBase?: string;
   /** GitHub cache status lookup (repo slug + number), when wired. */
   statusFor?: (repo: string | null, number: number | undefined) => GitHubItemStatus | undefined;
+  /**
+   * The board's own links for this thread (metadata key "linkedIssues"):
+   * GitHub items a thread's text never names, from the link CLI / tool.
+   * They join the chip row like text refs — see lib/link-metadata.ts.
+   */
+  linkedIssues?: ThreadLink[];
+  /**
+   * Hrefs the server's tracker_validate confirmed as existing (the chip
+   * rule: a text ref chips only when something attached to the project can
+   * validate it). Store links skip validation and always chip. Undefined =
+   * caller not wired to validation → the pre-validation behavior (chips
+   * render unfiltered), which keeps component-level previews sane.
+   */
+  validatedHrefs?: ReadonlySet<string>;
   // Ruler+wrap mini variant: fits the 136×92 context card grid.
   compact?: boolean;
 }
 
-/** Chip state-dot colors, mirroring the card's own state language. */
-const STATUS_DOT_CLASS: Record<string, string> = {
-  OPEN: "bg-emerald-500",
-  MERGED: "bg-purple-500",
-  CLOSED: "bg-muted-foreground/50",
+/** Chip kind-glyph colors by live state, mirroring the card's own state language. */
+const STATUS_ICON_CLASS: Record<string, string> = {
+  OPEN: "text-emerald-500",
+  MERGED: "text-purple-500",
+  CLOSED: "text-muted-foreground/50",
 };
 
 /**
@@ -141,7 +156,17 @@ const STATUS_DOT_CLASS: Record<string, string> = {
  */
 export const NESTED_ROWS_SCROLL_THRESHOLD = 5;
 
-/** Small clickable ticket chip; inert (span) when the ref has no href. */
+/**
+ * Small clickable ticket chip; inert (span) when the ref has no href.
+ *
+ * Two glyphs lead the ref text: the source's provider mark (GitHub's own
+ * octocat; a generic ticket mark when the source cannot be named — PROJ-123
+ * keys carry no provider signal), then the issue-vs-PR glyph drawn with
+ * GitHub's own octicon shapes (the same language GitHub.com and VS Code
+ * use). The kind glyph doubles as the state signal once live status lands —
+ * open emerald, merged purple, closed muted — absorbing the old bare state
+ * dot.
+ */
 function TicketChip({
   ticket,
   status,
@@ -149,17 +174,64 @@ function TicketChip({
   ticket: TicketRef;
   status: GitHubItemStatus | undefined;
 }) {
+  // Non-GitHub trackers show the site's favicon (forgejo bases, external
+  // links — each carries its hostname; bb's app shell sets no CSP header,
+  // verified 2026-10-08, so the browser may load it directly). A failed or
+  // blocked load collapses to the plain text chip.
+  const [faviconFailed, setFaviconFailed] = useState(false);
+  const favicon =
+    ticket.hostname !== undefined && !faviconFailed ? (
+      <img
+        src={`https://${ticket.hostname}/favicon.ico`}
+        alt=""
+        loading="lazy"
+        className="size-3 shrink-0 rounded-[2px]"
+        onError={() => setFaviconFailed(true)}
+      />
+    ) : null;
   const className = cn(
-    "inline-flex h-4 items-center gap-1 rounded bg-muted px-1 font-mono text-[10px] leading-none text-muted-foreground",
+    "inline-flex h-5 items-center gap-1 rounded bg-muted px-1 font-mono text-[10px] leading-none text-muted-foreground",
     ticket.href && "hover:bg-accent hover:text-foreground",
   );
-  const dot =
-    status === undefined ? null : (
-      <span
-        className={cn("size-1.5 shrink-0 rounded-full", STATUS_DOT_CLASS[status.state] ?? "bg-muted-foreground/30")}
-        aria-label={`${status.kind} ${status.state}`}
-      />
+  // Issue vs PR: live status is exact; before it lands (or for refs the
+  // status cache never covers) fall back to what the raw text implies,
+  // defaulting plain "#N" refs to the issue glyph — the glyph self-corrects
+  // the moment status arrives.
+  const kind = status?.kind === "pull" ? "pull" : (ticket.kind ?? "issue");
+  const kindIconName =
+    kind === "pull"
+      ? (status?.state === "MERGED"
+          ? "Merge"
+          : status?.state === "CLOSED"
+            ? "PullRequestClosed"
+            : "PullRequest")
+      : (status?.state === "CLOSED" ? "IssueClosed" : "IssueOpen");
+  const isGithub = ticket.tracker === "github";
+  const provider =
+    isGithub ? (
+      <Icon name="GithubMark" className="size-3 shrink-0" aria-hidden />
+    ) : favicon ?? (
+      <Icon name="Ticket" className="size-3 shrink-0" aria-hidden />
     );
+  // Only GitHub-shaped refs carry the issue-vs-PR glyph; external items
+  // name their own tracker in the favicon instead.
+  const kindGlyph = isGithub ? (
+    <Icon
+      name={kindIconName}
+      className={cn(
+        "size-3 shrink-0",
+        status === undefined ? undefined : (STATUS_ICON_CLASS[status.state] ?? "text-muted-foreground/30"),
+      )}
+      aria-label={status === undefined ? undefined : `${kind} ${status.state}`}
+    />
+  ) : null;
+  const body = (
+    <>
+      {provider}
+      {kindGlyph}
+      {ticket.raw}
+    </>
+  );
   return ticket.href ? (
     <a
       href={ticket.href}
@@ -167,14 +239,13 @@ function TicketChip({
       rel="noreferrer"
       onClick={(event) => event.stopPropagation()}
       className={className}
+      data-ticket-chip=""
     >
-      {dot}
-      {ticket.raw}
+      {body}
     </a>
   ) : (
-    <span className={className}>
-      {dot}
-      {ticket.raw}
+    <span className={className} data-ticket-chip="">
+      {body}
     </span>
   );
 }
@@ -309,6 +380,8 @@ export function ThreadCard({
   projectName,
   repoHrefBase,
   statusFor,
+  linkedIssues,
+  validatedHrefs,
   menuActions,
   childThreads,
   childCount,
@@ -336,10 +409,27 @@ export function ThreadCard({
   };
   const branch = thread.environment?.branchName ?? thread.host?.name ?? "";
   const repo = repoHrefBase === undefined ? null : resolveRepoSlug(repoHrefBase);
-  const ticketRefs = findTicketRefs(thread.displayTitle, {
+  const scannedTicketRefs = findTicketRefs(thread.displayTitle, {
     extraText: branch,
     repoHrefBase,
   });
+  // The chip rule: a TEXT ref chips only when the server's tracker_validate
+  // confirmed its item exists (validatedHrefs wired; undefined keeps the
+  // pre-validation behavior for unwired callers). A ref with no href at all
+  // (a project with no GitHub/forgejo remote) cannot be validated → no chip.
+  // Store links are trusted by construction and skip the gate entirely.
+  const validatedTextRefs =
+    validatedHrefs === undefined
+      ? scannedTicketRefs
+      : scannedTicketRefs.filter(
+          (ref) => ref.href !== undefined && validatedHrefs.has(ref.href),
+        );
+  // Links the board itself stores (issue #13) join the text-scan chips: a
+  // thread linked to an item its title and branch never name still shows the
+  // chip. href-dedupe inside keeps the scan's richer chip when identical.
+  const ticketRefs = validatedTextRefs.concat(
+    linkedTicketRefs(linkedIssues, validatedTextRefs),
+  );
   const children = childThreads ?? [];
   // The chip counts every visible child (prop from the raw family index);
   // fall back to the nested rows when the caller does not supply it.

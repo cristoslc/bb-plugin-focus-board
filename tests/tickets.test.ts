@@ -1,35 +1,37 @@
 import { describe, expect, it } from "vitest";
-import { findTicketRefs, resolveRepoSlug } from "../lib/tickets";
+import { findTicketRefs, forgejoItemBase, resolveRepoSlug } from "../lib/tickets";
 
 const BASE = "https://github.com/owner/repo";
 
-describe("findTicketRefs — PROJ-123 style keys", () => {
-  it("matches an uppercase key with digits", () => {
-    expect(findTicketRefs("Fix PROJ-123 render bug")).toEqual([
-      { raw: "PROJ-123", tracker: "generic", key: "PROJ" },
-    ]);
+describe("findTicketRefs — WORD-123 keys do not chip (unvalidated)", () => {
+  /**
+   * A WORD-123 shape ("GLM-5", "PROJ-123") carries its own key, but no
+   * project attachment today can validate one: GitHub/Forgejo identify
+   * items as #N/URLs, and no Jira-style tracker link exists per project
+   * (projects expose only a gitRemoteUrl). Under the board's rule an
+   * unvalidatable ref never chips, so these keys match nothing — they
+   * return when a tracker attachment that owns key ids exists.
+   */
+  it("does not match an uppercase key with digits", () => {
+    expect(findTicketRefs("Fix PROJ-123 render bug")).toEqual([]);
+    expect(findTicketRefs("Explain GLM-5 tag on thread")).toEqual([]);
   });
 
-  it("matches multi-digit keys", () => {
-    expect(findTicketRefs("AB2-9 done")).toEqual([
-      { raw: "AB2-9", tracker: "generic", key: "AB2" },
-    ]);
+  it("does not match multi-digit keys", () => {
+    expect(findTicketRefs("AB2-9 done")).toEqual([]);
   });
 
-  it("matches refs at string boundaries", () => {
-    expect(findTicketRefs("ENG-482 initial work")[0]).toMatchObject({ raw: "ENG-482" });
-    expect(findTicketRefs("done: ENG-482.")[0]).toMatchObject({ raw: "ENG-482" });
+  it("does not match keys at string boundaries", () => {
+    expect(findTicketRefs("ENG-482 initial work")).toEqual([]);
+    expect(findTicketRefs("done: ENG-482.")).toEqual([]);
   });
 
-  it("matches multiple refs in one title", () => {
-    expect(findTicketRefs("Ship PROJ-1 and PROJ-2")).toEqual([
-      { raw: "PROJ-1", tracker: "generic", key: "PROJ" },
-      { raw: "PROJ-2", tracker: "generic", key: "PROJ" },
-    ]);
+  it("does not match multiple refs in one title", () => {
+    expect(findTicketRefs("Ship PROJ-1 and PROJ-2")).toEqual([]);
   });
 });
 
-describe("findTicketRefs — false-positive guards", () => {
+describe("findTicketRefs — shape guards that still hold", () => {
   it("does not match lowercase or mixed-case keys", () => {
     expect(findTicketRefs("fix eng-482 now")).toEqual([]);
   });
@@ -39,8 +41,6 @@ describe("findTicketRefs — false-positive guards", () => {
   });
 
   it("does not match inside a longer word", () => {
-    // XABC-1: the token starts with X, so the match inside is XABC-1, not ABC-1.
-    expect(findTicketRefs("XABC-1")).toEqual([{ raw: "XABC-1", tracker: "generic", key: "XABC" }]);
     expect(findTicketRefs("abcPROJ-1")).toEqual([]);
   });
 
@@ -103,25 +103,36 @@ describe("findTicketRefs — #N hash refs", () => {
 });
 
 describe("findTicketRefs — GitHub URL forms", () => {
-  it("matches an issue URL", () => {
+  it("matches an issue URL and marks it kind issue", () => {
     expect(findTicketRefs("see https://github.com/owner/repo/issues/123")).toEqual([
       {
         raw: "https://github.com/owner/repo/issues/123",
         tracker: "github",
+        kind: "issue",
         number: 123,
         href: "https://github.com/owner/repo/issues/123",
       },
     ]);
   });
 
-  it("matches a pull URL", () => {
+  it("matches a pull URL and marks it kind pull", () => {
     expect(findTicketRefs("https://github.com/owner/repo/pull/45#discussion")).toEqual([
       {
         raw: "https://github.com/owner/repo/pull/45",
         tracker: "github",
+        kind: "pull",
         number: 45,
         href: "https://github.com/owner/repo/pull/45",
       },
+    ]);
+  });
+
+  it("leaves plain #N refs kindless — status resolves issue vs PR later", () => {
+    // A bare "#17" sits in the shared GitHub number space (issues and PRs
+    // share it), so the text alone cannot say; the ref stays kindless and
+    // the chip defaults to the issue glyph until live status corrects it.
+    expect(findTicketRefs("resolve #17", { repoHrefBase: BASE })).toEqual([
+      { raw: "#17", tracker: "github", number: 17, href: `${BASE}/issues/17` },
     ]);
   });
 
@@ -144,15 +155,76 @@ describe("resolveRepoSlug", () => {
 });
 
 describe("findTicketRefs — combined behavior", () => {
-  it("combines title and branch refs in order", () => {
-    const refs = findTicketRefs("PROJ-7", { extraText: "fix/proj-7-#9", repoHrefBase: BASE });
+  it("scans branch hash refs alongside the title", () => {
+    const refs = findTicketRefs("PROJ-7 stays inert", { extraText: "fix/proj-7-#9", repoHrefBase: BASE });
     expect(refs).toEqual([
-      { raw: "PROJ-7", tracker: "generic", key: "PROJ" },
       { raw: "#9", tracker: "github", number: 9, href: `${BASE}/issues/9` },
     ]);
   });
 
   it("returns empty for titles with no refs", () => {
     expect(findTicketRefs("just a normal title", { extraText: "main" })).toEqual([]);
+  });
+});
+
+describe("forgejoItemBase", () => {
+  it("maps an https remote on a non-github host to its item base", () => {
+    expect(forgejoItemBase("https://git.cove.internal/cove/focus-board.git")).toBe(
+      "https://git.cove.internal/cove/focus-board",
+    );
+    expect(forgejoItemBase("https://forge.example.com:8443/owner/repo/")).toBe(
+      "https://forge.example.com:8443/owner/repo",
+    );
+  });
+
+  it("maps a git@ ssh remote on a non-github host", () => {
+    expect(forgejoItemBase("git@forge.example.com:owner/repo.git")).toBe(
+      "https://forge.example.com/owner/repo",
+    );
+  });
+
+  it("github remotes resolve through the github path, null here", () => {
+    expect(forgejoItemBase("https://github.com/owner/repo.git")).toBeNull();
+    expect(forgejoItemBase("git@github.com:owner/repo.git")).toBeNull();
+  });
+
+  it("shapeless remotes are null", () => {
+    expect(forgejoItemBase("https://forge.example.com/solo.git")).toBeNull();
+    expect(forgejoItemBase(null)).toBeNull();
+    expect(forgejoItemBase("")).toBeNull();
+  });
+});
+
+describe("forgejo item URLs validate as https item URLs", () => {
+  it("a #N text ref on a forgejo base builds the /issues/N href", () => {
+    const refs = findTicketRefs("fix the thing #7", {
+      extraText: "",
+      repoHrefBase: "https://forge.example.com/owner/repo",
+    });
+    expect(refs).toEqual([
+      { raw: "#7", tracker: "github", number: 7, href: "https://forge.example.com/owner/repo/issues/7", hostname: "forge.example.com" },
+    ]);
+  });
+});
+
+describe("findTicketRefs — hostname on non-github bases (favicon source)", () => {
+  it("a #N ref on a forgejo base carries the base hostname", () => {
+    const refs = findTicketRefs("see #7", {
+      extraText: "",
+      repoHrefBase: "https://forge.example.com/owner/repo",
+    });
+    expect(refs[0].hostname).toBe("forge.example.com");
+  });
+
+  it("a #N ref on a github base carries no hostname (github glyph renders)", () => {
+    const refs = findTicketRefs("see #7", {
+      extraText: "",
+      repoHrefBase: "https://github.com/owner/repo",
+    });
+    expect(refs[0].hostname).toBeUndefined();
+  });
+
+  it("no base → no hostname", () => {
+    expect(findTicketRefs("see #7")[0].hostname).toBeUndefined();
   });
 });

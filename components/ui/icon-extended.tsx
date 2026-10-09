@@ -40,6 +40,8 @@ import Coffee02Icon from "@hugeicons/core-free-icons/Coffee02Icon";
 import CollapseIcon from "@hugeicons/core-free-icons/CollapseIcon";
 import DashedLine02Icon from "@hugeicons/core-free-icons/DashedLine02Icon";
 import DateTimeIcon from "@hugeicons/core-free-icons/DateTimeIcon";
+import CircleDotIcon from "@hugeicons/core-free-icons/CircleDotIcon";
+import TicketIcon from "@hugeicons/core-free-icons/Ticket01Icon";
 import DiscordIcon from "@hugeicons/core-free-icons/DiscordIcon";
 import DragDropHorizontalIcon from "@hugeicons/core-free-icons/DragDropHorizontalIcon";
 import DragDropVerticalIcon from "@hugeicons/core-free-icons/DragDropVerticalIcon";
@@ -197,6 +199,63 @@ const PaletteStrokeRoundedIcon: IconSvgElement = [
   ],
 ];
 
+const GithubMarkIcon: IconSvgElement = [
+  [
+    "path",
+    {
+      d: "M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12",
+      fill: "currentColor",
+      key: "0",
+    },
+  ],
+];
+
+/**
+ * GitHub's own ticket glyph set (primer/octicons, MIT): the issue/PR/merge
+ * glyphs GitHub.com and VS Code render, instantly recognizable to anyone who
+ * has used either. Octicons draw on a 16-grid while HugeiconsIcon hosts a
+ * 24 viewport, so every path rides a scale(1.5) transform; the glyphs are
+ * fill-based and color flows through fill="currentColor" (the chip's state
+ * classes set it via text-*).
+ */
+type OcticonPath = readonly [string, { readonly [key: string]: string }];
+
+const oct = (d: string, key: string): OcticonPath => [
+  "path",
+  { d, fill: "currentColor", transform: "scale(1.5)", key },
+];
+
+const IssueOpenIcon: IconSvgElement = [
+  oct("M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z", "0"),
+  oct("M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Z", "1"),
+];
+
+const IssueClosedIcon: IconSvgElement = [
+  oct("M11.28 6.78a.75.75 0 0 0-1.06-1.06L7.25 8.69 5.78 7.22a.75.75 0 0 0-1.06 1.06l2 2a.75.75 0 0 0 1.06 0l3.5-3.5Z", "0"),
+  oct("M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0Zm-1.5 0a6.5 6.5 0 1 0-13 0 6.5 6.5 0 0 0 13 0Z", "1"),
+];
+
+const PullRequestIcon: IconSvgElement = [
+  oct(
+    "M1.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm5.677-.177L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-1.5 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354ZM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm0 9.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm8.25.75a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Z",
+    "0",
+  ),
+];
+
+const PullRequestClosedIcon: IconSvgElement = [
+  oct(
+    "M3.25 1A2.25 2.25 0 0 1 4 5.372v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.251 2.251 0 0 1 3.25 1Zm9.5 5.5a.75.75 0 0 1 .75.75v3.378a2.251 2.251 0 1 1-1.5 0V7.25a.75.75 0 0 1 .75-.75Zm-2.03-5.273a.75.75 0 0 1 1.06 0l.97.97.97-.97a.748.748 0 0 1 1.265.332.75.75 0 0 1-.205.729l-.97.97.97.97a.751.751 0 0 1-.018 1.042.751.751 0 0 1-1.042.018l-.97-.97-.97.97a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734l.97-.97-.97-.97a.75.75 0 0 1 0-1.06ZM2.5 3.25a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0ZM3.25 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm9.5 0a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z",
+    "0",
+  ),
+];
+
+const MergeIcon: IconSvgElement = [
+  oct(
+    "M5.45 5.154A4.25 4.25 0 0 0 9.25 7.5h1.378a2.251 2.251 0 1 1 0 1.5H9.25A5.734 5.734 0 0 1 5 7.123v3.505a2.25 2.25 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.95-.218ZM4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm8.5-4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5ZM5 3.25a.75.75 0 1 0 0 .005V3.25Z",
+    "0",
+  ),
+];
+
 const DiscordLogoIcon: IconSvgElement = [
   [
     "path",
@@ -247,6 +306,13 @@ export const EXTENDED_ICON_MAP: ExtendedIconMap = {
   ChevronsDown: ArrowDownDoubleIcon,
   ChevronsUp: ArrowUpDoubleIcon,
   CircleArrowShrink: CircleArrowShrink01Icon,
+  CircleDot: CircleDotIcon,
+  GithubMark: GithubMarkIcon,
+  IssueOpen: IssueOpenIcon,
+  IssueClosed: IssueClosedIcon,
+  PullRequest: PullRequestIcon,
+  PullRequestClosed: PullRequestClosedIcon,
+  Merge: MergeIcon,
   Clean: CleanIcon,
   Clock: Clock01Icon,
   ClockArrowUp: ClockArrowUpIcon,
@@ -334,6 +400,7 @@ export const EXTENDED_ICON_MAP: ExtendedIconMap = {
   Star: StarIcon,
   Terminal: ComputerTerminal01Icon,
   TextWrap: TextWrapIcon,
+  Ticket: TicketIcon,
   TimeSchedule: TimeScheduleIcon,
   UserRound: UserIcon,
   ZoomIn: ZoomInAreaIcon,

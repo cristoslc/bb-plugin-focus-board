@@ -1,13 +1,22 @@
 /**
  * Ticket-reference detection for board cards ("mirror, don't integrate").
  *
+ * One rule above the pattern set: a text ref chips only when something
+ * attached to the project can validate it. GitHub remotes validate #N and
+ * issue/PR URLs (href from the repo base, dot from the GitHub plugin's
+ * cache), and the board's own link store validates its explicit links. A
+ * WORD-123 shape ("PROJ-123", "GLM-5") carries a tracker key only a
+ * Jira-style board link could validate — and bb projects expose no
+ * tracker links today, so key-shaped text matches nothing. Revisit when
+ * a project can carry a board attachment.
+ *
  * Pure string work: find ticket references in thread titles and branch
  * names and turn them into optional link-outs. Zero credentials, zero SDK
  * surface. See docs/plans/2026-09-25-tracker-mirroring-ticket-id-detection-link-out.md
- * for the pattern set and false-positive guards.
+ * for the original pattern set and false-positive guards.
  */
 
-/** Resolve a git remote URL to an "owner/repo" slug; null when not GitHub. */
+/** Resolve a git remote URL to an "owner/repo" GitHub slug; null when not GitHub. */
 export function resolveRepoSlug(remote: string | null | undefined): string | null {
   if (!remote) return null;
   const https = remote.match(/^https:\/\/github\.com\/([\w.-]+\/[\w.-]+?)(?:\.git)?\/?$/);
@@ -17,15 +26,44 @@ export function resolveRepoSlug(remote: string | null | undefined): string | nul
   return null;
 }
 
+/**
+ * Forgejo/Gitea item base from a git remote (deterministic): any remote with
+ * an owner/repo path on a host that is not github.com — bb's own forge serves
+ * Forgejo there, and Forgejo identifies items as /issues/N pages. Returns
+ * "https://<host>/<owner>/<repo>" (the base item URLs build on); null for
+ * github remotes and remotes without an owner/repo path (nothing to
+ * validate #N refs against there).
+ */
+export function forgejoItemBase(remote: string | null | undefined): string | null {
+  if (!remote) return null;
+  const https = remote.match(
+    /^https:\/\/(?!github\.com)([\w.-]+(?::\d+)?)\/([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/,
+  );
+  if (https) return `https://${https[1]}/${https[2]}/${https[3]}`;
+  const ssh = remote.match(/^git@(?!github\.com)([^:]+):([\w.-]+)\/([\w.-]+?)(?:\.git)?$/);
+  if (ssh) return `https://${ssh[1]}/${ssh[2]}/${ssh[3]}`;
+  return null;
+}
+
 export interface TicketRef {
-  /** The matched text, e.g. "PROJ-123", "#482". */
+  /** The matched text, e.g. "https://github.com/owner/repo/issues/42" or "#482". */
   raw: string;
-  /** "generic" for PROJ-123 style keys, "github" for #N and GitHub URLs. */
-  tracker: "generic" | "github";
+  /** GitHub-identifiable refs (#N, URLs) and external tracker items from the link store. */
+  tracker: "github" | "external";
+  /**
+   * Issue vs PR when the raw text itself implies it (GitHub URL refs).
+   * Plain "#N" refs stay kindless — issues and PRs share GitHub's number
+   * space — and the chip defaults to the issue glyph until live status
+   * corrects it.
+   */
+  kind?: "issue" | "pull";
   /** Issue/PR number for numeric refs (#123, GitHub URL forms). */
   number?: number;
-  /** Project key for PROJ-123 style refs, e.g. "PROJ". */
-  key?: string;
+  /**
+   * For external tracker items: the site's hostname, so the chip can render
+   * the site's favicon (Unit G). Absent on GitHub refs.
+   */
+  hostname?: string;
   /** Direct href when resolvable; absent refs render as inert chips. */
   href?: string;
 }
@@ -37,13 +75,6 @@ export interface TicketRefOptions {
   repoHrefBase?: string;
 }
 
-// PROJ-123: uppercase key (2+ chars, at least one letter) + hyphen + digits.
-// Anchored with a leading \b word boundary so the key cannot start mid-word,
-// and a trailing \b plus a (?![-\w]) lookahead so "PROJ-123x" and
-// "PROJ-123-4" do not match. The key rule rejects dates (2026-09-25),
-// versions (v1.2.3), and fragments (e2e-4).
-const KEY_REF = /\b([A-Z][A-Z0-9]*[A-Z]|[A-Z][A-Z0-9]{1,})-(\d+)\b(?![-\w])/g;
-
 // #1234: hash + digits, with a lookbehind rejecting hashes glued to letters
 // or another hash ("abc#12", "##12") while still matching adjacent glued
 // forms like "#12#13" (the digit of the previous ref is a legal lead-in).
@@ -51,9 +82,10 @@ const KEY_REF = /\b([A-Z][A-Z0-9]*[A-Z]|[A-Z][A-Z0-9]{1,})-(\d+)\b(?![-\w])/g;
 // #0 is rejected below.
 const HASH_REF = /(?<![#a-zA-Z])#(\d+)/g;
 
-// Full GitHub issue/PR URLs. The trailing fragment is allowed in the text
-// but not captured into the ref.
-const GITHUB_URL = /(?<raw>https:\/\/github\.com\/(?<owner>[\w.-]+)\/(?<repo>[\w.-]+)\/(?:issues|pull)\/(?<num>\d+))(?:#[^\s]*)?/g;
+// Full GitHub issue/PR URLs. The path segment is captured (issues|pull) so
+// the ref can carry its issue-vs-PR kind. The trailing fragment is allowed
+// in the text but not captured into the ref.
+const GITHUB_URL = /(?<raw>https:\/\/github\.com\/(?<owner>[\w.-]+)\/(?<repo>[\w.-]+)\/(?<kind>issues|pull)\/(?<num>\d+))(?:#[^\s]*)?/g;
 
 function pushUnique(refs: TicketRef[], ref: TicketRef): void {
   if (!refs.some((existing) => existing.raw === ref.raw)) refs.push(ref);
@@ -69,26 +101,36 @@ function pushUnique(refs: TicketRef[], ref: TicketRef): void {
 export function findTicketRefs(title: string, options: TicketRefOptions = {}): TicketRef[] {
   const refs: TicketRef[] = [];
   const base = options.repoHrefBase?.replace(/\/+$/, "");
+  // Hostname of a non-GitHub base (forgejo): the chip's favicon source. The
+  // app builds the base from a regex-validated remote, so the URL parse
+  // never fails in practice; a drifted base only loses the favicon, the
+  // chip and its href stay.
+  const baseHost = (() => {
+    if (base === undefined) return null;
+    try {
+      const hostname = new URL(base).hostname;
+      return hostname === "github.com" ? null : hostname;
+    } catch {
+      return null;
+    }
+  })();
 
   const scan = (text: string): void => {
     if (!text) return;
 
     for (const match of text.matchAll(GITHUB_URL)) {
-      const { raw, num } = match.groups as { raw: string; num: string };
+      const { raw, num, kind } = match.groups as {
+        raw: string;
+        num: string;
+        kind: "issues" | "pull";
+      };
       pushUnique(refs, {
         raw,
         tracker: "github",
+        kind: kind === "pull" ? "pull" : "issue",
         number: Number(num),
         href: raw,
       });
-    }
-
-    for (const match of text.matchAll(KEY_REF)) {
-      // Trailing boundary: \b already fails on "123x" (digit→letter is
-      // word-internal), but it passes between a digit and a hyphen, so the
-      // (?![-\w]) lookahead is what rejects "PROJ-123-4". Keep both.
-      const [raw, key] = match;
-      pushUnique(refs, { raw, tracker: "generic", key });
     }
 
     for (const match of text.matchAll(HASH_REF)) {
@@ -99,6 +141,7 @@ export function findTicketRefs(title: string, options: TicketRefOptions = {}): T
         tracker: "github",
         number: num,
         ...(base ? { href: `${base}/issues/${num}` } : {}),
+        ...(baseHost !== null ? { hostname: baseHost } : {}),
       });
     }
   };

@@ -10,6 +10,7 @@ import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { ThreadCard } from "./thread-card";
+import type { ThreadLink } from "../lib/link-metadata";
 import type { CardMenuAction } from "./thread-card-menu";
 import { EmptyState } from "./empty-state";
 import { threadState } from "./grouping";
@@ -44,6 +45,10 @@ interface ParentLaneBoardProps {
   statusFor?: (repo: string | null, number: number | undefined) =>
     | { kind: string; state: string }
     | undefined;
+  /** The board's own GitHub links per thread id (metadata "linkedIssues"). */
+  linkedIssuesFor?: (threadId: string) => ThreadLink[] | undefined;
+  /** Hrefs tracker_validate confirmed; text refs chip only for these. */
+  validatedHrefs?: ReadonlySet<string>;
   parentLaneOrder: ParentLaneOrder;
   onParentLaneOrderChange: (value: ParentLaneOrder) => void;
   onOpenThread: (threadId: string) => void;
@@ -218,6 +223,8 @@ export function ParentLaneBoard({
   projectNameFor,
   repoBaseFor,
   statusFor,
+  linkedIssuesFor,
+  validatedHrefs,
   parentLaneOrder,
   onParentLaneOrderChange,
   onOpenThread,
@@ -832,6 +839,8 @@ export function ParentLaneBoard({
                           projectName={projectNameFor(cell.thread.projectId)}
                           repoHrefBase={repoBaseFor(cell.thread.projectId) ?? undefined}
                           statusFor={statusFor}
+                          linkedIssues={linkedIssuesFor?.(cell.thread.id)}
+                          validatedHrefs={validatedHrefs}
                           menuActions={menuActionsFor(cell.thread)}
                           snoozeFor={snoozeFor}
                           activeThreadId={activeThreadId}

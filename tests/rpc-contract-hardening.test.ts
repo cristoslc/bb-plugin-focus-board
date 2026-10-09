@@ -25,6 +25,7 @@ const validInputs: Record<Method, unknown> = {
   },
   snooze_clear: { threadId: "thr_x" },
   tracker_status: { repo: "o/r", numbers: [1, 2] },
+  tracker_validate: { urls: ["https://github.com/o/r/issues/12"] },
   thread_autotitle: { threadId: "thr_x" },
   thread_autotitle_services: { threadId: "thr_x" },
   workspace_files_exist: { threadId: "thr_x", paths: ["docs/a.md"] },
@@ -41,6 +42,15 @@ const validInputs: Record<Method, unknown> = {
     toEnd: false,
     visibleIds: ["thr_x"],
   },
+  link_list: null,
+  link_set: {
+    threadId: "thr_x",
+    repo: "o/r",
+    number: 12,
+    kind: "issue",
+    source: "operator",
+  },
+  link_clear: { threadId: "thr_x" },
 };
 
 const nullInputMethods: Method[] = [
@@ -49,6 +59,7 @@ const nullInputMethods: Method[] = [
   "snooze_list",
   "rank_list",
   "sweep_config_get",
+  "link_list",
 ];
 
 const inputSchemaOf = (method: Method) =>

@@ -124,3 +124,15 @@ Hold points after this update (renumbered in the front matter: 4 → 2, hold 3 c
 
 1. **The 1.0.0 finalize commit, signed tag, and GitHub Release** — the semver promise goes live; intent-and-wait per the release spoke.
 2. **The marketplace pair** — PR #481's merge into `get-bb/marketplace`, then the `^1.0.0` range bump and listing refresh riding the 1.0.0 cut (item 1's hold point, unchanged).
+
+## Update 2026-10-05 — the cut executed (holds 1 and 2 resolved)
+
+Operator word: *"cut it"*. Executed per the release spoke §2–§7:
+
+- **Finalize commit `4b4636c`** on `dev`: changelog `[Unreleased]` (7 user-facing bullets) renamed to `[1.0.0] - 2026-10-05` with a fresh empty `[Unreleased]` primed above it; `package.json`/`package-lock.json`/`APP_VERSION` stripped to `1.0.0` (the `0.9.1-dev` guess was corrected — the certified scope is the 1.0.0 cut); the What's-new feed regenerated and now carries the 1.0.0 entry. The finalize commit also updated `tests/whats-new.test.ts`'s published-version list (the test reds by design when a version publishes). Battery re-verified: 1078 tests across 74 files, `tsc` clean, gates passing, build green.
+- **Tagged and promoted**: main fast-forwarded 539e52b → 4b4636c in a temp worktree (`--ff-only` succeeded), annotated tag `v1.0.0` created and signature-verified (Good, ED25519, key era per `scripts/release-signing.allowed`), `dev`/`main`/tag pushed, then the temp worktree removed.
+- **GitHub Release published**: https://github.com/cristoslc/bb-plugin-focus-board/releases/tag/v1.0.0 — title "Focus Board 1.0.0", notes are the changelog section verbatim with the v0.9.0 compare link, no binary assets.
+- **Marketplace (§4a, both halves failed live and were fixed in PR [get-bb/marketplace#491](https://github.com/get-bb/marketplace/pull/491))**: the live entry still carried `^0.3.1` (resolves nothing newer than 0.3.x) and the description/overview predated drag-to-act, sweep, snooze, and nesting. Fresh branch `submit-focus-board-1-0-0`: range → `^1.0.0`, description refreshed, `overview/focus-board.md` copied verbatim from the plugin repo's `PLUGIN_OVERVIEW.md` (source commit `5215a50`). Marketplace validation: `npm ci --ignore-scripts`, build (327 entries), 38/38 tests, `npm run check`, `git diff --check` — all pass. PR body requests the `v1-change` label and records the relation to the still-open #481. Merge of #491 remains external (get-bb/maintainers).
+- **Re-armed §6**: prep commit `b1ed78b` on `dev` bumps to `1.0.1-dev`; pushed. **§7**: rebuilt and `bb plugin reload focus-board` ran; `bb plugin list` reads `focus-board@1.0.1-dev running` from the main checkout.
+
+**All four original hold points are now resolved or standing policy**: hold 3 (upstream filing) closed as get-bb/bb#4793; hold 1 (finalize/tag/release) executed as above; hold 2 (marketplace) executed as PR #491 pending external merge; hold 4 (post-1.0 preference migrations) stands as the compatibility note's policy. Certification closed.
