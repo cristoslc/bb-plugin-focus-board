@@ -21,6 +21,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **The board no longer silently vanishes when a checkout's node_modules goes bad.** `npm test`, `npm run build`, and `npm run uat` now abort at a preflight guard whenever repo-root node_modules is a symlink, with the repair printed in the error; `scripts/node-modules-watchdog.sh` carries the self-healing bb automation that checks both main checkouts every 5 minutes, and AGENTS.md forbids node_modules symlinks outright.
 - **Mobile thread pane: thread actions drop from a split caret, like Open
   in.** The standalone ⋯ button next to the Mark Read toggle is gone — an
   icon-only toggle, a hairline divider, and an attached ChevronDown caret
