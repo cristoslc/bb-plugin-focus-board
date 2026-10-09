@@ -34,7 +34,7 @@ The board lives in bb's sidebar as a nav panel and updates in real time as your 
 - **Thread pane** — open a card to read and reply beside the board; full screen on phone. Agent questions are answered right from the pane, and the header's menu opens the workspace in your editor, file explorer, or terminal.
 - **Snooze** — "Snooze…" reads a thread now and marks it unread again at the time you pick.
 - **Sweep** — every lane carries a sweep with its own destination: stale Done threads archive, long-idle threads move to Done, Pinned unpins, Unread marks read. Shift-click and ⌘/Ctrl-click multi-select before sweeping.
-- **Ticket chips** for issue and PR refs in the title or branch, with GitHub status dots when the official GitHub plugin is installed. A thread whose text names nothing can still carry a chip: the board's own link store ties a thread to an item explicitly (the `focus_board_link_issue` agent tool, or `bb focus-board link set`).
+- **Ticket chips** for GitHub issue and PR refs in the title or branch, with status dots (the official GitHub plugin's cache feeds them). A `#N` on the project's remote only chips when it can be validated — a GitHub item confirmed in the GitHub plugin's cache, or any tracker URL that answers HTTP; unvalidated text like `PROJ-123` or `GLM-5` never chips. Forgejo remotes build their own `…/issues/N` links and non-GitHub chips show the site's favicon. A thread whose text names nothing can still carry a chip: the board's own link store ties a thread to any tracker item explicitly (the `focus_board_link_issue` agent tool, or `bb focus-board link set` GitHub URLs, issue numbers, or any https URL with an optional `--label`).
 - **What's new** — a 🎁 toolbar button lists recent changes after an update.
 
 Finer behavior notes (hand-ordering rules, Escape handling, pin behavior, pane history) live in [docs/features.md](docs/features.md).
@@ -117,7 +117,7 @@ bb focus-board done list [--json]
 bb focus-board done mark <thread-id>...
 bb focus-board done clear <thread-id>...
 bb focus-board link list [--json]
-bb focus-board link set <thread-id> <number-or-url> [--repo owner/repo] [--pull]
+bb focus-board link set <thread-id> <number-or-url> [--repo owner/repo] [--pull] [--label text]
 bb focus-board link clear <thread-id> [<number>...]
 bb focus-board snooze list
 bb focus-board snooze set <when> <thread-id>...   # +<N>m|h|d|w or a future timestamp
@@ -135,9 +135,12 @@ exits 1.
 ## Data and privacy
 
 The board reads bb's live thread view through the plugin SDK and writes only
-pin state, read state, Done marks, and per-thread issue/PR links through bb's
-own stores — never thread content. For ticket status dots it reads the
-official GitHub plugin's local cache read-only. Nothing leaves your machine.
+pin state, read state, Done marks, and per-thread tracker-item links (GitHub
+issues/PRs and other https tracker items) through bb's own stores — never
+thread content. For ticket status dots it reads the official GitHub plugin's
+local cache read-only; validating a text-scanned `#N` may also fetch the item
+URL once over HTTP (the answer is cached, fresh GitHub cache hits are never
+refetched). Nothing leaves your machine beyond those tracker checks.
 
 ## Development
 

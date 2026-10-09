@@ -553,7 +553,8 @@ function BoardPage({ subPath }: { subPath: string }) {
       ),
     ),
   );
-  // GitHub repo base per project, for ticket-chip link-outs. Best-effort:
+  // Tracker item base per project, for ticket-chip link-outs: GitHub slug
+  // when the remote resolves as one, forgejo base otherwise. Best-effort:
   // a failed or non-GitHub lookup just means chips render without links.
   // Re-runs when the sidebar project list changes (new project, or a
   // late-arriving remote) so the map is never a stale one-shot snapshot.
