@@ -364,3 +364,87 @@ export function buildColumns(
 // sent a card back down the list mid-gesture, which read as disorienting
 // shuffling. Sweep state never reorders the column now; the highlight and
 // the selected count carry the blast radius.
+/**
+ * Swimlanes: a second, horizontal grouping axis that splits the board into
+ * rows. Columns keep the Group-by dimension; every lane carries the SAME
+ * column set (empty cells included) so the cells line up under one shared
+ * header row. "parent" is not a lane axis — it has its own board.
+ */
+export type SwimlaneBy = "none" | "status" | "recency" | "project" | "provider" | "machine";
+
+export const SWIMLANE_BY_OPTIONS: readonly { value: SwimlaneBy; label: string }[] = [
+  { value: "none", label: "None" },
+  { value: "project", label: "Project" },
+  { value: "provider", label: "Provider" },
+  { value: "machine", label: "Machine" },
+  { value: "status", label: "Attention" },
+  { value: "recency", label: "Last activity" },
+];
+
+export interface Swimlane {
+  id: string;
+  label: string;
+  /** Same ids, labels, and order as the board's columns; threads are the lane's share. */
+  columns: BoardColumn[];
+  count: number;
+}
+
+/**
+ * Swimlanes only apply on the column board, and only when they split along a
+ * different axis than the columns do.
+ */
+export function swimlanesActive(groupBy: GroupBy, swimlaneBy: SwimlaneBy): boolean {
+  return swimlaneBy !== "none" && groupBy !== "parent" && groupBy !== swimlaneBy;
+}
+
+/**
+ * Partition already-assembled columns into lanes. Each card's lane comes from
+ * `columnFor` on the lane axis, so it reads exactly like the matching Group-by
+ * (a project lane is labelled like a project column). Column order inside a
+ * lane is the global column order filtered, so a hand-ordered column stays in
+ * the operator's order in every lane. Lanes holding no cards are omitted.
+ */
+export function buildSwimlanes(
+  columns: readonly BoardColumn[],
+  swimlaneBy: SwimlaneBy,
+  context: GroupingContext,
+  now: number = Date.now(),
+): Swimlane[] {
+  if (swimlaneBy === "none") {
+    const count = columns.reduce((sum, column) => sum + column.threads.length, 0);
+    return [{ id: "all", label: "Threads", columns: [...columns], count }];
+  }
+  const lanes = new Map<string, { label: string; cells: Map<string, PluginSidebarThread[]> }>();
+  for (const column of columns) {
+    for (const thread of column.threads) {
+      const lane = columnFor(thread, swimlaneBy, context, now);
+      let entry = lanes.get(lane.id);
+      if (entry === undefined) {
+        entry = { label: lane.label, cells: new Map() };
+        lanes.set(lane.id, entry);
+      }
+      const cell = entry.cells.get(column.id);
+      if (cell === undefined) entry.cells.set(column.id, [thread]);
+      else cell.push(thread);
+    }
+  }
+  return [...lanes.entries()]
+    .sort((a, b) => {
+      // Unassigned buckets ("No machine", an empty project) trail the board.
+      const aNone = a[0] === "none" ? 1 : 0;
+      const bNone = b[0] === "none" ? 1 : 0;
+      if (aNone !== bNone) return aNone - bNone;
+      const keyDiff = columnSortKey(swimlaneBy, a[0]) - columnSortKey(swimlaneBy, b[0]);
+      if (keyDiff !== 0) return keyDiff;
+      return a[1].label.localeCompare(b[1].label);
+    })
+    .map(([id, entry]) => {
+      const laneColumns = columns.map((column) => ({
+        id: column.id,
+        label: column.label,
+        threads: entry.cells.get(column.id) ?? [],
+      }));
+      const count = laneColumns.reduce((sum, column) => sum + column.threads.length, 0);
+      return { id, label: entry.label, columns: laneColumns, count };
+    });
+}
