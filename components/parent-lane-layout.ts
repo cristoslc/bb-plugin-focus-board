@@ -6,7 +6,8 @@ import type { ParentLane } from "./parent-lanes";
  * lanes-mock.html prototype). The lane locked to position 1 renders large
  * readable cards; every other lane renders mini cards that wrap to the size
  * of its busiest band — lane widths are content-driven, never reserved for
- * capacity that is not there. Band heights are uniform per status row across
+ * capacity that is not there, and both lane kinds are capped to the viewport
+ * budget (a locked lane over the budget wraps surplus cards into rows). Band heights are uniform per status row across
  * all lanes — driven by the locked lane — so the rail labels and band seams
  * line up board-wide. The pin-before-recut scroll interaction predicts flush
  * positions from these pure functions while the board geometry is still
@@ -61,8 +62,25 @@ export function viewportContextCols(
   viewportWidth: number,
   railWidth: number = RAIL_W_DEFAULT,
 ): number {
-  const budget = viewportWidth - railWidth - RAIL_TO_LANE_GAP - 24;
-  return Math.max(1, Math.min(CONTEXT_MAX_COLS, Math.floor(budget / (RULER.w + GAP))));
+  return Math.max(1, Math.min(CONTEXT_MAX_COLS, Math.floor(viewportBudget(viewportWidth, railWidth) / (RULER.w + GAP))));
+}
+
+/** Chrome the scroll area reserves around the lanes: rail, rail→lane gap,
+ *  and breathing room before the right edge. */
+function viewportBudget(viewportWidth: number, railWidth: number): number {
+  return viewportWidth - railWidth - RAIL_TO_LANE_GAP - 24;
+}
+
+/** Cap on ruler columns for the locked lane: the lane must fit the viewport
+ *  (a vertical lane is never wider than the viewport). Above-cap ruler cards
+ *  wrap into additional rows — the locked lane's bands grow downward instead
+ *  of the lane growing sideways past the right edge. Floored at one column:
+ *  a viewport narrower than one ruler card still renders exactly that card. */
+export function viewportLockedCols(
+  viewportWidth: number,
+  railWidth: number = RAIL_W_DEFAULT,
+): number {
+  return Math.max(1, Math.floor(viewportBudget(viewportWidth, railWidth) / (RULER.w + GAP)));
 }
 
 /** Mini-card rows that fit one shared band of the given height. */
@@ -72,7 +90,9 @@ function miniRowsForBand(bandHeight: number): number {
 }
 
 /** The locked lane's column count: its busiest band, one ruler column per
- *  RULER_COLS cards, floored at one so an empty lane still has a column. */
+ *  RULER_COLS cards, floored at one so an empty lane still has a column.
+ *  The caller caps this to the viewport (`viewportLockedCols`) — above-cap
+ *  cards wrap into additional rows instead of widening the lane. */
 function lockedColumnsFor(lane: ParentLane): number {
   let cols = 1;
   for (const row of lane.rows) {
@@ -115,7 +135,10 @@ export function computeParentLaneLayout(
 ): ParentLaneLayout {
   const cap = viewportContextCols(viewportWidth, railWidth);
   const rulerLane = lockedIndex === null ? undefined : lanes[lockedIndex];
-  const lockedCols = rulerLane === undefined ? 0 : lockedColumnsFor(rulerLane);
+  const lockedCols =
+    rulerLane === undefined
+      ? 0
+      : Math.min(lockedColumnsFor(rulerLane), viewportLockedCols(viewportWidth, railWidth));
   const lockedWidth = lockedLaneWidth(Math.max(1, lockedCols));
 
   // Band heights: the locked lane's ruler content dictates each status row's

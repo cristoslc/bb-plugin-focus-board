@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The selected parent's lane stays inside the viewport.** A busy parent
+  used to compute unbounded ruler columns and run its lane off the right
+  edge; the lane now caps columns to the viewport budget and wraps surplus
+  cards downward into the bands. Reported in
+  [issue #22](https://github.com/cristoslc/bb-plugin-focus-board/issues/22).
+
 ## [1.0.0] - 2026-10-05
 
 ### Added

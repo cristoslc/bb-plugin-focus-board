@@ -13,6 +13,7 @@ import {
   pinIsInstant,
   predictedStart,
   viewportContextCols,
+  viewportLockedCols,
   wallTrim,
 } from "../components/parent-lane-layout";
 import { thread } from "./thread-fixture";
@@ -184,6 +185,46 @@ describe("computeParentLaneLayout", () => {
   it("a narrow viewport caps context lanes to fewer columns", () => {
     expect(viewportContextCols(640, RAIL_W)).toBe(2);
     expect(viewportContextCols(4000, RAIL_W)).toBe(CONTEXT_MAX_COLS);
+  });
+
+  it("a locked lane never exceeds the viewport budget, however many cards its busiest band holds", () => {
+    // 20 working cards at a 900px viewport: the uncapped content-driven
+    // width would be ceil(20 / 2) = 10 ruler columns = 2240px (issue #22).
+    const lanes = familyLanes([20, 1, 0, 0]);
+    const viewport = 900;
+    const layout = computeParentLaneLayout(lanes, 0, viewport, RAIL_W);
+    expect(layout.laneWidths[0]).toBeLessThanOrEqual(viewport - RAIL_W);
+  });
+
+  it("a locked lane capped by the viewport wraps every card into rows instead of chipping", () => {
+    const lanes = familyLanes([20, 1, 0, 0]);
+    const viewport = 900;
+    const layout = computeParentLaneLayout(lanes, 0, viewport, RAIL_W);
+    const w = workingIndex(lanes);
+    const cap = viewportLockedCols(viewport, RAIL_W);
+    // Capped width matches the ruler geometry exactly, and every card is
+    // rendered — the overflow grows the band downward.
+    expect(layout.laneWidths[0]).toBe(cap * RULER.w + (cap - 1) * GAP + CELL_PAD * 2);
+    const cells = layout.lanes[0].cells.filter((cell) => cell.row === w);
+    expect(cells).toHaveLength(20);
+    expect(layout.lanes[0].chipFor[w]).toBeUndefined();
+    expect(layout.bandHeights[w]).toBe(
+      Math.max(1, Math.ceil(20 / cap)) * RULER.h + (Math.ceil(20 / cap) - 1) * GAP,
+    );
+  });
+
+  it("a tiny viewport floors the locked lane at one ruler column", () => {
+    const lanes = familyLanes([6, 1, 0, 0]);
+    const layout = computeParentLaneLayout(lanes, 0, 300, RAIL_W);
+    expect(layout.laneWidths[0]).toBe(RULER.w + CELL_PAD * 2);
+  });
+
+  it("an uncapped locked lane keeps the content-driven width", () => {
+    // Regression: the cap must not bite when the content-driven width already
+    // fits the viewport (ceil(7 / 2) = 4 columns at 1280px).
+    const lanes = familyLanes([7, 1, 1, 0]);
+    const layout = computeParentLaneLayout(lanes, 0, VIEWPORT, RAIL_W);
+    expect(layout.laneWidths[0]).toBe(4 * RULER.w + 3 * GAP + CELL_PAD * 2);
   });
 });
 
