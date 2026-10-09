@@ -62,6 +62,72 @@ describe("ticket chip icons — provider glyph", () => {
   });
 });
 
+describe("linked store chips — distinct PR vs issue glyphs", () => {
+  const linkedPull: import("../lib/link-metadata").GitHubItemLink = {
+    tracker: "github",
+    repo: "owner/repo",
+    issue: 16,
+    kind: "pull",
+    href: `${BASE}/pull/16`,
+    createdAt: "2026-10-09T00:00:00.000Z",
+    source: "agent",
+  };
+  const linkedIssue: import("../lib/link-metadata").GitHubItemLink = {
+    ...linkedPull,
+    issue: 12,
+    kind: "issue",
+    href: `${BASE}/issues/12`,
+  };
+
+  it("a store-linked PR leads with the PR glyph before status lands", async () => {
+    renderCard("Link thread to issue and update chip status", {
+      linkedIssues: [linkedPull],
+    });
+    await chipIcon("PullRequest");
+  });
+
+  it("a store-linked issue keeps the issue glyph", async () => {
+    renderCard("File issue on tag support for other threads", {
+      linkedIssues: [linkedIssue],
+    });
+    await chipIcon("IssueOpen");
+  });
+
+  it("an external chip shows the favicon and no GitHub kind glyph", async () => {
+    renderCard("Explain GLM-5 tag on thread", {
+      linkedIssues: [
+        {
+          tracker: "external",
+          url: "https://linear.app/t/PROJ-142",
+          hostname: "linear.app",
+          label: "PROJ-142",
+          createdAt: "2026-10-09T00:00:00.000Z",
+          source: "operator",
+        },
+      ],
+    });
+    const chipEl = await waitFor(() => {
+      const el = document.querySelector("[data-ticket-chip]");
+      if (el === null) throw new Error("missing chip");
+      return el;
+    });
+    expect(chipEl.textContent).toContain("PROJ-142");
+    expect(chipEl.querySelector('[data-icon="IssueOpen"]')).toBeNull();
+    expect(chipEl.querySelector('[data-icon="PullRequest"]')).toBeNull();
+    expect(chipEl.querySelector('[data-icon="GithubMark"]')).toBeNull();
+    expect(chipEl.querySelector("img")).not.toBeNull();
+  });
+
+  it("a merged store-linked PR still shows the merge glyph purple", async () => {
+    renderCard("Link thread to issue and update chip status", {
+      linkedIssues: [linkedPull],
+      statusFor: (repo, num) =>
+        repo === "owner/repo" && num === 16 ? { kind: "pull", state: "MERGED" } : undefined,
+    });
+    await chipIcon("Merge");
+  });
+});
+
 describe("ticket chip icons — issue vs PR glyph", () => {
   it("a kindless #N ref renders the open-issue glyph before status lands", async () => {
     renderCard("resolve #17: surface a thread's ticket");
