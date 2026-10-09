@@ -11,7 +11,7 @@ import {
   useSettings,
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
-import { findTicketRefs, resolveRepoSlug } from "./lib/tickets";
+import { findTicketRefs, forgejoItemBase, resolveRepoSlug } from "./lib/tickets";
 import {
   linkedRefKeys,
   parseLinkedIssues,
@@ -568,7 +568,14 @@ function BoardPage({ subPath }: { subPath: string }) {
           const next: Record<string, string> = {};
           for (const project of projectList) {
             const slug = resolveRepoSlug(project.gitRemoteUrl);
-            if (slug !== null) next[project.id] = `https://github.com/${slug}`;
+            if (slug !== null) {
+              next[project.id] = `https://github.com/${slug}`;
+            } else {
+              // Forgejo/Cove remote: the base item URLs build on, so #N text
+              // refs gain hrefs and ride tracker_validate like GitHub ones.
+              const base = forgejoItemBase(project.gitRemoteUrl);
+              if (base !== null) next[project.id] = base;
+            }
           }
           setRepoBaseByProject(next);
         },
@@ -982,6 +989,55 @@ function BoardPage({ subPath }: { subPath: string }) {
         .join(","),
     [liveThreads, repoBaseByProject, linksByThread],
   );
+  // Text-ref hrefs across visible threads, the tracker_validate batch (the
+  // chip rule: a #N/URL in text chips only when the item is confirmed).
+  // Sorted-join mirrors visibleRefKey: cheap string equality as the effect
+  // dep, safe join (https hrefs carry no commas).
+  const textRefHrefsKey = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          liveThreads.flatMap((thread) => {
+            const repoBase = repoBaseByProject[thread.projectId];
+            const branch = thread.environment?.branchName ?? thread.host?.name ?? "";
+            return findTicketRefs(thread.displayTitle, {
+              extraText: branch,
+              ...(repoBase !== undefined ? { repoHrefBase: repoBase } : {}),
+            })
+              .map((ref) => ref.href)
+              .filter((href): href is string => href !== undefined);
+          }),
+        ),
+      )
+        .sort()
+        .join(","),
+    [liveThreads, repoBaseByProject],
+  );
+  const [validatedHrefs, setValidatedHrefs] = useState<ReadonlySet<string>>(new Set());
+  useEffect(() => {
+    if (textRefHrefsKey === "") {
+      setValidatedHrefs(new Set());
+      return;
+    }
+    let cancelled = false;
+    const urls = textRefHrefsKey.split(",");
+    rpc.call("tracker_validate", { urls }).then(
+      (result) => {
+        if (cancelled) return;
+        setValidatedHrefs(
+          new Set(
+            Object.entries(result.results)
+              .filter(([, verdict]) => verdict.confirmed)
+              .map(([url]) => url),
+          ),
+        );
+      },
+      () => {}, // Validation optional; an empty set just holds text chips back.
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [rpc, textRefHrefsKey]);
   useEffect(() => {
     if (visibleRefKey === "") {
       setTicketStatuses({});
@@ -2001,6 +2057,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
             linkedIssuesFor={(threadId) => linksByThread[threadId]}
+            validatedHrefs={validatedHrefs}
             parentLaneOrder={parentLaneOrder}
             onParentLaneOrderChange={persistParentLaneOrder}
             onOpenThread={openThreadCard}
@@ -2033,6 +2090,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
             linkedIssuesFor={(threadId) => linksByThread[threadId]}
+            validatedHrefs={validatedHrefs}
             onOpenThread={openThreadCard}
             onClosePane={closeThreadPane}
             onNewTask={openNewThread}

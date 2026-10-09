@@ -125,6 +125,8 @@ interface BoardProps {
     | undefined;
   /** The board's own GitHub links per thread id (metadata "linkedIssues"). */
   linkedIssuesFor?: (threadId: string) => ThreadLink[] | undefined;
+  /** Hrefs tracker_validate confirmed; text refs chip only for these. */
+  validatedHrefs?: ReadonlySet<string>;
   onOpenThread: (threadId: string) => void;
   /** Close the open thread pane when the operator clicks empty board area. */
   onClosePane?: () => void;
@@ -368,6 +370,7 @@ export function Board({
   repoBaseFor,
   statusFor,
   linkedIssuesFor,
+  validatedHrefs,
   onOpenThread,
   onNewTask,
   onClosePane,
@@ -1393,6 +1396,7 @@ export function Board({
                           repoHrefBase={repoBaseFor(thread.projectId) ?? undefined}
                           statusFor={statusFor}
                           linkedIssues={linkedIssuesFor?.(thread.id)}
+                          validatedHrefs={validatedHrefs}
                           menuActions={menuActionsFor(thread)}
                           childThreads={
                             isDoneProjection

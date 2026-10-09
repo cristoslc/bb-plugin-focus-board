@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findTicketRefs, resolveRepoSlug } from "../lib/tickets";
+import { findTicketRefs, forgejoItemBase, resolveRepoSlug } from "../lib/tickets";
 
 const BASE = "https://github.com/owner/repo";
 
@@ -164,5 +164,43 @@ describe("findTicketRefs — combined behavior", () => {
 
   it("returns empty for titles with no refs", () => {
     expect(findTicketRefs("just a normal title", { extraText: "main" })).toEqual([]);
+  });
+});
+
+describe("forgejoItemBase", () => {
+  it("maps an https remote on a non-github host to its item base", () => {
+    expect(forgejoItemBase("https://git.cove.internal/cove/focus-board.git")).toBe(
+      "https://git.cove.internal/cove/focus-board",
+    );
+    expect(forgejoItemBase("https://forge.example.com:8443/owner/repo/")).toBe(
+      "https://forge.example.com:8443/owner/repo",
+    );
+  });
+
+  it("maps a git@ ssh remote on a non-github host", () => {
+    expect(forgejoItemBase("git@forge.example.com:owner/repo.git")).toBe(
+      "https://forge.example.com/owner/repo",
+    );
+  });
+
+  it("github remotes resolve through the github path, null here", () => {
+    expect(forgejoItemBase("https://github.com/owner/repo.git")).toBeNull();
+    expect(forgejoItemBase("git@github.com:owner/repo.git")).toBeNull();
+  });
+
+  it("shapeless remotes are null", () => {
+    expect(forgejoItemBase("https://forge.example.com/solo.git")).toBeNull();
+    expect(forgejoItemBase(null)).toBeNull();
+    expect(forgejoItemBase("")).toBeNull();
+  });
+});
+
+describe("forgejo item URLs validate as https item URLs", () => {
+  it("a #N text ref on a forgejo base builds the /issues/N href", () => {
+    const refs = findTicketRefs("fix the thing #7", {
+      extraText: "",
+      repoHrefBase: "https://forge.example.com/owner/repo",
+    });
+    expect(refs).toEqual([{ raw: "#7", tracker: "github", number: 7, href: "https://forge.example.com/owner/repo/issues/7" }]);
   });
 });

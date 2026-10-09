@@ -16,13 +16,32 @@
  * for the original pattern set and false-positive guards.
  */
 
-/** Resolve a git remote URL to an "owner/repo" slug; null when not GitHub. */
+/** Resolve a git remote URL to an "owner/repo" GitHub slug; null when not GitHub. */
 export function resolveRepoSlug(remote: string | null | undefined): string | null {
   if (!remote) return null;
   const https = remote.match(/^https:\/\/github\.com\/([\w.-]+\/[\w.-]+?)(?:\.git)?\/?$/);
   if (https) return https[1];
   const ssh = remote.match(/^git@github\.com:([\w.-]+\/[\w.-]+?)(?:\.git)?$/);
   if (ssh) return ssh[1];
+  return null;
+}
+
+/**
+ * Forgejo/Gitea item base from a git remote (deterministic): any remote with
+ * an owner/repo path on a host that is not github.com — bb's own forge serves
+ * Forgejo there, and Forgejo identifies items as /issues/N pages. Returns
+ * "https://<host>/<owner>/<repo>" (the base item URLs build on); null for
+ * github remotes and remotes without an owner/repo path (nothing to
+ * validate #N refs against there).
+ */
+export function forgejoItemBase(remote: string | null | undefined): string | null {
+  if (!remote) return null;
+  const https = remote.match(
+    /^https:\/\/(?!github\.com)([\w.-]+(?::\d+)?)\/([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/,
+  );
+  if (https) return `https://${https[1]}/${https[2]}/${https[3]}`;
+  const ssh = remote.match(/^git@(?!github\.com)([^:]+):([\w.-]+)\/([\w.-]+?)(?:\.git)?$/);
+  if (ssh) return `https://${ssh[1]}/${ssh[2]}/${ssh[3]}`;
   return null;
 }
 

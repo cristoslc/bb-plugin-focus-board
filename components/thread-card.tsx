@@ -131,6 +131,14 @@ interface ThreadCardProps {
    * They join the chip row like text refs — see lib/link-metadata.ts.
    */
   linkedIssues?: ThreadLink[];
+  /**
+   * Hrefs the server's tracker_validate confirmed as existing (the chip
+   * rule: a text ref chips only when something attached to the project can
+   * validate it). Store links skip validation and always chip. Undefined =
+   * caller not wired to validation → the pre-validation behavior (chips
+   * render unfiltered), which keeps component-level previews sane.
+   */
+  validatedHrefs?: ReadonlySet<string>;
   // Ruler+wrap mini variant: fits the 136×92 context card grid.
   compact?: boolean;
 }
@@ -356,6 +364,7 @@ export function ThreadCard({
   repoHrefBase,
   statusFor,
   linkedIssues,
+  validatedHrefs,
   menuActions,
   childThreads,
   childCount,
@@ -387,11 +396,22 @@ export function ThreadCard({
     extraText: branch,
     repoHrefBase,
   });
+  // The chip rule: a TEXT ref chips only when the server's tracker_validate
+  // confirmed its item exists (validatedHrefs wired; undefined keeps the
+  // pre-validation behavior for unwired callers). A ref with no href at all
+  // (a project with no GitHub/forgejo remote) cannot be validated → no chip.
+  // Store links are trusted by construction and skip the gate entirely.
+  const validatedTextRefs =
+    validatedHrefs === undefined
+      ? scannedTicketRefs
+      : scannedTicketRefs.filter(
+          (ref) => ref.href !== undefined && validatedHrefs.has(ref.href),
+        );
   // Links the board itself stores (issue #13) join the text-scan chips: a
   // thread linked to an item its title and branch never name still shows the
   // chip. href-dedupe inside keeps the scan's richer chip when identical.
-  const ticketRefs = scannedTicketRefs.concat(
-    linkedTicketRefs(linkedIssues, scannedTicketRefs),
+  const ticketRefs = validatedTextRefs.concat(
+    linkedTicketRefs(linkedIssues, validatedTextRefs),
   );
   const children = childThreads ?? [];
   // The chip counts every visible child (prop from the raw family index);

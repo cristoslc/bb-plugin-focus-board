@@ -70,6 +70,7 @@ import {
 } from "./lib/sweep-cli";
 import { readGitHubStatuses } from "./lib/tracker-status";
 import { resolveRepoSlug } from "./lib/tickets";
+import { validateTrackerUrls } from "./lib/tracker-validate";
 import { resolveWithinRoot } from "./lib/workspace-paths";
 import {
 	createWorkspaceOpenTargetsCache,
@@ -284,6 +285,29 @@ export const rpcContract = defineRpcContract({
     }),
     output: z.object({
       statuses: z.record(z.number().int(), z.object({ kind: z.string(), state: z.string() })),
+    }),
+  },
+  /**
+   * Text-ref validation (the chip rule, issue #13 follow-up): a #N ref or
+   * GitHub URL found in text only chips when the item exists. The GitHub
+   * plugin's sqlite cache is authoritative for GitHub items; an HTTP
+   * existence check covers cache misses and forgejo items (no cache).
+   * Store links (link_set / link tool) are trusted by construction and skip
+   * this method entirely.
+   */
+  tracker_validate: {
+    input: z.object({
+      urls: z.array(z.string().startsWith("https://", "https url")).max(100),
+    }),
+    output: z.object({
+      results: z.record(
+        z.string(),
+        z.object({
+          confirmed: z.boolean(),
+          kind: z.string().optional(),
+          state: z.string().optional(),
+        }),
+      ),
     }),
   },
 
@@ -1675,6 +1699,38 @@ export default async function plugin(bb: BbPluginApi) {
       if (home === "") return { statuses: {} };
       const statuses = readGitHubStatuses(`${home}/${GITHUB_CACHE_DB}`, repo, numbers, bb.log);
       return { statuses };
+    },
+    tracker_validate: async ({ urls }) => {
+      const home = process.env.HOME ?? "";
+      const results = await validateTrackerUrls(urls, {
+        fetchImpl: (url, init) => fetch(url, init),
+        // No HOME (or no cache file): the lookup degrades to {} and the URL
+        // falls through to the HTTP check, exactly the tracker_status rule.
+        githubCacheStatuses:
+          home === ""
+            ? () => ({})
+            : (repo, numbers) =>
+                readGitHubStatuses(`${home}/${GITHUB_CACHE_DB}`, repo, numbers, bb.log),
+        kvGet: async (key) => {
+          // Cached outcome read; garbage in the KV slot reads as absent (the
+          // cache is an optimization, never a correctness source here).
+          const raw = (await bb.storage.kv.get(key)) as unknown;
+          if (
+            typeof raw !== "object" ||
+            raw === null ||
+            typeof (raw as { ok?: unknown }).ok !== "boolean" ||
+            typeof (raw as { at?: unknown }).at !== "number"
+          ) {
+            return undefined;
+          }
+          return raw as { ok: boolean; at: number };
+        },
+        kvSet: async (key, value) => {
+          await bb.storage.kv.set(key, value);
+        },
+        now: () => Date.now(),
+      });
+      return { results };
     },
     workspace_files_exist: async ({ threadId, paths }) => {
       const thread = await bb.sdk.threads.get({ threadId });

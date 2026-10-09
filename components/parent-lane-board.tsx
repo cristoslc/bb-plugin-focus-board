@@ -46,6 +46,8 @@ interface ParentLaneBoardProps {
     | undefined;
   /** The board's own GitHub links per thread id (metadata "linkedIssues"). */
   linkedIssuesFor?: (threadId: string) => ThreadLink[] | undefined;
+  /** Hrefs tracker_validate confirmed; text refs chip only for these. */
+  validatedHrefs?: ReadonlySet<string>;
   parentLaneOrder: ParentLaneOrder;
   onParentLaneOrderChange: (value: ParentLaneOrder) => void;
   onOpenThread: (threadId: string) => void;
@@ -221,6 +223,7 @@ export function ParentLaneBoard({
   repoBaseFor,
   statusFor,
   linkedIssuesFor,
+  validatedHrefs,
   parentLaneOrder,
   onParentLaneOrderChange,
   onOpenThread,
@@ -829,6 +832,7 @@ export function ParentLaneBoard({
                           repoHrefBase={repoBaseFor(cell.thread.projectId) ?? undefined}
                           statusFor={statusFor}
                           linkedIssues={linkedIssuesFor?.(cell.thread.id)}
+                          validatedHrefs={validatedHrefs}
                           menuActions={menuActionsFor(cell.thread)}
                           snoozeFor={snoozeFor}
                           activeThreadId={activeThreadId}
