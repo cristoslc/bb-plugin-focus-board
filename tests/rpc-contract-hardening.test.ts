@@ -51,10 +51,15 @@ const validInputs: Record<Method, unknown> = {
     source: "operator",
   },
   link_clear: { threadId: "thr_x" },
+  groups_list: null,
+  group_create: { name: "Auth rework" },
+  group_rename: { groupId: "grp_x", name: "Auth rework" },
+  group_set: { threadId: "thr_x", groupId: null },
 };
 
 const nullInputMethods: Method[] = [
   "done_list",
+  "groups_list",
   "pin_parks_list",
   "snooze_list",
   "rank_list",

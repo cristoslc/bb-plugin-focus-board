@@ -39,6 +39,11 @@ import {
   type RankStore,
 } from "../lib/rank";
 import { reparentRefusalFromParents } from "../lib/reparent";
+import { columnRunInfo, unitMoveTarget, type ColumnRunInfo } from "../components/group-boxes";
+import { displayAfterUnitMove } from "../lib/rank-unit-move";
+
+/** The group plan absents itself when the caller has no group data. */
+const EMPTY_GROUP_BOXES: ReadonlyMap<string, { groupId: string; name: string }> = new Map();
 
 /** The parent map absents itself when the caller has no nesting data. */
 const EMPTY_PARENT_OF: ReadonlyMap<string, string> = new Map();
@@ -107,6 +112,15 @@ interface BoardProps {
    * the active card keeps the live portion.
    */
   doneChildrenByParent: ReadonlyMap<string, readonly PluginSidebarThread[]>;
+  /**
+   * Thread id → its feature-group family box ({ groupId, name }) — the
+   * dashed outline wrapper for sibling threads sharing a named group.
+   * Holds ONLY threads that render inside a box (groups of one, pinned and
+   * done members are absent); undefined/empty when the caller has no group
+   * data and every card renders standalone. The box itself is decoration
+   * only: no dot, no pill, no color — the name is secondary text.
+   */
+  groupBoxOf?: ReadonlyMap<string, { groupId: string; name: string }>;
   /** Family members that did not match the active filters; rendered dimmed. */
   dimmedIds: ReadonlySet<string>;
   /**
@@ -151,6 +165,13 @@ interface BoardProps {
     beforeId: string | null,
     toEnd: boolean,
     visibleIds: readonly string[],
+    /**
+     * The dragged card's family-box unit (its members in display order) —
+     * present ONLY when the dragged card is boxed, so card-level callers
+     * keep the card-shaped five-argument contract. The box lands
+     * contiguously and ranks together.
+     */
+    unitIds?: readonly string[],
   ) => void;
   /**
    * Drop a card ONTO a card: make the dropped thread a child of the target.
@@ -363,6 +384,7 @@ export function Board({
   nestedChildrenByParent,
   childCountByParent,
   doneChildrenByParent,
+  groupBoxOf,
   dimmedIds,
   collapsedFamilyIds,
   onFamilyCollapsedChange,
@@ -623,6 +645,7 @@ export function Board({
     beforeId: string | null,
     toEnd: boolean,
     visibleIds: readonly string[],
+    unitIds?: readonly string[],
   ): void {
     if (!ranking) {
       reportRefusal("card ordering is not available on this board.");
@@ -636,22 +659,32 @@ export function Board({
       return;
     }
     setRankError(null);
-    onRankMove?.(
-      columnRankKey(groupBy, column.id),
-      threadId,
-      beforeId,
-      toEnd,
-      visibleIds,
-    );
+    // The RPC's signature stays card-shaped when there is no unit: old
+    // callers and tests must not hear an argument that was never there.
+    if (unitIds === undefined) {
+      onRankMove?.(columnRankKey(groupBy, column.id), threadId, beforeId, toEnd, visibleIds);
+    } else {
+      onRankMove?.(
+        columnRankKey(groupBy, column.id),
+        threadId,
+        beforeId,
+        toEnd,
+        visibleIds,
+        unitIds,
+      );
+    }
     // Report the resulting position from the order the move produces, not
     // from the anchor's old index: dropping onto a card's top half lands one
     // above where that card was, and the message must match the new board.
     // The DISPLAYED order, not the sparse stored one — a card that keeps its
-    // rank below the drop point is still a card on the board.
-    const after = displayAfterMove(visibleIds, threadId, beforeId, toEnd);
+    // rank below the drop point is still a card on the board. A unit move
+    // reads the unit's arrangement (the box lands contiguous).
+    const after = unitIds
+      ? displayAfterUnitMove(visibleIds, unitIds, beforeId, toEnd)
+      : displayAfterMove(visibleIds, threadId, beforeId, toEnd);
     setAnnouncement(
       `Moved to position ${after.indexOf(threadId) + 1} of ${after.length} in ${column.label}.`,
-    );
+      );
   }
 
   /**
@@ -887,6 +920,34 @@ export function Board({
           // fresh install can reach the feature. The stored-order flag below
           // is for display only ("this lane is hand-ordered"), not a gate.
           const isOrdered = ranking && columnIsRanked(rankStore ?? {}, rankKey);
+          // Family-box run info for this column (the decided group design):
+          // who is boxed, at which edge — and which flat ids move as one
+          // unit. Empty plan → plain cards everywhere, zero overhead.
+          const runInfo = columnRunInfo(shownThreads, groupBoxOf ?? EMPTY_GROUP_BOXES);
+          const unitOf = (threadId: string): readonly string[] | undefined => {
+            const run = runInfo.get(threadId);
+            return run !== undefined && run.role !== "solo" && run.memberIds.length > 1
+              ? run.memberIds
+              : undefined;
+          };
+          // The insertion line must sit on the BOX edge, not mid-box on a
+          // hovered member: a before-edge maps to the run's first member,
+          // an after-edge to the card after the run (or the run's last card
+          // when the run ends the column).
+          const rankRepFor = (hoverId: string, zone: DropZone): { threadId: string; zone: DropZone } => {
+            const run = runInfo.get(hoverId);
+            if (run === undefined || run.role === "solo" || zone === "onto") {
+              return { threadId: hoverId, zone };
+            }
+            if (zone === "before") {
+              return { threadId: run.memberIds[0], zone: "before" };
+            }
+            const at = shownThreads.findIndex((candidate) => candidate.id === run.memberIds[run.memberIds.length - 1]);
+            const below = shownThreads[at + 1];
+            return below !== undefined
+              ? { threadId: below.id, zone: "before" }
+              : { threadId: run.memberIds[run.memberIds.length - 1], zone: "after" };
+          };
           return (
             <section
               key={column.id}
@@ -962,6 +1023,7 @@ export function Board({
                         null,
                         true,
                         shownThreads.map((candidate) => candidate.id),
+                        unitOf(threadId),
                       );
                     }
                   }
@@ -1133,10 +1195,29 @@ export function Board({
                       const isDoneProjection =
                         column.id === "done" && !doneIds.has(thread.id);
                       const projectionChildren = doneChildrenByParent.get(thread.id);
+                      // The card's role in its family-box run: a border
+                      // segment edge (first/mid/last) when the box has two or
+                      // more members in THIS column — a lone member (role
+                      // "solo", or a member whose box lives elsewhere) renders
+                      // a plain card with no decoration.
+                      const boxRun = runInfo.get(thread.id);
+                      const boxDecor =
+                        boxRun !== undefined && boxRun.role !== "solo" && boxRun.memberIds.length > 1
+                          ? (boxRun.role as "first" | "mid" | "last")
+                          : null;
                       return (
                       <li
                         key={thread.id}
                         data-rank-slot={ranking ? thread.id : undefined}
+                        data-group-box-member={
+                          boxDecor !== null ? (runInfo.get(thread.id)?.boxId ?? undefined) : undefined
+                        }
+                        data-group-box-first={
+                          boxDecor === "first" ? (runInfo.get(thread.id)?.boxId ?? undefined) : undefined
+                        }
+                        data-group-box-last={
+                          boxDecor === "last" ? (runInfo.get(thread.id)?.boxId ?? undefined) : undefined
+                        }
                         // Every card is a drop target for its own lane's
                         // drag; the hovered card decides which of its two
                         // edges the insertion line lands on, or whether the
@@ -1183,12 +1264,24 @@ export function Board({
                               clearRankDrop();
                               return;
                             }
+                            // Same-run hover (a member of the dragged card's
+                            // own box, either side) is a no-op: the box
+                            // cannot land inside itself.
+                            const dragUnit =
+                              draggingIdRef.current !== null && draggingIdRef.current !== ""
+                                ? unitOf(draggingIdRef.current)
+                                : undefined;
+                            if (dragUnit !== undefined && dragUnit.includes(thread.id)) {
+                              clearRankDrop();
+                              return;
+                            }
+                            const rep = rankRepFor(thread.id, zone);
                             setRankDrop((current) =>
                               current?.columnId === column.id &&
-                              current?.threadId === thread.id &&
-                              current?.zone === zone
+                              current?.threadId === rep.threadId &&
+                              current?.zone === rep.zone
                                 ? current
-                                : { columnId: column.id, threadId: thread.id, zone },
+                                : { columnId: column.id, threadId: rep.threadId, zone: rep.zone },
                             );
                           }
                         }
@@ -1233,11 +1326,12 @@ export function Board({
                               // The state change first — the card joins the
                               // lane — then the ranked slot the line showed.
                               if (dropHandler !== null) dropHandler(droppedId);
-                              const target = moveTargetFor(
+                              const target = unitMoveTarget(
                                 shownThreads.map((candidate) => candidate.id),
                                 thread.id,
                                 edge,
                                 droppedId,
+                                runInfo,
                               );
                               if (target !== null) {
                                 commitMove(
@@ -1246,6 +1340,7 @@ export function Board({
                                   target.beforeId,
                                   target.toEnd,
                                   shownThreads.map((candidate) => candidate.id),
+                                  unitOf(droppedId),
                                 );
                               }
                               return;
@@ -1258,11 +1353,12 @@ export function Board({
                             event.stopPropagation();
                             clearRankDrop();
                             if (droppedId === "") return;
-                            const target = moveTargetFor(
+                            const target = unitMoveTarget(
                               shownThreads.map((candidate) => candidate.id),
                               thread.id,
                               edge,
                               droppedId,
+                              runInfo,
                             );
                             if (target === null) {
                               reportRefusal(
@@ -1276,6 +1372,7 @@ export function Board({
                               target.beforeId,
                               target.toEnd,
                               shownThreads.map((candidate) => candidate.id),
+                              unitOf(droppedId),
                             );
                           }
                         }
@@ -1308,6 +1405,51 @@ export function Board({
                             if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
                             const at = shownThreads.indexOf(thread);
                             const visibleIds = shownThreads.map((candidate) => candidate.id);
+                            const unit = unitOf(thread.id);
+                            if (unit !== undefined && unit.length > 1) {
+                              // A boxed member steps its WHOLE box, anchored
+                              // at the neighbouring run's edge — the same
+                              // normalization a drag gets, so a step never
+                              // splices into another box's middle.
+                              const run = runInfo.get(thread.id);
+                              const stepInfo = run;
+                              if (stepInfo === undefined) return;
+                              const firstIdx = visibleIds.indexOf(stepInfo.memberIds[0]);
+                              const lastIdx = visibleIds.indexOf(
+                                stepInfo.memberIds[stepInfo.memberIds.length - 1],
+                              );
+                              if (event.key === "ArrowUp") {
+                                if (firstIdx <= 0) return;
+                                const target = unitMoveTarget(
+                                  visibleIds,
+                                  visibleIds[firstIdx - 1],
+                                  "before",
+                                  thread.id,
+                                  runInfo,
+                                );
+                                if (target === null) return;
+                                event.preventDefault();
+                                commitMove(column, thread.id, target.beforeId, target.toEnd, visibleIds, unit);
+                                return;
+                              }
+                              const hoverBelow = visibleIds[lastIdx + 1] ?? null;
+                              if (hoverBelow === null) {
+                                event.preventDefault();
+                                commitMove(column, thread.id, null, true, visibleIds, unit);
+                                return;
+                              }
+                              const target = unitMoveTarget(
+                                visibleIds,
+                                hoverBelow,
+                                "after",
+                                thread.id,
+                                runInfo,
+                              );
+                              if (target === null) return;
+                              event.preventDefault();
+                              commitMove(column, thread.id, target.beforeId, target.toEnd, visibleIds, unit);
+                              return;
+                            }
                             const to = event.key === "ArrowUp" ? at - 1 : at + 1;
                             if (to < 0 || to >= shownThreads.length) return;
                             event.preventDefault();
@@ -1337,6 +1479,48 @@ export function Board({
                           ),
                         )}
                       >
+                        {/* Feature-group family box (the decided design):
+                            segments of one dashed outline shared across the
+                            run's card slots — a real element per edge, since
+                            the before/after pseudo slots are taken by the
+                            insertion line. The name is secondary text
+                            interrupting the top border (fieldset style), on
+                            the FIRST member only. */}
+                        {boxDecor !== null ? (
+                          <>
+                            <span
+                              aria-hidden
+                              data-group-box-edge="left"
+                              className="absolute top-[-2px] bottom-[-2px] left-[-6px] w-0 border-l border-dashed border-border/70"
+                            />
+                            <span
+                              aria-hidden
+                              data-group-box-edge="right"
+                              className="absolute top-[-2px] bottom-[-2px] right-[-6px] w-0 border-l border-dashed border-border/70"
+                            />
+                            {boxDecor === "first" ? (
+                              <>
+                                <span
+                                  aria-hidden
+                                  className="absolute top-[-8px] left-[-6px] right-[-6px] h-0 border-t border-dashed border-border/70"
+                                />
+                                <span
+                                  data-group-box-label={runInfo.get(thread.id)?.boxId}
+                                  className="absolute top-[-12px] left-1.5 z-10 rounded-sm bg-muted px-1 text-[10.5px] leading-[15px] text-muted-foreground"
+                                  title={`Feature group “${runInfo.get(thread.id)?.boxName}” — drag any member to move the whole box`}
+                                >
+                                  {runInfo.get(thread.id)?.boxName}
+                                </span>
+                              </>
+                            ) : null}
+                            {boxDecor === "last" ? (
+                              <span
+                                aria-hidden
+                                className="absolute bottom-[-8px] left-[-6px] right-[-6px] h-0 border-t border-dashed border-border/70"
+                              />
+                            ) : null}
+                          </>
+                        ) : null}
                         <ThreadCard
                           thread={thread}
                           stateDot={<StateDot thread={thread} />}

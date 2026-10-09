@@ -42,6 +42,10 @@ import {
 } from "./components/nesting";
 import { buildParentLanes } from "./components/parent-lanes";
 import { ParentLaneBoard } from "./components/parent-lane-board";
+import { GroupDialog } from "./components/group-dialog";
+import { groupMenuActions } from "./lib/group-metadata";
+import { filterWithGroupBoxes, planGroupBoxes } from "./components/group-boxes";
+import { applyUnitMoveVisible } from "./lib/rank-unit-move";
 import { doneAtToEpochMs } from "./lib/done-metadata";
 import { newThreadSeedEnvironment, newThreadSeedProjectId } from "./lib/new-thread-seed";
 import { SnoozeDialog } from "./components/snooze-dialog";
@@ -463,6 +467,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   // "Pick a time…" dialog target: the thread id waiting on a custom wake
   // time, null when no dialog is open.
   const [snoozeDialogFor, setSnoozeDialogFor] = useState<string | null>(null);
+  // "Group…" picker target: the thread id whose card menu opened the group
+  // picker, null when closed. The thread may leave the board while it is
+  // open; the render closes quietly, like the snooze picker.
+  const [groupDialogFor, setGroupDialogFor] = useState<string | null>(null);
 
   // Manual column orders, keyed by columnRankKey. A column with no stored
   // order stays in the derived order and shows no drag affordance, so the
@@ -487,6 +495,53 @@ function BoardPage({ subPath }: { subPath: string }) {
     refetchRanks();
   }, [refetchRanks]);
   useRealtime("rank-changed", refetchRanks);
+
+  // Feature groups (the family boxes): the registry (names) and the
+  // per-thread assignments, both optional state — the board renders a plain
+  // board without them. One group-changed signal per surface (menu, CLI,
+  // another panel) refetches both shapes.
+  const [groupRegistry, setGroupRegistry] = useState<Record<string, { name: string; createdAt: string }>>({});
+  const [groupAssignments, setGroupAssignments] = useState<Record<string, string>>({});
+  const refetchGroups = useCallback(() => {
+    rpc.call("groups_list").then(
+      (result) => {
+        setGroupRegistry(result.groups);
+        setGroupAssignments(result.memberships);
+      },
+      () => {}, // Groups are optional state; the board works without them.
+    );
+  }, [rpc]);
+  useEffect(() => {
+    refetchGroups();
+  }, [refetchGroups]);
+  useRealtime("group-changed", refetchGroups);
+  const setThreadGroup = useCallback(
+    (threadId: string, groupId: string | null) => {
+      // Optimistic; the group-changed refetch settles the truth — including
+      // any prune the write caused (the last unassigned group vanishes).
+      setGroupAssignments((current) => {
+        const next = { ...current };
+        if (groupId === null) delete next[threadId];
+        else next[threadId] = groupId;
+        return next;
+      });
+      rpc.call("group_set", { threadId, groupId }).catch(() => refetchGroups());
+    },
+    [rpc, refetchGroups],
+  );
+  /** Create a named group and assign the thread to it — one gesture. */
+  const createAndAssignGroup = useCallback(
+    (threadId: string, name: string) => {
+      rpc
+        .call("group_create", { name })
+        .then((created: unknown) => {
+          const groupId = (created as { group: { id: string } }).group.id;
+          setThreadGroup(threadId, groupId);
+        })
+        .catch(() => refetchGroups());
+    },
+    [rpc, refetchGroups, setThreadGroup],
+  );
 
   // The sidebar view refreshes over its own realtime subscription, but
   // archive/unarchive changes also bump the pane's button state and the
@@ -818,7 +873,37 @@ function BoardPage({ subPath }: { subPath: string }) {
         : filterIndividually(nonHiddenThreads, filter, search.trim(), projectNameFor),
     [nestChildren, groupBy, nonHiddenThreads, familyIndex, filter, search, projectNameFor],
   );
-  const filtered = familyFiltered.kept;
+  // The feature-group plan (the decided family-box design): which groups
+  // render a box, which lane each box lands in. Computed over the FULL
+  // non-hidden set — a member a search hid is dimmed inside its passing
+  // box, never dropped from the group's count.
+  const groupBoxPlan = useMemo(
+    () =>
+      planGroupBoxes(
+        liveThreads,
+        new Map(Object.entries(groupAssignments)),
+        new Map(Object.entries(groupRegistry).map(([id, group]) => [id, group.name])),
+        groupBy,
+        { projects, providers },
+        doneIds,
+        Date.now(),
+      ),
+    [liveThreads, groupAssignments, groupRegistry, groupBy, projects, providers, doneIds],
+  );
+  // Group keep-and-dim applies over the family result (a member a failed
+  // family dropped cannot keep its box on the board); the two dim sets merge.
+  const groupBoxFiltered = useMemo(
+    () =>
+      groupBoxPlan.active
+        ? filterWithGroupBoxes(familyFiltered.kept, groupBoxPlan.groupBoxOf, filter, search.trim(), projectNameFor)
+        : { kept: familyFiltered.kept, dimmedIds: new Set<string>() as ReadonlySet<string> },
+    [groupBoxPlan, familyFiltered, filter, search, projectNameFor],
+  );
+  const dimmedAll = useMemo(
+    () => new Set([...familyFiltered.dimmedIds, ...groupBoxFiltered.dimmedIds]),
+    [familyFiltered, groupBoxFiltered],
+  );
+  const filtered = groupBoxFiltered.kept;
 
   const searchActive = search.trim() !== "";
   // Search runs inside filterFamilies (it keeps the whole family on a hit and
@@ -857,8 +942,9 @@ function BoardPage({ subPath }: { subPath: string }) {
             nestingEnabled: nestChildren,
             ranks,
             doneTimes,
+            extraColumnOverrides: groupBoxPlan.columnOverrides,
           }),
-    [isParentGroupBy, searched, groupBy, projects, providers, frozenColumns, doneIds, nestChildren, ranks, doneTimes],
+    [isParentGroupBy, searched, groupBy, projects, providers, frozenColumns, doneIds, nestChildren, ranks, doneTimes, groupBoxPlan],
   );
   const columns = assembly?.columns ?? [];
   // The map that actually renders as nested rows (nesting rules applied, so a
@@ -1177,7 +1263,7 @@ function BoardPage({ subPath }: { subPath: string }) {
     [searched],
   );
   const emptyBecauseFiltered = liveThreads.length > 0 && boardCount === 0 && anyFilterActive;
-  const dimmedIds = familyFiltered.dimmedIds;
+  const dimmedIds = dimmedAll;
 
   // The open pane's thread can vanish from the active view (archived,
   // deleted); the archived list keeps it resolvable so the pane stays open
@@ -1937,6 +2023,10 @@ function BoardPage({ subPath }: { subPath: string }) {
           },
         },
         ...snoozeEntries,
+        ...groupMenuActions({
+          grouped: groupAssignments[thread.id] !== undefined,
+          openPicker: () => setGroupDialogFor(thread.id),
+        }),
         ...(thread.parentThreadId !== null && thread.parentThreadId !== ""
           ? [
               {
@@ -2001,7 +2091,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         },
       ];
     },
-    [actions, applyUnreadStateEffects, clearParkPin, clearSnooze, doneAgeSource, doneIds, exitPinnedLane, openNewChildThread, requestReveal, restoreParkedPin, runBrowserReveal, rpc, setDoneExtras, setDoneIds, setSnoozeDialogFor, snoozeUntil, snoozedIds, sdk],
+    [actions, applyUnreadStateEffects, clearParkPin, clearSnooze, doneAgeSource, doneIds, exitPinnedLane, groupAssignments, openNewChildThread, requestReveal, restoreParkedPin, runBrowserReveal, rpc, setDoneExtras, setDoneIds, setGroupDialogFor, setSnoozeDialogFor, snoozeUntil, snoozedIds, sdk],
   );
 
   if (status === "loading" && threads.length === 0) {
@@ -2084,6 +2174,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             nestedChildrenByParent={nestedChildrenByParent}
             childCountByParent={assembly?.childCountByParent ?? new Map()}
             doneChildrenByParent={assembly?.doneChildrenByParent ?? new Map()}
+            groupBoxOf={groupBoxPlan.groupBoxOf}
             collapsedFamilyIds={collapsedFamilies}
             onFamilyCollapsedChange={setFamilyCollapsed}
             dimmedIds={dimmedIds}
@@ -2165,19 +2256,29 @@ function BoardPage({ subPath }: { subPath: string }) {
                 () => undefined,
               )
             }
-            onRankMove={(columnKey, threadId, beforeId, toEnd, visibleIds) => {
-              // Optimistic: the card snaps to its slot immediately, and the
-              // rank-changed refetch confirms. A rejected write settles back
-              // to the stored order on the next refetch rather than sticking.
+            onRankMove={(columnKey, threadId, beforeId, toEnd, visibleIds, unitIds) => {
+              // Optimistic: the card (or whole box, unitIds) snaps to its
+              // slot immediately, and the rank-changed refetch confirms. A
+              // rejected write settles back to the stored order on the next
+              // refetch rather than sticking.
               setRanks((prev) => ({
                 ...prev,
-                [columnKey]: applyMoveVisible(
-                  orderForColumn(prev, columnKey),
-                  visibleIds,
-                  threadId,
-                  beforeId,
-                  toEnd,
-                ),
+                [columnKey]:
+                  unitIds !== undefined && unitIds.length > 1
+                    ? applyUnitMoveVisible(
+                        orderForColumn(prev, columnKey),
+                        visibleIds,
+                        unitIds,
+                        beforeId,
+                        toEnd,
+                      )
+                    : applyMoveVisible(
+                        orderForColumn(prev, columnKey),
+                        visibleIds,
+                        threadId,
+                        beforeId,
+                        toEnd,
+                      ),
               }));
               rpc
                 .call("rank_move", {
@@ -2186,6 +2287,7 @@ function BoardPage({ subPath }: { subPath: string }) {
                   beforeId,
                   toEnd,
                   visibleIds: [...visibleIds],
+                  unitIds: unitIds !== undefined && unitIds.length > 1 ? [...unitIds] : undefined,
                 })
                 .catch(() => refetchRanks());
             }}
@@ -2297,6 +2399,33 @@ function BoardPage({ subPath }: { subPath: string }) {
               setSnoozeDialogFor(null);
             }}
             onCancel={() => setSnoozeDialogFor(null)}
+          />
+        );
+      })()}
+      {groupDialogFor === null ? null : (() => {
+        const dialogThread = threads.find((candidate) => candidate.id === groupDialogFor);
+        if (dialogThread === undefined) {
+          setGroupDialogFor(null);
+          return null;
+        }
+        return (
+          <GroupDialog
+            threadTitle={dialogThread.displayTitle}
+            groups={Object.entries(groupRegistry).map(([id, group]) => ({ id, name: group.name }))}
+            currentGroupId={groupAssignments[dialogThread.id] ?? null}
+            onPick={(groupId) => {
+              setThreadGroup(dialogThread.id, groupId);
+              setGroupDialogFor(null);
+            }}
+            onCreate={(name) => {
+              createAndAssignGroup(dialogThread.id, name);
+              setGroupDialogFor(null);
+            }}
+            onRemove={() => {
+              setThreadGroup(dialogThread.id, null);
+              setGroupDialogFor(null);
+            }}
+            onCancel={() => setGroupDialogFor(null)}
           />
         );
       })()}

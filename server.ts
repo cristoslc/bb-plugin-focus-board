@@ -56,6 +56,17 @@ import {
 } from "./lib/snooze";
 import { reparentRefusal } from "./lib/reparent";
 import {
+  GROUP_METADATA_KEY,
+  GROUPS_KV_KEY,
+  createGroupRecord,
+  groupsRowFromStore,
+  normalizeGroupName,
+  parseGroupMember,
+  parseGroupsStore,
+  pruneEmptyGroups,
+  type GroupRecord,
+} from "./lib/group-metadata";
+import {
   RANK_KV_KEY,
   applyMoveVisible,
   orderForColumn,
@@ -63,6 +74,7 @@ import {
   rankRowFromStore,
   type RankStore,
 } from "./lib/rank";
+import { applyUnitMoveVisible } from "./lib/rank-unit-move";
 import {
   sweepCliEligible,
   type SweepEligible,
@@ -478,8 +490,57 @@ export const rpcContract = defineRpcContract({
        * sparse comparator sorts all ranked cards above unranked ones.
        */
       visibleIds: z.array(z.string()),
+      /**
+       * The ids of a family box's members moving WITH `threadId` as one
+       * unit (the box's drag contract). Present (non-empty) → the move is
+       * a unit move: the ids land contiguously, all ranked together.
+       * `threadId` must be one of them (fail loud otherwise — a mismatch
+       * is a client bug, not data to paper over).
+       */
+      unitIds: z.array(z.string().min(1)).optional(),
     }),
     output: z.object({ columnKey: COLUMN_KEY_SCHEMA, order: z.array(z.string()) }),
+  },
+
+  /**
+   * Feature groups (the family boxes): a registry row of named groups
+   * (`focus-board:groups`) plus per-thread assignment metadata (key
+   * "group"). The registry carries ONLY names/creation stamps;
+   * membership always derives from the thread metadata, so the
+   * "exists while assigned" rule is a read, not a synchronizer.
+   */
+  groups_list: {
+    input: z.null(),
+    output: z.object({
+      groups: z.record(
+        z.string(),
+        z.object({ name: z.string(), createdAt: z.string() }),
+      ),
+      /** Live thread id → groupId; archived members report through GC only. */
+      memberships: z.record(z.string(), z.string()),
+    }),
+  },
+  group_create: {
+    input: z.object({ name: z.string().min(1).max(200) }),
+    output: z.object({
+      group: z.object({ id: z.string().min(1), name: z.string(), createdAt: z.string() }),
+    }),
+  },
+  group_rename: {
+    input: z.object({ groupId: z.string().min(1), name: z.string().min(1).max(200) }),
+    output: z.object({
+      group: z.object({ id: z.string().min(1), name: z.string(), createdAt: z.string() }),
+    }),
+  },
+  /**
+   * Assign or clear a thread's group (null clears). The write GCs the
+   * registry afterward: a group whose last member (live OR archived — an
+   * archived member still holds its assignment) is gone is deleted, which
+   * is the whole "exists only while assigned" lifecycle.
+   */
+  group_set: {
+    input: z.object({ threadId: z.string().min(1), groupId: z.string().min(1).nullable() }),
+    output: z.object({ threadId: z.string().min(1), groupId: z.string().min(1).nullable() }),
   },
 });
 
@@ -503,6 +564,11 @@ const LINK_CHANGED = "link-changed";
 /** Realtime signal after a rank write. Payload names the column; boards
  *  refetch the whole store, so a stale payload cannot desync an order. */
 const RANK_CHANGED = "rank-changed";
+/** Realtime signal after any group write (create, rename, assign, clear,
+ *  prune). Payload is { threadId }; consumers refetch the registry AND the
+ *  membership map — one event covers both shapes because a prune touches
+ *  neither thread's assignment yet moves every other member's label. */
+const GROUP_CHANGED = "group-changed";
 /** Legacy KV key written before the metadata migration. */
 const LEGACY_DONE_KEY = "done-thread-ids";
 /** Per-thread sweep keep flags, independent of Done marks. */
@@ -739,6 +805,77 @@ export default async function plugin(bb: BbPluginApi) {
         remove: [PIN_PARK_METADATA_KEY],
       });
     }
+  }
+
+  // --- Feature groups (the family boxes) ---
+
+  async function readGroupsStore(): Promise<Readonly<Record<string, GroupRecord>>> {
+    const row = await bb.storage.kv.get(GROUPS_KV_KEY);
+    return parseGroupsStore(row);
+  }
+
+  async function writeGroupsStore(store: Readonly<Record<string, GroupRecord>>): Promise<void> {
+    await bb.storage.kv.set(GROUPS_KV_KEY, groupsRowFromStore(store));
+  }
+
+  async function readGroupAssignment(
+    threadId: string,
+  ): Promise<{ groupId: string } | null> {
+    // Same cast contract as readDoneRecord: getPluginMetadata returns an
+    // untyped namespace record; parseGroupMember validates the shape.
+    const namespace = await bb.sdk.threads.getPluginMetadata({ threadId });
+    const value = (namespace as Record<string, JsonValue>)[GROUP_METADATA_KEY];
+    return parseGroupMember(value);
+  }
+
+  async function writeGroupAssignment(threadId: string, groupId: string | null): Promise<void> {
+    if (groupId === null) {
+      await bb.sdk.threads.updatePluginMetadata({
+        threadId,
+        remove: [GROUP_METADATA_KEY],
+      });
+      return;
+    }
+    await bb.sdk.threads.updatePluginMetadata({
+      threadId,
+      set: { [GROUP_METADATA_KEY]: { groupId } },
+    });
+  }
+
+  /**
+   * groupId → assigned-thread count across LIVE and ARCHIVED rows: an
+   * archived member still carries its assignment metadata, so it still
+   * keeps the group's record alive (the group must reappear with the
+   * thread if it is ever unarchived). getPluginMetadata per row, like
+   * every other scan here.
+   */
+  async function countAllGroupMembers(): Promise<Map<string, number>> {
+    const [live, archived] = await Promise.all([
+      bb.sdk.threads.list({}),
+      bb.sdk.threads.list({ archived: true, limit: 200 }),
+    ]);
+    const counts = new Map<string, number>();
+    for (const row of [...live, ...archived]) {
+      const record = await readGroupAssignment(row.id);
+      if (record === null) continue;
+      counts.set(record.groupId, (counts.get(record.groupId) ?? 0) + 1);
+    }
+    return counts;
+  }
+
+  async function pruneGroupsToMembers(): Promise<void> {
+    const store = await readGroupsStore();
+    const counts = await countAllGroupMembers();
+    const pruned = pruneEmptyGroups(store, counts);
+    if (Object.keys(pruned).length === Object.keys(store).length) return;
+    await writeGroupsStore(pruned);
+  }
+
+  function unknownGroupError(groupId: string): PluginCliError {
+    return new PluginCliError(
+      `group ${groupId} does not exist`,
+      { code: "invalid_value", hint: "Assign against a group from groups_list." },
+    );
   }
 
   // Linked GitHub items (issue #13): the chip feed that works when neither
@@ -1703,7 +1840,10 @@ export default async function plugin(bb: BbPluginApi) {
     tracker_validate: async ({ urls }) => {
       const home = process.env.HOME ?? "";
       const results = await validateTrackerUrls(urls, {
-        fetchImpl: (url, init) => fetch(url, init),
+        // Same shape as every other fetchImpl pass-through here (the daemon
+        // client at requireLocalDaemon, openWorkspaceInTarget): the direct
+        // `fetch` reference, not a re-invoked wrapper.
+        fetchImpl: fetch,
         // No HOME (or no cache file): the lookup degrades to {} and the URL
         // falls through to the HTTP check, exactly the tracker_status rule.
         githubCacheStatuses:
@@ -1851,17 +1991,31 @@ export default async function plugin(bb: BbPluginApi) {
       await bb.sdk.threads.update({ threadId, parentThreadId });
       return { threadId, parentThreadId };
     },
-    rank_move: ({ columnKey, threadId, beforeId, toEnd, visibleIds }) =>
+    rank_move: ({ columnKey, threadId, beforeId, toEnd, visibleIds, unitIds }) =>
       withRankWriteLock(async () => {
         const store = await readRanks();
         const current = orderForColumn(store, columnKey);
-        const next = applyMoveVisible(
-          current,
-          visibleIds,
-          threadId,
-          beforeId,
-          toEnd,
-        );
+        // A unit move (family box): the whole box lands contiguously at the
+        // drop point and ranks together. threadId must be one of the unit's
+        // ids — a mismatch is a client bug, never coerced.
+        const next =
+          unitIds !== undefined && unitIds.length > 0
+            ? ((): string[] => {
+                if (!unitIds.includes(threadId)) {
+                  throw new PluginCliError(
+                    `rank_move: dragged id ${threadId} is not part of the unit (${unitIds.join(", ")})`,
+                    { code: "invalid_value" },
+                  );
+                }
+                return applyUnitMoveVisible(
+                  current,
+                  visibleIds,
+                  unitIds,
+                  beforeId,
+                  toEnd,
+                );
+              })()
+            : applyMoveVisible(current, visibleIds, threadId, beforeId, toEnd);
         // Skip the write (and the refetch) when the move changes nothing, so
         // a drop that lands where the card already sits is a no-op everywhere.
         if (next.join("\u0000") !== current.join("\u0000")) {
@@ -1870,6 +2024,68 @@ export default async function plugin(bb: BbPluginApi) {
         }
         return { columnKey, order: next };
       }),
+    groups_list: async () => {
+      // Live rows only, like the other list scans: an archived member has
+      // no card to box, and unarchive brings the assignment back with it.
+      const [store, rows] = await Promise.all([
+        readGroupsStore(),
+        bb.sdk.threads.list({}),
+      ]);
+      const memberships: Record<string, string> = {};
+      for (const row of rows) {
+        const record = await readGroupAssignment(row.id);
+        // A record pointing at a group the registry lost (a manual KV edit)
+        // is orphaned data — skip it rather than box with a nameless label
+        // (planGroupBoxes ignores unknown ids on the client too).
+        if (record !== null && store[record.groupId] !== undefined) {
+          memberships[row.id] = record.groupId;
+        }
+      }
+      return { groups: groupsRowFromStore(store), memberships };
+    },
+    group_create: async ({ name }) => {
+      const settled = normalizeGroupName(name);
+      if (settled === null) {
+        throw new PluginCliError(
+          `group name must be 1-80 non-blank characters, got ${JSON.stringify(name)}`,
+          { code: "invalid_value" },
+        );
+      }
+      const store = await readGroupsStore();
+      const id = crypto.randomUUID();
+      const record = createGroupRecord(settled, new Date());
+      await writeGroupsStore({ ...store, [id]: record });
+      bb.realtime.publish(GROUP_CHANGED, { threadId: null });
+      return { group: { id, ...record } };
+    },
+    group_rename: async ({ groupId, name }) => {
+      const store = await readGroupsStore();
+      if (store[groupId] === undefined) throw unknownGroupError(groupId);
+      const settled = normalizeGroupName(name);
+      if (settled === null) {
+        throw new PluginCliError(
+          `group name must be 1-80 non-blank characters, got ${JSON.stringify(name)}`,
+          { code: "invalid_value" },
+        );
+      }
+      const record = { ...store[groupId], name: settled };
+      await writeGroupsStore({ ...store, [groupId]: record });
+      bb.realtime.publish(GROUP_CHANGED, { threadId: null });
+      return { group: { id: groupId, ...record } };
+    },
+    group_set: async ({ threadId, groupId }) => {
+      if (groupId !== null) {
+        const store = await readGroupsStore();
+        if (store[groupId] === undefined) throw unknownGroupError(groupId);
+      }
+      await writeGroupAssignment(threadId, groupId);
+      // GC after the write: the assignment this cleared may be the group's
+      // last; the "exists only while assigned" lifecycle is enforced here,
+      // not by any client.
+      await pruneGroupsToMembers();
+      bb.realtime.publish(GROUP_CHANGED, { threadId });
+      return { threadId, groupId };
+    },
   });
 
   // --- CLI: bb focus-board ---
