@@ -24,6 +24,7 @@ import {
   RAIL_TO_LANE_GAP,
   RULER,
   computeParentLaneLayout,
+  laneOverflowsViewport,
   predictedStart,
   lockIndexFor,
   pinIsInstant,
@@ -241,6 +242,9 @@ export function ParentLaneBoard({
    *  hover. Updated only when the row changes, so pans never re-render. */
   const [bandHover, setBandHover] = useState<string | null>(null);
   const bandHoverRef = useRef<string | null>(null);
+  /** Lanes overflow the viewport (degenerate narrow scrollport): snap-to on
+   *  scroll is disabled, header clicks select lanes. */
+  const snapBlockedRef = useRef(false);
 
   // Latest-value refs the imperative scroll manager reads without re-binding.
   const geoIdxRef = useRef(0);
@@ -295,6 +299,7 @@ export function ParentLaneBoard({
   layoutRef.current = layout;
   viewportRef.current = viewportW;
   activeThreadIdRef.current = activeThreadId;
+  snapBlockedRef.current = laneOverflowsViewport(viewportW, RAIL_W);
 
   // Measure the scrollport for the context-column cap.
   useLayoutEffect(() => {
@@ -544,6 +549,9 @@ export function ParentLaneBoard({
       }
       pendingLockRef.current = null;
       window.clearTimeout(settleTimer);
+      // Overflowing lanes: snap-to on scroll is off — the pan rests where the
+      // operator leaves it; header clicks select lanes instead.
+      if (snapBlockedRef.current) return;
       settleTimer = window.setTimeout(settle, 200);
     };
 

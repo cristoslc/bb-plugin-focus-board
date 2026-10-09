@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { act } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ParentLaneBoard, verticalCardCorrection } from "../components/parent-lane-board";
 import { buildParentLanes } from "../components/parent-lanes";
@@ -225,5 +226,91 @@ describe("ruler+wrap board geometry", () => {
     expect(ruler?.closest("[data-cell]")?.getAttribute("data-variant")).toBe("ruler");
     const mini = container.querySelector('section:not([data-locked]) [data-band="working"] [data-thread-card]');
     expect(mini?.closest("[data-cell]")?.getAttribute("data-variant")).toBe("mini");
+  });
+});
+
+describe("scroll snap vs overflowing lanes (issue #22)", () => {
+  /** jsdom reports clientWidth 0 (the measure effect keeps its estimate);
+   *  pin a value the effect can read instead. */
+  function stubClientWidth(width: number) {
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "clientWidth")!;
+    Object.defineProperty(Element.prototype, "clientWidth", {
+      configurable: true,
+      get: () => width,
+    });
+    return () => Object.defineProperty(Element.prototype, "clientWidth", descriptor);
+  }
+
+  /** Three families, recency order a → b → c, two working children each. */
+  function threeFamilies() {
+    const mk = (id: string, age: number) => {
+      const parent = thread({ id, displayTitle: `Family ${id}`, updatedAt: NOW - age });
+      const kids = Array.from({ length: 2 }, (_, i) =>
+        thread({ id: `${id}k${i}`, parentThreadId: id, status: "active", updatedAt: NOW - age }),
+      );
+      return [parent, ...kids];
+    };
+    return [...mk("a", 0), ...mk("b", HOUR), ...mk("c", 2 * HOUR)];
+  }
+
+  function setup(clientWidth: number) {
+    vi.useFakeTimers();
+    const restoreWidth = stubClientWidth(clientWidth);
+    const rendered = renderBoard(threeFamilies());
+    const board = rendered.container.querySelector("[data-parent-board]") as HTMLElement;
+    // jsdom leaves Element.scrollTo undefined; the glide pin must find a stub.
+    const scrollTo = vi.fn();
+    Object.defineProperty(board, "scrollTo", { configurable: true, value: scrollTo });
+    return {
+      board,
+      rendered,
+      scrollTo,
+      restore: () => {
+        restoreWidth();
+        vi.useRealTimers();
+      },
+    };
+  }
+
+  it("still snaps the resting scroll to the nearest lane when lanes fit the viewport", async () => {
+    const { board, rendered, restore } = setup(1400);
+    try {
+      board.scrollLeft = 4000;
+      fireEvent.scroll(board);
+      await vi.advanceTimersByTimeAsync(3200);
+      expect(
+        rendered.container.querySelector("section[data-locked]")?.getAttribute("data-lane-id"),
+      ).toBe("c");
+    } finally {
+      restore();
+    }
+  });
+
+  it("does not snap-to on scroll when a lane is wider than the viewport", async () => {
+    const { board, rendered, scrollTo, restore } = setup(380);
+    try {
+      board.scrollLeft = 4000;
+      fireEvent.scroll(board);
+      await vi.advanceTimersByTimeAsync(3200);
+      // The pan rests where the operator left it: no re-lock, no glide, and
+      // the released board carries no locked section.
+      expect(rendered.container.querySelector("section[data-locked]")).toBeNull();
+      expect(scrollTo).not.toHaveBeenCalled();
+    } finally {
+      restore();
+    }
+  });
+
+  it("header clicks still re-lock and recut lanes when snap is disabled", async () => {
+    const { rendered, restore } = setup(380);
+    try {
+      fireEvent.click(screen.getByRole("button", { name: "Open Family b" }));
+      await vi.advanceTimersByTimeAsync(3200);
+      expect(
+        rendered.container.querySelector("section[data-locked]")?.getAttribute("data-lane-id"),
+      ).toBe("b");
+    } finally {
+      restore();
+    }
   });
 });

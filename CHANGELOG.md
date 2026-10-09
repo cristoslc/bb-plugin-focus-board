@@ -23,6 +23,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **The selected parent's lane stays inside the viewport.** A lane's ruler
+  columns now cap to the viewport budget and surplus cards wrap downward
+  into the bands; on scrollports too narrow to fit a single lane at all,
+  snap-to on scroll is off and header clicks select lanes.
+  ([#22](https://github.com/cristoslc/bb-plugin-focus-board/issues/22))
 - **The board no longer silently vanishes when a checkout's node_modules goes bad.** `npm test`, `npm run build`, and `npm run uat` now abort at a preflight guard whenever repo-root node_modules is a symlink, with the repair printed in the error; `scripts/node-modules-watchdog.sh` carries the self-healing bb automation that checks the main checkout every 5 minutes (its `/Users/cristos/code` path is a symlink alias to the same directory, not a second checkout), and AGENTS.md forbids node_modules symlinks outright.
 - **Word-shaped ticket keys no longer chip.** `PROJ-123`-style text matched with nothing able to validate it, so impostor chips like GLM-5 appeared; only refs GitHub can confirm (`#N`, issue/PR URLs) and the board's own links chip now.
 - **Mobile thread pane: thread actions drop from a split caret, like Open
