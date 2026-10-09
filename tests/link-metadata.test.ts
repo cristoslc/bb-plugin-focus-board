@@ -9,11 +9,15 @@ import {
   linkedRefKeys,
   clearLinkedIssues,
   stampLinkedIssues,
+  makeExternalLink,
+  type ExternalItemLink,
+  type GitHubItemLink,
   type ThreadLink,
 } from "../lib/link-metadata";
 import type { JsonValue } from "@get-bb/plugin-sdk";
 
-const LINK: ThreadLink = {
+const GITHUB: GitHubItemLink = {
+  tracker: "github",
   repo: "cristoslc/bb-plugin-focus-board",
   issue: 12,
   kind: "issue",
@@ -21,7 +25,9 @@ const LINK: ThreadLink = {
   createdAt: "2026-10-05T22:00:00.000Z",
   source: "operator",
 };
+const LINK: ThreadLink = GITHUB;
 const OTHER: ThreadLink = {
+  tracker: "github",
   repo: "cristoslc/bb-plugin-focus-board",
   issue: 9,
   kind: "pull",
@@ -220,5 +226,178 @@ describe("linkedRefKeys", () => {
   it("returns nothing for an absent or empty record", () => {
     expect(linkedRefKeys(null)).toEqual([]);
     expect(linkedRefKeys([])).toEqual([]);
+  });
+});
+describe("external links — parse", () => {
+  /**
+   * Unit E: an external tracker item the conversation turned up (a Linear
+   * ticket, a Forgejo issue, any https page) can be linked by URL; the URL
+   * is the identity. The hostname is derived from the URL at parse time,
+   * never trusted from storage.
+   */
+  const EXT: ExternalItemLink = {
+    tracker: "external",
+    url: "https://linear.app/cove/issue/PROJ-142",
+    hostname: "linear.app",
+    label: "PROJ-142",
+    createdAt: "2026-10-08T10:00:00.000Z",
+    source: "agent",
+  };
+
+  it("accepts a well-formed external link (round-trip)", () => {
+    const value = [EXT, GITHUB] as unknown as JsonValue;
+    expect(parseLinkedIssues(value)).toEqual([EXT, GITHUB]);
+  });
+
+  it("accepts a legacy GitHub record without a tracker field", () => {
+    const legacy = { repo: "a/b", issue: 3, kind: "issue", href: "https://github.com/a/b/issues/3", createdAt: "2026-10-05T22:00:00.000Z", source: "auto" };
+    expect(parseLinkedIssues([legacy] as unknown as JsonValue)).toMatchObject([
+      { tracker: "github", issue: 3 },
+    ]);
+  });
+
+  it("derives the hostname from the URL, ignoring a stored impostor", () => {
+    const impostor = { ...EXT, url: "https://good.example.com/item/PROJ-1", hostname: "evil.example" };
+    const [parsed] = parseLinkedIssues([impostor] as unknown as JsonValue)!;
+    expect(parsed.hostname).toBe("good.example.com");
+  });
+
+  it("throws on a non-https URL, an unparseable URL, and a bad label", () => {
+    expect(() =>
+      parseLinkedIssues([{ tracker: "external", url: "http://insecure.example/x", hostname: "insecure.example", createdAt: "2026-10-08T10:00:00.000Z", source: "agent" }] as unknown as JsonValue),
+    ).toThrow(/url/i);
+    expect(() =>
+      parseLinkedIssues([{ tracker: "external", url: "not a url", createdAt: "2026-10-08T10:00:00.000Z", source: "agent" }] as unknown as JsonValue),
+    ).toThrow(/url/i);
+    expect(() =>
+      parseLinkedIssues([{ ...EXT, label: "" }] as unknown as JsonValue),
+    ).toThrow(/label/i);
+    expect(() =>
+      parseLinkedIssues([{ ...EXT, label: "x".repeat(81) }] as unknown as JsonValue),
+    ).toThrow(/label/i);
+  });
+});
+
+describe("external links — stamp upserts by URL", () => {
+  const EXT: ExternalItemLink = {
+    tracker: "external",
+    url: "https://linear.app/cove/issue/PROJ-142",
+    hostname: "linear.app",
+    createdAt: "2026-10-08T10:00:00.000Z",
+    source: "operator",
+  };
+
+  it("a re-set of the same URL moves to the front with a fresh stamp", () => {
+    const next = stampLinkedIssues([EXT], { ...EXT, createdAt: "2026-10-08T11:00:00.000Z", source: "agent" });
+    expect(next).toHaveLength(1);
+    expect(next[0].createdAt).toBe("2026-10-08T11:00:00.000Z");
+    expect(next[0].source).toBe("agent");
+  });
+
+  it("an external link coexists with GitHub links", () => {
+    const next = stampLinkedIssues([GITHUB], EXT);
+    expect(next).toHaveLength(2);
+    expect(next[0].tracker).toBe("external");
+  });
+
+  it("different URLs are different items even with equal labels", () => {
+    const next = stampLinkedIssues([EXT], { ...EXT, url: "https://linear.app/cove/issue/PROJ-143" });
+    expect(next).toHaveLength(2);
+  });
+});
+
+describe("external links — clear", () => {
+  const EXT: ExternalItemLink = {
+    tracker: "external",
+    url: "https://linear.app/cove/issue/PROJ-142",
+    hostname: "linear.app",
+    createdAt: "2026-10-08T10:00:00.000Z",
+    source: "operator",
+  };
+
+  it("clearing a GitHub number keeps external links (they have none)", () => {
+    expect(clearLinkedIssues([EXT, GITHUB], 12)).toEqual([EXT]);
+  });
+
+  it("clearing everything removes externals too", () => {
+    expect(clearLinkedIssues([EXT, GITHUB], undefined)).toBeNull();
+  });
+});
+
+describe("external links — chip merge and dot path", () => {
+  const EXT: ExternalItemLink = {
+    tracker: "external",
+    url: "https://linear.app/cove/issue/PROJ-142",
+    hostname: "linear.app",
+    label: "PROJ-142",
+    createdAt: "2026-10-08T10:00:00.000Z",
+    source: "agent",
+  };
+
+  it("an external link chips under its label with the stored href and hostname", () => {
+    expect(linkedTicketRefs([EXT, GITHUB])).toEqual([
+      { raw: "PROJ-142", tracker: "external", href: EXT.url, hostname: "linear.app" },
+      { raw: "#12", tracker: "github", number: 12, href: GITHUB.href },
+    ]);
+  });
+
+  it("an external link without a label falls back to the hostname", () => {
+    const [ref] = linkedTicketRefs([{ ...EXT, label: undefined } as ThreadLink]);
+    expect(ref.raw).toBe("linear.app");
+  });
+
+  it("an external link whose href a text ref already renders is skipped", () => {
+    const textRefs = [{ raw: "PROJ-142", tracker: "external" as const, href: EXT.url, hostname: "linear.app" }];
+    expect(linkedTicketRefs([EXT], textRefs)).toEqual([]);
+  });
+
+  it("equal-label externals emit one chip; the primary wins", () => {
+    const other = { ...EXT, url: "https://other-site.example/PROJ-142", createdAt: "2026-10-08T11:00:00.000Z" } as ThreadLink;
+    const refs = linkedTicketRefs([EXT, other]);
+    expect(refs).toHaveLength(1);
+    expect(refs[0].href).toBe(EXT.url);
+  });
+
+  it("external links never enter the GitHub status-dot batch", () => {
+    expect(linkedRefKeys([EXT, GITHUB])).toEqual(["cristoslc/bb-plugin-focus-board#12"]);
+    expect(linkedRefKeys([EXT])).toEqual([]);
+  });
+});
+
+describe("makeExternalLink", () => {
+  it("derives the hostname from the URL and omits an absent label", () => {
+    const link = makeExternalLink(
+      "https://linear.app/team/item/PROJ-142",
+      undefined,
+      "agent",
+      new Date("2026-10-08T12:00:00.000Z"),
+    );
+    expect(link).toEqual({
+      tracker: "external",
+      url: "https://linear.app/team/item/PROJ-142",
+      hostname: "linear.app",
+      createdAt: "2026-10-08T12:00:00.000Z",
+      source: "agent",
+    });
+  });
+
+  it("carries a label when given", () => {
+    const link = makeExternalLink(
+      "https://linear.app/x/1",
+      "PROJ-142",
+      "operator",
+      new Date("2026-10-08T12:00:00.000Z"),
+    );
+    expect(link.label).toBe("PROJ-142");
+  });
+
+  it("throws on a plain-parseable but non-https URL (fail loud)", () => {
+    expect(() => makeExternalLink("http://a.example/1", undefined, "operator", new Date())).toThrow(
+      /https/,
+    );
+  });
+
+  it("throws on an unparseable URL", () => {
+    expect(() => makeExternalLink("not a url", undefined, "operator", new Date())).toThrow();
   });
 });

@@ -29,8 +29,8 @@ export function resolveRepoSlug(remote: string | null | undefined): string | nul
 export interface TicketRef {
   /** The matched text, e.g. "https://github.com/owner/repo/issues/42" or "#482". */
   raw: string;
-  /** GitHub-identifiable refs (#N, URLs). Key-style refs cannot validate, so none exist. */
-  tracker: "github";
+  /** GitHub-identifiable refs (#N, URLs) and external tracker items from the link store. */
+  tracker: "github" | "external";
   /**
    * Issue vs PR when the raw text itself implies it (GitHub URL refs).
    * Plain "#N" refs stay kindless — issues and PRs share GitHub's number
@@ -40,6 +40,11 @@ export interface TicketRef {
   kind?: "issue" | "pull";
   /** Issue/PR number for numeric refs (#123, GitHub URL forms). */
   number?: number;
+  /**
+   * For external tracker items: the site's hostname, so the chip can render
+   * the site's favicon (Unit G). Absent on GitHub refs.
+   */
+  hostname?: string;
   /** Direct href when resolvable; absent refs render as inert chips. */
   href?: string;
 }

@@ -12,7 +12,12 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { findTicketRefs, resolveRepoSlug } from "./lib/tickets";
-import { linkedRefKeys, type ThreadLink } from "./lib/link-metadata";
+import {
+  linkedRefKeys,
+  parseLinkedIssues,
+  type ThreadLink,
+} from "./lib/link-metadata";
+import type { JsonValue } from "@get-bb/plugin-sdk";
 import { installHostLinkGlue } from "./components/host-link-glue";
 import { FocusBoardAppIcon } from "./components/ui/icon";
 import type { rpcContract } from "./server";
@@ -289,6 +294,20 @@ function BoardPage({ subPath }: { subPath: string }) {
   // of the GitHub plugin's link rows exists). Record<string, ThreadLink[]>;
   // a thread absent from it carries no linked chips.
   const [linksByThread, setLinksByThread] = useState<Record<string, ThreadLink[]>>({});
+  // The RPC contract's link records tolerate a legacy GitHub record without
+  // its tracker tag; parse normalizes each thread's array into ThreadLink[]
+  // (and fails loud on anything malformed, never coerces).
+  const linksFromRpc = useCallback(
+    (result: { links: Record<string, unknown> }) => {
+      const out: Record<string, ThreadLink[]> = {};
+      for (const [threadId, links] of Object.entries(result.links)) {
+        const parsed = parseLinkedIssues(links as JsonValue);
+        if (parsed !== null) out[threadId] = parsed;
+      }
+      return out;
+    },
+    [],
+  );
   // Pinned-pin parks: a lane-exit unpin parks the pin (thread metadata via
   // RPC) so the writes that bring the card back to the operator — Mark Not
   // Done, Mark Unread — can restore it. Local optimistic state drives the
@@ -323,7 +342,7 @@ function BoardPage({ subPath }: { subPath: string }) {
       () => {}, // Settings are optional; defaults apply when unreachable.
     );
     rpc.call("link_list").then(
-      (result) => setLinksByThread(result.links),
+      (result) => setLinksByThread(linksFromRpc(result)),
       () => {}, // Links are optional state; the board works without them.
     );
   }, [rpc]);
@@ -355,7 +374,7 @@ function BoardPage({ subPath }: { subPath: string }) {
   // converges on the card that is already on screen.
   useRealtime("link-changed", () => {
     rpc.call("link_list").then(
-      (result) => setLinksByThread(result.links),
+      (result) => setLinksByThread(linksFromRpc(result)),
       () => {}, // Links are optional state; the board works without them.
     );
   });
