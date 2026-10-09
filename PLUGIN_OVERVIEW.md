@@ -2,11 +2,15 @@ Focus Board is a nav panel in the bb sidebar that shows all your threads as a ka
 
 ## What you get
 
-- **Orient at a glance.** The default lanes rank threads by attention — pinned, needs-you, unread, or working — and quiet threads settle out based on how long they have been idle. Reslice anytime by project, provider, machine, activity, or parent; search and filters persist across sessions.
-- **Act from the board.** Drag to re-order a column, or drop a card to change its state or nest it as a child. Sweep a lane's stragglers to "Done" or "Archive" so your board stays focused on what's fresh.
-- **Depth, one click away.** Open a thread within the board and read, reply, or answer the agent's questions -- works from your browser, desktop, or phone.
+- **Orient at a glance.**
+  - The default lanes rank threads by attention — pinned, needs-you, unread, or working — and quiet threads settle out based on how long they have been idle.
+  - Reslice anytime by project, provider, machine, activity, or parent; search and filters persist across sessions.
+- **Act from the board.**
+  - Drag to re-order a column, or drop a card to change its state or nest it as a child. Sweep a lane's stragglers to "Done" or "Archive" so your board stays focused on what's fresh.
+- **Depth, one click away.**
+  - Open a thread within the board and read, reply, or answer the agent's questions -- works from your browser, desktop, or phone.
 
-More about our features in the [README](https://github.com/cristoslc/bb-plugin-focus-board) — its screenshots and the [CHANGELOG](https://github.com/cristoslc/bb-plugin-focus-board/blob/main/CHANGELOG.md) carry the rest.
+More about our features in the [README](https://github.com/cristoslc/bb-plugin-focus-board).
 
 ## CLI
 
