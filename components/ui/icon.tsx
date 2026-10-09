@@ -43,6 +43,7 @@ import MessageQuestionIcon from "@hugeicons/core-free-icons/MessageQuestionIcon"
 import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import Settings01Icon from "@hugeicons/core-free-icons/Settings01Icon";
+import Tag01Icon from "@hugeicons/core-free-icons/Tag01Icon";
 import SidebarLeftIcon from "@hugeicons/core-free-icons/SidebarLeftIcon";
 import SlidersHorizontalIcon from "@hugeicons/core-free-icons/SlidersHorizontalIcon";
 import SourceCodeIcon from "@hugeicons/core-free-icons/SourceCodeIcon";
@@ -244,6 +245,7 @@ const CORE_ICON_MAP = {
   Settings: Settings01Icon,
   SlidersHorizontal: SlidersHorizontalIcon,
   Spinner: DashedLineCircleIcon,
+  Tag: Tag01Icon,
   Target: Target02Icon,
   Terminal: ComputerTerminal01Icon,
   Toolbox: ToolboxIcon,

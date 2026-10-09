@@ -99,6 +99,14 @@ export interface NestingOptions {
    * parent's done children project into the Done column.
    */
   doneIds?: ReadonlySet<string>;
+  /**
+   * Feature-group box overrides (components/group-boxes): member id → the
+   * column the member's box lands in. Merged OVER the family overrides —
+   * a thread that is both a family root and a box member takes the box's
+   * lane, because the box is the surface the operator wrapped the cards
+   * with.
+   */
+  extraColumnOverrides?: ReadonlyMap<string, { id: string; label: string }>;
 }
 
 /**
@@ -136,6 +144,10 @@ export function assembleBoard(
   // removes the thread from the list.
   const visible = threads.filter((thread) => !thread.isArchived);
   if (!nestingEnabled) {
+    // Flat board: no families — but group boxes are NOT family machinery,
+    // they are the operator's own container, so their column overrides
+    // still move a box's members into one lane and runsFromColumns wraps
+    // them there (the board keeps this plan's groupBoxOf).
     return {
       columns: buildColumns(
         visible,
@@ -145,6 +157,7 @@ export function assembleBoard(
         doneIds,
         now,
         ranks,
+        options.extraColumnOverrides ?? new Map(),
       ),
       nestedChildrenByParent: new Map(),
       doneChildrenByParent: new Map(),
@@ -157,14 +170,20 @@ export function assembleBoard(
   const familyIndex = buildFamilyIndex(visible);
   // R4: under the status grouping a family lands in the column of its most
   // attention-requiring live member, so the parent card carries the family's
-  // urgency instead of splitting from its children.
-  const columnOverrides = familyColumnOverrides(
+  // urgency instead of splitting from its children. Group-box overrides
+  // merge over them (a thread in both takes the box's lane).
+  const familyOverrides = familyColumnOverrides(
     visible,
     familyIndex,
     groupBy,
     context,
     doneIds,
   );
+  const extraOverrides = options.extraColumnOverrides;
+  const columnOverrides =
+    extraOverrides !== undefined && extraOverrides.size > 0
+      ? new Map([...familyOverrides, ...extraOverrides])
+      : familyOverrides;
   const nested = nestUnderParents(
     buildColumns(
       visible,
