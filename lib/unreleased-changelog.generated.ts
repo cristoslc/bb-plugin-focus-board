@@ -16,7 +16,15 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     ]
   },
   {
+    "text": "**Board links reach any tracker.** `link set` and the agent tool accept any https tracker URL (with an optional chip label), forgejo remotes build their own `…/issues/N` chips, and non-GitHub chips show the site's favicon.",
+    "children": []
+  },
+  {
     "text": "**The pane's actions menu now leads with the state toggles.** Mark Done and Pin sit at the top, Snooze keeps its divider, and \"New child thread…\" moved down below the snooze entry, away from the everyday toggles.",
+    "children": []
+  },
+  {
+    "text": "**Ticket chips say their source and their kind at a glance.** Each chip now leads with its provider mark — GitHub's own mark, or a generic ticket glyph when the source can't be named — followed by the issue-vs-PR glyph, whose open/merged/closed color takes over the old bare state dot.",
     "children": []
   },
   {
