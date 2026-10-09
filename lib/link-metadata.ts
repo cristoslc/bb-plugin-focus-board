@@ -270,6 +270,9 @@ export function linkedTicketRefs(
             tracker: "github",
             number: link.issue,
             href,
+            // The store knows issue vs PR exactly (the URL said so); carrying
+            // it means the PR glyph leads before any status lands.
+            kind: link.kind,
           },
     );
   }

@@ -206,14 +206,16 @@ function TicketChip({
             ? "PullRequestClosed"
             : "PullRequest")
       : (status?.state === "CLOSED" ? "IssueClosed" : "IssueOpen");
-  const provider = (
-    <Icon
-      name={ticket.tracker === "github" ? "GithubMark" : "Ticket"}
-      className="size-3 shrink-0"
-      aria-hidden
-    />
-  );
-  const kindGlyph = (
+  const isGithub = ticket.tracker === "github";
+  const provider =
+    isGithub ? (
+      <Icon name="GithubMark" className="size-3 shrink-0" aria-hidden />
+    ) : favicon ?? (
+      <Icon name="Ticket" className="size-3 shrink-0" aria-hidden />
+    );
+  // Only GitHub-shaped refs carry the issue-vs-PR glyph; external items
+  // name their own tracker in the favicon instead.
+  const kindGlyph = isGithub ? (
     <Icon
       name={kindIconName}
       className={cn(
@@ -222,12 +224,11 @@ function TicketChip({
       )}
       aria-label={status === undefined ? undefined : `${kind} ${status.state}`}
     />
-  );
+  ) : null;
   const body = (
     <>
       {provider}
       {kindGlyph}
-      {favicon}
       {ticket.raw}
     </>
   );

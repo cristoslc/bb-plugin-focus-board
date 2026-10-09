@@ -141,7 +141,7 @@ describe("linkHref", () => {
 });
 
 describe("linkedTicketRefs (chip merge)", () => {
-  it("turns links into TicketRefs carrying the stored href", () => {
+  it("turns links into TicketRefs carrying the stored href and kind", () => {
     const refs = linkedTicketRefs([LINK, OTHER]);
     expect(refs).toEqual([
       {
@@ -149,14 +149,21 @@ describe("linkedTicketRefs (chip merge)", () => {
         tracker: "github",
         number: 12,
         href: "https://github.com/cristoslc/bb-plugin-focus-board/issues/12",
+        kind: "issue",
       },
       {
         raw: "#9",
         tracker: "github",
         number: 9,
         href: "https://github.com/cristoslc/bb-plugin-focus-board/pull/9",
+        kind: "pull",
       },
     ]);
+  });
+
+  it("a linked PR emits kind pull so its chip leads with the PR glyph", () => {
+    const [ref] = linkedTicketRefs([OTHER]);
+    expect(ref.kind).toBe("pull");
   });
 
   it("skips a link whose href a text ref already renders", () => {
@@ -337,7 +344,7 @@ describe("external links — chip merge and dot path", () => {
   it("an external link chips under its label with the stored href and hostname", () => {
     expect(linkedTicketRefs([EXT, GITHUB])).toEqual([
       { raw: "PROJ-142", tracker: "external", href: EXT.url, hostname: "linear.app" },
-      { raw: "#12", tracker: "github", number: 12, href: GITHUB.href },
+      { raw: "#12", tracker: "github", number: 12, href: GITHUB.href, kind: "issue" },
     ]);
   });
 
