@@ -28,7 +28,7 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
-    "text": "**The board no longer silently vanishes when a checkout's node_modules goes bad.** `npm test`, `npm run build`, and `npm run uat` now abort at a preflight guard whenever repo-root node_modules is a symlink, with the repair printed in the error; `scripts/node-modules-watchdog.sh` carries the self-healing bb automation that checks both main checkouts every 5 minutes, and AGENTS.md forbids node_modules symlinks outright.",
+    "text": "**The board no longer silently vanishes when a checkout's node_modules goes bad.** `npm test`, `npm run build`, and `npm run uat` now abort at a preflight guard whenever repo-root node_modules is a symlink, with the repair printed in the error; `scripts/node-modules-watchdog.sh` carries the self-healing bb automation that checks the main checkout every 5 minutes (its `/Users/cristos/code` path is a symlink alias to the same directory, not a second checkout), and AGENTS.md forbids node_modules symlinks outright.",
     "children": []
   },
   {
