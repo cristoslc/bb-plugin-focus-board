@@ -10,12 +10,12 @@ Focus Board is a nav panel in the bb sidebar that shows all your threads as a ka
 - **Auto-rename**: the pane's title editor can title the thread from its opening prompt with bb's AI services, falling back to the thread's own model when the pinned service can't.
 - **Snooze**: "Snooze…" reads a thread now and marks it unread again at the time you pick.
 - **Sweep**: every lane carries a sweep with its own destination — stale Done threads archive, long-idle threads move to Done, Pinned unpins, Unread marks read. Shift-click and Cmd/Ctrl-click multi-select before sweeping.
-- **Ticket chips** for issue and PR refs in the title or branch, with GitHub status dots when the official GitHub plugin is installed. A thread whose text names nothing can still carry a chip: the board's own link store ties a thread to an item explicitly (the `focus_board_link_issue` agent tool, or `bb focus-board link set`).
+- **Ticket chips** for GitHub issue and PR refs in the title or branch, with status dots (the official GitHub plugin's cache feeds them). A `#N` on the project's remote only chips when it can be validated — a GitHub item confirmed in the GitHub plugin's cache, or any tracker URL that answers HTTP; unvalidated text like `PROJ-123` or `GLM-5` never chips. Forgejo remotes build their own `…/issues/N` links and non-GitHub chips show the site's favicon. A thread whose text names nothing can still carry a chip: the board's own link store ties a thread to any tracker item explicitly (the `focus_board_link_issue` agent tool, or `bb focus-board link set` GitHub URLs, issue numbers, or any https URL with an optional `--label`).
 - **What's new**: a gift toolbar button lists recent changes after an update.
 
 ## How it works
 
-The board writes only pin state, read state, Done marks, and per-thread issue/PR links through bb's own stores — never thread content. Sweep thresholds are configurable in Settings → Installed plugins or with the CLI, and any thread can be exempted with a per-card "Keep from sweep" override.
+The board writes only pin state, read state, Done marks, and per-thread tracker-item links (GitHub issues/PRs and other https tracker items) through bb's own stores — never thread content. Sweep thresholds are configurable in Settings → Installed plugins or with the CLI, and any thread can be exempted with a per-card "Keep from sweep" override.
 
 ## CLI
 

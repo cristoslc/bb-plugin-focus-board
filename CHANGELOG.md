@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Board cards carry linked-issue chips.** A thread tied to a GitHub issue or pull request in the board's own link store shows its `#N` chip with a live status dot, even when the title and branch name say nothing (issue [#13](https://github.com/cristoslc/bb-plugin-focus-board/issues/13)).
   - **Agents are nudged to link.** The `focus_board_link_issue` tool rides thread instructions and asks agents to call it right after they open or file an issue or PR.
   - **The CLI links too.** `bb focus-board link list|set|clear` manages the store by hand.
+- **Board links reach any tracker.** `link set` and the agent tool accept any https tracker URL (with an optional chip label), forgejo remotes build their own `…/issues/N` chips, and non-GitHub chips show the site's favicon.
 
 ### Changed
 

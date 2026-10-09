@@ -28,6 +28,7 @@ import {
   LINK_METADATA_KEY,
   clearLinkedIssues,
   linkHref,
+  makeExternalLink,
   parseGithubItemUrl,
   parseLinkedIssues,
   stampLinkedIssues,
@@ -69,6 +70,7 @@ import {
 } from "./lib/sweep-cli";
 import { readGitHubStatuses } from "./lib/tracker-status";
 import { resolveRepoSlug } from "./lib/tickets";
+import { validateTrackerUrls } from "./lib/tracker-validate";
 import { resolveWithinRoot } from "./lib/workspace-paths";
 import {
 	createWorkspaceOpenTargetsCache,
@@ -112,8 +114,14 @@ const COLUMN_KEY_SCHEMA = z
   .max(200)
   .regex(/^(?!__proto__$)[^\x00-\x1f\x7f]+$/, "not a column key");
 
-/** One board-linked GitHub item, exactly the lib/link-metadata ThreadLink round-trip. */
-const LINK_RECORD_SCHEMA = z.object({
+/**
+ * One board-linked tracker item, exactly the lib/link-metadata ThreadLink
+ * round-trip. The github variant's tracker is optional so records written
+ * before the external variant existed still pass the output contract; new
+ * writes always carry it.
+ */
+const GITHUB_LINK_RECORD = z.object({
+  tracker: z.literal("github").optional(),
   repo: z.string().min(1),
   issue: z.number().int().positive(),
   kind: z.enum(["issue", "pull"]),
@@ -121,6 +129,18 @@ const LINK_RECORD_SCHEMA = z.object({
   createdAt: z.string(),
   source: z.enum(["agent", "operator", "auto"]),
 });
+
+/** Non-GitHub tracker item (Jira, Linear, Forgejo, anything with a URL). */
+const EXTERNAL_LINK_RECORD = z.object({
+  tracker: z.literal("external"),
+  url: z.string().startsWith("https://"),
+  hostname: z.string().min(1),
+  label: z.string().min(1).max(80).optional(),
+  createdAt: z.string(),
+  source: z.enum(["agent", "operator", "auto"]),
+});
+
+const LINK_RECORD_SCHEMA = z.union([GITHUB_LINK_RECORD, EXTERNAL_LINK_RECORD]);
 
 export const rpcContract = defineRpcContract({
   done_list: {
@@ -150,13 +170,56 @@ export const rpcContract = defineRpcContract({
     output: z.object({ links: z.record(z.string(), z.array(LINK_RECORD_SCHEMA)) }),
   },
   link_set: {
-    input: z.object({
-      threadId: z.string().min(1),
-      repo: z.string().min(1),
-      number: z.number().int().positive(),
-      kind: z.enum(["issue", "pull"]),
-      source: z.enum(["agent", "operator", "auto"]),
-    }),
+    input: z
+      .object({
+        threadId: z.string().min(1),
+        // Exactly one of: repo+number (GitHub form), url (GitHub or
+        // external). `kind` applies to the number form only; `label` to the
+        // external form only.
+        repo: z.string().min(1).optional(),
+        number: z.number().int().positive().optional(),
+        kind: z.enum(["issue", "pull"]).optional(),
+        url: z.string().startsWith("https://", "https url").optional(),
+        label: z.string().min(1).max(80).optional(),
+        source: z.enum(["agent", "operator", "auto"]),
+      })
+      .superRefine((input, ctx) => {
+        const hasNumber = input.number !== undefined;
+        const hasUrl = input.url !== undefined;
+        if (hasNumber === hasUrl) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "give exactly one of url or number",
+            path: hasUrl ? ["url"] : ["number"],
+          });
+        }
+        if (hasNumber && input.repo === undefined) {
+          // Allowed: the handler resolves the repo from the thread's project
+          // remote. Nothing to check here; the comment keeps the contract
+          // readable.
+        }
+        if (input.repo !== undefined && hasUrl) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "repo applies to the number form only",
+            path: ["repo"],
+          });
+        }
+        if (input.kind !== undefined && hasUrl) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "kind applies to the number form only (the URL carries its own)",
+            path: ["kind"],
+          });
+        }
+        if (input.label !== undefined && hasNumber) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "label applies to the external-url form only",
+            path: ["label"],
+          });
+        }
+      }),
     output: z.object({ threadId: z.string(), link: LINK_RECORD_SCHEMA }),
   },
   link_clear: {
@@ -222,6 +285,29 @@ export const rpcContract = defineRpcContract({
     }),
     output: z.object({
       statuses: z.record(z.number().int(), z.object({ kind: z.string(), state: z.string() })),
+    }),
+  },
+  /**
+   * Text-ref validation (the chip rule, issue #13 follow-up): a #N ref or
+   * GitHub URL found in text only chips when the item exists. The GitHub
+   * plugin's sqlite cache is authoritative for GitHub items; an HTTP
+   * existence check covers cache misses and forgejo items (no cache).
+   * Store links (link_set / link tool) are trusted by construction and skip
+   * this method entirely.
+   */
+  tracker_validate: {
+    input: z.object({
+      urls: z.array(z.string().startsWith("https://", "https url")).max(100),
+    }),
+    output: z.object({
+      results: z.record(
+        z.string(),
+        z.object({
+          confirmed: z.boolean(),
+          kind: z.string().optional(),
+          state: z.string().optional(),
+        }),
+      ),
     }),
   },
 
@@ -1469,17 +1555,36 @@ export default async function plugin(bb: BbPluginApi) {
       }
       return { links };
     },
-    link_set: async ({ threadId, repo, number, kind, source }) => {
-      const existing = await readLinkedIssues(threadId);
-      const link: ThreadLink = {
-        repo,
-        issue: number,
-        kind,
-        href: linkHref(repo, kind, number),
-        createdAt: new Date().toISOString(),
-        source,
-      };
-      await writeLinkedIssues(threadId, stampLinkedIssues(existing, link));
+    link_set: async ({ threadId, repo, number, kind, url, label, source }) => {
+      const now = new Date();
+      const ghItem = url === undefined ? null : parseGithubItemUrl(url);
+      let link: ThreadLink;
+      if (url !== undefined && ghItem === null) {
+        // Non-GitHub https URL → external tracker item; the hostname derives
+        // from the URL (never from caller input).
+        link = makeExternalLink(url, label, source, now);
+      } else {
+        // GitHub item: URL form parsed above, number form resolved against
+        // the thread's project remote (or the explicit repo).
+        const resolved =
+          ghItem !== null
+            ? ghItem
+            : {
+                repo: await resolveLinkRepo(threadId, repo),
+                issue: number!,
+                kind: kind ?? "issue",
+              };
+        link = {
+          tracker: "github",
+          repo: resolved.repo,
+          issue: resolved.issue,
+          kind: resolved.kind,
+          href: linkHref(resolved.repo, resolved.kind, resolved.issue),
+          createdAt: now.toISOString(),
+          source,
+        };
+      }
+      await writeLinkedIssues(threadId, stampLinkedIssues(await readLinkedIssues(threadId), link));
       await publishLinksChanged([threadId]);
       return { threadId, link };
     },
@@ -1594,6 +1699,38 @@ export default async function plugin(bb: BbPluginApi) {
       if (home === "") return { statuses: {} };
       const statuses = readGitHubStatuses(`${home}/${GITHUB_CACHE_DB}`, repo, numbers, bb.log);
       return { statuses };
+    },
+    tracker_validate: async ({ urls }) => {
+      const home = process.env.HOME ?? "";
+      const results = await validateTrackerUrls(urls, {
+        fetchImpl: (url, init) => fetch(url, init),
+        // No HOME (or no cache file): the lookup degrades to {} and the URL
+        // falls through to the HTTP check, exactly the tracker_status rule.
+        githubCacheStatuses:
+          home === ""
+            ? () => ({})
+            : (repo, numbers) =>
+                readGitHubStatuses(`${home}/${GITHUB_CACHE_DB}`, repo, numbers, bb.log),
+        kvGet: async (key) => {
+          // Cached outcome read; garbage in the KV slot reads as absent (the
+          // cache is an optimization, never a correctness source here).
+          const raw = (await bb.storage.kv.get(key)) as unknown;
+          if (
+            typeof raw !== "object" ||
+            raw === null ||
+            typeof (raw as { ok?: unknown }).ok !== "boolean" ||
+            typeof (raw as { at?: unknown }).at !== "number"
+          ) {
+            return undefined;
+          }
+          return raw as { ok: boolean; at: number };
+        },
+        kvSet: async (key, value) => {
+          await bb.storage.kv.set(key, value);
+        },
+        now: () => Date.now(),
+      });
+      return { results };
     },
     workspace_files_exist: async ({ threadId, paths }) => {
       const thread = await bb.sdk.threads.get({ threadId });
@@ -1914,7 +2051,7 @@ export default async function plugin(bb: BbPluginApi) {
   // metadata key. The CLI is the operator's fallback when no agent tool is
   // in the session (issue #13's repro had no agent-side surface at all).
   const linkList = cliCommand({
-    summary: "List threads with linked GitHub issues/PRs",
+    summary: "List threads with linked tracker items (GitHub issues/PRs, externals)",
     options: {
       json: { type: "boolean", description: "Emit machine-readable JSON" },
     },
@@ -1937,12 +2074,16 @@ export default async function plugin(bb: BbPluginApi) {
       const stdout = _input.options.json
         ? JSON.stringify(rows, null, 2) + "\n"
         : rows.length === 0
-          ? "No threads carry linked GitHub issues.\n"
+          ? "No threads carry linked tracker items.\n"
           : rows
               .map(
                 (row) =>
                   `${row.id}\t${row.links
-                    .map((link) => `${link.repo}#${link.issue}${link.kind === "pull" ? " (pull)" : ""}`)
+                    .map((link) =>
+                      link.tracker === "external"
+                        ? `${link.label ?? link.hostname} (${link.url})`
+                        : `${link.repo}#${link.issue}${link.kind === "pull" ? " (pull)" : ""}`,
+                    )
                     .join(", ")}\t${row.title ?? "(untitled)"}`,
               )
               .join("\n") + "\n";
@@ -1951,9 +2092,9 @@ export default async function plugin(bb: BbPluginApi) {
   });
 
   const linkSet = cliCommand({
-    summary: "Link a thread to a GitHub issue or PR (sets its card chip)",
+    summary: "Link a thread to a tracker item (GitHub issue/PR, or any https URL)",
     description:
-      "Give the full GitHub issue/PR URL, or a bare number (resolved against the thread's project remote, or an explicit --repo owner/repo). --pull marks the target a pull request when passing a bare number.",
+      "Give a full GitHub issue/PR URL (status dot included), a bare number (resolved against the thread's project remote, or an explicit --repo owner/repo; --pull marks a pull request), or any other https URL (external tracker item; --label sets the chip text).",
     positionals: [
       {
         name: "thread-id",
@@ -1962,7 +2103,7 @@ export default async function plugin(bb: BbPluginApi) {
       },
       {
         name: "number-or-url",
-        description: "GitHub issue/PR URL, or a bare issue number",
+        description: "GitHub issue/PR URL, a bare issue number, or any https URL",
         required: true,
       },
     ],
@@ -1975,6 +2116,10 @@ export default async function plugin(bb: BbPluginApi) {
         type: "boolean",
         description: "The number is a pull request, not an issue",
       },
+      label: {
+        type: "string",
+        description: "Chip text for an external URL link (1-80 chars)",
+      },
       json: { type: "boolean", description: "Emit machine-readable JSON" },
     },
     async run(input) {
@@ -1982,28 +2127,41 @@ export default async function plugin(bb: BbPluginApi) {
         input.positionals["thread-id"] as string,
         input.positionals["number-or-url"] as string,
       ];
-      const parsed = parseGithubItemUrl(target);
-      const kind = parsed !== null ? parsed.kind : input.options.pull === true ? "pull" : "issue";
-      const repo =
-        parsed !== null
-          ? parsed.repo
-          : await resolveLinkRepo(threadId, input.options.repo);
-      const number =
-        parsed !== null ? parsed.issue : Number(/^#?(\d+)$/.exec(target)?.[1]);
-      if (!(Number.isInteger(number) && number > 0)) {
-        throw new PluginCliError(`invalid issue or PR '${target}'`, {
-          code: "invalid_value",
-          hint: "Pass a full GitHub URL, or a positive integer (#12 or 12).",
-        });
+      const now = new Date();
+      const ghParsed = parseGithubItemUrl(target);
+      let link: ThreadLink;
+      if (ghParsed !== null) {
+        link = {
+          tracker: "github",
+          repo: ghParsed.repo,
+          issue: ghParsed.issue,
+          kind: ghParsed.kind,
+          href: linkHref(ghParsed.repo, ghParsed.kind, ghParsed.issue),
+          createdAt: now.toISOString(),
+          source: "operator",
+        };
+      } else if (/^https:\/\//.test(target)) {
+        link = makeExternalLink(target, input.options.label, "operator", now);
+      } else {
+        const number = Number(/^#?(\d+)$/.exec(target)?.[1]);
+        if (!(Number.isInteger(number) && number > 0)) {
+          throw new PluginCliError(`invalid issue, PR, or URL '${target}'`, {
+            code: "invalid_value",
+            hint: "Pass a full https URL, or a positive integer (#12 or 12).",
+          });
+        }
+        const repo = await resolveLinkRepo(threadId, input.options.repo);
+        const kind = input.options.pull === true ? "pull" : "issue";
+        link = {
+          tracker: "github",
+          repo,
+          issue: number,
+          kind,
+          href: linkHref(repo, kind, number),
+          createdAt: now.toISOString(),
+          source: "operator",
+        };
       }
-      const link: ThreadLink = {
-        repo,
-        issue: number,
-        kind,
-        href: linkHref(repo, kind, number),
-        createdAt: new Date().toISOString(),
-        source: "operator",
-      };
       await writeLinkedIssues(
         threadId,
         stampLinkedIssues(await readLinkedIssues(threadId), link),
@@ -2011,7 +2169,7 @@ export default async function plugin(bb: BbPluginApi) {
       await publishLinksChanged([threadId]);
       const stdout = input.options.json
         ? JSON.stringify({ threadId, link }, null, 2) + "\n"
-        : `linked ${threadId} → ${linkHref(repo, kind, number)}\n`;
+        : `linked ${threadId} → ${link.tracker === "external" ? link.url : linkHref(link.repo, link.kind, link.issue)}\n`;
       return { exitCode: 0, stdout };
     },
   });
@@ -2570,28 +2728,34 @@ export default async function plugin(bb: BbPluginApi) {
     },
   });
 
-  // Board-linked GitHub items: the agent surface (issue #13). The tool's
+  // Board-linked tracker items: the agent surface (issue #13). The tool's
   // `instructions` nudge — the AGENTS.md-style push — rides with the tool's
   // presence in the session's tool set, so any thread's agent learns to link
-  // what it files, without text pasted into every repo's AGENTS.md.
+  // what it files or turns up, without text pasted into every repo's AGENTS.md.
   const LINK_AGENT_TOOL = "focus_board_link_issue";
   bb.agents.registerTool({
     name: LINK_AGENT_TOOL,
     description:
-      "Link this bb thread to a GitHub issue or pull request so the Focus Board card shows a chip with a live status dot. Call it right after you open or file the issue or PR, passing its URL.",
+      "Link this bb thread to a tracker item so the Focus Board card shows a chip: a GitHub issue or pull request (live status dot), or any other https URL the conversation turns up (external tracker, chip reads the label or hostname). Call it right after you open or file the item, passing its URL.",
     instructions: [
-      "Linking work to GitHub: whenever you open or file a GitHub issue or",
-      "pull request for this thread's work, call focus_board_link_issue with",
-      "the returned URL so the Focus Board card carries its chip (number,",
-      "kind, and live status dot). One call per item; call focus_board_link_issue",
-      "with no arguments is invalid, and a bare number needs a GitHub remote",
-      "on the thread's project, so prefer the URL form.",
+      "Linking work to tracker items: whenever you open or file a GitHub issue",
+      "or pull request for this thread's work, call focus_board_link_issue with",
+      "the returned URL, and the Focus Board card carries its chip (number,",
+      "kind, live status dot). External tracker URLs (Jira, Linear, Forgejo,",
+      "anything https) link too: pass the URL, optionally with label for the",
+      "chip text when the conversation turns such an item up. One call per",
+      "item; prefer the URL form (a bare GitHub number needs a GitHub remote",
+      "on the thread's project).",
     ].join("\n"),
     parameters: z
       .object({
-        url: z.string().optional(),
+        url: z
+          .string()
+          .startsWith("https://", "https url")
+          .optional(),
         number: z.number().int().positive().optional(),
         kind: z.enum(["issue", "pull"]).optional(),
+        label: z.string().min(1).max(80).optional(),
       })
       .superRefine((value, refineCtx) => {
         if ((value.url === undefined) === (value.number === undefined)) {
@@ -2600,10 +2764,11 @@ export default async function plugin(bb: BbPluginApi) {
             message: "Pass exactly one of url or number.",
           });
         }
-        if (value.url !== undefined && !/^https:\/\/github\.com\//.test(value.url)) {
+        if (value.number !== undefined && value.label !== undefined) {
           refineCtx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "url must be a GitHub issue or PR URL.",
+            message: "label applies to the url form only.",
+            path: ["label"],
           });
         }
       }),
@@ -2612,16 +2777,26 @@ export default async function plugin(bb: BbPluginApi) {
         content: [{ type: "text" as const, text }],
         isError: true as const,
       });
-      const parsed =
-        params.url !== undefined ? parseGithubItemUrl(params.url) : null;
-      let repo: string;
-      let number: number;
-      let kind: "issue" | "pull";
+      const now = new Date();
+      const parsed = params.url === undefined ? null : parseGithubItemUrl(params.url);
+      let link: ThreadLink;
       if (parsed !== null) {
-        ({ repo, issue: number, kind } = parsed);
-      } else if (params.number !== undefined) {
-        number = params.number;
-        kind = params.kind ?? "issue";
+        link = {
+          tracker: "github",
+          repo: parsed.repo,
+          issue: parsed.issue,
+          kind: parsed.kind,
+          href: linkHref(parsed.repo, parsed.kind, parsed.issue),
+          createdAt: now.toISOString(),
+          source: "agent",
+        };
+      } else if (params.url !== undefined) {
+        // Non-GitHub https URL → external tracker item; the hostname derives
+        // from the URL, the label (optional) rides caller input.
+        link = makeExternalLink(params.url, params.label, "agent", now);
+      } else {
+        const number = params.number!;
+        const kind = params.kind ?? "issue";
         // Repo from the thread's project remote only; never guessed. The
         // URL form is preferred precisely because bare numbers need this.
         const project = await bb.sdk.projects.get({ projectId: ctx.projectId });
@@ -2631,20 +2806,16 @@ export default async function plugin(bb: BbPluginApi) {
             `Cannot link to a GitHub item: project ${ctx.projectId} has no GitHub remote. Pass the full GitHub issue or PR URL instead.`,
           );
         }
-        repo = slug;
-      } else {
-        return linkError(
-          `${params.url} is not a GitHub issue or PR URL (https://github.com/<owner>/<repo>/(issues|pull)/<n>).`,
-        );
+        link = {
+          tracker: "github",
+          repo: slug,
+          issue: number,
+          kind,
+          href: linkHref(slug, kind, number),
+          createdAt: now.toISOString(),
+          source: "agent",
+        };
       }
-      const link: ThreadLink = {
-        repo,
-        issue: number,
-        kind,
-        href: linkHref(repo, kind, number),
-        createdAt: new Date().toISOString(),
-        source: "agent",
-      };
       await writeLinkedIssues(
         ctx.threadId,
         stampLinkedIssues(await readLinkedIssues(ctx.threadId), link),
@@ -2654,7 +2825,7 @@ export default async function plugin(bb: BbPluginApi) {
         content: [
           {
             type: "text" as const,
-            text: `Linked this thread to ${link.href}; the Focus Board card now carries the chip.`,
+            text: `Linked this thread to ${link.tracker === "external" ? link.url : link.href}; the Focus Board card now carries the chip.`,
           },
         ],
       };
@@ -2666,7 +2837,7 @@ export default async function plugin(bb: BbPluginApi) {
       name: "focus-board",
       summary: "Manage the Focus Board plugin's own state",
       description:
-        "Done list/mark/clear, linked GitHub issues (link list/set/clear), snooze list/set/clear, autotitle availability/probe diagnostics, sweep (archive old Done + long-idle, dry-run by default), and the sweep thresholds.",
+        "Done list/mark/clear, linked tracker items (link list/set/clear), snooze list/set/clear, autotitle availability/probe diagnostics, sweep (archive old Done + long-idle, dry-run by default), and the sweep thresholds.",
       commands: {
         "done list": doneList,
         "done mark": doneMark,

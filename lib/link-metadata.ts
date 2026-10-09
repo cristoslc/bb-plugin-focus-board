@@ -15,8 +15,12 @@ import type { TicketRef } from "./tickets";
 /** The board's linked-issues key inside its thread plugin-metadata namespace. */
 export const LINK_METADATA_KEY = "linkedIssues";
 
-/** One thread→GitHub item link. First entry in the array is the primary. */
-export type ThreadLink = {
+/** One thread→tracker-item link. First entry in the array is the primary. */
+export type ThreadLink = GitHubItemLink | ExternalItemLink;
+
+/** GitHub-shaped link: the repo/number identity the board's dots can decorate. */
+export type GitHubItemLink = {
+  tracker: "github";
   /** "owner/repo" slug. */
   repo: string;
   /** Issue/PR number, positive integer. */
@@ -27,6 +31,24 @@ export type ThreadLink = {
   /** ISO-8601 stamp of the link's write. */
   createdAt: string;
   /** Who wrote it: a thread agent (tool), the operator (CLI), auto-detect. */
+  source: "agent" | "operator" | "auto";
+};
+
+/**
+ * External tracker item (Jira, Linear, Clickup, Forgejo, anything): the URL
+ * is the identity — agents set these through the link tool when the
+ * conversation turns one up, and the chip renders the site's favicon. No
+ * repo/number pair, no GitHub status dot.
+ */
+export type ExternalItemLink = {
+  tracker: "external";
+  /** Canonical https URL of the item; dedupes by exact URL. */
+  url: string;
+  /** Derived at parse from the URL hostname; never trusted from storage. */
+  hostname: string;
+  /** Optional display text (e.g. "PROJ-142"); falls back to the hostname. */
+  label?: string;
+  createdAt: string;
   source: "agent" | "operator" | "auto";
 };
 
@@ -43,7 +65,8 @@ export function linkHref(repo: string, kind: "issue" | "pull", issue: number): s
 
 /**
  * Parse a full GitHub issue/PR URL into its repo, number, and kind. Null on
- * anything else (the caller fails loud about the bad input, not silently).
+ * anything else (the caller decides whether that means an external item or
+ * bad input — parseGithubItemUrl itself stays silent either way).
  */
 export function parseGithubItemUrl(
   url: string,
@@ -60,25 +83,86 @@ export function parseGithubItemUrl(
   };
 }
 
+/**
+ * Build an external link record at a write boundary (agent tool, CLI, RPC):
+ * the hostname always derives from the URL here, never from caller input,
+ * and the URL must be https (fail loud otherwise). Label optional, 1..80 —
+ * the same bound parse enforces on stored records.
+ */
+export function makeExternalLink(
+  url: string,
+  label: string | undefined,
+  source: ThreadLink["source"],
+  now: Date,
+): ExternalItemLink {
+  if (!/^https:\/\//.test(url)) {
+    throw new Error(`external link: url must be https, got ${JSON.stringify(url)}`);
+  }
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    throw new Error(`external link: unparseable url ${JSON.stringify(url)}`);
+  }
+  if (label !== undefined && (label.length < 1 || label.length > 80)) {
+    throw new Error(`external link: label must be 1..80 chars, got ${label.length}`);
+  }
+  const link: ExternalItemLink = {
+    tracker: "external",
+    url,
+    hostname,
+    createdAt: now.toISOString(),
+    source,
+  };
+  if (label !== undefined) link.label = label;
+  return link;
+}
+
 function parseLink(value: JsonValue, index: number): ThreadLink {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     const got = Array.isArray(value) ? "array" : typeof value;
     throw new Error(`linked issues: entry ${index}: expected object, got ${got}`);
   }
   const entry = value as { [key: string]: JsonValue };
+  expect(entry["createdAt"], "createdAt", index, (v) => typeof v === "string" && !Number.isNaN(Date.parse(v)));
+  expect(entry["source"], "source", index, (v) => typeof v === "string" && LINK_SOURCES.has(v));
+  const createdAt = entry["createdAt"] as string;
+  const source = entry["source"] as ThreadLink["source"];
+  // Records written before the external variant existed carry no tracker —
+  // they are GitHub links by shape (repo + issue + kind + github href).
+  const tracker = entry["tracker"] === undefined ? "github" : entry["tracker"];
+  expect(tracker, "tracker", index, (v) => v === "github" || v === "external");
+  if (tracker === "external") {
+    expect(entry["url"], "url", index, (v) => typeof v === "string" && /^https:\/\//.test(v));
+    const url = entry["url"] as string;
+    // Hostname derives from the URL; a stored value is never trusted.
+    let hostname: string;
+    try {
+      hostname = new URL(url).hostname;
+    } catch {
+      throw new Error(`linked issues: entry ${index}: invalid url ${JSON.stringify(url)}`);
+    }
+    if (entry["label"] !== undefined) {
+      expect(entry["label"], "label", index, (v) => typeof v === "string" && v.length > 0 && v.length <= 80);
+    }
+    const link: ExternalItemLink = { tracker, url, hostname, createdAt, source };
+    if (typeof entry["label"] === "string" && entry["label"].length > 0) {
+      link.label = entry["label"];
+    }
+    return link;
+  }
   expect(entry["repo"], "repo", index, (v) => typeof v === "string" && v.includes("/") && /[\w.-]+\/[\w.-]+/.test(v));
   expect(entry["issue"], "issue", index, (v) => typeof v === "number" && Number.isInteger(v) && v > 0);
   expect(entry["kind"], "kind", index, (v) => typeof v === "string" && LINK_KINDS.has(v));
   expect(entry["href"], "href", index, (v) => typeof v === "string" && v.startsWith("https://github.com/"));
-  expect(entry["createdAt"], "createdAt", index, (v) => typeof v === "string" && !Number.isNaN(Date.parse(v)));
-  expect(entry["source"], "source", index, (v) => typeof v === "string" && LINK_SOURCES.has(v));
   return {
+    tracker: "github",
     repo: entry["repo"] as string,
     issue: entry["issue"] as number,
-    kind: entry["kind"] as ThreadLink["kind"],
+    kind: entry["kind"] as GitHubItemLink["kind"],
     href: entry["href"] as string,
-    createdAt: entry["createdAt"] as string,
-    source: entry["source"] as ThreadLink["source"],
+    createdAt,
+    source,
   };
 }
 
@@ -112,7 +196,10 @@ export function parseLinkedIssues(value: JsonValue | undefined): ThreadLink[] | 
 
 function sameItem(a: ThreadLink, b: ThreadLink): boolean {
   // GitHub redirects /issues/N ↔ /pull/N, so kind does not take part in
-  // identity: repo + number is the item.
+  // identity: repo + number is the item. External items are their URL.
+  if (a.tracker === "external" || b.tracker === "external") {
+    return a.tracker === "external" && b.tracker === "external" && a.url === b.url;
+  }
   return a.repo === b.repo && a.issue === b.issue;
 }
 
@@ -129,9 +216,10 @@ export function stampLinkedIssues(
 }
 
 /**
- * Remove one repo+number pair (number given), or everything (absent).
- * Returns null when nothing remains, so the caller can remove the key
- * rather than store an empty array.
+ * Remove one GitHub repo+number pair (number given), or everything (absent).
+ * A number only ever matches GitHub links; external links clear via the
+ * no-number form. Returns null when nothing remains, so the caller can
+ * remove the key rather than store an empty array.
  */
 export function clearLinkedIssues(
   existing: ThreadLink[] | null,
@@ -141,7 +229,9 @@ export function clearLinkedIssues(
   const remaining =
     issue === undefined
       ? []
-      : existing.filter((entry) => entry.issue !== issue);
+      : existing.filter(
+          (entry) => entry.tracker !== "github" || entry.issue !== issue,
+        );
   return remaining.length === 0 ? null : remaining;
 }
 
@@ -163,29 +253,38 @@ export function linkedTicketRefs(
   const seen = new Set<string>();
   const refs: TicketRef[] = [];
   for (const link of links) {
-    if (known.has(link.href)) continue;
+    const href = link.tracker === "external" ? link.url : link.href;
+    if (known.has(href)) continue;
     // Chip rows key chips by raw text, and "#12" can repeat across repos —
     // stampLinkedIssues dedupes per repo+number but not across repos. First
-    // entry wins (the array's primary link is first).
-    const raw = `#${link.issue}`;
+    // entry wins (the array's primary link is first). External items label
+    // with their stored label or their hostname.
+    const raw = link.tracker === "external" ? link.label ?? link.hostname : `#${link.issue}`;
     if (seen.has(raw)) continue;
     seen.add(raw);
-    refs.push({
-      raw,
-      tracker: "github",
-      number: link.issue,
-      href: link.href,
-    });
+    refs.push(
+      link.tracker === "external"
+        ? { raw, tracker: "external", href, hostname: link.hostname }
+        : {
+            raw,
+            tracker: "github",
+            number: link.issue,
+            href,
+          },
+    );
   }
   return refs;
 }
 
 /**
- * "owner/repo#number" strings for a thread's links, the batched
- * tracker_status lookup key (app.tsx groups visible refs per repo).
+ * "owner/repo#number" strings for a thread's GitHub links, the batched
+ * tracker_status lookup key (app.tsx groups visible refs per repo). External
+ * links take no part: the dot path is GitHub-only.
  */
 export function linkedRefKeys(
   links: ThreadLink[] | null | undefined,
 ): string[] {
-  return (links ?? []).map((link) => `${link.repo}#${link.issue}`);
+  return (links ?? [])
+    .filter((link) => link.tracker === "github")
+    .map((link) => `${link.repo}#${link.issue}`);
 }

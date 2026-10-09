@@ -33,6 +33,10 @@ export async function setup(opts: {
       },
       threads: {
         list: async () => (opts.threads ?? []).map((id) => ({ id })),
+        get: async (args: { threadId: string }) => ({
+          id: args.threadId,
+          projectId: "project-test",
+        }),
         getPluginMetadata: async (args: { threadId: string }) =>
           meta.get(args.threadId) ?? {},
         updatePluginMetadata: async (args: {

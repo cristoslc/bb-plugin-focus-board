@@ -25,6 +25,7 @@ const validInputs: Record<Method, unknown> = {
   },
   snooze_clear: { threadId: "thr_x" },
   tracker_status: { repo: "o/r", numbers: [1, 2] },
+  tracker_validate: { urls: ["https://github.com/o/r/issues/12"] },
   thread_autotitle: { threadId: "thr_x" },
   thread_autotitle_services: { threadId: "thr_x" },
   workspace_files_exist: { threadId: "thr_x", paths: ["docs/a.md"] },

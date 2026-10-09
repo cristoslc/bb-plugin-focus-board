@@ -67,3 +67,10 @@ Realtime channel `link-changed`. Plugin metadata writes emit no thread realtime 
 - Auto-detect (V2 above).
 - Writing to GitHub (the plugin mirrors; it never mutates the tracker).
 - Bidirectional sync with the builtin plugin's links; a link set in both places is two records, and each surface renders its own.
+## Follow-up units (2026-10-09, branch bb/external-links-and-validated-chips)
+
+Units E, F, and G landed after the GLM-5 false-chip report (operator rule @414: a text ref chips only when something attached to the project can validate it; projects expose only `gitRemoteUrl`, so nothing can validate a bare WORD-123 key).
+
+- **Unit E — external-item links.** `ThreadLink` is now a union: GitHub records (repo+number identity, kind excluded because GitHub redirects `/issues/N` to `/pull/N`) and external records (any https URL, identity by exact URL, `hostname` derived at parse and never trusted from storage, optional 1..80-char `label` chip text). `link_set`, the CLI, and `focus_board_link_issue` accept any https URL; external chips read label-or-hostname, never enter the status-dot batch, and survive clearing a GitHub number.
+- **Unit F — validation.** `lib/tickets.ts` gains `forgejoItemBase` (non-GitHub remotes with owner/repo shape become deterministic `https://host/owner/repo` item bases). New `lib/tracker-validate.ts` + `tracker_validate` RPC: GitHub-plugin cache first (authoritative, with kind/state), HTTP GET fallback (10s timeout) for cache misses and forgejo, KV-cached with a 6h up / 10min down TTL. Cards receive a `validatedHrefs` set and render a scanned text ref only when its href validates; store links stay trusted by construction. An unwired prop keeps the old unfiltered behavior so older test suites hold.
+- **Unit G — favicon chips.** Non-GitHub `#N` refs carry their base hostname; `TicketChip` renders `https://<host>/favicon.ico` before the ref text, hidden on load error. The bb app shell sets no Content-Security-Policy header (verified with `curl -I` on the live shell), so cross-origin favicons load.

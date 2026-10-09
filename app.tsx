@@ -11,8 +11,13 @@ import {
   useSettings,
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
-import { findTicketRefs, resolveRepoSlug } from "./lib/tickets";
-import { linkedRefKeys, type ThreadLink } from "./lib/link-metadata";
+import { findTicketRefs, forgejoItemBase, resolveRepoSlug } from "./lib/tickets";
+import {
+  linkedRefKeys,
+  parseLinkedIssues,
+  type ThreadLink,
+} from "./lib/link-metadata";
+import type { JsonValue } from "@get-bb/plugin-sdk";
 import { installHostLinkGlue } from "./components/host-link-glue";
 import { FocusBoardAppIcon } from "./components/ui/icon";
 import type { rpcContract } from "./server";
@@ -289,6 +294,20 @@ function BoardPage({ subPath }: { subPath: string }) {
   // of the GitHub plugin's link rows exists). Record<string, ThreadLink[]>;
   // a thread absent from it carries no linked chips.
   const [linksByThread, setLinksByThread] = useState<Record<string, ThreadLink[]>>({});
+  // The RPC contract's link records tolerate a legacy GitHub record without
+  // its tracker tag; parse normalizes each thread's array into ThreadLink[]
+  // (and fails loud on anything malformed, never coerces).
+  const linksFromRpc = useCallback(
+    (result: { links: Record<string, unknown> }) => {
+      const out: Record<string, ThreadLink[]> = {};
+      for (const [threadId, links] of Object.entries(result.links)) {
+        const parsed = parseLinkedIssues(links as JsonValue);
+        if (parsed !== null) out[threadId] = parsed;
+      }
+      return out;
+    },
+    [],
+  );
   // Pinned-pin parks: a lane-exit unpin parks the pin (thread metadata via
   // RPC) so the writes that bring the card back to the operator — Mark Not
   // Done, Mark Unread — can restore it. Local optimistic state drives the
@@ -323,7 +342,7 @@ function BoardPage({ subPath }: { subPath: string }) {
       () => {}, // Settings are optional; defaults apply when unreachable.
     );
     rpc.call("link_list").then(
-      (result) => setLinksByThread(result.links),
+      (result) => setLinksByThread(linksFromRpc(result)),
       () => {}, // Links are optional state; the board works without them.
     );
   }, [rpc]);
@@ -355,7 +374,7 @@ function BoardPage({ subPath }: { subPath: string }) {
   // converges on the card that is already on screen.
   useRealtime("link-changed", () => {
     rpc.call("link_list").then(
-      (result) => setLinksByThread(result.links),
+      (result) => setLinksByThread(linksFromRpc(result)),
       () => {}, // Links are optional state; the board works without them.
     );
   });
@@ -534,7 +553,8 @@ function BoardPage({ subPath }: { subPath: string }) {
       ),
     ),
   );
-  // GitHub repo base per project, for ticket-chip link-outs. Best-effort:
+  // Tracker item base per project, for ticket-chip link-outs: GitHub slug
+  // when the remote resolves as one, forgejo base otherwise. Best-effort:
   // a failed or non-GitHub lookup just means chips render without links.
   // Re-runs when the sidebar project list changes (new project, or a
   // late-arriving remote) so the map is never a stale one-shot snapshot.
@@ -549,7 +569,14 @@ function BoardPage({ subPath }: { subPath: string }) {
           const next: Record<string, string> = {};
           for (const project of projectList) {
             const slug = resolveRepoSlug(project.gitRemoteUrl);
-            if (slug !== null) next[project.id] = `https://github.com/${slug}`;
+            if (slug !== null) {
+              next[project.id] = `https://github.com/${slug}`;
+            } else {
+              // Forgejo/Cove remote: the base item URLs build on, so #N text
+              // refs gain hrefs and ride tracker_validate like GitHub ones.
+              const base = forgejoItemBase(project.gitRemoteUrl);
+              if (base !== null) next[project.id] = base;
+            }
           }
           setRepoBaseByProject(next);
         },
@@ -963,6 +990,55 @@ function BoardPage({ subPath }: { subPath: string }) {
         .join(","),
     [liveThreads, repoBaseByProject, linksByThread],
   );
+  // Text-ref hrefs across visible threads, the tracker_validate batch (the
+  // chip rule: a #N/URL in text chips only when the item is confirmed).
+  // Sorted-join mirrors visibleRefKey: cheap string equality as the effect
+  // dep, safe join (https hrefs carry no commas).
+  const textRefHrefsKey = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          liveThreads.flatMap((thread) => {
+            const repoBase = repoBaseByProject[thread.projectId];
+            const branch = thread.environment?.branchName ?? thread.host?.name ?? "";
+            return findTicketRefs(thread.displayTitle, {
+              extraText: branch,
+              ...(repoBase !== undefined ? { repoHrefBase: repoBase } : {}),
+            })
+              .map((ref) => ref.href)
+              .filter((href): href is string => href !== undefined);
+          }),
+        ),
+      )
+        .sort()
+        .join(","),
+    [liveThreads, repoBaseByProject],
+  );
+  const [validatedHrefs, setValidatedHrefs] = useState<ReadonlySet<string>>(new Set());
+  useEffect(() => {
+    if (textRefHrefsKey === "") {
+      setValidatedHrefs(new Set());
+      return;
+    }
+    let cancelled = false;
+    const urls = textRefHrefsKey.split(",");
+    rpc.call("tracker_validate", { urls }).then(
+      (result) => {
+        if (cancelled) return;
+        setValidatedHrefs(
+          new Set(
+            Object.entries(result.results)
+              .filter(([, verdict]) => verdict.confirmed)
+              .map(([url]) => url),
+          ),
+        );
+      },
+      () => {}, // Validation optional; an empty set just holds text chips back.
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [rpc, textRefHrefsKey]);
   useEffect(() => {
     if (visibleRefKey === "") {
       setTicketStatuses({});
@@ -1982,6 +2058,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
             linkedIssuesFor={(threadId) => linksByThread[threadId]}
+            validatedHrefs={validatedHrefs}
             parentLaneOrder={parentLaneOrder}
             onParentLaneOrderChange={persistParentLaneOrder}
             onOpenThread={openThreadCard}
@@ -2014,6 +2091,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
             linkedIssuesFor={(threadId) => linksByThread[threadId]}
+            validatedHrefs={validatedHrefs}
             onOpenThread={openThreadCard}
             onClosePane={closeThreadPane}
             onNewTask={openNewThread}

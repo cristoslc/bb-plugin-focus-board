@@ -77,6 +77,129 @@ describe("link_set over plugin metadata", () => {
   });
 });
 
+describe("link_set external and URL forms", () => {
+  it("stores an external link for a non-GitHub https URL, hostname derived", async () => {
+    const { callRpc, meta, harness } = await setup({ threads: ["thr_a"] });
+    await callRpc("link_set", {
+      threadId: "thr_a",
+      url: "https://linear.app/team/item/PROJ-142",
+      source: "operator",
+    });
+    const links = linksOf(meta, "thr_a")!;
+    expect(links[0]).toMatchObject({
+      tracker: "external",
+      url: "https://linear.app/team/item/PROJ-142",
+      hostname: "linear.app",
+      source: "operator",
+    });
+    expect(Number.isNaN(Date.parse(links[0].createdAt))).toBe(false);
+    expect(harness.inspection.realtimeSignals).toContainEqual({
+      channel: "link-changed",
+      payload: { threadIds: ["thr_a"] },
+    });
+  });
+
+  it("carries an optional label on the external form", async () => {
+    const { callRpc, meta } = await setup({ threads: ["thr_a"] });
+    await callRpc("link_set", {
+      threadId: "thr_a",
+      url: "https://linear.app/team/item/PROJ-142",
+      label: "PROJ-142",
+      source: "operator",
+    });
+    expect(linksOf(meta, "thr_a")![0].label).toBe("PROJ-142");
+  });
+
+  it("parses a full GitHub URL into the github record", async () => {
+    const { callRpc, meta } = await setup({ threads: ["thr_a"] });
+    await callRpc("link_set", {
+      threadId: "thr_a",
+      url: "https://github.com/a/b/pull/9",
+      source: "operator",
+    });
+    expect(linksOf(meta, "thr_a")![0]).toMatchObject({
+      tracker: "github",
+      repo: "a/b",
+      issue: 9,
+      kind: "pull",
+      href: "https://github.com/a/b/pull/9",
+      source: "operator",
+    });
+  });
+
+  it("the number form without a repo resolves from the project remote", async () => {
+    const { callRpc, meta } = await setup({ threads: ["thr_a"] });
+    const result = (await callRpc("link_set", {
+      threadId: "thr_a",
+      number: 12,
+      source: "operator",
+    })) as { link: { repo?: string } };
+    expect(result.link.repo).toBe("a/b");
+    expect(linksOf(meta, "thr_a")![0].tracker).toBe("github");
+  });
+
+  it("the number form fails loud when no GitHub remote resolves", async () => {
+    const { callRpc } = await setup({ threads: ["thr_a"], projectRemote: null });
+    await expect(
+      callRpc("link_set", { threadId: "thr_a", number: 12, source: "operator" }),
+    ).rejects.toThrow(/GitHub repo/);
+  });
+
+  it("rejects url and number together (exactly one)", async () => {
+    const { callRpc } = await setup({ threads: ["thr_a"] });
+    await expect(
+      callRpc("link_set", {
+        threadId: "thr_a",
+        url: "https://github.com/a/b/issues/12",
+        number: 12,
+        source: "operator",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects a label with the number form", async () => {
+    const { callRpc } = await setup({ threads: ["thr_a"] });
+    await expect(
+      callRpc("link_set", { threadId: "thr_a", number: 12, label: "PROJ-1", source: "operator" }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects http:// urls (https only)", async () => {
+    const { callRpc } = await setup({ threads: ["thr_a"] });
+    await expect(
+      callRpc("link_set", { threadId: "thr_a", url: "http://a.example/item/1", source: "operator" }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects a label longer than 80 characters", async () => {
+    const { callRpc } = await setup({ threads: ["thr_a"] });
+    await expect(
+      callRpc("link_set", {
+        threadId: "thr_a",
+        url: "https://linear.app/x/1",
+        label: "x".repeat(81),
+        source: "operator",
+      }),
+    ).rejects.toThrow();
+  });
+});
+
+describe("link_clear with externals present", () => {
+  it("clearing one github number keeps external links", async () => {
+    const { callRpc, meta } = await setup({ threads: ["thr_a"] });
+    await callRpc("link_set", {
+      threadId: "thr_a",
+      url: "https://linear.app/team/item/PROJ-142",
+      source: "operator",
+    });
+    await callRpc("link_set", { threadId: "thr_a", repo: "a/b", number: 12, kind: "issue", source: "agent" });
+    await callRpc("link_clear", { threadId: "thr_a", number: 12 });
+    const links = linksOf(meta, "thr_a")!;
+    expect(links).toHaveLength(1);
+    expect(links[0].tracker).toBe("external");
+  });
+});
+
 describe("link_clear over plugin metadata", () => {
   it("clears one number and publishes link-changed", async () => {
     const { callRpc, meta, harness } = await setup({ threads: ["thr_a"] });

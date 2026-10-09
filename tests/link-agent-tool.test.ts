@@ -8,6 +8,56 @@ function registered(host: FakePluginHost) {
   return host.harness.inspection.registrations.agentTools;
 }
 
+describe("focus_board_link_issue external URL forms", () => {
+  it("links an external tracker URL with its label", async () => {
+    const { harness, meta } = await setup({ threads: ["thread-test"] });
+    await harness.callAgentTool("focus_board_link_issue", {
+      url: "https://linear.app/team/item/PROJ-142",
+      label: "PROJ-142",
+    });
+    const links = linksOf(meta, "thread-test");
+    expect(links).toHaveLength(1);
+    expect(links![0]).toMatchObject({
+      tracker: "external",
+      url: "https://linear.app/team/item/PROJ-142",
+      hostname: "linear.app",
+      label: "PROJ-142",
+      source: "agent",
+    });
+    expect(harness.inspection.realtimeSignals).toContainEqual({
+      channel: "link-changed",
+      payload: { threadIds: ["thread-test"] },
+    });
+  });
+
+  it("an external URL without a label falls back to the hostname", async () => {
+    const { harness, meta } = await setup({ threads: ["thread-test"] });
+    await harness.callAgentTool("focus_board_link_issue", {
+      url: "https://jira.internal.acme.com/browse/ENG-482",
+    });
+    const links = linksOf(meta, "thread-test")!;
+    expect(links[0].tracker).toBe("external");
+    if (links[0].tracker === "external") {
+      expect(links[0].hostname).toBe("jira.internal.acme.com");
+      expect(links[0].label).toBeUndefined();
+    }
+  });
+
+  it("rejects http:// urls (https only)", async () => {
+    const { harness } = await setup();
+    await expect(
+      harness.callAgentTool("focus_board_link_issue", { url: "http://a.example/item/1" }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects a label alongside the number form", async () => {
+    const { harness } = await setup();
+    await expect(
+      harness.callAgentTool("focus_board_link_issue", { number: 12, label: "PROJ-1" }),
+    ).rejects.toThrow();
+  });
+});
+
 describe("focus_board_link_issue registration", () => {
   it("registers exactly one agent tool named focus_board_link_issue", async () => {
     const { host } = await setup();

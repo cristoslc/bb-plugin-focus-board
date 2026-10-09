@@ -16,7 +16,7 @@
  * for the original pattern set and false-positive guards.
  */
 
-/** Resolve a git remote URL to an "owner/repo" slug; null when not GitHub. */
+/** Resolve a git remote URL to an "owner/repo" GitHub slug; null when not GitHub. */
 export function resolveRepoSlug(remote: string | null | undefined): string | null {
   if (!remote) return null;
   const https = remote.match(/^https:\/\/github\.com\/([\w.-]+\/[\w.-]+?)(?:\.git)?\/?$/);
@@ -26,11 +26,30 @@ export function resolveRepoSlug(remote: string | null | undefined): string | nul
   return null;
 }
 
+/**
+ * Forgejo/Gitea item base from a git remote (deterministic): any remote with
+ * an owner/repo path on a host that is not github.com — bb's own forge serves
+ * Forgejo there, and Forgejo identifies items as /issues/N pages. Returns
+ * "https://<host>/<owner>/<repo>" (the base item URLs build on); null for
+ * github remotes and remotes without an owner/repo path (nothing to
+ * validate #N refs against there).
+ */
+export function forgejoItemBase(remote: string | null | undefined): string | null {
+  if (!remote) return null;
+  const https = remote.match(
+    /^https:\/\/(?!github\.com)([\w.-]+(?::\d+)?)\/([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/,
+  );
+  if (https) return `https://${https[1]}/${https[2]}/${https[3]}`;
+  const ssh = remote.match(/^git@(?!github\.com)([^:]+):([\w.-]+)\/([\w.-]+?)(?:\.git)?$/);
+  if (ssh) return `https://${ssh[1]}/${ssh[2]}/${ssh[3]}`;
+  return null;
+}
+
 export interface TicketRef {
   /** The matched text, e.g. "https://github.com/owner/repo/issues/42" or "#482". */
   raw: string;
-  /** GitHub-identifiable refs (#N, URLs). Key-style refs cannot validate, so none exist. */
-  tracker: "github";
+  /** GitHub-identifiable refs (#N, URLs) and external tracker items from the link store. */
+  tracker: "github" | "external";
   /**
    * Issue vs PR when the raw text itself implies it (GitHub URL refs).
    * Plain "#N" refs stay kindless — issues and PRs share GitHub's number
@@ -40,6 +59,11 @@ export interface TicketRef {
   kind?: "issue" | "pull";
   /** Issue/PR number for numeric refs (#123, GitHub URL forms). */
   number?: number;
+  /**
+   * For external tracker items: the site's hostname, so the chip can render
+   * the site's favicon (Unit G). Absent on GitHub refs.
+   */
+  hostname?: string;
   /** Direct href when resolvable; absent refs render as inert chips. */
   href?: string;
 }
@@ -77,6 +101,19 @@ function pushUnique(refs: TicketRef[], ref: TicketRef): void {
 export function findTicketRefs(title: string, options: TicketRefOptions = {}): TicketRef[] {
   const refs: TicketRef[] = [];
   const base = options.repoHrefBase?.replace(/\/+$/, "");
+  // Hostname of a non-GitHub base (forgejo): the chip's favicon source. The
+  // app builds the base from a regex-validated remote, so the URL parse
+  // never fails in practice; a drifted base only loses the favicon, the
+  // chip and its href stay.
+  const baseHost = (() => {
+    if (base === undefined) return null;
+    try {
+      const hostname = new URL(base).hostname;
+      return hostname === "github.com" ? null : hostname;
+    } catch {
+      return null;
+    }
+  })();
 
   const scan = (text: string): void => {
     if (!text) return;
@@ -104,6 +141,7 @@ export function findTicketRefs(title: string, options: TicketRefOptions = {}): T
         tracker: "github",
         number: num,
         ...(base ? { href: `${base}/issues/${num}` } : {}),
+        ...(baseHost !== null ? { hostname: baseHost } : {}),
       });
     }
   };
