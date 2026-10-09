@@ -101,6 +101,19 @@ function pushUnique(refs: TicketRef[], ref: TicketRef): void {
 export function findTicketRefs(title: string, options: TicketRefOptions = {}): TicketRef[] {
   const refs: TicketRef[] = [];
   const base = options.repoHrefBase?.replace(/\/+$/, "");
+  // Hostname of a non-GitHub base (forgejo): the chip's favicon source. The
+  // app builds the base from a regex-validated remote, so the URL parse
+  // never fails in practice; a drifted base only loses the favicon, the
+  // chip and its href stay.
+  const baseHost = (() => {
+    if (base === undefined) return null;
+    try {
+      const hostname = new URL(base).hostname;
+      return hostname === "github.com" ? null : hostname;
+    } catch {
+      return null;
+    }
+  })();
 
   const scan = (text: string): void => {
     if (!text) return;
@@ -128,6 +141,7 @@ export function findTicketRefs(title: string, options: TicketRefOptions = {}): T
         tracker: "github",
         number: num,
         ...(base ? { href: `${base}/issues/${num}` } : {}),
+        ...(baseHost !== null ? { hostname: baseHost } : {}),
       });
     }
   };

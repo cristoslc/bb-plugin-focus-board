@@ -174,6 +174,21 @@ function TicketChip({
   ticket: TicketRef;
   status: GitHubItemStatus | undefined;
 }) {
+  // Non-GitHub trackers show the site's favicon (forgejo bases, external
+  // links — each carries its hostname; bb's app shell sets no CSP header,
+  // verified 2026-10-08, so the browser may load it directly). A failed or
+  // blocked load collapses to the plain text chip.
+  const [faviconFailed, setFaviconFailed] = useState(false);
+  const favicon =
+    ticket.hostname !== undefined && !faviconFailed ? (
+      <img
+        src={`https://${ticket.hostname}/favicon.ico`}
+        alt=""
+        loading="lazy"
+        className="size-3 shrink-0 rounded-[2px]"
+        onError={() => setFaviconFailed(true)}
+      />
+    ) : null;
   const className = cn(
     "inline-flex h-5 items-center gap-1 rounded bg-muted px-1 font-mono text-[10px] leading-none text-muted-foreground",
     ticket.href && "hover:bg-accent hover:text-foreground",
@@ -212,6 +227,7 @@ function TicketChip({
     <>
       {provider}
       {kindGlyph}
+      {favicon}
       {ticket.raw}
     </>
   );

@@ -201,6 +201,30 @@ describe("forgejo item URLs validate as https item URLs", () => {
       extraText: "",
       repoHrefBase: "https://forge.example.com/owner/repo",
     });
-    expect(refs).toEqual([{ raw: "#7", tracker: "github", number: 7, href: "https://forge.example.com/owner/repo/issues/7" }]);
+    expect(refs).toEqual([
+      { raw: "#7", tracker: "github", number: 7, href: "https://forge.example.com/owner/repo/issues/7", hostname: "forge.example.com" },
+    ]);
+  });
+});
+
+describe("findTicketRefs — hostname on non-github bases (favicon source)", () => {
+  it("a #N ref on a forgejo base carries the base hostname", () => {
+    const refs = findTicketRefs("see #7", {
+      extraText: "",
+      repoHrefBase: "https://forge.example.com/owner/repo",
+    });
+    expect(refs[0].hostname).toBe("forge.example.com");
+  });
+
+  it("a #N ref on a github base carries no hostname (github glyph renders)", () => {
+    const refs = findTicketRefs("see #7", {
+      extraText: "",
+      repoHrefBase: "https://github.com/owner/repo",
+    });
+    expect(refs[0].hostname).toBeUndefined();
+  });
+
+  it("no base → no hostname", () => {
+    expect(findTicketRefs("see #7")[0].hostname).toBeUndefined();
   });
 });
