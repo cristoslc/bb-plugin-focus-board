@@ -28,6 +28,7 @@
 The board lives in bb's sidebar as a nav panel and updates in real time as your threads change. Lanes read left to right in order of attention: **Pinned, Needs you, Unread, Working**, then idle threads bucketed by how long they've been quiet.
 
 - **Group and filter** — lanes by Attention, Last activity, Project, Provider, Machine, or Parent thread; filter and search by state, project, provider, or title.
+- **Swimlanes** — split the column board into collapsible rows by Project, Provider, Machine, Attention, or Last activity, e.g. Attention columns × Project rows.
 - **Drag to act** — hand-order a column, drop a card on Pinned, Unread, or Done to change its state in the same drag, or drop it onto a card's middle to nest it as that thread's child; drag a nested child onto any column header (they grow and ring amber during family drags; a title drop never writes an order — placement is the insertion line's job) or floor to top-level it again, and back onto a card to re-nest.
 - **Spawn children from the board** — "New child thread…" in the card and pane menus opens the composer preset to the parent's project and checkout; the child lands nested under its parent in the pane.
 - **✨ auto-rename** — the pane's title editor can title the thread from its opening prompt with bb's AI services, falling back to the thread's own model when the pinned service can't.

@@ -9,7 +9,7 @@ import {
   shouldShowDropdownSearch,
 } from "./dropdown-search";
 import type { FilterState, GroupBy, ThreadState } from "./grouping";
-import { GROUP_BY_OPTIONS } from "./grouping";
+import { GROUP_BY_OPTIONS, SWIMLANE_BY_OPTIONS, type SwimlaneBy } from "./grouping";
 
 /**
  * Linear-model dropdown: clicking a row's label applies it as the single
@@ -411,6 +411,9 @@ function ProjectDropdown({
 interface BoardToolbarProps {
   groupBy: GroupBy;
   onGroupByChange: (value: GroupBy) => void;
+  /** Swimlanes: a second, horizontal grouping axis over the columns. */
+  swimlaneBy: SwimlaneBy;
+  onSwimlaneByChange: (value: SwimlaneBy) => void;
   /** R3: "Nest child threads" toggle — nested rendering on/off. */
   nestChildren: boolean;
   onNestChildrenChange: (enabled: boolean) => void;
@@ -445,6 +448,8 @@ const STATE_OPTIONS: readonly { value: ThreadState; label: string }[] = [
 export function BoardToolbar({
   groupBy,
   onGroupByChange,
+  swimlaneBy,
+  onSwimlaneByChange,
   nestChildren,
   onNestChildrenChange,
   nestingLocked,
@@ -485,6 +490,26 @@ export function BoardToolbar({
         summaryFor={() => GROUP_BY_OPTIONS.find((o) => o.value === groupBy)?.label ?? groupBy}
         onSingleSelect={(value) => onGroupByChange(value as GroupBy)}
       />
+      {/* Hidden on the parent-lane board, which already lays threads out in
+          rows. The option matching the column grouping is left out: lanes on
+          the same axis as the columns would just be a diagonal. */}
+      {groupBy === "parent" ? null : (
+        <MultiSelectDropdown
+          exclusive
+          label="Swimlanes"
+          icon="ListTodo"
+          selected={new Set([swimlaneBy === groupBy ? "none" : swimlaneBy])}
+          options={SWIMLANE_BY_OPTIONS.filter((option) => option.value !== groupBy).map(
+            (option) => ({ value: option.value, label: option.label }),
+          )}
+          summaryFor={() =>
+            swimlaneBy === groupBy
+              ? "None"
+              : (SWIMLANE_BY_OPTIONS.find((o) => o.value === swimlaneBy)?.label ?? swimlaneBy)
+          }
+          onSingleSelect={(value) => onSwimlaneByChange(value as SwimlaneBy)}
+        />
+      )}
       {/* R3 "Nest child threads" toggle: lives in the Group control area —
           it changes how the board structures families, like the grouping. */}
       <button
