@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 // Ticket chips: each ref renders as [provider glyph][kind glyph] + ref text.
 // The provider glyph names the source (GitHub's brand; a generic ticket
-// mark when the provider cannot be named — PROJ-123 keys carry no source
-// signal). The kind glyph separates issue from PR and carries the live
-// state color once status lands: the old bare dot is gone.
+// mark when the provider cannot be named — unreachable from text scanning
+// now that unvalidatable key-shaped refs never chip, and kept for chip
+// sources that one day render without a text provider). The kind glyph
+// separates issue from PR and carries the live state color once status
+// lands: the old bare dot is gone.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, waitFor } from "@testing-library/react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
@@ -54,11 +56,9 @@ describe("ticket chip icons — provider glyph", () => {
     expect(chip().textContent).toContain("#17");
   });
 
-  it("a PROJ-123 key ref falls back to the generic ticket mark", async () => {
+  it("a PROJ-123 key ref renders no chip (word keys cannot validate)", async () => {
     renderCard("Fix PROJ-123 render bug");
-    await chipIcon("Ticket");
-    const github = chip().querySelector('[data-icon="GithubMark"]');
-    expect(github).toBeNull();
+    expect(document.querySelector("[data-ticket-chip]")).toBeNull();
   });
 });
 
@@ -75,9 +75,9 @@ describe("ticket chip icons — issue vs PR glyph", () => {
     expect(issueGlyph).toBeNull();
   });
 
-  it("a PROJ-123 key ref renders the issue glyph (keys are never PRs)", async () => {
+  it("a PROJ-123 key ref renders no chip (word keys are never PRs, never chips)", async () => {
     renderCard("Fix PROJ-123 render bug");
-    await chipIcon("IssueOpen");
+    expect(document.querySelector("[data-ticket-chip]")).toBeNull();
   });
 
   it("live open-issue status colors the open-issue glyph emerald", async () => {
