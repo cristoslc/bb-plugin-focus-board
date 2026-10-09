@@ -20,6 +20,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[] }[] =
     "children": []
   },
   {
+    "text": "**PR chips and issue chips are distinct glyphs.** A link's stored issue-vs-PR kind now rides the chip, so a linked PR shows the PR glyph immediately (merging into the purple merge glyph when status lands) instead of the issue glyph; external tracker chips name their own site's favicon and no longer don a GitHub issue glyph.",
+    "children": []
+  },
+  {
     "text": "**The pane's actions menu now leads with the state toggles.** Mark Done and Pin sit at the top, Snooze keeps its divider, and \"New child thread…\" moved down below the snooze entry, away from the everyday toggles.",
     "children": []
   },

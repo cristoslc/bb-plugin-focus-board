@@ -14,6 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - **Agents are nudged to link.** The `focus_board_link_issue` tool rides thread instructions and asks agents to call it right after they open or file an issue or PR.
   - **The CLI links too.** `bb focus-board link list|set|clear` manages the store by hand.
 - **Board links reach any tracker.** `link set` and the agent tool accept any https tracker URL (with an optional chip label), forgejo remotes build their own `…/issues/N` chips, and non-GitHub chips show the site's favicon.
+- **PR chips and issue chips are distinct glyphs.** A link's stored issue-vs-PR kind now rides the chip, so a linked PR shows the PR glyph immediately (merging into the purple merge glyph when status lands) instead of the issue glyph; external tracker chips name their own site's favicon and no longer don a GitHub issue glyph.
 
 ### Changed
 
