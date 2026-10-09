@@ -1,10 +1,19 @@
 /**
  * Ticket-reference detection for board cards ("mirror, don't integrate").
  *
+ * One rule above the pattern set: a text ref chips only when something
+ * attached to the project can validate it. GitHub remotes validate #N and
+ * issue/PR URLs (href from the repo base, dot from the GitHub plugin's
+ * cache), and the board's own link store validates its explicit links. A
+ * WORD-123 shape ("PROJ-123", "GLM-5") carries a tracker key only a
+ * Jira-style board link could validate — and bb projects expose no
+ * tracker links today, so key-shaped text matches nothing. Revisit when
+ * a project can carry a board attachment.
+ *
  * Pure string work: find ticket references in thread titles and branch
  * names and turn them into optional link-outs. Zero credentials, zero SDK
  * surface. See docs/plans/2026-09-25-tracker-mirroring-ticket-id-detection-link-out.md
- * for the pattern set and false-positive guards.
+ * for the original pattern set and false-positive guards.
  */
 
 /** Resolve a git remote URL to an "owner/repo" slug; null when not GitHub. */
@@ -18,10 +27,10 @@ export function resolveRepoSlug(remote: string | null | undefined): string | nul
 }
 
 export interface TicketRef {
-  /** The matched text, e.g. "PROJ-123", "#482". */
+  /** The matched text, e.g. "https://github.com/owner/repo/issues/42" or "#482". */
   raw: string;
-  /** "generic" for PROJ-123 style keys, "github" for #N and GitHub URLs. */
-  tracker: "generic" | "github";
+  /** GitHub-identifiable refs (#N, URLs). Key-style refs cannot validate, so none exist. */
+  tracker: "github";
   /**
    * Issue vs PR when the raw text itself implies it (GitHub URL refs).
    * Plain "#N" refs stay kindless — issues and PRs share GitHub's number
@@ -31,8 +40,6 @@ export interface TicketRef {
   kind?: "issue" | "pull";
   /** Issue/PR number for numeric refs (#123, GitHub URL forms). */
   number?: number;
-  /** Project key for PROJ-123 style refs, e.g. "PROJ". */
-  key?: string;
   /** Direct href when resolvable; absent refs render as inert chips. */
   href?: string;
 }
@@ -43,13 +50,6 @@ export interface TicketRefOptions {
   /** GitHub repo base ("https://github.com/owner/repo") when the project has one. */
   repoHrefBase?: string;
 }
-
-// PROJ-123: uppercase key (2+ chars, at least one letter) + hyphen + digits.
-// Anchored with a leading \b word boundary so the key cannot start mid-word,
-// and a trailing \b plus a (?![-\w]) lookahead so "PROJ-123x" and
-// "PROJ-123-4" do not match. The key rule rejects dates (2026-09-25),
-// versions (v1.2.3), and fragments (e2e-4).
-const KEY_REF = /\b([A-Z][A-Z0-9]*[A-Z]|[A-Z][A-Z0-9]{1,})-(\d+)\b(?![-\w])/g;
 
 // #1234: hash + digits, with a lookbehind rejecting hashes glued to letters
 // or another hash ("abc#12", "##12") while still matching adjacent glued
@@ -94,14 +94,6 @@ export function findTicketRefs(title: string, options: TicketRefOptions = {}): T
         number: Number(num),
         href: raw,
       });
-    }
-
-    for (const match of text.matchAll(KEY_REF)) {
-      // Trailing boundary: \b already fails on "123x" (digit→letter is
-      // word-internal), but it passes between a digit and a hyphen, so the
-      // (?![-\w]) lookahead is what rejects "PROJ-123-4". Keep both.
-      const [raw, key] = match;
-      pushUnique(refs, { raw, tracker: "generic", key });
     }
 
     for (const match of text.matchAll(HASH_REF)) {

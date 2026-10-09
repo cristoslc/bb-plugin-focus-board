@@ -3,33 +3,35 @@ import { findTicketRefs, resolveRepoSlug } from "../lib/tickets";
 
 const BASE = "https://github.com/owner/repo";
 
-describe("findTicketRefs — PROJ-123 style keys", () => {
-  it("matches an uppercase key with digits", () => {
-    expect(findTicketRefs("Fix PROJ-123 render bug")).toEqual([
-      { raw: "PROJ-123", tracker: "generic", key: "PROJ" },
-    ]);
+describe("findTicketRefs — WORD-123 keys do not chip (unvalidated)", () => {
+  /**
+   * A WORD-123 shape ("GLM-5", "PROJ-123") carries its own key, but no
+   * project attachment today can validate one: GitHub/Forgejo identify
+   * items as #N/URLs, and no Jira-style tracker link exists per project
+   * (projects expose only a gitRemoteUrl). Under the board's rule an
+   * unvalidatable ref never chips, so these keys match nothing — they
+   * return when a tracker attachment that owns key ids exists.
+   */
+  it("does not match an uppercase key with digits", () => {
+    expect(findTicketRefs("Fix PROJ-123 render bug")).toEqual([]);
+    expect(findTicketRefs("Explain GLM-5 tag on thread")).toEqual([]);
   });
 
-  it("matches multi-digit keys", () => {
-    expect(findTicketRefs("AB2-9 done")).toEqual([
-      { raw: "AB2-9", tracker: "generic", key: "AB2" },
-    ]);
+  it("does not match multi-digit keys", () => {
+    expect(findTicketRefs("AB2-9 done")).toEqual([]);
   });
 
-  it("matches refs at string boundaries", () => {
-    expect(findTicketRefs("ENG-482 initial work")[0]).toMatchObject({ raw: "ENG-482" });
-    expect(findTicketRefs("done: ENG-482.")[0]).toMatchObject({ raw: "ENG-482" });
+  it("does not match keys at string boundaries", () => {
+    expect(findTicketRefs("ENG-482 initial work")).toEqual([]);
+    expect(findTicketRefs("done: ENG-482.")).toEqual([]);
   });
 
-  it("matches multiple refs in one title", () => {
-    expect(findTicketRefs("Ship PROJ-1 and PROJ-2")).toEqual([
-      { raw: "PROJ-1", tracker: "generic", key: "PROJ" },
-      { raw: "PROJ-2", tracker: "generic", key: "PROJ" },
-    ]);
+  it("does not match multiple refs in one title", () => {
+    expect(findTicketRefs("Ship PROJ-1 and PROJ-2")).toEqual([]);
   });
 });
 
-describe("findTicketRefs — false-positive guards", () => {
+describe("findTicketRefs — shape guards that still hold", () => {
   it("does not match lowercase or mixed-case keys", () => {
     expect(findTicketRefs("fix eng-482 now")).toEqual([]);
   });
@@ -39,8 +41,6 @@ describe("findTicketRefs — false-positive guards", () => {
   });
 
   it("does not match inside a longer word", () => {
-    // XABC-1: the token starts with X, so the match inside is XABC-1, not ABC-1.
-    expect(findTicketRefs("XABC-1")).toEqual([{ raw: "XABC-1", tracker: "generic", key: "XABC" }]);
     expect(findTicketRefs("abcPROJ-1")).toEqual([]);
   });
 
@@ -155,10 +155,9 @@ describe("resolveRepoSlug", () => {
 });
 
 describe("findTicketRefs — combined behavior", () => {
-  it("combines title and branch refs in order", () => {
-    const refs = findTicketRefs("PROJ-7", { extraText: "fix/proj-7-#9", repoHrefBase: BASE });
+  it("scans branch hash refs alongside the title", () => {
+    const refs = findTicketRefs("PROJ-7 stays inert", { extraText: "fix/proj-7-#9", repoHrefBase: BASE });
     expect(refs).toEqual([
-      { raw: "PROJ-7", tracker: "generic", key: "PROJ" },
       { raw: "#9", tracker: "github", number: 9, href: `${BASE}/issues/9` },
     ]);
   });
