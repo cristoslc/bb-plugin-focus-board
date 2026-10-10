@@ -8,6 +8,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **Sibling threads now join a named family box.** "Group…" in a card menu assigns the thread to a shared named group (created in-line); members render inside one dashed outline with the group name on the border, the whole box moves as one unit by drag or Alt+Arrow, and the group evaporates the moment its last member unassigns — no parent thread involved.
+- **New thread leads the board toolbar, with a maximize button beside it.** Maximize expands the composer into bb's main new-thread view — seeds and stored prompt text ride along, the draft moves rather than copies — and the maximize button hides while a child preset is armed, since the main view cannot spawn a nested thread.
+
+### Changed
+
+- **The toolbar's controls follow the creation lead.** The search field sits right after New thread and the Group / Nest / Project / Provider / State controls abut it; the thread count and What's-new gift anchor the right edge.
 
 ## [1.1.0] - 2026-10-09
 
