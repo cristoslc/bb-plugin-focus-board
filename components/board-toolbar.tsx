@@ -1,4 +1,5 @@
 import { useId, useRef, useState } from "react";
+import type { RefObject } from "react";
 import type { PluginSidebarProject } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -433,6 +434,9 @@ interface BoardToolbarProps {
   /** An update landed since the stored last-seen version — the gift pulses. */
   whatsNewUnseen: boolean;
   onOpenWhatsNew: () => void;
+  /** Registers the board's search field so a "/" (see useSearchFocusOnSlash)
+   *  can move focus to it; owner lives above, in the app shell. */
+  searchInputRef?: RefObject<HTMLInputElement | null>;
 }
 
 const STATE_OPTIONS: readonly { value: ThreadState; label: string }[] = [
@@ -463,6 +467,7 @@ export function BoardToolbar({
   onNewThread,
   whatsNewUnseen,
   onOpenWhatsNew,
+  searchInputRef,
 }: BoardToolbarProps) {
   const groupOptions = GROUP_BY_OPTIONS.map((option) => ({
     value: option.value,
@@ -494,6 +499,7 @@ export function BoardToolbar({
           aria-hidden
         />
         <Input
+          ref={searchInputRef}
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search title or id…"

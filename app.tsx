@@ -25,6 +25,7 @@ import { Board } from "./components/board";
 import { BoardToolbar } from "./components/board-toolbar";
 import { ThreadPane } from "./components/thread-pane";
 import type { ThreadPaneThread } from "./components/thread-pane";
+import { useSearchFocusOnSlash } from "./hooks/use-search-focus";
 import { NewThreadModal } from "./components/new-thread-modal";
 import type { SpawnedThread } from "./components/new-thread-modal";
 import type { CardMenuAction } from "./components/thread-card-menu";
@@ -1334,6 +1335,11 @@ function BoardPage({ subPath }: { subPath: string }) {
           ? false
           : archivedThreads.some((thread) => thread.id === openThreadId));
 
+  // "/" is the board's search gesture, live only with no pane open (the
+  // pane's chat input owns keystrokes while it is up).
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useSearchFocusOnSlash({ enabled: openThread === null, searchInputRef });
+
   // Opening (or switching) a pane pushes a panel route, so every pane is one
   // history entry and the back arrow walks back through the cards the user
   // opened — reopening a trail of panes they lost track of. Closing replaces
@@ -2149,6 +2155,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           onNewThread={openNewThread}
           whatsNewUnseen={whatsNewUnseen}
           onOpenWhatsNew={openWhatsNew}
+          searchInputRef={searchInputRef}
           nestChildren={nestChildren}
           onNestChildrenChange={persistNestChildren}
           nestingLocked={isParentGroupBy}
