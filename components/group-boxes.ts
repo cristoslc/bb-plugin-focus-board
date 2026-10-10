@@ -173,7 +173,7 @@ function stateIndexOf(state: ThreadState): number {
  */
 export function runsFromColumns(
   columns: readonly BoardColumn[],
-  groupBoxOf: ReadonlyMap<string, GroupBox>,
+  groupBoxOf: GroupBoxMap,
 ): ReadonlyMap<string, readonly GroupRunItem[]> {
   const runs = new Map<string, readonly GroupRunItem[]>();
   for (const column of columns) {
@@ -189,12 +189,45 @@ export function runsFromColumns(
       const members = box.members.filter((member) =>
         column.threads.some((candidate) => candidate.id === member.id),
       );
+      // A lone member in THIS column (its box split by a frozen selection
+      // or a caller that skipped the overrides) renders plain — a box of
+      // one card is the "group of one" rule applied per column.
+      if (members.length < 2) {
+        items.push({ kind: "single", thread });
+        continue;
+      }
       for (const member of members) consumedThisColumn.add(member.id);
       items.push({ kind: "box", box: { ...box, members } });
     }
     runs.set(column.id, items);
   }
   return runs;
+}
+
+/**
+ * A member frozen in an off-box column (open in the pane: its column is
+ * frozen at selection) would otherwise split its box — each column then
+ * sees one member and both render plain. The FAMILY follows the frozen
+ * member instead: every member of its box takes the frozen column's lane,
+ * exactly the way nested children follow their parent card wherever it
+ * sits. Returns the INPUT plan unchanged when no frozen id is a box member
+ * (identity, so callers can memoize cheaply).
+ */
+export function reconcileGroupBoxPlan(
+  plan: GroupBoxPlan,
+  frozenColumns: ReadonlyMap<string, { id: string; label: string }>,
+): GroupBoxPlan {
+  if (frozenColumns.size === 0 || plan.groupBoxOf.size === 0) return plan;
+  const overrides = new Map(plan.columnOverrides);
+  let changed = false;
+  for (const [threadId, column] of frozenColumns) {
+    const box = plan.groupBoxOf.get(threadId);
+    if (box === undefined) continue;
+    changed = true;
+    for (const member of box.members) overrides.set(member.id, column);
+  }
+  if (!changed) return plan;
+  return { ...plan, columnOverrides: overrides };
 }
 
 /**
@@ -214,6 +247,9 @@ export interface ColumnRunInfo {
 
 /** The box-ref shape columnRunInfo reads (the members field is display data). */
 export type GroupBoxRef = Pick<GroupBox, "groupId" | "name">;
+
+/** The box map the board consumes: refs carrying their members in the visible order the plan collected them. */
+export type GroupBoxMap = ReadonlyMap<string, GroupBoxRef & Pick<GroupBox, "members">>;
 
 /**
  * Run membership per thread of ONE column: members of the same group that

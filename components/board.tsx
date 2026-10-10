@@ -39,11 +39,17 @@ import {
   type RankStore,
 } from "../lib/rank";
 import { reparentRefusalFromParents } from "../lib/reparent";
-import { columnRunInfo, unitMoveTarget, type ColumnRunInfo } from "../components/group-boxes";
+import {
+  columnRunInfo,
+  runsFromColumns,
+  unitMoveTarget,
+  type ColumnRunInfo,
+  type GroupBoxMap,
+} from "../components/group-boxes";
 import { displayAfterUnitMove } from "../lib/rank-unit-move";
 
 /** The group plan absents itself when the caller has no group data. */
-const EMPTY_GROUP_BOXES: ReadonlyMap<string, { groupId: string; name: string }> = new Map();
+const EMPTY_GROUP_BOXES: GroupBoxMap = new Map();
 
 /** The parent map absents itself when the caller has no nesting data. */
 const EMPTY_PARENT_OF: ReadonlyMap<string, string> = new Map();
@@ -120,7 +126,7 @@ interface BoardProps {
    * data and every card renders standalone. The box itself is decoration
    * only: no dot, no pill, no color — the name is secondary text.
    */
-  groupBoxOf?: ReadonlyMap<string, { groupId: string; name: string }>;
+  groupBoxOf?: GroupBoxMap;
   /** Family members that did not match the active filters; rendered dimmed. */
   dimmedIds: ReadonlySet<string>;
   /**
@@ -1183,41 +1189,44 @@ export function Board({
                     </p>
                   ) : null
                 ) : null}
-                {column.threads.length === 0 ? null : (
-                  <ul className="flex flex-col gap-1.5">
-                    {shownThreads.map((thread) => {
-                      // A live thread sitting in the Done column is a family's
-                      // projection card: it renders the done portion of the
-                      // family (done children nested under it) while the
-                      // active card keeps the live portion. It is not a done
-                      // thread — it carries the Done treatment and refuses
-                      // sweep selection.
-                      const isDoneProjection =
-                        column.id === "done" && !doneIds.has(thread.id);
-                      const projectionChildren = doneChildrenByParent.get(thread.id);
-                      // The card's role in its family-box run: a border
-                      // segment edge (first/mid/last) when the box has two or
-                      // more members in THIS column — a lone member (role
-                      // "solo", or a member whose box lives elsewhere) renders
-                      // a plain card with no decoration.
-                      const boxRun = runInfo.get(thread.id);
-                      const boxDecor =
-                        boxRun !== undefined && boxRun.role !== "solo" && boxRun.memberIds.length > 1
-                          ? (boxRun.role as "first" | "mid" | "last")
-                          : null;
-                      return (
-                      <li
-                        key={thread.id}
-                        data-rank-slot={ranking ? thread.id : undefined}
-                        data-group-box-member={
-                          boxDecor !== null ? (runInfo.get(thread.id)?.boxId ?? undefined) : undefined
-                        }
-                        data-group-box-first={
-                          boxDecor === "first" ? (runInfo.get(thread.id)?.boxId ?? undefined) : undefined
-                        }
-                        data-group-box-last={
-                          boxDecor === "last" ? (runInfo.get(thread.id)?.boxId ?? undefined) : undefined
-                        }
+                {column.threads.length === 0 ? null : (() => {
+                  // One renderer per card slot, shared by standalone cards
+                  // and box members (a boxed run renders INSIDE one real
+                  // dashed container, so its members' markup is identical
+                  // either way — `boxRole` only carries the data attributes
+                  // tests and styling key on).
+                  const threadLi = (
+                    thread: PluginSidebarThread,
+                    boxRole?: "first" | "mid" | "last",
+                  ) => {
+                  // A live thread sitting in the Done column is a family's
+                  // projection card: it renders the done portion of the
+                  // family (done children nested under it) while the
+                  // active card keeps the live portion. It is not a done
+                  // thread — it carries the Done treatment and refuses
+                  // sweep selection.
+                  const isDoneProjection =
+                    column.id === "done" && !doneIds.has(thread.id);
+                  const projectionChildren = doneChildrenByParent.get(thread.id);
+                  // This slot's box role, passed by the caller: attrs only —
+                  // a box's outline is drawn by its CONTAINER (one dashed
+                  // rounded element around the run), never by fragments on
+                  // the cards; per-card fragments clipped at the list's top
+                  // edge and never read as one box.
+                  const boxDecor = boxRole;
+                  return (
+                  <li
+                    key={thread.id}
+                    data-rank-slot={ranking ? thread.id : undefined}
+                    data-group-box-member={
+                      boxDecor !== undefined ? (runInfo.get(thread.id)?.boxId ?? undefined) : undefined
+                    }
+                    data-group-box-first={
+                      boxDecor === "first" ? (runInfo.get(thread.id)?.boxId ?? undefined) : undefined
+                    }
+                    data-group-box-last={
+                      boxDecor === "last" ? (runInfo.get(thread.id)?.boxId ?? undefined) : undefined
+                    }
                         // Every card is a drop target for its own lane's
                         // drag; the hovered card decides which of its two
                         // edges the insertion line lands on, or whether the
@@ -1479,48 +1488,6 @@ export function Board({
                           ),
                         )}
                       >
-                        {/* Feature-group family box (the decided design):
-                            segments of one dashed outline shared across the
-                            run's card slots — a real element per edge, since
-                            the before/after pseudo slots are taken by the
-                            insertion line. The name is secondary text
-                            interrupting the top border (fieldset style), on
-                            the FIRST member only. */}
-                        {boxDecor !== null ? (
-                          <>
-                            <span
-                              aria-hidden
-                              data-group-box-edge="left"
-                              className="absolute top-[-2px] bottom-[-2px] left-[-6px] w-0 border-l border-dashed border-border/70"
-                            />
-                            <span
-                              aria-hidden
-                              data-group-box-edge="right"
-                              className="absolute top-[-2px] bottom-[-2px] right-[-6px] w-0 border-l border-dashed border-border/70"
-                            />
-                            {boxDecor === "first" ? (
-                              <>
-                                <span
-                                  aria-hidden
-                                  className="absolute top-[-8px] left-[-6px] right-[-6px] h-0 border-t border-dashed border-border/70"
-                                />
-                                <span
-                                  data-group-box-label={runInfo.get(thread.id)?.boxId}
-                                  className="absolute top-[-12px] left-1.5 z-10 rounded-sm bg-muted px-1 text-[10.5px] leading-[15px] text-muted-foreground"
-                                  title={`Feature group “${runInfo.get(thread.id)?.boxName}” — drag any member to move the whole box`}
-                                >
-                                  {runInfo.get(thread.id)?.boxName}
-                                </span>
-                              </>
-                            ) : null}
-                            {boxDecor === "last" ? (
-                              <span
-                                aria-hidden
-                                className="absolute bottom-[-8px] left-[-6px] right-[-6px] h-0 border-t border-dashed border-border/70"
-                              />
-                            ) : null}
-                          </>
-                        ) : null}
                         <ThreadCard
                           thread={thread}
                           stateDot={<StateDot thread={thread} />}
@@ -1616,11 +1583,57 @@ export function Board({
                             if (id === null) clearRankDrop();
                           }}
                         />
-                      </li>
-                      );
-                    })}
-                  </ul>
-                )}
+                  </li>
+                  );
+                  };
+                  // The run list: standalone card slots at their own
+                  // positions; a boxed run renders ONE dashed container li
+                  // whose members keep their own card slots inside. The
+                  // container rides in the column's own order (at its first
+                  // member's slot), the label sits on its top margin — inside
+                  // the scrollport at any position, never clipped by the
+                  // list's top edge (the old per-card fragments truncated
+                  // there; observed 2026-10-09, "fraction of a label").
+                  const columnRuns =
+                    runsFromColumns([column], groupBoxOf ?? EMPTY_GROUP_BOXES).get(column.id) ?? [];
+                  return (
+                    <ul className="flex flex-col gap-1.5">
+                      {columnRuns.map((runItem) =>
+                        runItem.kind === "single" ? (
+                          threadLi(runItem.thread)
+                        ) : (
+                          <li
+                            key={`group:${runItem.box.groupId}`}
+                            data-group-box={runItem.box.groupId}
+                            className="relative mt-1.5"
+                          >
+                            <div className="relative rounded-lg border border-dashed border-border/70 px-1 pt-1.5 pb-0.5">
+                              <span
+                                data-group-box-label={runItem.box.groupId}
+                                title={`Feature group “${runItem.box.name}” — drag any member to move the whole box`}
+                                className="absolute -top-1 left-2 z-10 rounded-sm bg-muted px-1 text-[10.5px] leading-[14px] text-muted-foreground"
+                              >
+                                {runItem.box.name}
+                              </span>
+                              <ul className="flex flex-col gap-1.5">
+                                {runItem.box.members.map((boxMember, memberIndex) =>
+                                  threadLi(
+                                    boxMember,
+                                    memberIndex === 0
+                                      ? "first"
+                                      : memberIndex === runItem.box.members.length - 1
+                                        ? "last"
+                                        : "mid",
+                                  ),
+                                )}
+                              </ul>
+                            </div>
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  );
+                })()}
                 {column.id === "working" ? (
                   <button
                     type="button"
