@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Marking a thread Done renames its worktree branch under `bb/done/`.** Dropping a card on Done (or the CLI or the sweep) renames its managed worktree branch `bb/<slug>` to `bb/done/<slug>` in the project repo and records the original, so finished work stays labeled even after bb deletes the worktree at archive time; un-Done renames it back, and a branch outside the managed `bb/` prefix is never touched (toggle in the plugin's settings).
 - **Restrict the board with a Group filter.** A Group control sits beside the Project filter with a row per feature group — plus "No group" for unassigned threads and "Unknown group" when an assignment outlives its registry record — composing with the Project / Provider / State filters and persisting like them.
 - **Hide a group lane straight from the board.** In the Group view, hovering a column's header shows the same eye-off affordance the Project view hides project lanes with: two clicks write the lane's group out of the Group filter and a banner names the restore path (re-check the row in that filter's menu).
 - **Hide a project lane straight from the board.** In the Project view, hovering a lane's header shows an eye-off icon where the sweep pill sits; two clicks (icon → armed "Hide") write the lane's project out of the Project filter and a banner explains the lane restores from that filter — the board's only project lane refuses with its reason instead of pretending to hide.
