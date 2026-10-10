@@ -1243,10 +1243,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   );
   // Expand ("maximize") the board composer into bb's main new-thread view:
   // the seeds and the composer's stored prompt text ride along, the main
-  // view focuses the prompt, and the stored draft moves rather than copies
-  // (lib/compose-maximize). A child preset cannot follow — the main view
-  // cannot spawn a nested thread — so the modal only gets the maximize
-  // button while no child preset is armed.
+  // view focuses the prompt, and the board's own draft is KEPT — a maximize
+  // is a close, not a spawn (lib/compose-maximize). A child preset cannot
+  // follow — the main view cannot spawn a nested thread — so the modal only
+  // gets the maximize button while no child preset is armed.
   const maximizeNewThread = useCallback(() => {
     maximizeComposerToMainView({
       navigate,

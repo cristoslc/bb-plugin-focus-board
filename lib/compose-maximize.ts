@@ -1,7 +1,7 @@
 // Maximize transfer: the board's New thread composer expands into bb's main
 // new-thread view (the root compose surface). The stored prompt draft and the
-// composer's seeds ride along, the modal closes, and the stored draft moves
-// — it is not copied.
+// composer's seeds ride along, the modal closes, and the board's stored draft
+// is kept — maximize is a close, not a spawn.
 //
 // The draft record is host-owned (apps/app `usePromptDraftStorage`): the
 // localStorage key is
@@ -17,10 +17,7 @@ export const PLUGIN_COMPOSER_DRAFT_KEY = "focus-board";
 
 const DRAFT_STORAGE_KEY_PREFIX = "bb.promptbox.contents-plugin-draft-";
 
-export type DraftStorage = Pick<
-  Storage,
-  "length" | "key" | "getItem" | "removeItem"
->;
+export type DraftStorage = Pick<Storage, "length" | "key" | "getItem">;
 
 /** Every stored key for this composer's draft, oldest to newest version. */
 export function newThreadDraftStorageKeys(
@@ -69,15 +66,16 @@ export function readNewThreadDraftText(
 }
 
 /**
- * Expand the board composer into bb's main new-thread view:
- * navigate with the composer's seeds and stored prompt text (the prompt
- * focuses, matching the expand intent), then remove the stored draft —
- * bb's main view seeds its own draft from the route state bb carries, so
- * leaving the record behind would resurrect the same text later.
+ * Expand the board composer into bb's main new-thread view: navigate with
+ * the composer's seeds and stored prompt text (the prompt focuses, matching
+ * the expand intent). The stored draft KEPT — a maximize is a close, not a
+ * spawn, so the board modal's saved prompt survives exactly like a plain
+ * dialog close would leave it; bb's main view seeds its own draft from the
+ * transferred prompt (route state), and only spending the prompt on a spawn
+ * ever clears a draft.
  *
- * `toCompose` is synchronous and void, so the record must outlive the call
- * into whatever the host does while composing it: this removes only after
- * navigation returns, and only a record that actually transferred.
+ * `toCompose` is synchronous, so the record is fully written before the
+ * host composes the navigation; nothing here mutates the draft store.
  *
  * Fidelity note: the host persists the composer draft on a ~250ms debounce,
  * so the trailing keystrokes of a burst of typing can miss the transfer —
@@ -112,7 +110,4 @@ export function maximizeComposerToMainView({
     initialPrompt: text ?? "",
     focusPrompt: true,
   });
-  if (text === null) return;
-  const keys = newThreadDraftStorageKeys(storage, composerKey);
-  if (keys.length > 0) storage.removeItem(keys[keys.length - 1]);
 }
