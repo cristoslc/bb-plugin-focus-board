@@ -44,6 +44,7 @@ import { buildParentLanes } from "./components/parent-lanes";
 import { ParentLaneBoard } from "./components/parent-lane-board";
 import { doneAtToEpochMs } from "./lib/done-metadata";
 import { newThreadSeedEnvironment, newThreadSeedProjectId } from "./lib/new-thread-seed";
+import { maximizeComposerToMainView } from "./lib/compose-maximize";
 import { SnoozeDialog } from "./components/snooze-dialog";
 import {
   snoozeMenuActions,
@@ -1153,6 +1154,21 @@ function BoardPage({ subPath }: { subPath: string }) {
     () => newThreadSeedEnvironment({ parentEnvironment: newThreadParent?.environment }),
     [newThreadParent],
   );
+  // Expand ("maximize") the board composer into bb's main new-thread view:
+  // the seeds and the composer's stored prompt text ride along, the main
+  // view focuses the prompt, and the stored draft moves rather than copies
+  // (lib/compose-maximize). A child preset cannot follow — the main view
+  // cannot spawn a nested thread — so the toolbar only wires the maximize
+  // button while no child preset is armed.
+  const maximizeNewThread = useCallback(() => {
+    maximizeComposerToMainView({
+      navigate,
+      storage: window.localStorage,
+      projectId: newThreadProjectId,
+      environmentId: newThreadEnvironmentSeed?.environmentId,
+    });
+    setNewThreadOpen(false);
+  }, [navigate, newThreadProjectId, newThreadEnvironmentSeed]);
   // A freshly spawned thread is not in the sidebar cache on the tick the
   // pane route opens, and the pane only renders for a resolvable thread.
   // The spawn result stands in until the cache carries the thread (this row
@@ -2041,6 +2057,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           }}
           anyFilterActive={anyFilterActive}
           onNewThread={openNewThread}
+          onMaximizeNewThread={newThreadParentId === null ? maximizeNewThread : undefined}
           whatsNewUnseen={whatsNewUnseen}
           onOpenWhatsNew={openWhatsNew}
           nestChildren={nestChildren}
