@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
-// Toolbar layout: New thread (with its maximize button) leads from the far
-// left, the filter controls abut the search field, and the count/gift
-// cluster anchors whatever space remains. The maximize button only renders
-// when the app can actually hand the composer off.
+// Toolbar layout: New thread leads from the far left, the filter controls
+// abut the search field, and the count/gift cluster anchors whatever space
+// remains.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { BoardToolbar } from "../components/board-toolbar";
 
 type BoardToolbarProps = Parameters<typeof BoardToolbar>[0];
@@ -33,7 +32,6 @@ function renderToolbar(
     onNewThread: vi.fn(),
     whatsNewUnseen: false,
     onOpenWhatsNew: vi.fn(),
-    onMaximizeNewThread: vi.fn(),
     ...overrides,
   } as unknown as BoardToolbarProps;
   const view = render(<BoardToolbar {...props} />);
@@ -54,16 +52,11 @@ afterEach(() => {
 });
 
 describe("BoardToolbar layout", () => {
-  it("leads with New thread, then maximize, before the search field", () => {
+  it("leads with New thread, before the search field", () => {
     const root = renderToolbar();
     const newThreadIndex = topChildIndex(root, screen.getByText("New thread"));
-    const maximizeIndex = topChildIndex(
-      root,
-      screen.getByLabelText("Maximize new thread"),
-    );
     const searchIndex = topChildIndex(root, screen.getByLabelText("Search threads"));
-    expect(newThreadIndex).toBeLessThan(maximizeIndex);
-    expect(maximizeIndex).toBeLessThan(searchIndex);
+    expect(newThreadIndex).toBeLessThan(searchIndex);
   });
 
   it("abuts the filter controls to the search field, count last", () => {
@@ -84,16 +77,8 @@ describe("BoardToolbar layout", () => {
     expect(clearIndex).toBeGreaterThan(stateIndex);
   });
 
-  it("the maximize button hands the composer expansion back to the app", () => {
-    const onMaximizeNewThread = vi.fn();
-    renderToolbar({ onMaximizeNewThread });
-    fireEvent.click(screen.getByLabelText("Maximize new thread"));
-    expect(onMaximizeNewThread).toHaveBeenCalledTimes(1);
-  });
-
-  it("omits the maximize button when no expansion handler is given", () => {
-    renderToolbar({ onMaximizeNewThread: undefined });
+  it("carries no maximize button — that lives in the New thread modal", () => {
+    renderToolbar();
     expect(screen.queryByLabelText("Maximize new thread")).toBeNull();
-    expect(screen.getByText("New thread")).not.toBeNull();
   });
 });

@@ -78,6 +78,12 @@ export function readNewThreadDraftText(
  * `toCompose` is synchronous and void, so the record must outlive the call
  * into whatever the host does while composing it: this removes only after
  * navigation returns, and only a record that actually transferred.
+ *
+ * Fidelity note: the host persists the composer draft on a ~250ms debounce,
+ * so the trailing keystrokes of a burst of typing can miss the transfer —
+ * the main view receives the last flushed record, not the exact character
+ * the operator was mid-typing. This is best-effort by design; the transfer
+ * never fabricates text that was not stored.
  */
 export function maximizeComposerToMainView({
   navigate,
