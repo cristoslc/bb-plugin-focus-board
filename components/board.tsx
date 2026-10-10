@@ -1607,11 +1607,11 @@ export function Board({
                             data-group-box={runItem.box.groupId}
                             className="relative mt-1.5"
                           >
-                            <div className="relative rounded-lg border border-dashed border-border/70 px-1 pt-1.5 pb-0.5">
+                            <div className="relative rounded-lg border border-dashed border-muted-foreground/50 px-1 pt-4 pb-0.5">
                               <span
                                 data-group-box-label={runItem.box.groupId}
                                 title={`Feature group “${runItem.box.name}” — drag any member to move the whole box`}
-                                className="absolute -top-1 left-2 z-10 rounded-sm bg-muted px-1 text-[10.5px] leading-[14px] text-muted-foreground"
+                                className="absolute -top-2 left-3 z-10 rounded-sm bg-muted px-1 text-[10.5px] leading-[14px] text-muted-foreground"
                               >
                                 {runItem.box.name}
                               </span>
