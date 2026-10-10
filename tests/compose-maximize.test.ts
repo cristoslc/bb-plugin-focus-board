@@ -127,10 +127,14 @@ describe("maximizeComposerToMainView", () => {
     expect(toCompose).toHaveBeenCalled();
   });
 
-  it("clears the transferred record after navigation, leaving others alone", () => {
+  it("keeps the transferred record after navigation, leaving others alone", () => {
+    // A maximize is a close, not a spawn: the board modal's draft survives
+    // it (the dialog promises "your draft is saved as you type, even if you
+    // close and come back later"), and bb's main view seeds its own draft
+    // from the transferred prompt. Only spending the prompt on a spawn may
+    // clear it.
     const storage = new FakeStorage();
     storage.setItem(pluginKey(PLUGIN_COMPOSER_DRAFT_KEY, 3), draftRecord("moved"));
-    storage.setItem(pluginKey(PLUGIN_COMPOSER_DRAFT_KEY, 2), draftRecord("legacy"));
     storage.setItem(pluginKey("other-plugin", 3), draftRecord("stay"));
     toCompose.mockClear();
     maximizeComposerToMainView({
@@ -139,8 +143,7 @@ describe("maximizeComposerToMainView", () => {
       projectId: undefined,
       environmentId: undefined,
     });
-    expect(storage.getItem(pluginKey(PLUGIN_COMPOSER_DRAFT_KEY, 3))).toBeNull();
-    expect(storage.getItem(pluginKey(PLUGIN_COMPOSER_DRAFT_KEY, 2))).not.toBeNull();
+    expect(storage.getItem(pluginKey(PLUGIN_COMPOSER_DRAFT_KEY, 3))).toBe(draftRecord("moved"));
     expect(storage.getItem(pluginKey("other-plugin", 3))).not.toBeNull();
   });
 

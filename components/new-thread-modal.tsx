@@ -67,10 +67,11 @@ export function NewThreadModal({
   parentThreadTitle?: string;
   /**
    * Maximize: expand this composer into bb's main new-thread view. The app
-   * supplies the hand-off (seeds ride along, the stored prompt draft moves
-   * — lib/compose-maximize) and omits it while a child preset is armed,
-   * since the main view cannot spawn a nested thread; the button renders
-   * only when the hand-off exists.
+   * supplies the hand-off (seeds and the stored prompt text ride along; the
+   * board's own draft is kept — a maximize is a close, not a spawn;
+   * lib/compose-maximize) and omits it while a child preset is armed, since
+   * the main view cannot spawn a nested thread; the button renders only
+   * when the hand-off exists.
    */
   onMaximize?: () => void;
   onSpawned: (thread: SpawnedThread) => void;
