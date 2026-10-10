@@ -30,6 +30,10 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
         "children": []
       },
       {
+        "lead": "Toolbar search finds cards by their issue/PR chip.",
+        "children": []
+      },
+      {
         "lead": "The selected parent's lane stays inside the viewport.",
         "children": []
       },
