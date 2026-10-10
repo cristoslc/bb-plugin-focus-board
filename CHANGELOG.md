@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **Sibling threads now join a named family box.** "Group…" in a card menu assigns the thread to a shared named group (created in-line); members render inside one dashed outline with the group name on the border, the whole box moves as one unit by drag or Alt+Arrow, and the group evaporates the moment its last member unassigns — no parent thread involved.
-- **The New thread composer can maximize into the main new-thread view.** A maximize button in the composer's dialog (beside the close) hands off to bb's root compose surface — project and environment seeds plus the stored prompt text ride along, the draft moves rather than copies, and the button hides while a child preset is armed since the main view cannot spawn a nested thread.
+- **The New thread composer can maximize into the main new-thread view.** A maximize button in the composer's dialog (beside the close) hands off to bb's root compose surface — project and environment seeds plus the prompt text ride along; the board's own draft is kept (a maximize is a close, not a spawn) and the button hides while a child preset is armed since the main view cannot spawn a nested thread.
 - **`/` jumps to search.** With no pane open, pressing `/` on the board moves focus to the toolbar's search field and puts the caret at the end of the query; panes, dialogs, open dropdowns, and modifier chords keep claiming the key.
 
 ### Changed
