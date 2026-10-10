@@ -901,6 +901,20 @@ function BoardPage({ subPath }: { subPath: string }) {
   // render a box, which lane each box lands in. Computed over the FULL
   // non-hidden set — a member a search hid is dimmed inside its passing
   // box, never dropped from the group's count.
+  // A member open in the pane holds a FROZEN column (declared just below;
+  // frozen beats the box's lane and would split the pair into two no-box
+  // columns). The box follows the frozen member instead — the family
+  // gathers around the selected card, the way nested children always have.
+  // Declared AFTER frozenColumns, reading it reactively: the ref variant
+  // never invalidated its memo, and the split shipped (2026-10-10 report:
+  // open pane, pair split Working/Idle·Recent, nothing drawing).
+  const frozenColumns = useMemo(() => {
+    const frozen = new Map<string, { id: string; label: string }>();
+    if (openThreadId !== null && frozenColumn !== null && frozenColumn.threadId === openThreadId) {
+      frozen.set(frozenColumn.threadId, frozenColumn.column);
+    }
+    return frozen;
+  }, [openThreadId, frozenColumn]);
   const groupBoxPlan = useMemo(
     () =>
       planGroupBoxes(
@@ -917,13 +931,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   // A member open in the pane holds a frozen column; frozen beats the box's
   // lane and would split the pair into two no-box columns. The box follows
   // the frozen member instead — the family gathers around the selected
-  // card, the way nested children always have. frozenColumns is declared
-  // below; the ref keeps the reconcile honest on the very render a pane
-  // opens (it syncs right after the declaration).
-  const frozenColumnsRef = useRef<ReadonlyMap<string, { id: string; label: string }>>(new Map());
+  // card, the way nested children always have.
   const groupBoxPlanFrozen = useMemo(
-    () => reconcileGroupBoxPlan(groupBoxPlan, frozenColumnsRef.current),
-    [groupBoxPlan],
+    () => reconcileGroupBoxPlan(groupBoxPlan, frozenColumns),
+    [groupBoxPlan, frozenColumns],
   );
   // Group keep-and-dim applies over the family result (a member a failed
   // family dropped cannot keep its box on the board); the two dim sets merge.
@@ -944,17 +955,6 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Search runs inside filterFamilies (it keeps the whole family on a hit and
   // dims non-matching members), so `searched` is just the kept set.
   const searched = filtered;
-
-  const frozenColumns = useMemo(() => {
-    const frozen = new Map<string, { id: string; label: string }>();
-    if (openThreadId !== null && frozenColumn !== null && frozenColumn.threadId === openThreadId) {
-      frozen.set(frozenColumn.threadId, frozenColumn.column);
-    }
-    return frozen;
-  }, [openThreadId, frozenColumn]);
-  // The box reconcile reads this (it is declared above, before
-  // frozenColumns); this assignment lands before the assembly memo runs.
-  frozenColumnsRef.current = frozenColumns;
 
   // Single assembly: buildColumns → nestUnderParents. The nesting result's
   // map (not the raw family index) drives which children render as nested
