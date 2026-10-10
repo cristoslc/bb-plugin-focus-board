@@ -10,7 +10,7 @@
 // so the RPC layer, the chip merge, and tests can drive them without a bb
 // host.
 import type { JsonValue } from "@get-bb/plugin-sdk";
-import type { TicketRef } from "./tickets";
+import { findTicketRefs, type TicketRef } from "./tickets";
 
 /** The board's linked-issues key inside its thread plugin-metadata namespace. */
 export const LINK_METADATA_KEY = "linkedIssues";
@@ -290,4 +290,36 @@ export function linkedRefKeys(
   return (links ?? [])
     .filter((link) => link.tracker === "github")
     .map((link) => `${link.repo}#${link.issue}`);
+}
+
+/**
+ * The full chip row for a thread: title/branch text refs after the chip
+ * gate, joined by the store's link refs. The ONE definition of what a card
+ * shows — ThreadCard renders it, and the toolbar search matches against it,
+ * so a "#38" query finds every card carrying a #38 chip. (The chip rule
+ * applies here too when `validatedHrefs` is wired: a text ref the tracker
+ * never confirmed shows no chip and is not a search hit either; store links
+ * are trusted by construction and always count.)
+ */
+export function cardTicketRefs(args: {
+  title: string;
+  /** Branch text refs scan too (ThreadCard's `extraText`). */
+  branch?: string;
+  /** Project's GitHub base; when present, #N text refs gain hrefs. */
+  repoHrefBase?: string;
+  linkedIssues?: ThreadLink[] | null;
+  /** tracker_validate-confirmed hrefs; undefined keeps the pre-validation behavior. */
+  validatedHrefs?: ReadonlySet<string>;
+}): TicketRef[] {
+  const scanned = findTicketRefs(args.title, {
+    ...(args.branch !== undefined ? { extraText: args.branch } : {}),
+    ...(args.repoHrefBase !== undefined ? { repoHrefBase: args.repoHrefBase } : {}),
+  });
+  // Same gate as the card: a TEXT ref chips only when the item was confirmed;
+  // store links skip the gate entirely.
+  const validated =
+    args.validatedHrefs === undefined
+      ? scanned
+      : scanned.filter((ref) => ref.href !== undefined && args.validatedHrefs!.has(ref.href));
+  return validated.concat(linkedTicketRefs(args.linkedIssues, validated));
 }

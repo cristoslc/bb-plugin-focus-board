@@ -385,6 +385,25 @@ describe("filterFamilies", () => {
     expect(result.kept).toHaveLength(0);
   });
 
+  it("a ticket-chip hit on a child keeps the family (parent dimmed)", () => {
+    const index = buildFamilyIndex([parent, child]);
+    const refsFor = (t: PluginSidebarThread) =>
+      t.id === "c"
+        ? [
+            {
+              raw: "#38",
+              tracker: "github" as const,
+              number: 38,
+              href: "https://github.com/o/r/issues/38",
+            },
+          ]
+        : [];
+    const result = filterFamilies([parent, child], index, EMPTY_FILTER, "#38", undefined, refsFor);
+    expect(result.kept.map((t) => t.id).sort()).toEqual(["c", "p"]);
+    expect(result.dimmedIds.has("p")).toBe(true);
+    expect(result.dimmedIds.has("c")).toBe(false);
+  });
+
   it("composes with project filters: a same-family cross-project child still keeps the family", () => {
     const crossChild = thread({
       id: "x",
@@ -1288,6 +1307,15 @@ describe("filterIndividually — nesting toggle OFF filtering (R3)", () => {
     const archived = thread({ id: "a", isArchived: true });
     const result = filterIndividually([archived], EMPTY_FILTER, "");
     expect(result.kept).toHaveLength(0);
+  });
+
+  it("a ticket-chip hit keeps the thread (flat mode)", () => {
+    const solo = thread({ id: "solo", displayTitle: "Ship the fix" });
+    const refsFor = () => [
+      { raw: "#38", tracker: "github" as const, number: 38, href: "https://github.com/o/r/issues/38" },
+    ];
+    const result = filterIndividually([solo], EMPTY_FILTER, "#38", undefined, refsFor);
+    expect(result.kept.map((t) => t.id)).toEqual(["solo"]);
   });
 });
 

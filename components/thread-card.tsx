@@ -3,11 +3,11 @@ import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { threadState, THREAD_STATE_LABELS } from "./grouping";
-import { findTicketRefs, resolveRepoSlug, type TicketRef } from "@/lib/tickets";
+import { type TicketRef, resolveRepoSlug } from "@/lib/tickets";
 import type { GitHubItemStatus } from "@/lib/tracker-status";
 
 import { DRAG_ID_KEY, rankDragType } from "../lib/rank";
-import { linkedTicketRefs, type ThreadLink } from "../lib/link-metadata";
+import { cardTicketRefs, type ThreadLink } from "../lib/link-metadata";
 import { describeWakeAt } from "../lib/snooze";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
 
@@ -409,27 +409,16 @@ export function ThreadCard({
   };
   const branch = thread.environment?.branchName ?? thread.host?.name ?? "";
   const repo = repoHrefBase === undefined ? null : resolveRepoSlug(repoHrefBase);
-  const scannedTicketRefs = findTicketRefs(thread.displayTitle, {
-    extraText: branch,
-    repoHrefBase,
+  // The chip row: text refs after the chip gate + the board's store links
+  // (lib/link-metadata's cardTicketRefs). The toolbar search matches this
+  // exact set (app.tsx), so a "#38" query finds every card with a #38 chip.
+  const ticketRefs = cardTicketRefs({
+    title: thread.displayTitle,
+    branch,
+    ...(repoHrefBase !== undefined ? { repoHrefBase } : {}),
+    linkedIssues,
+    ...(validatedHrefs !== undefined ? { validatedHrefs } : {}),
   });
-  // The chip rule: a TEXT ref chips only when the server's tracker_validate
-  // confirmed its item exists (validatedHrefs wired; undefined keeps the
-  // pre-validation behavior for unwired callers). A ref with no href at all
-  // (a project with no GitHub/forgejo remote) cannot be validated → no chip.
-  // Store links are trusted by construction and skip the gate entirely.
-  const validatedTextRefs =
-    validatedHrefs === undefined
-      ? scannedTicketRefs
-      : scannedTicketRefs.filter(
-          (ref) => ref.href !== undefined && validatedHrefs.has(ref.href),
-        );
-  // Links the board itself stores (issue #13) join the text-scan chips: a
-  // thread linked to an item its title and branch never name still shows the
-  // chip. href-dedupe inside keeps the scan's richer chip when identical.
-  const ticketRefs = validatedTextRefs.concat(
-    linkedTicketRefs(linkedIssues, validatedTextRefs),
-  );
   const children = childThreads ?? [];
   // The chip counts every visible child (prop from the raw family index);
   // fall back to the nested rows when the caller does not supply it.

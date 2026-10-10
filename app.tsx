@@ -13,6 +13,7 @@ import {
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { findTicketRefs, forgejoItemBase, resolveRepoSlug } from "./lib/tickets";
 import {
+  cardTicketRefs,
   linkedRefKeys,
   parseLinkedIssues,
   type ThreadLink,
@@ -298,6 +299,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   // of the GitHub plugin's link rows exists). Record<string, ThreadLink[]>;
   // a thread absent from it carries no linked chips.
   const [linksByThread, setLinksByThread] = useState<Record<string, ThreadLink[]>>({});
+  // tracker_validate's confirmed-href set, declared above the filter pass so
+  // the ticket-aware search callback (ticketRefsFor, below) can read it: the
+  // chip rule gates text refs identically in render and in search.
+  const [validatedHrefs, setValidatedHrefs] = useState<ReadonlySet<string>>(new Set());
   // The RPC contract's link records tolerate a legacy GitHub record without
   // its tracker tag; parse normalizes each thread's array into ThreadLink[]
   // (and fails loud on anything malformed, never coerces).
@@ -858,6 +863,23 @@ function BoardPage({ subPath }: { subPath: string }) {
       projects.find((project) => project.id === projectId)?.name ?? "Personal",
     [projects],
   );
+  // The chip row each card shows, exactly as ThreadCard derives it
+  // (cardTicketRefs): text refs after the tracker_validate gate, plus the
+  // board's store links. Toolbar search matches this set, so typing "#38"
+  // finds every card carrying a #38 chip — including the store-link case
+  // whose title and branch never say #38.
+  const ticketRefsFor = useCallback((thread: PluginSidebarThread) => {
+    const branch = thread.environment?.branchName ?? thread.host?.name ?? "";
+    return cardTicketRefs({
+      title: thread.displayTitle,
+      branch,
+      ...(repoBaseByProject[thread.projectId] !== undefined
+        ? { repoHrefBase: repoBaseByProject[thread.projectId] }
+        : {}),
+      linkedIssues: linksByThread[thread.id],
+      validatedHrefs,
+    });
+  }, [repoBaseByProject, linksByThread, validatedHrefs]);
   // Family-aware filtering replaces per-thread filtering when nesting is ON:
   // a family passes when any member matches, non-matching members render
   // dimmed (archived members are hidden outright by the family index, so
@@ -869,9 +891,9 @@ function BoardPage({ subPath }: { subPath: string }) {
   const familyFiltered = useMemo(
     () =>
       nestChildren || groupBy === "parent"
-        ? filterFamilies(nonHiddenThreads, familyIndex, filter, search.trim(), projectNameFor)
-        : filterIndividually(nonHiddenThreads, filter, search.trim(), projectNameFor),
-    [nestChildren, groupBy, nonHiddenThreads, familyIndex, filter, search, projectNameFor],
+        ? filterFamilies(nonHiddenThreads, familyIndex, filter, search.trim(), projectNameFor, ticketRefsFor)
+        : filterIndividually(nonHiddenThreads, filter, search.trim(), projectNameFor, ticketRefsFor),
+    [nestChildren, groupBy, nonHiddenThreads, familyIndex, filter, search, projectNameFor, ticketRefsFor],
   );
   // The feature-group plan (the decided family-box design): which groups
   // render a box, which lane each box lands in. Computed over the FULL
@@ -1100,7 +1122,6 @@ function BoardPage({ subPath }: { subPath: string }) {
         .join(","),
     [liveThreads, repoBaseByProject],
   );
-  const [validatedHrefs, setValidatedHrefs] = useState<ReadonlySet<string>>(new Set());
   useEffect(() => {
     if (textRefHrefsKey === "") {
       setValidatedHrefs(new Set());

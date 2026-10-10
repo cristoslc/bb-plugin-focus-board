@@ -7,6 +7,7 @@ import {
   matchesFilter,
   threadState,
 } from "../components/grouping";
+import type { TicketRef } from "../lib/tickets";
 import { thread } from "./thread-fixture";
 
 const HOUR = 60 * 60 * 1000;
@@ -124,6 +125,50 @@ describe("matchesFilter", () => {
   it("falls back to the host name when the card shows no branch", () => {
     const hosted = thread({ host: { id: "h1", name: "work-laptop" } });
     expect(matchesFilter(hosted, "laptop")).toBe(true);
+  });
+});
+
+describe("matchesFilter — ticket-chip refs are searchable", () => {
+  // A card whose issue/PR chip (#38) comes from somewhere the four base
+  // fields never render: the board's link store or a URL-form text ref.
+  const plain = thread({ id: "thr_plain", displayTitle: "Ship the login fix" });
+
+  const ghRef: TicketRef = {
+    raw: "#38",
+    tracker: "github",
+    number: 38,
+    href: "https://github.com/o/r/issues/38",
+  };
+
+  it("matches a store-linked chip number with and without the hash", () => {
+    expect(matchesFilter(plain, "#38", undefined, () => [ghRef])).toBe(true);
+    expect(matchesFilter(plain, "38", undefined, () => [ghRef])).toBe(true);
+    expect(matchesFilter(plain, "#39", undefined, () => [ghRef])).toBe(false);
+  });
+
+  it("matches a URL-form text ref by its number (the raw text lacks the #)", () => {
+    const urlRef: TicketRef = {
+      raw: "https://github.com/o/r/pull/123",
+      tracker: "github",
+      kind: "pull",
+      number: 123,
+      href: "https://github.com/o/r/pull/123",
+    };
+    expect(matchesFilter(plain, "#123", undefined, () => [urlRef])).toBe(true);
+  });
+
+  it("matches an external item's chip label", () => {
+    const extRef: TicketRef = {
+      raw: "PROJ-142",
+      hostname: "jira.example.com",
+      tracker: "external",
+      href: "https://jira.example.com/browse/PROJ-142",
+    };
+    expect(matchesFilter(plain, "proj-142", undefined, () => [extRef])).toBe(true);
+  });
+
+  it("does not consult refs when the callback is unwired", () => {
+    expect(matchesFilter(plain, "#38")).toBe(false);
   });
 });
 
