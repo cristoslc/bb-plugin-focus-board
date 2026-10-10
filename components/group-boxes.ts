@@ -37,6 +37,7 @@ import type {
 import { columnFor, matchesFilter, threadState } from "./grouping";
 import { STATUS_COLUMN_ORDER } from "./grouping";
 import type { MoveTarget } from "../lib/rank";
+import type { TicketRef } from "../lib/tickets";
 
 /** The groupings under which boxes are active (see the module comment). */
 const BOX_GROUPINGS: ReadonlySet<GroupBy> = new Set(["status", "none", "recency"]);
@@ -361,13 +362,17 @@ export function filterWithGroupBoxes(
   filter: FilterState,
   searchQuery: string,
   projectNameFor?: (projectId: string) => string,
+  ticketRefsFor?: (thread: PluginSidebarThread) => readonly TicketRef[],
 ): { kept: PluginSidebarThread[]; dimmedIds: ReadonlySet<string> } {
   const passes = (thread: PluginSidebarThread): boolean => {
     if (thread.isArchived) return false;
     if (filter.projects.size > 0 && !filter.projects.has(thread.projectId)) return false;
     if (filter.providers.size > 0 && !filter.providers.has(thread.providerId)) return false;
     if (filter.states.size > 0 && !filter.states.has(threadState(thread))) return false;
-    if (searchQuery.trim() !== "" && !matchesFilter(thread, searchQuery.trim(), projectNameFor)) {
+    if (
+      searchQuery.trim() !== "" &&
+      !matchesFilter(thread, searchQuery.trim(), projectNameFor, ticketRefsFor)
+    ) {
       return false;
     }
     return true;

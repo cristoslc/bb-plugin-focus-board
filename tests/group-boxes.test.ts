@@ -329,6 +329,55 @@ describe("filterWithGroupBoxes", () => {
     expect(result.kept.map((t) => t.id).sort()).toEqual(["thr_a", "thr_b", "thr_x"]);
     expect(result.dimmedIds.size).toBe(0);
   });
+
+  it("a ticket-chip hit keeps a boxed thread the title/branch never name", () => {
+    // The Forgejo #38 live repro: an external store link labels the chip;
+    // no base field contains "#38". The box must keep both members.
+    const refsFor = (t: { id: string }) =>
+      t.id === "thr_a"
+        ? [
+            {
+              raw: "Forgejo #38",
+              hostname: "git.cove.local",
+              tracker: "external" as const,
+              href: "https://git.cove.local/cristos/Homelab/issues/38",
+            },
+          ]
+        : [];
+    const result = filterWithGroupBoxes(
+      threads,
+      plan.groupBoxOf,
+      { projects: new Set(), providers: new Set(), states: new Set() },
+      "#38",
+      () => "",
+      refsFor,
+    );
+    expect(result.kept.map((t) => t.id)).toEqual(["thr_a", "thr_b"]);
+    expect(result.dimmedIds).toEqual(new Set(["thr_b"]));
+  });
+
+  it("a ticket-chip hit keeps an unboxed thread on its own", () => {
+    const refsFor = (t: { id: string }) =>
+      t.id === "thr_x"
+        ? [
+            {
+              raw: "Forgejo #38",
+              hostname: "git.cove.local",
+              tracker: "external" as const,
+              href: "https://git.cove.local/cristos/Homelab/issues/38",
+            },
+          ]
+        : [];
+    const result = filterWithGroupBoxes(
+      threads,
+      plan.groupBoxOf,
+      { projects: new Set(), providers: new Set(), states: new Set() },
+      "#38",
+      () => "",
+      refsFor,
+    );
+    expect(result.kept.map((t) => t.id)).toEqual(["thr_x"]);
+  });
 });
 
 describe("columnRunInfo and unitMoveTarget", () => {
