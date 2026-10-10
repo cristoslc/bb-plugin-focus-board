@@ -54,6 +54,12 @@ import {
   stampSnooze,
   type SnoozeRecord,
 } from "./lib/snooze";
+import {
+  doneBranchName,
+  parseWorktreeBranchRecord,
+  stampWorktreeBranchRecord,
+  WORKTREE_BRANCH_METADATA_KEY,
+} from "./lib/worktree-branch";
 import { reparentRefusal } from "./lib/reparent";
 import {
   GROUP_METADATA_KEY,
@@ -670,6 +676,17 @@ export default async function plugin(bb: BbPluginApi) {
     // plugin detail page's configuration panel; the board reads it
     // reactively through the frontend `useSettings()` hook (explicit
     // stored false is off — loading/unavailable keeps the default).
+    // The done gesture's branch side channel. Ships ON: the whole point is
+    // that a done thread's work is labeled bb/done/ before bb's own
+    // archive-time cleanup deletes the worktree (branch-janitor covers the
+    // archived branch separately). Off restores the old bare marking.
+    renameBranchOnDone: {
+      type: "boolean",
+      label: "Done: rename the worktree branch under bb/done/",
+      description:
+        "Marking a thread Done renames its managed worktree branch bb/<slug> to bb/done/<slug> in the project repo, and un-marking renames it back. The worktree itself is untouched; bb still removes it when the thread archives. A branch outside the managed bb/ prefix is never renamed.",
+      default: true,
+    },
     escStopsRunningThread: {
       type: "boolean",
       label: "Thread pane: Escape stops a running thread first",
@@ -770,7 +787,263 @@ export default async function plugin(bb: BbPluginApi) {
     );
   }
 
-  async function writeDoneRecord(threadId: string, done: boolean) {    const now = new Date();
+  // --- Done branch rename (the done gesture's git side channel) ---
+
+  /**
+   * Run one git command in the project's source checkout through a
+   * terminal (the SDK has no direct exec), the same shape branch-janitor
+   * uses: `git <args> ; exit`, polled until the session exits.
+   */
+  async function runGitInCheckout(
+    hostId: string,
+    cwd: string,
+    args: string[],
+    timeoutMs = 30_000,
+  ): Promise<{ exitCode: number; text: string }> {
+    const terminal = await bb.sdk.terminals.create({
+      cols: 80,
+      rows: 24,
+      scope: { kind: "host_path", hostId, cwd },
+      start: { mode: "command", command: [...args, ";", "exit"].join(" ") },
+      title: "focus-board",
+    });
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      if (Date.now() > deadline) {
+        await bb.sdk.terminals
+          .close({ terminalId: terminal.id, mode: "force" })
+          .catch(() => {});
+        throw new Error(`git ${args.join(" ")} timed out after ${timeoutMs}ms`);
+      }
+      const session = await bb.sdk.terminals.get({ terminalId: terminal.id });
+      if (session.status === "exited" || session.status === "disconnected") {
+        const output = await bb.sdk.terminals.output({
+          terminalId: terminal.id,
+        });
+        const text = output.chunks
+          .map((chunk) =>
+            Buffer.from(chunk.dataBase64, "base64").toString("utf8"),
+          )
+          .join("");
+        await bb.sdk.terminals
+          .close({ terminalId: terminal.id, mode: "force" })
+          .catch(() => {});
+        return { exitCode: session.exitCode ?? 0, text };
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
+
+  /**
+   * A local branch ref exists. A false-positive on a failed probe is
+   * accepted on purpose: the probe distinguishes "free" from "taken", and
+   * a "free" answer only lets the rename proceed — git itself re-refuses
+   * if the name is in fact occupied. This side channel is best-effort by
+   * design: it logs and moves on, never blocking the done write.
+   */
+  async function branchExists(
+    hostId: string,
+    cwd: string,
+    branch: string,
+  ): Promise<boolean> {
+    const probe = await runGitInCheckout(hostId, cwd, [
+      "show-ref",
+      "--verify",
+      `refs/heads/${branch}`,
+    ]);
+    return probe.exitCode === 0;
+  }
+
+  /** The checkout git runs in: the project's default source, or null. */
+  async function resolveCheckout(
+    projectId: string,
+  ): Promise<{ hostId: string; cwd: string } | null> {
+    const project = await bb.sdk.projects.get({ projectId });
+    const source =
+      project.sources.find((candidate) => candidate.isDefault) ??
+      project.sources[0];
+    return source ? { hostId: source.hostId, cwd: source.path } : null;
+  }
+
+  /**
+   * Done arm of the branch channel: rename the thread's managed worktree
+   * branch under bb/done/ and record the original name, so un-done can
+   * restore without guessing. A branch outside the managed namespace or
+   * under bb/done/ already is skipped; a failed rename leaves no record
+   * behind, so the restore arm never acts on a rename that never happened.
+   */
+  async function markDoneRenameBranch(
+    threadId: string,
+    environmentId: string,
+  ): Promise<void> {
+    const values = await settings.get();
+    if (!values.renameBranchOnDone) return;
+    const environment = await bb.sdk.environments.get({ environmentId });
+    const branch = environment.isGitRepo &&
+      environment.workspaceProvisionType === "managed-worktree"
+      ? environment.branchName
+      : null;
+    const doneBranch = branch ? doneBranchName(branch) : null;
+    if (!branch || !doneBranch) return;
+    const checkout = await resolveCheckout(environment.projectId);
+    if (!checkout) {
+      bb.log.warn(
+        `focus-board: no project source checkout for ${branch}` +
+          ` rename (thread ${threadId})`,
+      );
+      return;
+    }
+    if (await branchExists(checkout.hostId, checkout.cwd, doneBranch)) {
+      bb.log.warn(
+        `focus-board: ${doneBranch} already exists; not renaming ${branch}` +
+          ` (thread ${threadId})`,
+      );
+      return;
+    }
+    const moved = await runGitInCheckout(checkout.hostId, checkout.cwd, [
+      "branch",
+      "-m",
+      branch,
+      doneBranch,
+    ]);
+    if (moved.exitCode !== 0) {
+      bb.log.warn(
+        `focus-board: git branch -m failed for ${branch}:` +
+          ` ${moved.text.trim() || "git failed"} (thread ${threadId})`,
+      );
+      return;
+    }
+    await bb.sdk.threads.updatePluginMetadata({
+      threadId,
+      set: {
+        [WORKTREE_BRANCH_METADATA_KEY]: stampWorktreeBranchRecord(
+          branch,
+          doneBranch,
+          new Date(),
+        ),
+      },
+    });
+    bb.log.info(`focus-board: renamed ${branch} -> ${doneBranch} (thread ${threadId})`);
+  }
+
+  /**
+   * Restore arm: undo the recorded rename, then drop the record whatever
+   * happened (worktree gone, branch drifted, original name occupied). The
+   * record exists only because a rename succeeded, so clearing it can
+   * never strand the un-done arm on a rename that never ran.
+   */
+  async function unmarkDoneRestoreBranch(threadId: string): Promise<void> {
+    const namespace = await bb.sdk.threads.getPluginMetadata({ threadId });
+    const record = parseWorktreeBranchRecord(
+      (namespace as Record<string, JsonValue>)[WORKTREE_BRANCH_METADATA_KEY],
+    );
+    if (record === null) return;
+    const thread = await bb.sdk.threads.get({ threadId });
+    const threadEnvironmentId =
+      "environmentId" in thread ? thread.environmentId : null;
+    if (threadEnvironmentId !== null) {
+      try {
+        const environment = await bb.sdk.environments.get({
+          environmentId: threadEnvironmentId,
+        });
+        if (
+          environment.isGitRepo &&
+          environment.workspaceProvisionType === "managed-worktree" &&
+          environment.branchName === record.doneBranch
+        ) {
+          const checkout = await resolveCheckout(environment.projectId);
+          if (checkout) {
+            const originalOccupied = await branchExists(
+              checkout.hostId,
+              checkout.cwd,
+              record.originalBranch,
+            );
+            if (!originalOccupied) {
+              const moved = await runGitInCheckout(
+                checkout.hostId,
+                checkout.cwd,
+                ["branch", "-m", record.doneBranch, record.originalBranch],
+              );
+              if (moved.exitCode === 0) {
+                bb.log.info(
+                  `focus-board: renamed ${record.doneBranch} ->` +
+                    ` ${record.originalBranch} (thread ${threadId})`,
+                );
+              } else {
+                bb.log.warn(
+                  `focus-board: git branch -m failed for` +
+                    ` ${record.doneBranch}: ${moved.text.trim() || "git failed"}` +
+                    ` (thread ${threadId})`,
+                );
+              }
+            } else {
+              bb.log.warn(
+                `focus-board: ${record.originalBranch} already exists; ${record.doneBranch}` +
+                  ` left in place (thread ${threadId})`,
+              );
+            }
+          } else {
+            bb.log.warn(
+              `focus-board: no project source checkout to restore` +
+                ` ${record.doneBranch} (thread ${threadId})`,
+            );
+          }
+        } else {
+          bb.log.warn(
+            `focus-board: branch for thread ${threadId} is` +
+              ` ${environment.branchName ?? "unknown"}, not` +
+              ` ${record.doneBranch}; restore record dropped`,
+          );
+        }
+      } catch (error) {
+        // The worktree and its environment row go away at archive time; the
+        // branch is what survives, so a vanished environment ends the
+        // restore — the record still drops below, whatever happened.
+        bb.log.warn(
+          `focus-board: done branch restore skipped for thread ${threadId}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+    await bb.sdk.threads.updatePluginMetadata({
+      threadId,
+      remove: [WORKTREE_BRANCH_METADATA_KEY],
+    });
+  }
+
+  /**
+   * The branch channel fires after the done metadata write (fire and
+   * forget with a caught rejection, so a slow git poll never delays the
+   * done gesture and never escapes the host process).
+   */
+  function fireDoneBranchChannel(threadId: string, done: boolean): void {
+    const arm = done
+      ? markDoneBranchChannel(threadId)
+      : unmarkDoneRestoreBranch(threadId);
+    void arm.catch((error) => {
+      bb.log.warn(
+        `focus-board: done branch channel failed for thread ${threadId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    });
+  }
+
+  /**
+   * Resolve the thread once, then run the rename arm; a thread without an
+   * environment has no worktree branch to rename.
+   */
+  async function markDoneBranchChannel(threadId: string): Promise<void> {
+    const thread = await bb.sdk.threads.get({ threadId });
+    const environmentId =
+      "environmentId" in thread ? thread.environmentId : null;
+    if (environmentId === null) return;
+    await markDoneRenameBranch(threadId, environmentId);
+  }
+
+  async function writeDoneRecord(threadId: string, done: boolean) {
+    const now = new Date();
     if (done) {
       const existing = await readDoneRecord(threadId);
       const record = stampDone(existing, now);
@@ -786,6 +1059,10 @@ export default async function plugin(bb: BbPluginApi) {
       });
       await removeFromDoneIndex(threadId);
     }
+    // The branch channel rides every done write, whichever surface made it
+    // (RPC, CLI, sweep). Best-effort: fire after the stamp, never delaying
+    // the gesture and never failing it.
+    fireDoneBranchChannel(threadId, done);
   }
 
   async function readPinParkRecord(
