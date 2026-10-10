@@ -34,6 +34,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Toolbar search finds cards by their issue/PR chip.** Typing `#38` (or the bare `38`, a pasted item URL, or an external item's label) now matches every card carrying that chip, including chips attached through the board's link store whose title and branch never name the number.
 - **The selected parent's lane stays inside the viewport.** A lane's ruler
   columns now cap to the viewport budget and surplus cards wrap downward
   into the bands; on scrollports too narrow to fit a single lane at all,

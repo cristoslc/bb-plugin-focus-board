@@ -21,6 +21,7 @@ import {
   orderForColumn,
   type RankStore,
 } from "../lib/rank";
+import type { TicketRef } from "../lib/tickets";
 
 export interface FamilyIndex {
   /** Parent id → its non-archived children, in input order. */
@@ -733,9 +734,10 @@ export function filterFamilies(
   filter: FilterState,
   searchQuery: string,
   projectNameFor?: (projectId: string) => string,
+  ticketRefsFor?: (thread: PluginSidebarThread) => readonly TicketRef[],
 ): FamilyFilterResult {
   const passes = (thread: PluginSidebarThread): boolean =>
-    threadPassesFilter(thread, filter, searchQuery, projectNameFor);
+    threadPassesFilter(thread, filter, searchQuery, projectNameFor, ticketRefsFor);
 
   // Group visible threads into families by their root, so a parent and its
   // descendants pass or fail together.
@@ -778,6 +780,7 @@ function threadPassesFilter(
   filter: FilterState,
   searchQuery: string,
   projectNameFor?: (projectId: string) => string,
+  ticketRefsFor?: (thread: PluginSidebarThread) => readonly TicketRef[],
 ): boolean {
   if (thread.isArchived) return false;
   if (filter.projects.size > 0 && !filter.projects.has(thread.projectId)) return false;
@@ -785,7 +788,7 @@ function threadPassesFilter(
   if (filter.states.size > 0 && !filter.states.has(threadState(thread))) return false;
   if (
     searchQuery.trim() !== "" &&
-    !matchesFilter(thread, searchQuery.trim(), projectNameFor)
+    !matchesFilter(thread, searchQuery.trim(), projectNameFor, ticketRefsFor)
   ) {
     return false;
   }
@@ -802,10 +805,13 @@ export function filterIndividually(
   filter: FilterState,
   searchQuery: string,
   projectNameFor?: (projectId: string) => string,
+  ticketRefsFor?: (thread: PluginSidebarThread) => readonly TicketRef[],
 ): FamilyFilterResult {
   const kept: PluginSidebarThread[] = [];
   for (const thread of threads) {
-    if (threadPassesFilter(thread, filter, searchQuery, projectNameFor)) kept.push(thread);
+    if (threadPassesFilter(thread, filter, searchQuery, projectNameFor, ticketRefsFor)) {
+      kept.push(thread);
+    }
   }
   return { kept, dimmedIds: new Set() };
 }
