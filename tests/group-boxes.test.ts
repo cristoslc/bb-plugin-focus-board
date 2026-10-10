@@ -7,6 +7,7 @@ import {
   filterWithGroupBoxes,
   flattenRuns,
   planGroupBoxes,
+  reconcileGroupBoxPlan,
   runsFromColumns,
   unitMoveTarget,
 } from "../components/group-boxes";
@@ -391,6 +392,42 @@ describe("columnRunInfo and unitMoveTarget", () => {
       beforeId: "thr_x",
       toEnd: false,
     });
+  });
+});
+
+describe("reconcileGroupBoxesWithFrozen", () => {
+  const threads = [
+    thread({ id: "thr_a", updatedAt: NOW - 1000 }),
+    thread({ id: "thr_b", status: "active", updatedAt: NOW - 2000 }),
+  ];
+  const plan = planGroupBoxes(
+    threads,
+    groupOf({ thr_a: "grp_auth", thr_b: "grp_auth" }),
+    NAMES,
+    "status",
+    context,
+    new Set(),
+    NOW,
+  );
+
+  it("a member frozen in another column pulls its WHOLE box to that column", () => {
+    // The member is open in the pane: its column is frozen (the open card
+    // must never slide). The box follows it — the family gathers around
+    // the selected card, exactly as nested children do.
+    const frozen = new Map([["thr_a", { id: "idle-today", label: "Idle · Today" }]]);
+    const reconciled = reconcileGroupBoxPlan(plan, frozen);
+    expect(reconciled.columnOverrides.get("thr_b")).toEqual({ id: "idle-today", label: "Idle · Today" });
+    expect(reconciled.columnOverrides.get("thr_a")).toEqual({ id: "idle-today", label: "Idle · Today" });
+  });
+
+  it("frozen ids outside any box leave the plan untouched", () => {
+    const frozen = new Map([["thr_x", { id: "working", label: "Working" }]]);
+    const reconciled = reconcileGroupBoxPlan(plan, frozen);
+    expect(reconciled).toBe(plan);
+  });
+
+  it("no frozen columns: the plan passes through", () => {
+    expect(reconcileGroupBoxPlan(plan, new Map())).toBe(plan);
   });
 });
 

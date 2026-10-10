@@ -45,7 +45,7 @@ import { buildParentLanes } from "./components/parent-lanes";
 import { ParentLaneBoard } from "./components/parent-lane-board";
 import { GroupDialog } from "./components/group-dialog";
 import { groupMenuActions } from "./lib/group-metadata";
-import { filterWithGroupBoxes, planGroupBoxes } from "./components/group-boxes";
+import { filterWithGroupBoxes, planGroupBoxes, reconcileGroupBoxPlan } from "./components/group-boxes";
 import { applyUnitMoveVisible } from "./lib/rank-unit-move";
 import { doneAtToEpochMs } from "./lib/done-metadata";
 import { newThreadSeedEnvironment, newThreadSeedProjectId } from "./lib/new-thread-seed";
@@ -892,14 +892,25 @@ function BoardPage({ subPath }: { subPath: string }) {
       ),
     [liveThreads, groupAssignments, groupRegistry, groupBy, projects, providers, doneIds],
   );
+  // A member open in the pane holds a frozen column; frozen beats the box's
+  // lane and would split the pair into two no-box columns. The box follows
+  // the frozen member instead — the family gathers around the selected
+  // card, the way nested children always have. frozenColumns is declared
+  // below; the ref keeps the reconcile honest on the very render a pane
+  // opens (it syncs right after the declaration).
+  const frozenColumnsRef = useRef<ReadonlyMap<string, { id: string; label: string }>>(new Map());
+  const groupBoxPlanFrozen = useMemo(
+    () => reconcileGroupBoxPlan(groupBoxPlan, frozenColumnsRef.current),
+    [groupBoxPlan],
+  );
   // Group keep-and-dim applies over the family result (a member a failed
   // family dropped cannot keep its box on the board); the two dim sets merge.
   const groupBoxFiltered = useMemo(
     () =>
-      groupBoxPlan.active
-        ? filterWithGroupBoxes(familyFiltered.kept, groupBoxPlan.groupBoxOf, filter, search.trim(), projectNameFor)
+      groupBoxPlanFrozen.active
+        ? filterWithGroupBoxes(familyFiltered.kept, groupBoxPlanFrozen.groupBoxOf, filter, search.trim(), projectNameFor)
         : { kept: familyFiltered.kept, dimmedIds: new Set<string>() as ReadonlySet<string> },
-    [groupBoxPlan, familyFiltered, filter, search, projectNameFor],
+    [groupBoxPlanFrozen, familyFiltered, filter, search, projectNameFor],
   );
   const dimmedAll = useMemo(
     () => new Set([...familyFiltered.dimmedIds, ...groupBoxFiltered.dimmedIds]),
@@ -919,6 +930,9 @@ function BoardPage({ subPath }: { subPath: string }) {
     }
     return frozen;
   }, [openThreadId, frozenColumn]);
+  // The box reconcile reads this (it is declared above, before
+  // frozenColumns); this assignment lands before the assembly memo runs.
+  frozenColumnsRef.current = frozenColumns;
 
   // Single assembly: buildColumns → nestUnderParents. The nesting result's
   // map (not the raw family index) drives which children render as nested
@@ -944,9 +958,9 @@ function BoardPage({ subPath }: { subPath: string }) {
             nestingEnabled: nestChildren,
             ranks,
             doneTimes,
-            extraColumnOverrides: groupBoxPlan.columnOverrides,
+            extraColumnOverrides: groupBoxPlanFrozen.columnOverrides,
           }),
-    [isParentGroupBy, searched, groupBy, projects, providers, frozenColumns, doneIds, nestChildren, ranks, doneTimes, groupBoxPlan],
+    [isParentGroupBy, searched, groupBy, projects, providers, frozenColumns, doneIds, nestChildren, ranks, doneTimes, groupBoxPlanFrozen],
   );
   const columns = assembly?.columns ?? [];
   // The map that actually renders as nested rows (nesting rules applied, so a
@@ -2197,7 +2211,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             nestedChildrenByParent={nestedChildrenByParent}
             childCountByParent={assembly?.childCountByParent ?? new Map()}
             doneChildrenByParent={assembly?.doneChildrenByParent ?? new Map()}
-            groupBoxOf={groupBoxPlan.groupBoxOf}
+            groupBoxOf={groupBoxPlanFrozen.groupBoxOf}
             collapsedFamilyIds={collapsedFamilies}
             onFamilyCollapsedChange={setFamilyCollapsed}
             dimmedIds={dimmedIds}
