@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`/` jumps to search.** With no pane open, pressing `/` on the board moves focus to the toolbar's search field and puts the caret at the end of the query; panes, dialogs, open dropdowns, and modifier chords keep claiming the key.
+
 ## [1.1.0] - 2026-10-09
 
 ### Added
