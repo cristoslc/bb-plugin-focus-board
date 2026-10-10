@@ -430,10 +430,6 @@ interface BoardToolbarProps {
   onClearFilters: () => void;
   anyFilterActive: boolean;
   onNewThread: () => void;
-  /** Expand the board composer into bb's main new-thread view, carrying the
-   *  seeds and the stored prompt text over. Omitted while a child preset is
-   *  armed: the main view cannot spawn a nested thread, so no maximize. */
-  onMaximizeNewThread?: () => void;
   /** An update landed since the stored last-seen version — the gift pulses. */
   whatsNewUnseen: boolean;
   onOpenWhatsNew: () => void;
@@ -465,7 +461,6 @@ export function BoardToolbar({
   onClearFilters,
   anyFilterActive,
   onNewThread,
-  onMaximizeNewThread,
   whatsNewUnseen,
   onOpenWhatsNew,
 }: BoardToolbarProps) {
@@ -480,11 +475,9 @@ export function BoardToolbar({
     .sort((a, b) => a.label.localeCompare(b.label));
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
-      {/* Creation leads: New thread opens the board composer; the maximize
-          button expands it into bb's main new-thread view, carrying the
-          seeds and the composer's stored prompt text over (app.tsx clears
-          the draft after the hand-off). Omitted while a child preset is
-          armed — the main view cannot spawn a nested thread. */}
+      {/* Creation leads, at the far left: New thread opens the board
+          composer (components/new-thread-modal, whose header carries the
+          maximize hand-off to bb's main new-thread view). */}
       <button
         type="button"
         onClick={onNewThread}
@@ -493,17 +486,6 @@ export function BoardToolbar({
         <Icon name="Plus" className="size-3.5" aria-hidden />
         New thread
       </button>
-      {onMaximizeNewThread ? (
-        <button
-          type="button"
-          onClick={onMaximizeNewThread}
-          aria-label="Maximize new thread"
-          title="Open in the main new-thread view"
-          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Icon name="Maximize2" className="size-3.5" aria-hidden />
-        </button>
-      ) : null}
       {/* Search sits right after creation; the filter controls abut it. */}
       <div className="relative min-w-36 flex-1 sm:max-w-64">
         <Icon

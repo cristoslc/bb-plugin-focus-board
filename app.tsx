@@ -1244,7 +1244,7 @@ function BoardPage({ subPath }: { subPath: string }) {
   // the seeds and the composer's stored prompt text ride along, the main
   // view focuses the prompt, and the stored draft moves rather than copies
   // (lib/compose-maximize). A child preset cannot follow — the main view
-  // cannot spawn a nested thread — so the toolbar only wires the maximize
+  // cannot spawn a nested thread — so the modal only gets the maximize
   // button while no child preset is armed.
   const maximizeNewThread = useCallback(() => {
     maximizeComposerToMainView({
@@ -2147,7 +2147,6 @@ function BoardPage({ subPath }: { subPath: string }) {
           }}
           anyFilterActive={anyFilterActive}
           onNewThread={openNewThread}
-          onMaximizeNewThread={newThreadParentId === null ? maximizeNewThread : undefined}
           whatsNewUnseen={whatsNewUnseen}
           onOpenWhatsNew={openWhatsNew}
           nestChildren={nestChildren}
@@ -2389,6 +2388,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         focusRequest={composerFocusRequest}
         parentThreadId={newThreadParentId ?? undefined}
         parentThreadTitle={newThreadParentTitle}
+        onMaximize={newThreadParentId === null ? maximizeNewThread : undefined}
         onSpawned={handleSpawnedThread}
       />
       <WhatsNewModal

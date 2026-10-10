@@ -12,6 +12,7 @@ import type { NewThreadRequest } from "@get-bb/plugin-sdk/app";
 const spawn = vi.fn();
 const onOpenChange = vi.fn();
 const onSpawned = vi.fn();
+const onMaximize = vi.fn();
 
 // The submit request is opaque to the modal (it forwards verbatim to
 // spawn), so the test builds a minimal one and casts.
@@ -59,6 +60,7 @@ beforeEach(() => {
   spawn.mockResolvedValue(SPAWNED);
   onOpenChange.mockReset();
   onSpawned.mockReset();
+  onMaximize.mockReset();
   lastComposerProps = null;
   lastSubmitPromise = null;
 });
@@ -73,6 +75,7 @@ function renderModal(
     focusRequest,
     parentThreadId,
     parentThreadTitle,
+    withMaximize = false,
   }: {
     open?: boolean;
     defaultProjectId?: string;
@@ -80,6 +83,7 @@ function renderModal(
     focusRequest?: number;
     parentThreadId?: string;
     parentThreadTitle?: string;
+    withMaximize?: boolean;
   } = {},
 ) {
   return render(
@@ -92,13 +96,16 @@ function renderModal(
       parentThreadId,
       parentThreadTitle,
       onSpawned,
+      // A child preset cannot follow to the main view; the app passes the
+      // handler only for root threads, mirrored here by the flag.
+      onMaximize: withMaximize ? onMaximize : undefined,
     }),
   );
 }
 
 const submitButton = () => {
   const button = document.querySelector<HTMLButtonElement>(
-    'button[type="button"]:not([aria-label="Close"])',
+    'button[type="button"]:not([aria-label="Close"]):not([aria-label="Maximize new thread"])',
   );
   if (button === null) throw new Error("stub composer submit button not rendered");
   return button;
@@ -185,6 +192,22 @@ describe("NewThreadModal", () => {
       type: "reuse",
       environmentId: "env_1",
     });
+  });
+
+  it("maximizes into the main new-thread view when the app provides the hand-off", () => {
+    renderModal({ withMaximize: true });
+    const maximize = screen.getByLabelText("Maximize new thread");
+    expect(maximize.getAttribute("title")).toBe("Open in the main new-thread view");
+    fireEvent.click(maximize);
+    expect(onMaximize).toHaveBeenCalledTimes(1);
+    // The hand-off does not submit: nothing spawns.
+    expect(spawn).not.toHaveBeenCalled();
+    expect(onSpawned).not.toHaveBeenCalled();
+  });
+
+  it("without a hand-off handler, carries no maximize button (inverse)", () => {
+    renderModal();
+    expect(screen.queryByLabelText("Maximize new thread")).toBeNull();
   });
 
   it("without an environment seed, passes nothing to the composer (inverse)", () => {
