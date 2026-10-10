@@ -6,6 +6,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "Board layout"
   },
   {
+    "text": "**Marking a thread Done renames its worktree branch under `bb/done/`.** Dropping a card on Done (or the CLI or the sweep) renames its managed worktree branch `bb/<slug>` to `bb/done/<slug>` in the project repo and records the original, so finished work stays labeled even after bb deletes the worktree at archive time; un-Done renames it back, and a branch outside the managed `bb/` prefix is never touched (toggle in the plugin's settings).",
+    "children": [],
+    "group": "Done gesture"
+  },
+  {
     "text": "**The overview board opens the New Thread composer on a keyboard shortcut.** Pressing the configured key (default C) with no pane open opens the same composer the New Thread button does; typing in a pane never triggers it, and the key is changeable or switchable off in Settings → Behavior.",
     "children": [],
     "group": "New Thread composer"

@@ -11,6 +11,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **The Parent view's rows each carry their own sweep.** Every sweepable row's rail cell has the same broom the Focus view's columns use, and arming it sweeps that row's cards across every family lane. The A-while-ago row marks its aged-out children Done, the Done row archives, and the Needs-you and Working rows carry no sweep at all.
 
+#### Done gesture
+
+- **Marking a thread Done renames its worktree branch under `bb/done/`.** Dropping a card on Done (or the CLI or the sweep) renames its managed worktree branch `bb/<slug>` to `bb/done/<slug>` in the project repo and records the original, so finished work stays labeled even after bb deletes the worktree at archive time; un-Done renames it back, and a branch outside the managed `bb/` prefix is never touched (toggle in the plugin's settings).
+
 #### New Thread composer
 
 - **The overview board opens the New Thread composer on a keyboard shortcut.** Pressing the configured key (default C) with no pane open opens the same composer the New Thread button does; typing in a pane never triggers it, and the key is changeable or switchable off in Settings → Behavior.
