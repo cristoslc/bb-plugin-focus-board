@@ -430,6 +430,10 @@ interface BoardToolbarProps {
   onClearFilters: () => void;
   anyFilterActive: boolean;
   onNewThread: () => void;
+  /** Expand the board composer into bb's main new-thread view, carrying the
+   *  seeds and the stored prompt text over. Omitted while a child preset is
+   *  armed: the main view cannot spawn a nested thread, so no maximize. */
+  onMaximizeNewThread?: () => void;
   /** An update landed since the stored last-seen version — the gift pulses. */
   whatsNewUnseen: boolean;
   onOpenWhatsNew: () => void;
@@ -461,6 +465,7 @@ export function BoardToolbar({
   onClearFilters,
   anyFilterActive,
   onNewThread,
+  onMaximizeNewThread,
   whatsNewUnseen,
   onOpenWhatsNew,
 }: BoardToolbarProps) {
@@ -475,6 +480,45 @@ export function BoardToolbar({
     .sort((a, b) => a.label.localeCompare(b.label));
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
+      {/* Creation leads: New thread opens the board composer; the maximize
+          button expands it into bb's main new-thread view, carrying the
+          seeds and the composer's stored prompt text over (app.tsx clears
+          the draft after the hand-off). Omitted while a child preset is
+          armed — the main view cannot spawn a nested thread. */}
+      <button
+        type="button"
+        onClick={onNewThread}
+        className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <Icon name="Plus" className="size-3.5" aria-hidden />
+        New thread
+      </button>
+      {onMaximizeNewThread ? (
+        <button
+          type="button"
+          onClick={onMaximizeNewThread}
+          aria-label="Maximize new thread"
+          title="Open in the main new-thread view"
+          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Icon name="Maximize2" className="size-3.5" aria-hidden />
+        </button>
+      ) : null}
+      {/* Search sits right after creation; the filter controls abut it. */}
+      <div className="relative min-w-36 flex-1 sm:max-w-64">
+        <Icon
+          name="Search"
+          className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+          aria-hidden
+        />
+        <Input
+          value={search}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Search title or id…"
+          aria-label="Search threads"
+          className="h-8 pl-7 text-xs"
+        />
+      </div>
       {/* Mutually exclusive: picking a grouping replaces the current one. */}
       <MultiSelectDropdown
         exclusive
@@ -593,20 +637,6 @@ export function BoardToolbar({
         }
         onClear={() => onFilterChange({ ...filter, states: new Set() })}
       />
-      <div className="relative ml-auto min-w-36 flex-1 sm:max-w-64">
-        <Icon
-          name="Search"
-          className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
-          aria-hidden
-        />
-        <Input
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search title or id…"
-          aria-label="Search threads"
-          className="h-8 pl-7 text-xs"
-        />
-      </div>
       {anyFilterActive ? (
         <button
           type="button"
@@ -617,15 +647,7 @@ export function BoardToolbar({
           Clear
         </button>
       ) : null}
-      <button
-        type="button"
-        onClick={onNewThread}
-        className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <Icon name="Plus" className="size-3.5" aria-hidden />
-        New thread
-      </button>
-      <span className="text-xs text-muted-foreground">{totalCount} threads</span>
+      <span className="ml-auto text-xs text-muted-foreground">{totalCount} threads</span>
       {/* Always present — the changelog never becomes unreachable. The pulse
           (and the amber tint) is the only state, and it clears on open. */}
       <button
