@@ -11,6 +11,7 @@ import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
 import { SIM_DEMO_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, type SimThread } from "./data";
 import { applyMoveVisible } from "../../lib/rank";
+import { applyUnitMoveVisible } from "../../lib/rank-unit-move";
 // Pure constants only — lib/sweep would drag components/grouping into the
 // mock, whose SDK-app import this file itself stands in for (cycle).
 import { DAY_MS } from "../../lib/duration";
@@ -335,6 +336,16 @@ export function experimental_NewThreadComposer(props: Record<string, unknown>): 
  */
 let simRanks: Record<string, string[]> = {};
 const uatCalls: { method: string; args?: unknown }[] = [];
+// Feature groups: the registry (id → name stamps) and the per-thread
+// assignments, module state mutated by group_* writes. The default box
+// wraps the two active threads ("chat-imagegent", the live report's group).
+let simGroupRegistry: Record<string, { name: string; createdAt: string }> = {
+  grp_chat_imagegent: { name: "chat-imagegent", createdAt: "2026-10-09T22:00:00.000Z" },
+};
+let simGroupAssignments: Record<string, string> = {
+  thr_column_sort: "grp_chat_imagegent",
+  thr_drag_done: "grp_chat_imagegent",
+};
 (globalThis as unknown as { __uat?: unknown }).__uat = {
   seedRanks: (orders: Record<string, string[]>) => {
     simRanks = structuredClone(orders);
@@ -361,6 +372,35 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   if (method === "rank_list") return { orders: structuredClone(simRanks) };
   if (method === "pin_parks_list") return { parks: {} };
   if (method === "snooze_list") return { snoozes: {} };
+  // Feature groups (components/group-boxes): the harness renders one box
+  // ("chat-imagegent") around the two active threads by default, and its
+  // group writes mutate the module map + re-render, the way thread_reparent
+  // does — the real app code renders unmodified against the simulation.
+  if (method === "groups_list") {
+    return {
+      groups: simGroupRegistry,
+      memberships: structuredClone(simGroupAssignments),
+    };
+  }
+  if (method === "group_create") {
+    const { name } = args as { name: string };
+    const id = `grp_${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    simGroupRegistry[id] = { name, createdAt: new Date().toISOString() };
+    return { group: { id, name, createdAt: simGroupRegistry[id].createdAt } };
+  }
+  if (method === "group_rename") {
+    const { groupId, name } = args as { groupId: string; name: string };
+    simGroupRegistry[groupId] = { ...simGroupRegistry[groupId], name };
+    mockRender();
+    return { group: { id: groupId, ...simGroupRegistry[groupId] } };
+  }
+  if (method === "group_set") {
+    const { threadId, groupId } = args as { threadId: string; groupId: string | null };
+    if (groupId !== null) simGroupAssignments[threadId] = groupId;
+    else delete simGroupAssignments[threadId];
+    mockRender();
+    return { threadId, groupId };
+  }
   if (method === "thread_reparent") {
     // The server's semantics, abbreviated for the harness: the real handler
     // re-checks lib/reparent against fresh rows, then calls threads.update
@@ -429,20 +469,24 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     // of them — so a UAT pass exercises the real state change. The copy this
     // replaced drifted the first time the move semantics changed (the
     // rank-everything-above-the-drop-point fix), and the suite caught it.
-    const { columnKey, threadId, beforeId, toEnd, visibleIds } = args as {
+    const { columnKey, threadId, beforeId, toEnd, visibleIds, unitIds } = args as {
       columnKey: string;
       threadId: string;
       beforeId: string | null;
       toEnd: boolean;
       visibleIds: string[];
+      unitIds?: string[];
     };
-    simRanks[columnKey] = applyMoveVisible(
-      simRanks[columnKey] ?? [],
-      visibleIds,
-      threadId,
-      beforeId,
-      toEnd,
-    );
+    simRanks[columnKey] =
+      unitIds !== undefined && unitIds.length > 0
+        ? applyUnitMoveVisible(simRanks[columnKey] ?? [], visibleIds, unitIds, beforeId, toEnd)
+        : applyMoveVisible(
+            simRanks[columnKey] ?? [],
+            visibleIds,
+            threadId,
+            beforeId,
+            toEnd,
+          );
     return { columnKey, order: [...simRanks[columnKey]] };
   }
   return {};
