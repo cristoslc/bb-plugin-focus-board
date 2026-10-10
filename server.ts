@@ -2266,6 +2266,74 @@ export default async function plugin(bb: BbPluginApi) {
   // Board-linked GitHub items: list/set/clear over the linkedIssues
   // metadata key. The CLI is the operator's fallback when no agent tool is
   // in the session (issue #13's repro had no agent-side surface at all).
+  const groupList = cliCommand({
+    summary: "List feature groups (family boxes) with their assigned threads",
+    options: {
+      json: { type: "boolean", description: "Emit machine-readable JSON" },
+    },
+    async run(_input) {
+      const [store, { rows: candidates, liveIds }] = await Promise.all([
+        readGroupsStore(),
+        listCandidateThreads(),
+      ]);
+      // Registry-defined groups first, then any orphaned assignment (a
+      // thread whose metadata points at a group the registry lost — a
+      // manual KV edit's survivor; the board renders none of these).
+      const membersByGroup = new Map<string, ThreadRow[]>();
+      const orphaned: Array<{ id: string; groupId: string; title: string | null }> = [];
+      for (const thread of candidates) {
+        const record = await readGroupAssignment(thread.id);
+        if (record === null) continue;
+        if (store[record.groupId] === undefined) {
+          orphaned.push({
+            id: thread.id,
+            groupId: record.groupId,
+            title: thread.title ?? thread.titleFallback,
+          });
+          continue;
+        }
+        const members = membersByGroup.get(record.groupId);
+        if (members === undefined) membersByGroup.set(record.groupId, [thread]);
+        else members.push(thread);
+      }
+      const rows = Object.entries(store).map(([id, record]) => ({
+        id,
+        name: record.name,
+        createdAt: record.createdAt,
+        members: (membersByGroup.get(id) ?? []).map((thread) => ({
+          id: thread.id,
+          title: thread.title ?? thread.titleFallback,
+          inLiveList: liveIds.has(thread.id),
+        })),
+      }));
+      const stdout = _input.options.json
+        ? JSON.stringify({ groups: rows, orphaned }, null, 2) + "\n"
+        : rows.length === 0
+          ? "No feature groups exist.\n"
+          : rows
+              .map((row) => {
+                const members = row.members
+                  .map((member) => {
+                    const suffix = member.inLiveList ? "" : " (archived)";
+                    return `    ${member.id}\t${member.title ?? "(untitled)"}${suffix}`;
+                  })
+                  .join("\n");
+                const note =
+                  row.members.length < 2 ? "  — box withheld: fewer than two members" : "";
+                return `${row.id}\t${row.name}\t${row.members.length} member(s)${note}\n${members}`;
+              })
+              .join("\n") +
+          (orphaned.length > 0
+            ? "\n\nOrphaned assignments (group record missing; never rendered):\n" +
+              orphaned
+                .map((row) => `  ${row.id}\t→ ${row.groupId}\t${row.title ?? "(untitled)"}`)
+                .join("\n")
+            : "") +
+          "\n";
+      return { exitCode: 0, stdout };
+    },
+  });
+
   const linkList = cliCommand({
     summary: "List threads with linked tracker items (GitHub issues/PRs, externals)",
     options: {
@@ -3053,11 +3121,12 @@ export default async function plugin(bb: BbPluginApi) {
       name: "focus-board",
       summary: "Manage the Focus Board plugin's own state",
       description:
-        "Done list/mark/clear, linked tracker items (link list/set/clear), snooze list/set/clear, autotitle availability/probe diagnostics, sweep (archive old Done + long-idle, dry-run by default), and the sweep thresholds.",
+        "Done list/mark/clear, feature groups (group list), linked tracker items (link list/set/clear), snooze list/set/clear, autotitle availability/probe diagnostics, sweep (archive old Done + long-idle, dry-run by default), and the sweep thresholds.",
       commands: {
         "done list": doneList,
         "done mark": doneMark,
         "done clear": doneClear,
+        "group list": groupList,
         "link list": linkList,
         "link set": linkSet,
         "link clear": linkClear,
