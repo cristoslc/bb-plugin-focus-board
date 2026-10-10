@@ -941,9 +941,9 @@ function BoardPage({ subPath }: { subPath: string }) {
   const groupBoxFiltered = useMemo(
     () =>
       groupBoxPlanFrozen.active
-        ? filterWithGroupBoxes(familyFiltered.kept, groupBoxPlanFrozen.groupBoxOf, filter, search.trim(), projectNameFor)
+        ? filterWithGroupBoxes(familyFiltered.kept, groupBoxPlanFrozen.groupBoxOf, filter, search.trim(), projectNameFor, ticketRefsFor)
         : { kept: familyFiltered.kept, dimmedIds: new Set<string>() as ReadonlySet<string> },
-    [groupBoxPlanFrozen, familyFiltered, filter, search, projectNameFor],
+    [groupBoxPlanFrozen, familyFiltered, filter, search, projectNameFor, ticketRefsFor],
   );
   const dimmedAll = useMemo(
     () => new Set([...familyFiltered.dimmedIds, ...groupBoxFiltered.dimmedIds]),
