@@ -202,8 +202,34 @@ describe("forgejo item URLs validate as https item URLs", () => {
       repoHrefBase: "https://forge.example.com/owner/repo",
     });
     expect(refs).toEqual([
-      { raw: "#7", tracker: "github", number: 7, href: "https://forge.example.com/owner/repo/issues/7", hostname: "forge.example.com" },
+      { raw: "#7", tracker: "external", number: 7, href: "https://forge.example.com/owner/repo/issues/7", hostname: "forge.example.com" },
     ]);
+  });
+
+  it("a #N ref on a forgejo base is not claimed as github (the mark must not read github.com)", () => {
+    const [ref] = findTicketRefs("see #7", {
+      extraText: "",
+      repoHrefBase: "https://forge.example.com/owner/repo",
+    });
+    expect(ref.tracker).toBe("external");
+  });
+
+  it("a github base still yields a github ref", () => {
+    const [ref] = findTicketRefs("see #7", {
+      extraText: "",
+      repoHrefBase: "https://github.com/owner/repo",
+    });
+    expect(ref.tracker).toBe("github");
+    expect(ref.hostname).toBeUndefined();
+  });
+
+  it("a bare #N with no base keeps the github shape (it never chips without a validated href)", () => {
+    expect(findTicketRefs("see #7")[0].tracker).toBe("github");
+  });
+
+  it("a full github URL still scans as github", () => {
+    const [ref] = findTicketRefs("see https://github.com/owner/repo/issues/7");
+    expect(ref.tracker).toBe("github");
   });
 });
 
@@ -230,6 +256,16 @@ describe("findTicketRefs — hostname on non-github bases (favicon source)", () 
 });
 
 describe("forgejoItemUrl — item URLs carry base, kind, number", () => {
+  it("hydrates a stored forgejo item URL on a generic bucket ref (kind, number)", () => {
+    // linkedTicketRefs (lib/link-metadata) uses this to give a URL-identity
+    // external ref its id text and kind instead of the bare hostname.
+    expect(forgejoItemUrl("https://git.cove/cristos/Homelab/pulls/42")).toEqual({
+      base: "https://git.cove/cristos/Homelab",
+      kind: "pull",
+      number: 42,
+    });
+  });
+
   it("parses an issues URL into its repo base and kind issue", () => {
     expect(forgejoItemUrl("https://forge.example/org/app/issues/7")).toEqual({
       base: "https://forge.example/org/app",

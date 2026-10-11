@@ -65,6 +65,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+#### Card ticket chips
+
+- **A Forgejo chip names its item, not its host.** A Cove or Gitea link used to collapse every item on the host into one chip reading `git.cove`, and following it opened whichever item happened to be first. Each link now reads its number (`#42`) with its own href, a PR leads with the PR glyph, the mark points at that repo's list page, and a `#39` in a title stops wearing GitHub's mark.
 - **A group box never splits across lanes while its family card is attended.** Opening the pane on a child of a boxed parent used to freeze only the parent's card: another member's status change then re-laned the box without it, leaving the family in one lane and the group in another until the pane closed. The attention capture now pins the parent's whole box alongside the family, and the box moves together again when the attention releases.
 - **The white drop rectangle around a lane no longer sticks after the drag ends.** Escape mid-drag, a drop claimed by a card, and a drop that relocates the card out from under its own element all clear the lane's ring now, where only a drop onto empty lane space did before.
 

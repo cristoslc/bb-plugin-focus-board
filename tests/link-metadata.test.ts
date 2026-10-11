@@ -353,14 +353,58 @@ describe("external links — chip merge and dot path", () => {
     expect(ref.raw).toBe("linear.app");
   });
 
+  it("hydrates an external item URL into its number and kind (id text, not the host)", () => {
+    const cove = {
+      tracker: "external",
+      url: "https://git.cove/cristos/Homelab/pulls/42",
+      hostname: "git.cove",
+      createdAt: "2026-10-11T21:46:04.559Z",
+      source: "agent",
+    } as ThreadLink;
+    expect(linkedTicketRefs([cove])).toEqual([
+      {
+        raw: "#42",
+        tracker: "external",
+        href: cove.url,
+        hostname: "git.cove",
+        kind: "pull",
+        number: 42,
+      },
+    ]);
+  });
+
+  it("a three-item Cove thread emits three refs, one per item", () => {
+    const items = [
+      { tracker: "external", url: "https://git.cove/cristos/Homelab/pulls/42", hostname: "git.cove", createdAt: "a", source: "agent" },
+      { tracker: "external", url: "https://git.cove/cristos/Homelab/pulls/41", hostname: "git.cove", createdAt: "b", source: "agent" },
+      { tracker: "external", url: "https://git.cove/cristos/Homelab/issues/39", hostname: "git.cove", createdAt: "c", source: "agent" },
+    ] as ThreadLink[];
+    expect(linkedTicketRefs(items).map((ref) => ref.raw)).toEqual(["#42", "#41", "#39"]);
+  });
+
+  it("two external items of the same host with no label stay two refs", () => {
+    const a = { tracker: "external", url: "https://git.cove/o/r/issues/1", hostname: "git.cove", createdAt: "a", source: "agent" } as ThreadLink;
+    const b = { tracker: "external", url: "https://git.cove/o/r/issues/2", hostname: "git.cove", createdAt: "b", source: "agent" } as ThreadLink;
+    expect(linkedTicketRefs([a, b])).toHaveLength(2);
+  });
+
   it("an external link whose href a text ref already renders is skipped", () => {
     const textRefs = [{ raw: "PROJ-142", tracker: "external" as const, href: EXT.url, hostname: "linear.app" }];
     expect(linkedTicketRefs([EXT], textRefs)).toEqual([]);
   });
 
-  it("equal-label externals emit one chip; the primary wins", () => {
+  it("equal-label externals on different URLs stay two refs (identity is the URL)", () => {
     const other = { ...EXT, url: "https://other-site.example/PROJ-142", createdAt: "2026-10-08T11:00:00.000Z" } as ThreadLink;
     const refs = linkedTicketRefs([EXT, other]);
+    // Two different tracker items that happen to share a label are two items;
+    // keying the dedupe on raw text used to collapse them into one chip.
+    expect(refs).toHaveLength(2);
+    expect(refs.map((ref) => ref.href)).toEqual([EXT.url, other.url]);
+  });
+
+  it("the same external URL twice emits one ref (href is identity)", () => {
+    const older = { ...EXT, createdAt: "2026-10-08T09:00:00.000Z" } as ThreadLink;
+    const refs = linkedTicketRefs([EXT, older]);
     expect(refs).toHaveLength(1);
     expect(refs[0].href).toBe(EXT.url);
   });

@@ -24,7 +24,7 @@
 // finds every card whose chips show a #38.
 
 import type { TicketRef } from "./tickets";
-import { forgejoItemUrl, resolveRepoSlug } from "./tickets";
+import { forgejoItemBase, forgejoItemUrl, resolveRepoSlug } from "./tickets";
 import { parseGithubItemUrl } from "./link-metadata";
 
 /** One chip inside a provider row: all the provider's IDs of one kind. */
@@ -77,6 +77,10 @@ export function ticketChipRows(
   const rows: TicketChipRow[] = [];
   const byKey = new Map<string, TicketChipRow>();
   const fallbackRepo = options.repoHrefBase === undefined ? null : resolveRepoSlug(options.repoHrefBase);
+  // The forgejo sibling of fallbackRepo: a non-GitHub project remote backstops
+  // an external ref whose own href is missing (a kindless text ref the scan
+  // could not build an item URL for), so its chip still finds the list page.
+  const fallbackForgejo = options.repoHrefBase === undefined ? null : forgejoItemBase(options.repoHrefBase);
   for (const ref of refs) {
     const github = ref.tracker === "github";
     let key: string;
@@ -100,8 +104,12 @@ export function ticketChipRows(
       key = ref.hostname;
       hostname = ref.hostname;
       const item = ref.href !== undefined ? forgejoItemUrl(ref.href) : null;
-      if (item !== null) base = item.base;
-      kind = item?.kind ?? "issue";
+      // The item URL wins the base (it names this ref's own repo); a ref the
+      // store built without one falls back to the project's item base. The
+      // ref's own kind, when hydrated, outranks the URL parse (the same
+      // answer either way, but the hydrated shape is the record's truth).
+      base = item?.base ?? fallbackForgejo ?? undefined;
+      kind = ref.kind ?? item?.kind ?? "issue";
     }
     let row = byKey.get(key);
     if (row === undefined) {

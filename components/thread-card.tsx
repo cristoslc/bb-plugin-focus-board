@@ -200,13 +200,17 @@ export const NESTED_ROWS_SCROLL_THRESHOLD = 5;
  * one kind (issue or pull) inside a single chip shell — the provider mark
  * leading, the kind glyph naming the chip's kind, then one link per ID.
  *
- * The mark links to that kind's list page: the repo's filtered page where
- * the group's base is known, GitHub's own global page otherwise; an unknown
- * external tracker's mark stays inert. Each ID keeps its own href, and the
- * kind glyph carries the state color — read from the group's primary (first)
- * ref's status — while ID text stays neutral and each ID's state survives on
- * its hover title. The chip shell wraps, so a long ID list reflows onto
- * extra lines instead of overflowing the card.
+ * The mark names the tracker: GitHub's brand on github.com, else the site's
+ * favicon (falling back to a generic ticket glyph). It links to that kind's
+ * list page: the repo's filtered page where the group's base is known,
+ * GitHub's own global page for a bare github row, an unknown external
+ * tracker's mark stays inert. Each ID keeps its own href, and the kind glyph
+ * names issue vs PR wherever the tracker encodes one (GitHub and Forgejo
+ * both do) — carrying the live state color on GitHub, where status is known;
+ * a Forgejo glyph reads plain until a state source exists. ID text stays
+ * neutral and each ID's state survives on its hover title. The chip shell
+ * wraps, so a long ID list reflows onto extra lines instead of overflowing
+ * the card.
  */
 function ProviderTicketChip({
   row,
@@ -222,7 +226,7 @@ function ProviderTicketChip({
   // External providers show the site's favicon (forgejo bases, external
   // links — each carries its hostname; bb's app shell sets no CSP header,
   // verified 2026-10-08, so the browser may load it directly). A failed or
-  // blocked load collapses to the plain text chip.
+  // blocked load collapses to the plain ticket glyph.
   const [faviconFailed, setFaviconFailed] = useState(false);
   const isGithub = row.provider === "github";
   const markHref = ticketChipIconHref(row, chip.kind);
@@ -277,14 +281,20 @@ function ProviderTicketChip({
   // ref's live state names it (merged PR → merge glyph, closed → closed
   // glyph), defaulting to the open shapes before status lands. Status kind
   // overrides the chip's structural kind too — a kindless "#N" that turns
-  // out to be a merged PR swaps to the pull shapes.
+  // out to be a merged PR swaps to the pull shapes. A GitHub ref always
+  // leads a glyph. An external ref leads one when it names an ITEM (it has a
+  // number): a Forgejo id defaults to the issue glyph like GitHub's does,
+  // and a `/pulls/N` URL or a hydrated store kind names the PR. A tracker
+  // item with no item number (a Linear "PROJ-142" label) shows no glyph —
+  // its favicon names the source, and calling it an issue would be a guess.
   const primary = chip.refs[0];
   const primaryStatus =
     isGithub && primary !== undefined
       ? statusFor?.(ticketStatusRepo(primary, projectRepo), primary.number)
       : undefined;
   const kind = primaryStatus?.kind === "pull" ? "pull" : chip.kind;
-  const kindGlyph = isGithub ? (
+  const showKindGlyph = isGithub || primary?.number !== undefined;
+  const kindGlyph = showKindGlyph ? (
     <Icon
       name={
         kind === "pull"
@@ -301,7 +311,15 @@ function ProviderTicketChip({
           ? undefined
           : STATUS_ICON_CLASS[primaryStatus.state],
       )}
-      aria-label={primaryStatus === undefined ? undefined : `${kind} ${primaryStatus.state}`}
+      aria-label={
+        primaryStatus === undefined
+          ? isGithub
+            ? undefined
+            : primary?.number !== undefined
+              ? `${kind} #${primary.number}`
+              : kind
+          : `${kind} ${primaryStatus.state}`
+      }
     />
   ) : null;
   // External items name their own tracker in the favicon and carry no

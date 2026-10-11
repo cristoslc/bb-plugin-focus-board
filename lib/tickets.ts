@@ -72,19 +72,24 @@ export function forgejoItemUrl(
 export interface TicketRef {
   /** The matched text, e.g. "https://github.com/owner/repo/issues/42" or "#482". */
   raw: string;
-  /** GitHub-identifiable refs (#N, URLs) and external tracker items from the link store. */
+  /**
+   * GitHub-identifiable refs (#N, URLs) and non-GitHub tracker items (Forgejo
+   * remotes and the link store's external records). A `#N` on a non-GitHub
+   * base is external: its chip names that tracker, never GitHub.
+   */
   tracker: "github" | "external";
   /**
-   * Issue vs PR when the raw text itself implies it (GitHub URL refs).
-   * Plain "#N" refs stay kindless — issues and PRs share GitHub's number
-   * space — and the chip defaults to the issue glyph until live status
-   * corrects it.
+   * Issue vs PR when the raw text itself implies it (GitHub URL refs and
+   * non-GitHub item URLs, where Forgejo/Gitea spell PRs `/pulls/N`). Plain
+   * "#N" refs stay kindless on both trackers — issues and PRs share the
+   * number space — and the chip defaults to the issue glyph until live
+   * status corrects it.
    */
   kind?: "issue" | "pull";
-  /** Issue/PR number for numeric refs (#123, GitHub URL forms). */
+  /** Item number for numeric refs (#123, item URL forms, on either tracker). */
   number?: number;
   /**
-   * For external tracker items: the site's hostname, so the chip can render
+   * For non-GitHub tracker items: the site's hostname, so the chip can render
    * the site's favicon (Unit G). Absent on GitHub refs.
    */
   hostname?: string;
@@ -162,7 +167,11 @@ export function findTicketRefs(title: string, options: TicketRefOptions = {}): T
       if (num === 0) continue; // GitHub numbers start at 1.
       pushUnique(refs, {
         raw: `#${match[1]}`,
-        tracker: "github",
+        // A non-GitHub base (forgejo) makes this an external tracker ref:
+        // the chip carries that site's favicon and links its list page,
+        // never GitHub's mark. A GitHub base, or no base at all, keeps the
+        // github shape.
+        tracker: baseHost !== null ? "external" : "github",
         number: num,
         ...(base ? { href: `${base}/issues/${num}` } : {}),
         ...(baseHost !== null ? { hostname: baseHost } : {}),
