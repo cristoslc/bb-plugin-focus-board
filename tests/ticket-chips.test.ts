@@ -65,6 +65,12 @@ describe("ticketChipRows — one row per provider", () => {
     ]);
     expect(rows.map((row) => row.key)).toEqual(["forge.example", "github", "linear.app"]);
   });
+
+  it("an external row keeps provider external — never the github slug path", () => {
+    const rows = ticketChipRows([forgejoRef()]);
+    expect(rows[0].provider).toBe("external");
+    expect(rows[0].base).toBe("https://forge.example/org/app");
+  });
 });
 
 describe("ticketChipRows — chips hold one kind each", () => {
@@ -111,6 +117,23 @@ describe("ticketChipRows — chips hold one kind each", () => {
     expect(rows[0].issues).toBeUndefined();
     expect(rows[0].pulls?.refs).toHaveLength(1);
   });
+
+  it("an external ref carrying a kind lands in that kind's chip", () => {
+    const rows = ticketChipRows([
+      forgejoRef({ raw: "#42", kind: "pull", number: 42, href: "https://forge.example/org/app/pulls/42" }),
+      forgejoRef({ raw: "#7", kind: "issue", number: 7, href: "https://forge.example/org/app/issues/7" }),
+    ]);
+    expect(rows[0].issues?.refs.map((ref) => ref.number)).toEqual([7]);
+    expect(rows[0].pulls?.refs.map((ref) => ref.number)).toEqual([42]);
+  });
+
+  it("the pulls chip reads the pull kind from the URL when the ref has no kind", () => {
+    const rows = ticketChipRows([
+      forgejoRef({ raw: "git.cove", href: "https://forge.example/org/app/pulls/42" }),
+    ]);
+    expect(rows[0].issues).toBeUndefined();
+    expect(rows[0].pulls?.refs).toHaveLength(1);
+  });
 });
 
 describe("ticketChipRows — repo base selection", () => {
@@ -129,6 +152,15 @@ describe("ticketChipRows — repo base selection", () => {
       repoHrefBase: "https://github.com/proj/board",
     });
     expect(rows[0].base).toBe("https://github.com/proj/board");
+  });
+
+  it("a forgejo remote base backstops an external #N ref with no href", () => {
+    const rows = ticketChipRows(
+      [{ raw: "#7", tracker: "external", hostname: "forge.example", number: 7 }],
+      { repoHrefBase: "https://forge.example/org/app" },
+    );
+    expect(rows[0].base).toBe("https://forge.example/org/app");
+    expect(ticketChipIconHref(rows[0], "issues")).toBe("https://forge.example/org/app/issues");
   });
 });
 
@@ -163,6 +195,12 @@ describe("ticketChipIdText — ids, not addresses", () => {
   it("keeps short raws and labels verbatim", () => {
     expect(ticketChipIdText(githubRef({ raw: "#12" }))).toBe("#12");
     expect(ticketChipIdText(forgejoRef({ raw: "PROJ-142", number: undefined }))).toBe("PROJ-142");
+  });
+
+  it("an external ref with a number renders #N, never the host", () => {
+    expect(
+      ticketChipIdText(forgejoRef({ raw: "#42", number: 42, kind: "pull", href: "https://forge.example/org/app/pulls/42" })),
+    ).toBe("#42");
   });
 
   it("shortens a scanned full github URL ref to its number", () => {

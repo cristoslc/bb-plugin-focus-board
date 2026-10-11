@@ -10,7 +10,7 @@
 // so the RPC layer, the chip merge, and tests can drive them without a bb
 // host.
 import type { JsonValue } from "@get-bb/plugin-sdk";
-import { findTicketRefs, type TicketRef } from "./tickets";
+import { findTicketRefs, forgejoItemUrl, type TicketRef } from "./tickets";
 
 /** The board's linked-issues key inside its thread plugin-metadata namespace. */
 export const LINK_METADATA_KEY = "linkedIssues";
@@ -255,26 +255,41 @@ export function linkedTicketRefs(
   for (const link of links) {
     const href = link.tracker === "external" ? link.url : link.href;
     if (known.has(href)) continue;
-    // Chip rows key chips by raw text, and "#12" can repeat across repos —
-    // stampLinkedIssues dedupes per repo+number but not across repos. First
-    // entry wins (the array's primary link is first). External items label
-    // with their stored label or their hostname.
-    const raw = link.tracker === "external" ? link.label ?? link.hostname : `#${link.issue}`;
+    if (link.tracker === "external") {
+      // External items are their URL (identity by exact href), so dedupe by
+      // href: two Forgejo items on one host share no raw text, and keying on
+      // the label-or-hostname would collapse a whole host's items into one
+      // chip. Where the URL is a Forgejo-shaped item (/issues/N, /pulls/N),
+      // hydrate its number and kind so the chip shows "#42" with the PR
+      // glyph instead of the bare hostname. A stored label overrides the id
+      // text; anything else keeps the hostname fallback.
+      if (seen.has(href)) continue;
+      seen.add(href);
+      const item = forgejoItemUrl(link.url);
+      refs.push({
+        raw: link.label ?? (item !== null ? `#${item.number}` : link.hostname),
+        tracker: "external",
+        href,
+        hostname: link.hostname,
+        ...(item !== null ? { kind: item.kind, number: item.number } : {}),
+      });
+      continue;
+    }
+    // GitHub links: chip rows key chips by raw text, and "#12" can repeat
+    // across repos — stampLinkedIssues dedupes per repo+number but not across
+    // repos. First entry wins (the array's primary link is first).
+    const raw = `#${link.issue}`;
     if (seen.has(raw)) continue;
     seen.add(raw);
-    refs.push(
-      link.tracker === "external"
-        ? { raw, tracker: "external", href, hostname: link.hostname }
-        : {
-            raw,
-            tracker: "github",
-            number: link.issue,
-            href,
-            // The store knows issue vs PR exactly (the URL said so); carrying
-            // it means the PR glyph leads before any status lands.
-            kind: link.kind,
-          },
-    );
+    refs.push({
+      raw,
+      tracker: "github",
+      number: link.issue,
+      href,
+      // The store knows issue vs PR exactly (the URL said so); carrying
+      // it means the PR glyph leads before any status lands.
+      kind: link.kind,
+    });
   }
   return refs;
 }

@@ -124,6 +124,84 @@ describe("linked store chips — distinct PR vs issue glyphs", () => {
     expect(chipEl.querySelector("img")).not.toBeNull();
   });
 
+  it("a forgejo PR id leads with the PR glyph, beside the site favicon", async () => {
+    renderCard("Fix render-configs.sh placeholder substitution", {
+      repoHrefBase: "https://git.cove/cristos/Homelab",
+      linkedIssues: [
+        {
+          tracker: "external",
+          url: "https://git.cove/cristos/Homelab/pulls/42",
+          hostname: "git.cove",
+          createdAt: "2026-10-11T21:46:04.559Z",
+          source: "agent",
+        },
+      ],
+    });
+    const chipEl = await waitFor(() => {
+      const el = document.querySelector("[data-ticket-chip]");
+      if (el === null) throw new Error("missing chip");
+      return el;
+    });
+    // The id is its number, not the host; the glyph names its kind.
+    expect(chipEl.querySelector('[data-ticket-id="#42"]')).not.toBeNull();
+    expect(chipEl.textContent).toContain("#42");
+    expect(chipEl.textContent).not.toContain("git.cove");
+    expect(chipEl.querySelector('[data-icon="PullRequest"]')).not.toBeNull();
+    expect(chipEl.querySelector('[data-icon="GithubMark"]')).toBeNull();
+    expect(chipEl.querySelector("img")?.getAttribute("src")).toBe("https://git.cove/favicon.ico");
+  });
+
+  it("a forgejo PR and issue from the store share one row as two chips", async () => {
+    renderCard("purge MetaMCP remnants", {
+      repoHrefBase: "https://git.cove/cristos/Homelab",
+      linkedIssues: [
+        { tracker: "external", url: "https://git.cove/cristos/Homelab/pulls/42", hostname: "git.cove", createdAt: "a", source: "agent" },
+        { tracker: "external", url: "https://git.cove/cristos/Homelab/issues/39", hostname: "git.cove", createdAt: "b", source: "agent" },
+      ],
+    });
+    await waitFor(() => {
+      if (document.querySelectorAll("[data-ticket-chip]").length < 2) throw new Error("want two chips");
+    });
+    const row = document.querySelector('[data-provider-row="git.cove"]');
+    const chips = row?.querySelectorAll("[data-ticket-chip]") ?? [];
+    expect(chips.length).toBe(2);
+    expect(chips[0].querySelector('[data-ticket-id="#39"]')).not.toBeNull();
+    expect(chips[1].querySelector('[data-ticket-id="#42"]')).not.toBeNull();
+    expect(chips[0].querySelector('[data-icon="IssueOpen"]')).not.toBeNull();
+    expect(chips[1].querySelector('[data-icon="PullRequest"]')).not.toBeNull();
+  });
+
+  it("a three-item Cove thread renders all three ids, each linking its own item", async () => {
+    renderCard("purge MetaMCP remnants (issue #39)", {
+      repoHrefBase: "https://git.cove/cristos/Homelab",
+      linkedIssues: [
+        { tracker: "external", url: "https://git.cove/cristos/Homelab/pulls/42", hostname: "git.cove", createdAt: "a", source: "agent" },
+        { tracker: "external", url: "https://git.cove/cristos/Homelab/pulls/41", hostname: "git.cove", createdAt: "b", source: "agent" },
+        { tracker: "external", url: "https://git.cove/cristos/Homelab/issues/39", hostname: "git.cove", createdAt: "c", source: "agent" },
+      ],
+    });
+    const ids = await waitFor(() => {
+      const els = document.querySelectorAll("[data-ticket-id]");
+      if (els.length < 3) throw new Error(`only ${els.length} ids`);
+      return els;
+    });
+    const hrefs = [...ids].map((el) => el.getAttribute("href"));
+    expect(hrefs).toContain("https://git.cove/cristos/Homelab/pulls/42");
+    expect(hrefs).toContain("https://git.cove/cristos/Homelab/pulls/41");
+    expect(hrefs).toContain("https://git.cove/cristos/Homelab/issues/39");
+  });
+
+  it("a forgejo text ref's chip mark links the base's list page, not github.com", async () => {
+    renderCard("resolve #7", { repoHrefBase: "https://git.cove/cristos/Homelab" });
+    const mark = await waitFor(() => {
+      const el = document.querySelector("[data-ticket-chip-mark]");
+      if (el === null) throw new Error("missing mark");
+      return el;
+    });
+    expect(mark.getAttribute("href")).toBe("https://git.cove/cristos/Homelab/issues");
+    expect(mark.querySelector('[data-icon="GithubMark"]')).toBeNull();
+  });
+
   it("a merged store-linked PR still shows the merge glyph purple", async () => {
     renderCard("Link thread to issue and update chip status", {
       linkedIssues: [linkedPull],
