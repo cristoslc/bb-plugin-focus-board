@@ -79,6 +79,7 @@ function renderModal(
     focusRequest,
     parentThreadId,
     parentThreadTitle,
+    parentGroupName,
     groupName,
     withMaximize = false,
     rememberProjectId,
@@ -91,6 +92,7 @@ function renderModal(
     focusRequest?: number;
     parentThreadId?: string;
     parentThreadTitle?: string;
+    parentGroupName?: string;
     groupName?: string;
     withMaximize?: boolean;
     rememberProjectId?: ReturnType<typeof vi.fn>;
@@ -107,6 +109,7 @@ function renderModal(
       focusRequest,
       parentThreadId,
       parentThreadTitle,
+      ...(parentGroupName !== undefined ? { parentGroupName } : {}),
       ...(groupName !== undefined ? { groupName } : {}),
       onSpawned,
       ...(rememberProjectId !== undefined ? { rememberProjectId } : {}),
@@ -340,5 +343,30 @@ describe("the group preset (New thread in group…)", () => {
     renderModal({ groupName: "Auth rework" });
     expect("defaultProviderId" in (lastComposerProps ?? {})).toBe(false);
     expect("defaultModel" in (lastComposerProps ?? {})).toBe(false);
+  });
+});
+
+describe("the child preset's group inheritance (New child thread… from a grouped parent)", () => {
+  it("names the parent's group the child will join", () => {
+    renderModal({ parentThreadId: "thr_p", parentThreadTitle: "Auth rework", parentGroupName: "Auth rework" });
+    const hint = document.querySelector('[data-new-child-group-hint=""]');
+    if (hint === null) throw new Error("child group hint not rendered");
+    expect(hint.textContent).toContain("Will join the group");
+    expect(hint.textContent).toContain("Auth rework");
+  });
+
+  it("without the parent being grouped, carries no group hint (inverse)", () => {
+    renderModal({ parentThreadId: "thr_p", parentThreadTitle: "Auth rework" });
+    expect(document.querySelector('[data-new-child-group-hint=""]')).toBeNull();
+  });
+
+  it("a parent-preset thread without a parentGroupName never renders the grouping hint (inverse, root-shaped data)", () => {
+    renderModal({ parentThreadId: "thr_p" });
+    expect(document.querySelector('[data-new-child-group-hint=""]')).toBeNull();
+  });
+
+  it("a grouped child spawn still keeps the nesting hint", () => {
+    renderModal({ parentThreadId: "thr_p", parentThreadTitle: "Auth rework", parentGroupName: "Auth rework" });
+    expect(document.querySelector('[data-new-child-hint=""]')).not.toBeNull();
   });
 });
