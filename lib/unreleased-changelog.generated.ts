@@ -35,7 +35,13 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
   {
     "text": "**A right-click on a family box offers the group's actions in one menu.** New thread in group… opens the composer preset to the group, Rename group… opens the label editor, and Ungroup all members keeps its click-again confirm.",
     "children": [
-      "The spawned thread lands with the majority of the members' settings: the most common project and the most common provider/model pair seeded into the composer, each member's model resolved through its own settings.",
+      "The spawned thread lands with the majority of the members' settings: the most common project and the most common provider/model pair seeded into the composer, each member's model resolved through its own settings."
+    ],
+    "group": "Groups and family boxes"
+  },
+  {
+    "text": "**A child thread joins the parent's group.** Starting a child thread from a grouped parent (card menu or pane menu) writes the parent's group membership onto the spawn, so the child counts as a real member of the box and the group filter everywhere, including after the parent is archived. The dialog names the group before the prompt is spent (\"Will join the group …\").",
+    "children": [
       "The composer dialog announces the target, \"Will be tagged into *group*\", before the prompt is spent, and tags the spawned thread into the group itself.",
       "Member cards keep their own menus; the group menu covers the box's surface only."
     ],
