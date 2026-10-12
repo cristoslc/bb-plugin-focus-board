@@ -8,7 +8,7 @@ import {
 } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { BoardColumn, GroupBy, LaneHideOutcome } from "./grouping";
-import { threadState } from "./grouping";
+import { threadState, THREAD_STATE_LABELS } from "./grouping";
 import {
   SWEEP_DESTINATION_LABELS,
   SWEEP_SETTLED_WORDS,
@@ -51,6 +51,7 @@ import {
   runsFromColumns,
   unitMoveTarget,
   type ColumnRunInfo,
+  type GroupBox,
   type GroupBoxMap,
   type GroupRunItem,
 } from "../components/group-boxes";
@@ -289,6 +290,15 @@ interface BoardProps {
   collapsedFamilyIds?: ReadonlySet<string>;
   /** Reports a family card's collapse/expand gesture (parent id, new state). */
   onFamilyCollapsedChange?: (parentId: string, collapsed: boolean) => void;
+  /**
+   * Group ids whose dashed boxes fold into ONE normal-size card (the box's
+   * members hide). Persisted by the caller; absent → boxes always render
+   * expanded and no fold affordance appears (a board that cannot expand a
+   * folded box must never fold one).
+   */
+  collapsedGroupIds?: ReadonlySet<string>;
+  /** Reports a group box's collapse/expand gesture (group id, new state). */
+  onGroupCollapsedChange?: (groupId: string, collapsed: boolean) => void;
   /**
    * Attention reporting (components/attention-freeze): the card a pointer
    * enters, and the card it leaves. The caller captures each entered card's
@@ -580,6 +590,8 @@ export function Board({
   dimmedIds,
   collapsedFamilyIds,
   onFamilyCollapsedChange,
+  collapsedGroupIds,
+  onGroupCollapsedChange,
   projectNameFor,
   repoBaseFor,
   statusFor,
@@ -2859,9 +2871,27 @@ export function Board({
                         >
                           {play.boxName}
                         </span>
-                        <ul className="flex flex-col gap-1.5">
-                          {(play.members ?? []).map((member) => threadLi(member))}
-                        </ul>
+                        {collapsedGroupIds?.has(play.threadId) ? (
+                          // The box was folded when it left: the ghost keeps
+                          // the fold's shape — one dashed normal-size card —
+                          // so the dissolve never flashes the expanded box.
+                          <div
+                            data-ghost-collapsed-group={play.threadId}
+                            className="rounded-md border border-dashed border-muted-foreground/50 bg-card px-2.5 py-1.5"
+                          >
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <span className="truncate">{play.boxName}</span>
+                              <span className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] tabular-nums">
+                                {(play.members ?? []).length}{" "}
+                                {(play.members ?? []).length === 1 ? "thread" : "threads"}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <ul className="flex flex-col gap-1.5">
+                            {(play.members ?? []).map((member) => threadLi(member))}
+                          </ul>
+                        )}
                         {transportSparksOn ? (
                           <TransportSparkLayer phaseMs={TRANSPORT_WIPE_OUT_MS} tone="out" />
                         ) : null}
@@ -2926,8 +2956,242 @@ export function Board({
                       rankDragLifecycle(lead.id);
                     }
                   };
-                  const renderRun = (runItem: GroupRunItem) =>
-                    runItem.kind === "single" ? (
+                  /**
+                   * One box run's fold state: the box renders as ONE
+                   * normal-size card when the caller persisted a collapse for
+                   * its group AND can expand it again (unwired boards never
+                   * fold), and never while its label rename editor is open —
+                   * the editor lives in the expanded box's label row, so the
+                   * fold lifts while it is on.
+                   */
+                  const boxCollapseFolds = (box: GroupBox): boolean =>
+                    onGroupCollapsedChange !== undefined &&
+                    renamingBoxId !== box.groupId &&
+                    (collapsedGroupIds?.has(box.groupId) ?? false);
+                  /**
+                   * One collapsed box run's markup: ONE normal-size card
+                   * whose dashed ring keeps the box's own vocabulary — the
+                   * visual that distinguishes it from a real thread card or
+                   * a parent thread card. It carries the group name, the
+                   * member count, and one status dot per member (the same
+                   * strip the family fold uses); the cards it stands for are
+                   * hidden. The box's gestures ride it: it drags the whole
+                   * unit (the lead member's payload, the label drag's own),
+                   * it accepts drop-to-join over its whole surface, and a
+                   * right-click opens the group's menu (its "Expand group"
+                   * entry unwinds the fold).
+                   */
+                  const renderCollapsedBoxRun = (box: {
+                    groupId: string;
+                    name: string;
+                    members: readonly PluginSidebarThread[];
+                  }) => {
+                    const collapsedGroupMenuWired =
+                      onNewThreadInGroup !== undefined ||
+                      onRenameGroup !== undefined ||
+                      onDeleteGroup !== undefined ||
+                      onGroupCollapsedChange !== undefined;
+                    return (
+                      <li
+                        key={`group:${box.groupId}`}
+                        data-collapsed-group={box.groupId}
+                        data-transport-arrival={
+                          boxArrivalFor(box.groupId) ? "wiping-in" : undefined
+                        }
+                        style={
+                          boxArrivalFor(box.groupId) !== undefined &&
+                          !prefersReducedMotion
+                            ? { maxHeight: "0px", overflow: "hidden" }
+                            : undefined
+                        }
+                        ref={(el) => {
+                          const arriving = boxArrivalFor(box.groupId);
+                          if (arriving !== undefined) {
+                            transportElsRef.current.set(
+                              `slot:${arriving.threadId}@${arriving.gen}`,
+                              el,
+                            );
+                          }
+                        }}
+                        className="relative mt-1.5"
+                        draggable={box.members.length > 0}
+                        onDragStart={(event) => beginBoxLabelDrag(event, box)}
+                        onDragEnd={() => rankDragLifecycle(null)}
+                        onContextMenu={(event) => {
+                          // The group menu covers the folded card exactly as
+                          // it covers the expanded box's surface; an unwired
+                          // board opens nothing.
+                          if (!collapsedGroupMenuWired) return;
+                          event.preventDefault();
+                          setGroupMenuUngroupArmed(false);
+                          setGroupMenu({
+                            groupId: box.groupId,
+                            name: box.name,
+                            x: event.clientX,
+                            y: event.clientY,
+                          });
+                        }}
+                        onDragOver={(event) => {
+                          if (!ranking || onJoinGroup === undefined) return;
+                          const droppedId = draggingIdRef.current;
+                          if (droppedId === null || droppedId === "") return;
+                          if (!canJoinGroup(droppedId, box.groupId, groupBoxOf ?? EMPTY_GROUP_BOXES)) return;
+                          event.preventDefault();
+                          event.dataTransfer.dropEffect = "move";
+                          setJoinHoverId(box.groupId);
+                        }}
+                        onDragLeave={(event) => {
+                          // Same contains() guard the card slots run: the
+                          // promise dies only when the hover truly left.
+                          const into = event.relatedTarget;
+                          if (into instanceof Node && event.currentTarget.contains(into)) return;
+                          setJoinHoverId((current) => (current === box.groupId ? null : current));
+                        }}
+                        onDrop={(event) => {
+                          if (!ranking || onJoinGroup === undefined) return;
+                          const droppedId = draggedIdFor(event, draggingIdRef.current);
+                          if (
+                            droppedId === "" ||
+                            !canJoinGroup(droppedId, box.groupId, groupBoxOf ?? EMPTY_GROUP_BOXES)
+                          ) {
+                            return; // unclaimed: the column's own drop path decides
+                          }
+                          // Claim the drop so the column's append or
+                          // state-change path stays out of a join write.
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setJoinHoverId(null);
+                          onJoinGroup(droppedId, box.groupId);
+                        }}
+                      >
+                        <div
+                          data-collapsed-group-card={box.groupId}
+                          data-collapsed-group-join-hover={joinHoverId === box.groupId ? "" : undefined}
+                          data-transport-fade={
+                            boxArrivalFor(box.groupId) !== undefined &&
+                            !prefersReducedMotion
+                              ? ""
+                              : undefined
+                          }
+                          style={
+                            boxArrivalFor(box.groupId) !== undefined &&
+                            !prefersReducedMotion
+                              ? { opacity: 0 }
+                              : undefined
+                          }
+                          ref={(el) => {
+                            const boxArrival = boxArrivalFor(box.groupId);
+                            if (boxArrival !== undefined && el !== null && !prefersReducedMotion) {
+                              transportElsRef.current.set(
+                                `arrival:${boxArrival.threadId}@${boxArrival.gen}`,
+                                el,
+                              );
+                            }
+                          }}
+                          className={cn(
+                            // A NORMAL card's shape (the thread card's own
+                            // rounded-md + bg-card), with the box's dashed
+                            // border: the fold never reads as a real card.
+                            "relative rounded-md border border-dashed border-muted-foreground/50 bg-card px-2.5 py-1.5",
+                            // The join hover reads amber like the box's.
+                            joinHoverId === box.groupId &&
+                              "ring-2 ring-amber-500/80 border-amber-500/70",
+                          )}
+                        >
+                          <button
+                            type="button"
+                            data-collapsed-group-toggle={box.groupId}
+                            aria-expanded={false}
+                            aria-label={`Expand group ${box.name}`}
+                            title={`Feature group “${box.name}” — click to expand the member cards; drag this card to move the whole group; drop a card on it to join the group`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onGroupCollapsedChange?.(box.groupId, false);
+                            }}
+                            className={cn(
+                              "flex max-w-full items-center gap-1.5 rounded-sm py-0.5 pr-1.5 text-xs text-foreground",
+                              "transition-colors hover:bg-accent/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            )}
+                          >
+                            <Icon name="ChevronRight" className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+                            <span className="truncate font-medium">{box.name}</span>
+                            <span className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] tabular-nums text-muted-foreground">
+                              {box.members.length} {box.members.length === 1 ? "thread" : "threads"}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            data-collapsed-group-dots={box.groupId}
+                            aria-label={`Expand group ${box.name}`}
+                            title="Show the group's member cards"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onGroupCollapsedChange?.(box.groupId, false);
+                            }}
+                            className={cn(
+                              "mt-1 flex max-w-full flex-wrap items-center gap-1 rounded-sm py-0.5",
+                              "transition-colors hover:bg-accent/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            )}
+                          >
+                            {box.members.map((member) => {
+                              const state = threadState(member);
+                              return (
+                                <span
+                                  key={member.id}
+                                  data-collapsed-group-dot=""
+                                  title={`${member.displayTitle} · ${THREAD_STATE_LABELS[state] ?? state}`}
+                                  className={cn(
+                                    "size-1.5 rounded-full",
+                                    DOT_CLASS[state] ?? "bg-muted-foreground/30",
+                                    state === "attention" && "motion-safe:animate-pulse",
+                                  )}
+                                />
+                              );
+                            })}
+                          </button>
+                        </div>
+                        {/* The arrival's glint layer rides the slot li —
+                            a sibling of the fading dashed card, so the amber
+                            sparks never inherit its dissolve opacity. */}
+                        {transportSparksOn &&
+                        boxArrivalFor(box.groupId) !== undefined ? (
+                          <TransportSparkLayer phaseMs={TRANSPORT_WIPE_IN_MS} tone="in" />
+                        ) : null}
+                      </li>
+                    );
+                  };
+                  /**
+                   * The expanded box's fold affordance: a small chevron chip
+                   * beside the label, wired only when the caller persists
+                   * collapse state. Unwired boards never offer the fold.
+                   */
+                  const boxCollapseChevron = (box: {
+                    groupId: string;
+                    name: string;
+                  }) =>
+                    onGroupCollapsedChange === undefined ? null : (
+                      <button
+                        type="button"
+                        data-group-box-collapse={box.groupId}
+                        aria-label={`Collapse group ${box.name}`}
+                        title={`Collapse group “${box.name}” — the member cards fold into one compact card`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onGroupCollapsedChange?.(box.groupId, true);
+                        }}
+                        className={cn(
+                          "flex h-[14px] items-center rounded-sm bg-muted px-0.5 text-muted-foreground",
+                          "transition-colors hover:text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                        )}
+                      >
+                        <Icon name="ChevronsUp" className="size-2.5" aria-hidden />
+                      </button>
+                    );
+                  const renderRun = (runItem: GroupRunItem) => {
+                    if (runItem.kind === "box" && boxCollapseFolds(runItem.box)) {
+                      return renderCollapsedBoxRun(runItem.box);
+                    }
+                    return runItem.kind === "single" ? (
                       threadLi(runItem.thread)
                     ) : (
                       <li
@@ -2969,7 +3233,8 @@ export function Board({
                           if (
                             onNewThreadInGroup === undefined &&
                             onRenameGroup === undefined &&
-                            onDeleteGroup === undefined
+                            onDeleteGroup === undefined &&
+                            onGroupCollapsedChange === undefined
                           ) {
                             return;
                           }
@@ -3175,29 +3440,35 @@ export function Board({
                                   ) : null}
                                 </div>
                               ) : onRenameGroup !== undefined ? (
-                                <button
-                                  type="button"
-                                  data-group-box-label={runItem.box.groupId}
-                                  title={`Feature group “${runItem.box.name}” — click to rename; drag this label or any member to move the whole box; drop a card on this box to join the group`}
-                                  draggable
-                                  onDragStart={(event) => beginBoxLabelDrag(event, runItem.box)}
-                                  onDragEnd={() => rankDragLifecycle(null)}
-                                  onClick={() => startLabelRename(runItem.box.groupId)}
-                                  className="absolute -top-2 left-3 z-10 max-w-48 truncate rounded-sm bg-muted px-1 text-left text-[10.5px] leading-[14px] text-muted-foreground hover:text-foreground"
-                                >
-                                  {runItem.box.name}
-                                </button>
+                                <div className="absolute -top-2 left-3 z-10 flex items-center gap-0.5">
+                                  <button
+                                    type="button"
+                                    data-group-box-label={runItem.box.groupId}
+                                    title={`Feature group “${runItem.box.name}” — click to rename; drag this label or any member to move the whole box; drop a card on this box to join the group`}
+                                    draggable
+                                    onDragStart={(event) => beginBoxLabelDrag(event, runItem.box)}
+                                    onDragEnd={() => rankDragLifecycle(null)}
+                                    onClick={() => startLabelRename(runItem.box.groupId)}
+                                    className="max-w-48 truncate rounded-sm bg-muted px-1 text-left text-[10.5px] leading-[14px] text-muted-foreground hover:text-foreground"
+                                  >
+                                    {runItem.box.name}
+                                  </button>
+                                  {boxCollapseChevron(runItem.box)}
+                                </div>
                               ) : (
-                                <span
-                                  data-group-box-label={runItem.box.groupId}
-                                  title={`Feature group “${runItem.box.name}” — drag this label or any member to move the whole box; drop a card on this box to join the group`}
-                                  draggable
-                                  onDragStart={(event) => beginBoxLabelDrag(event, runItem.box)}
-                                  onDragEnd={() => rankDragLifecycle(null)}
-                                  className="absolute -top-2 left-3 z-10 rounded-sm bg-muted px-1 text-[10.5px] leading-[14px] text-muted-foreground"
-                                >
-                                  {runItem.box.name}
-                                </span>
+                                <div className="absolute -top-2 left-3 z-10 flex items-center gap-0.5">
+                                  <span
+                                    data-group-box-label={runItem.box.groupId}
+                                    title={`Feature group “${runItem.box.name}” — drag this label or any member to move the whole box; drop a card on this box to join the group`}
+                                    draggable
+                                    onDragStart={(event) => beginBoxLabelDrag(event, runItem.box)}
+                                    onDragEnd={() => rankDragLifecycle(null)}
+                                    className="rounded-sm bg-muted px-1 text-[10.5px] leading-[14px] text-muted-foreground"
+                                  >
+                                    {runItem.box.name}
+                                  </span>
+                                  {boxCollapseChevron(runItem.box)}
+                                </div>
                               )}
                               <ul className="flex flex-col gap-1.5">
                                 {runItem.box.members.map((boxMember, memberIndex) =>
@@ -3222,6 +3493,7 @@ export function Board({
                             ) : null}
                           </li>
                     );
+                    };
                   return (
                     <ul className="flex flex-col gap-1.5">
                       {insertGhostSlots(columnRuns, laneOutGhosts).map((entry) =>
@@ -3287,6 +3559,18 @@ export function Board({
                     const groupId = groupMenu.groupId;
                     closeGroupMenu();
                     startLabelRename(groupId);
+                  },
+            collapse:
+              onGroupCollapsedChange === undefined
+                ? undefined
+                : {
+                    collapsed: collapsedGroupIds?.has(groupMenu.groupId) ?? false,
+                    toggle: () => {
+                      const groupId = groupMenu.groupId;
+                      const wasCollapsed = collapsedGroupIds?.has(groupId) ?? false;
+                      closeGroupMenu();
+                      onGroupCollapsedChange(groupId, !wasCollapsed);
+                    },
                   },
             ungroup:
               onDeleteGroup === undefined

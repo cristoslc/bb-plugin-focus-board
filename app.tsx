@@ -126,13 +126,16 @@ import {
 import { useSweepClickAway } from "./components/board";
 import {
   COLLAPSED_FAMILIES_KEY,
+  COLLAPSED_GROUPS_KEY,
   GROUP_BY_KEY,
   NEST_CHILDREN_KEY,
   PARENT_LANE_ORDER_KEY,
   collapsedFamiliesStoredValue,
+  collapsedGroupsStoredValue,
   escStopsRunningFromSetting,
   nestStoredValue,
   parseCollapsedFamiliesStored,
+  parseCollapsedGroupsStored,
   parseNestStored,
   parseGroupStored,
   parseParentLaneOrderStored,
@@ -769,6 +772,9 @@ function BoardPage({ subPath }: { subPath: string }) {
   const [collapsedFamilies, setCollapsedFamilies] = useState<ReadonlySet<string>>(() =>
     parseCollapsedFamiliesStored(readStoredText(COLLAPSED_FAMILIES_KEY, "")),
   );
+  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(() =>
+    parseCollapsedGroupsStored(readStoredText(COLLAPSED_GROUPS_KEY, "")),
+  );
   // Board wallpaper: a versioned settings document (single global layer
   // today; per-project / per-group overrides extend the same document).
   const [wallpaper, setWallpaper] = useState<WallpaperSettings>(() =>
@@ -1124,6 +1130,20 @@ function BoardPage({ subPath }: { subPath: string }) {
       const next = new Set(current);
       if (collapsed) next.add(parentId);
       else next.delete(parentId);
+      return next;
+    });
+  }, []);
+  // Same single-writer pattern for the collapsed group boxes: state is the
+  // only writer, this effect serializes it (the mount run's round-trip also
+  // repairs a corrupt stored list).
+  useEffect(() => {
+    writeStored(COLLAPSED_GROUPS_KEY, collapsedGroupsStoredValue(collapsedGroups));
+  }, [collapsedGroups]);
+  const setGroupCollapsed = useCallback((groupId: string, collapsed: boolean) => {
+    setCollapsedGroups((current) => {
+      const next = new Set(current);
+      if (collapsed) next.add(groupId);
+      else next.delete(groupId);
       return next;
     });
   }, []);
@@ -2801,6 +2821,8 @@ function BoardPage({ subPath }: { subPath: string }) {
             onNewThreadInGroup={openNewThreadInGroup}
             collapsedFamilyIds={collapsedFamilies}
             onFamilyCollapsedChange={setFamilyCollapsed}
+            collapsedGroupIds={collapsedGroups}
+            onGroupCollapsedChange={setGroupCollapsed}
             dimmedIds={dimmedIds}
             projectNameFor={projectNameFor}
             repoBaseFor={repoBaseFor}
