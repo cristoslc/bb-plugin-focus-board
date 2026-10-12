@@ -200,4 +200,54 @@ describe("groupBoxMenuActions (the group box's own right-click menu)", () => {
         .every((action) => action.danger !== true && !/click again/i.test(action.label)),
     ).toBe(true);
   });
+
+  it("the collapse entry is wired: Collapse group when expanded, Expand group when collapsed", () => {
+    const expanded = groupBoxMenuActions({
+      armed: false,
+      collapse: { collapsed: false, toggle: () => undefined },
+    });
+    expect(expanded.map((action) => action.id)).toEqual(["collapse-group"]);
+    expect(expanded[0]?.label).toBe("Collapse group");
+    const collapsed = groupBoxMenuActions({
+      armed: false,
+      collapse: { collapsed: true, toggle: () => undefined },
+    });
+    expect(collapsed[0]?.label).toBe("Expand group");
+  });
+
+  it("the collapse toggle is the caller's closure", () => {
+    let ran = false;
+    const [entry] = groupBoxMenuActions({
+      armed: false,
+      collapse: { collapsed: false, toggle: () => (ran = true) },
+    });
+    entry?.run();
+    expect(ran).toBe(true);
+  });
+
+  it("an unwired collapse entry is omitted, keeping the three-entry menu unchanged", () => {
+    const actions = groupBoxMenuActions({
+      armed: false,
+      spawn: () => undefined,
+      rename: () => undefined,
+      ungroup: () => undefined,
+    });
+    expect(actions.map((action) => action.id)).toEqual(["new-thread-in-group", "rename-group", "ungroup-all"]);
+  });
+
+  it("the collapse entry runs after rename and before ungroup when every capability is wired", () => {
+    const actions = groupBoxMenuActions({
+      armed: false,
+      spawn: () => undefined,
+      rename: () => undefined,
+      ungroup: () => undefined,
+      collapse: { collapsed: false, toggle: () => undefined },
+    });
+    expect(actions.map((action) => action.id)).toEqual([
+      "new-thread-in-group",
+      "rename-group",
+      "collapse-group",
+      "ungroup-all",
+    ]);
+  });
 });

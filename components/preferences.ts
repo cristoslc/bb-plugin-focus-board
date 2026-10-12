@@ -86,6 +86,32 @@ export function collapsedFamiliesStoredValue(ids: ReadonlySet<string>): string {
 }
 
 /**
+ * Collapsed feature-group boxes' persistence. The stored list holds the
+ * GROUP ids whose dashed boxes fold into one normal-size card; every id
+ * absent from it renders the box expanded (the default), so the list only
+ * ever records deliberate collapses. Tolerant like every other stored value:
+ * corrupt JSON, a non-array, or non-string entries degrade to fewer (or
+ * zero) collapsed groups, never to a board that fails to load.
+ */
+export const COLLAPSED_GROUPS_KEY = "focus-board:collapsedGroups";
+
+export function parseCollapsedGroupsStored(raw: string | null): ReadonlySet<string> {
+  if (raw === null || raw === "") return new Set();
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((entry): entry is string => typeof entry === "string"));
+  } catch {
+    return new Set();
+  }
+}
+
+/** Sorted for a stable stored form, so equal sets round-trip byte-identical. */
+export function collapsedGroupsStoredValue(ids: ReadonlySet<string>): string {
+  return JSON.stringify([...ids].sort());
+}
+
+/**
  * The localStorage access the board preferences share: every stored value
  * parses through its own tolerant reader above, and these three wrap the
  * raw window access (it can throw in embedded contexts) so callers keep one
