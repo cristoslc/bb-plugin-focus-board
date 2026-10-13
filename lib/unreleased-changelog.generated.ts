@@ -76,6 +76,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "Search and filters"
   },
   {
+    "text": "**The wallpaper crop tunes over the image itself.** The picker's viewport flips layers: the wallpaper image paints at its own natural aspect, and a mocked-up board lays over it as a window at the board's exact ratio, so its place and size show which parts and how much of the image fill the board, bars included as window overhang. Dragging reframes, pinching zooms, the window takes arrow keys, and the lane and card silhouettes ride inside the window; the old board-shaped replica with its small focal square is gone.",
+    "children": [],
+    "group": "Settings"
+  },
+  {
     "text": "**The Appearance tab is now the wallpaper's only home.** The board toolbar drops its wallpaper icon, and the picker renders inline in the settings' Appearance tab instead of popping over the toolbar; a wallpaper already stored keeps painting the board.",
     "children": [],
     "group": "Settings"
