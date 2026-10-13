@@ -88,6 +88,8 @@ export function WallpaperPicker({
       dim: override.dim ?? active.dim,
     };
     if (active.darkUrl !== undefined) layer.darkUrl = active.darkUrl;
+    const nextCanvas = override.canvas ?? active.canvas;
+    if (nextCanvas !== undefined) layer.canvas = nextCanvas;
     Object.assign(layer, cropFields(nextFit, nextZoom, nextFocusX, nextFocusY, active));
     onWallpaperChange({ version: 1, global: layer });
   };
@@ -172,6 +174,9 @@ export function WallpaperPicker({
             onZoomChange={(zoom) => {
               setZoom(zoom);
               commitActive({ zoom });
+            }}
+            onCanvasChange={(color) => {
+              if (color !== active.canvas) commitActive({ canvas: color });
             }}
           />
         ) : null}

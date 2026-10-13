@@ -148,6 +148,20 @@ describe("wallpaper picker (Appearance tab content)", () => {
     });
   });
 
+  it("the dim slider preserves the stored canvas letterbox color too", () => {
+    const { onWallpaperChange } = renderPicker({
+      version: 1,
+      global: { url: "https://example.com/w.png", dim: 0.35, canvas: "#112233" },
+    });
+    fireEvent.change(screen.getByRole("slider", { name: "Wallpaper dim" }), {
+      target: { value: "0.6" },
+    });
+    expect(onWallpaperChange).toHaveBeenCalledWith({
+      version: 1,
+      global: { url: "https://example.com/w.png", dim: 0.6, canvas: "#112233" },
+    });
+  });
+
   it("the fit toggle commits fit: cover carrying the layer's url, dim, dark variant, and set crop fields", () => {
     const { onWallpaperChange } = renderPicker({
       version: 1,

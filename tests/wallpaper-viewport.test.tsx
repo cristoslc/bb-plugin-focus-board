@@ -8,7 +8,7 @@
 // and the lane/card silhouettes ride inside the board window at scale.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { WallpaperViewport, cropWindowOf, focusForCropWindowCenter } from "../components/wallpaper-viewport";
+import { WallpaperViewport, averageEdgeColor, cropWindowOf, focusForCropWindowCenter } from "../components/wallpaper-viewport";
 import type { BoardGeometry } from "../components/wallpaper-viewport";
 import type { WallpaperLayer } from "../components/preferences";
 
@@ -91,6 +91,37 @@ describe("focusForCropWindowCenter (pure inverse)", () => {
   });
 });
 
+describe("averageEdgeColor (pure edge sampler)", () => {
+  it("averages the four edge rings of the sampled image into a hex color", () => {
+    // 4x4 sample: edge pixels red (255,0,0), interior blue — only edges count.
+    const size = 4;
+    const data = new Uint8ClampedArray(size * size * 4);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const i = (y * size + x) * 4;
+        const edge = x === 0 || y === 0 || x === size - 1 || y === size - 1;
+        data[i] = edge ? 255 : 0;
+        data[i + 1] = 0;
+        data[i + 2] = edge ? 0 : 255;
+        data[i + 3] = 255;
+      }
+    }
+    expect(averageEdgeColor(data, size)).toBe("#ff0000");
+  });
+
+  it("mixed edges average channel-wise; empty or undersized samples refuse", () => {
+    const data = new Uint8ClampedArray([
+      10, 20, 30, 255,
+      10, 20, 30, 255,
+      10, 20, 30, 255,
+      10, 20, 30, 255,
+    ]);
+    expect(averageEdgeColor(data, 2)).toBe("#0a141e");
+    expect(averageEdgeColor(new Uint8ClampedArray(3), 4)).toBeNull();
+    expect(averageEdgeColor(new Uint8ClampedArray(16), 0)).toBeNull();
+  });
+});
+
 describe("wallpaper viewport", () => {
   it("paints the image itself and the board window over it, silhouettes inside the window", () => {
     render(
@@ -117,6 +148,48 @@ describe("wallpaper viewport", () => {
     const card = cropWindow.querySelector('[data-wallpaper-silhouette="card"]') as HTMLElement;
     expect(card.getAttribute("style")).toContain("left: 5%");
     expect(card.getAttribute("style")).toContain("top: 10%");
+  });
+
+  it("the board window paints the stored canvas color and a clipped copy of the image at the window's scale", () => {
+    // contain overhang: board 1.5, image 2, focal top-left -> window
+    // { x: 0, y: 0, w: 1, h: 4/3 }: the image copy fills the window's
+    // width and 75% of its height; the bars below show the canvas color.
+    render(
+      <WallpaperViewport
+        layer={{ url: "https://a/w.png", dim: 0, fit: "contain", canvas: "#112233", focusX: 0, focusY: 0 }}
+        dark={false}
+        geometry={{ aspect: 1.5, lanes: [], cards: [] }}
+        imageAspect={2}
+        onFocusChange={vi.fn()}
+        onZoomChange={vi.fn()}
+      />,
+    );
+    const cropWindow = screen.getByLabelText("Wallpaper crop window") as HTMLElement;
+    expect(cropWindow.style.backgroundColor).toBe("rgb(17, 34, 51)");
+    const copy = cropWindow.querySelector("[data-wallpaper-window-image]") as HTMLElement;
+    expect(copy.getAttribute("style")).toContain("left: 0%");
+    expect(copy.getAttribute("style")).toContain("top: 0%");
+    expect(copy.getAttribute("style")).toContain("width: 100%");
+    expect(copy.getAttribute("style")).toContain("height: 75%");
+  });
+
+  it("under cover the clipped copy overflows past the window and the canvas never shows", () => {
+    render(
+      <WallpaperViewport
+        layer={{ url: "https://a/w.png", dim: 0, fit: "cover", zoom: 2 }}
+        dark={false}
+        geometry={GEOMETRY}
+        imageAspect={1.5}
+        onFocusChange={vi.fn()}
+        onZoomChange={vi.fn()}
+      />,
+    );
+    const cropWindow = screen.getByLabelText("Wallpaper crop window") as HTMLElement;
+    const copy = cropWindow.querySelector("[data-wallpaper-window-image]") as HTMLElement;
+    expect(copy.getAttribute("style")).toContain("left: -50%");
+    expect(copy.getAttribute("style")).toContain("width: 200%");
+    // No canvas stored: the bars-less fallback rides the class.
+    expect(cropWindow.className).toContain("bg-background");
   });
 
   it("an image whose ratio is not yet known falls back to the board's aspect so the window stays exact", () => {

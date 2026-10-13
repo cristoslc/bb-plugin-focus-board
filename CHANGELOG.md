@@ -7,6 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+#### Wallpaper
+
+- **Letterbox bars take the image's own edge color.** When a wallpaper leaves bars under Letterbox, the picker samples the image's averaged edge color once (CORS-permitting hosts only) and fills the bars with it instead of the theme background.
+  - The sampled color saves with the wallpaper, so the board never re-reads pixels; a host that refuses the read keeps the themed bars.
+
 #### Card animations
 
 - **Cards teleport with the transporter dissolve.** A card moving between lanes dissolves away in its old spot (the slot holds until the dissolve finishes, then the lane closes) and materializes into the new one as its space opens quickly around it; both sweeps ease in slowly and bloom brighter as they travel, each carrying its own shimmer: silver glints rising from the bottom as the card departs, amber glints descending from the top as it arrives. A view switch or a whole-board batch move keeps the plain reflow.

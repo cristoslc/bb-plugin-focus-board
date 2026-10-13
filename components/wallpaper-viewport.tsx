@@ -3,6 +3,7 @@ import { HOST_PANEL_ATTR } from "./host-link-glue";
 import {
   clampedWallpaperFocus,
   clampedWallpaperZoom,
+  normalizeCanvasColor,
   resolvedWallpaperUrl,
   type WallpaperFit,
   type WallpaperLayer,
@@ -156,7 +157,6 @@ interface ImageMeasure {
   status: "loading" | "error";
   ratio: number;
 }
-
 /** Reads the wallpaper image's natural aspect (an <img> load reports it
  *  without any pixel access, so no CORS is involved). jsdom never loads
  *  images, so the ratio stays 0 and callers fall back until a real browser
@@ -193,15 +193,93 @@ const VIEWPORT_MAX_HEIGHT = 200;
  *  space) without colliding with neighboring picker content. */
 const VIEWPORT_RIM = 24;
 
+/**
+ * Averages the four edge rings of a sampled image into one hex color: the
+ * per-channel mean of every pixel that touches the sample's border. The
+ * result is the letterbox canvas, so a bar looks like the image running
+ * out instead of the theme background. Undersized samples refuse (null).
+ */
+export function averageEdgeColor(data: Uint8ClampedArray, size: number): string | null {
+  if (!Number.isInteger(size) || size <= 0) return null;
+  if (data.length < size * size * 4) return null;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let count = 0;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      if (x !== 0 && y !== 0 && x !== size - 1 && y !== size - 1) continue;
+      const i = (y * size + x) * 4;
+      r += data[i];
+      g += data[i + 1];
+      b += data[i + 2];
+      count += 1;
+    }
+  }
+  if (count === 0) return null;
+  const channel = (sum: number) => Math.round(sum / count).toString(16).padStart(2, "0");
+  return `#${channel(r)}${channel(g)}${channel(b)}`;
+}
+
+/**
+ * Samples the wallpaper's averaged edge color once per resolved url: a
+ * CORS-clean copy loads (`crossOrigin="anonymous"`), draws into a small
+ * offscreen canvas, and `averageEdgeColor` reads its border. A host
+ * without CORS headers, a tainted canvas, or a missing 2d context yields
+ * null — the canvas field then stays unset and the bars keep the theme
+ * background (the sampling is best-effort; the paint never needs pixels).
+ */
+function useWallpaperEdgeColor(url: string): string | null {
+  const [color, setColor] = useState<string | null>(null);
+  useEffect(() => {
+    if (url === "") {
+      setColor(null);
+      return;
+    }
+    let alive = true;
+    setColor(null);
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => {
+      if (!alive || image.naturalWidth === 0 || image.naturalHeight === 0) return;
+      const size = 32;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const context = canvas.getContext("2d");
+      if (context === null) return;
+      try {
+        context.drawImage(image, 0, 0, size, size);
+        const sampled = averageEdgeColor(context.getImageData(0, 0, size, size).data, size);
+        if (alive && sampled !== null) setColor(sampled);
+      } catch {
+        // A tainted canvas (no CORS headers from the host) cannot be read;
+        // the canvas field stays unset and the theme shows in the bars.
+        return;
+      }
+    };
+    image.src = url;
+    return () => {
+      alive = false;
+    };
+  }, [url]);
+  return color;
+}
+
 interface ViewportProps {
   /** The painted layer (null = no wallpaper: an empty outline). */
   layer: WallpaperLayer | null;
   dark: boolean;
   geometry: BoardGeometry | null;
-  /** Test seam: the image's natural aspect, normally measured live. */
+  /** Test seams: the image's natural aspect / sampled edge color, both
+   *  normally measured live in the browser. */
   imageAspect?: number;
+  canvasColor?: string | null;
   onFocusChange: (x: number, y: number) => void;
   onZoomChange: (zoom: number) => void;
+  /** Fired once the sampler has an edge color for the resolved url; the
+   *  picker persists it into the layer's `canvas` field (deduped there). */
+  onCanvasChange?: (color: string) => void;
 }
 
 /**
@@ -214,12 +292,22 @@ interface ViewportProps {
  * window so the mock stays orientable. One pointer drags the frame, two
  * pinch zoom; the crop window answers arrow keys.
  */
-export function WallpaperViewport({ layer, dark, geometry, imageAspect, onFocusChange, onZoomChange }: ViewportProps) {
+export function WallpaperViewport({ layer, dark, geometry, imageAspect, canvasColor, onFocusChange, onZoomChange, onCanvasChange }: ViewportProps) {
   const imageBoxRef = useRef<HTMLDivElement | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinchStart = useRef<{ distance: number; zoom: number } | null>(null);
   const boardAspect = geometry?.aspect ?? window.innerWidth / window.innerHeight;
-  const measured = useWallpaperImageRatio(layer === null ? "" : resolvedWallpaperUrl(layer, dark));
+  const resolvedUrl = layer === null ? "" : resolvedWallpaperUrl(layer, dark);
+  const measured = useWallpaperImageRatio(resolvedUrl);
+  const sampledColor = useWallpaperEdgeColor(resolvedUrl);
+  const edgeColor = canvasColor !== undefined ? canvasColor : sampledColor;
+  // Once the sampler reports for this url, hand the color up; the picker
+  // dedupes against the stored field, so this settles after one commit.
+  useEffect(() => {
+    if (layer !== null && edgeColor !== null && edgeColor !== layer.canvas) {
+      onCanvasChange?.(edgeColor);
+    }
+  }, [edgeColor, layer, onCanvasChange]);
   const ratio = imageAspect ?? measured.ratio;
   const imageAspectValue = ratio > 0 ? ratio : boardAspect;
   const failed = layer !== null && imageAspect === undefined && measured.status === "error" && measured.ratio === 0;
@@ -311,12 +399,16 @@ export function WallpaperViewport({ layer, dark, geometry, imageAspect, onFocusC
             aria-label="Wallpaper crop window"
             title="The board over the image: drag on the preview to reframe, pinch to zoom"
             tabIndex={0}
-            className="absolute rounded-md border-2 border-ring bg-ring/5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={`absolute rounded-md border-2 border-ring outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              layer.canvas === undefined ? "bg-background" : ""
+            }`}
             style={{
               left: `${windowRect.x * 100}%`,
               top: `${windowRect.y * 100}%`,
               width: `${windowRect.w * 100}%`,
               height: `${windowRect.h * 100}%`,
+              backgroundColor: layer.canvas ?? edgeColor ?? undefined,
+              overflow: "hidden",
             }}
             onKeyDown={(event) => {
               const step = 2;
@@ -337,6 +429,23 @@ export function WallpaperViewport({ layer, dark, geometry, imageAspect, onFocusC
               }
             }}
           >
+            {/* The image as the board paints it, clipped to the window:
+                fraction u of the image sits at (u − x)/w of the window, so
+                the full image copy spans from −x/w, scaled by 1/w. Its
+                overhang shows the canvas bars exactly where they paint. */}
+            <img
+              data-wallpaper-window-image=""
+              src={resolvedWallpaperUrl(layer, dark)}
+              alt=""
+              draggable={false}
+              className="absolute max-w-none"
+              style={{
+                left: `${(-windowRect.x / windowRect.w) * 100}%`,
+                top: `${(-windowRect.y / windowRect.h) * 100}%`,
+                width: `${(1 / windowRect.w) * 100}%`,
+                height: `${(1 / windowRect.h) * 100}%`,
+              }}
+            />
             {(geometry?.lanes ?? []).map((lane, index) => (
               <div
                 key={`lane-${index}-${lane.x}-${lane.y}`}
