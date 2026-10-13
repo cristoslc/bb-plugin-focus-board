@@ -1,0 +1,32 @@
+{
+  "cardInfo": {
+    "id": "thr_ship_release",
+    "rect": {
+      "x": 18,
+      "y": 89,
+      "width": 244,
+      "height": 77
+    },
+    "style": {
+      "backgroundColor": "oklch(0.195 0 0)",
+      "opacity": "1"
+    }
+  },
+  "siblingInfo": {
+    "id": "thr_roadmap",
+    "style": {
+      "backgroundColor": "oklch(0.195 0 0)",
+      "opacity": "1"
+    }
+  },
+  "hoverInfo": {
+    "hovered": {
+      "backgroundColor": "oklab(0.27495 0 0 / 0.5)",
+      "opacity": "1"
+    },
+    "sibling": {
+      "backgroundColor": "oklch(0.195 0 0)",
+      "opacity": "1"
+    }
+  }
+}
