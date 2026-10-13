@@ -219,47 +219,58 @@ describe("wallpaper picker (Appearance tab content)", () => {
     expect(document.querySelector("[data-wallpaper-viewport]")).not.toBeNull();
   });
 
-  it("dragging the viewport's focus rectangle commits free focal percentages, carrying the layer's fields", () => {
+  it("dragging the viewport reframes the crop window, committing focal percentages that carry the layer's fields", () => {
     const withActive = renderPicker({
-      version: 1,
-      global: { url: "https://example.com/w.png", dim: 0.5, darkUrl: "https://example.com/w-dark.png", fit: "cover" },
-    });
-    const root = document.querySelector("[data-wallpaper-viewport]") as HTMLElement;
-    Object.defineProperty(root, "getBoundingClientRect", {
-      value: () => ({ left: 0, top: 0, width: 100, height: 100, right: 100, bottom: 100, x: 0, y: 0, toJSON: () => ({}) }),
-    });
-    fireEvent.pointerDown(root, { pointerId: 1, clientX: 30, clientY: 70 });
-    expect(withActive.onWallpaperChange).toHaveBeenCalledWith({
       version: 1,
       global: {
         url: "https://example.com/w.png",
         dim: 0.5,
         darkUrl: "https://example.com/w-dark.png",
         fit: "cover",
-        focusX: 30,
-        focusY: 70,
+        zoom: 2,
       },
     });
+    const imageBox = document.querySelector("[data-wallpaper-imagebox]") as HTMLElement;
+    Object.defineProperty(imageBox, "getBoundingClientRect", {
+      value: () => ({ left: 0, top: 0, width: 100, height: 100, right: 100, bottom: 100, x: 0, y: 0, toJSON: () => ({}) }),
+    });
+    fireEvent.pointerDown(imageBox, { pointerId: 1, clientX: 30, clientY: 70 });
+    expect(withActive.onWallpaperChange).toHaveBeenCalledTimes(1);
+    const layer = (withActive.onWallpaperChange.mock.calls[0]?.[0] as { global: Record<string, unknown> }).global;
+    expect(layer).toEqual({
+      url: "https://example.com/w.png",
+      dim: 0.5,
+      darkUrl: "https://example.com/w-dark.png",
+      fit: "cover",
+      zoom: 2,
+      focusX: expect.any(Number),
+      focusY: expect.any(Number),
+    });
+    // The unloaded image falls back to the board's aspect, so cover zoom 2
+    // gives kw = kh = 0.5; the pointer at (30, 70) centers the window there
+    // -> focal (10, 90). Rounded here: the inverse carries fp noise.
+    expect(Math.round(layer.focusX as number)).toBe(10);
+    expect(Math.round(layer.focusY as number)).toBe(90);
   });
 
   it("pinching the viewport commits the scaled zoom, carrying the layer's fields", () => {
     const withActive = renderPicker({
       version: 1,
-      global: { url: "https://example.com/w.png", dim: 0.5 },
+      global: { url: "https://example.com/w.png", dim: 0.5, zoom: 2 },
     });
-    const root = document.querySelector("[data-wallpaper-viewport]") as HTMLElement;
-    Object.defineProperty(root, "getBoundingClientRect", {
+    const imageBox = document.querySelector("[data-wallpaper-imagebox]") as HTMLElement;
+    Object.defineProperty(imageBox, "getBoundingClientRect", {
       value: () => ({ left: 0, top: 0, width: 100, height: 100, right: 100, bottom: 100, x: 0, y: 0, toJSON: () => ({}) }),
     });
-    fireEvent.pointerDown(root, { pointerId: 1, clientX: 0, clientY: 50 });
-    fireEvent.pointerDown(root, { pointerId: 2, clientX: 40, clientY: 50 });
-    fireEvent.pointerMove(root, { pointerId: 2, clientX: 80, clientY: 50 });
-    // The press itself focused (0, 50); the pinch then carries the focal
-    // edit (focusX 0) while it scales the zoom. The mock parent never
-    // commits back, so focusY stays unstored and is omitted at its default.
+    fireEvent.pointerDown(imageBox, { pointerId: 1, clientX: 0, clientY: 50 });
+    fireEvent.pointerDown(imageBox, { pointerId: 2, clientX: 40, clientY: 50 });
+    fireEvent.pointerMove(imageBox, { pointerId: 2, clientX: 80, clientY: 50 });
+    // The press itself focused (focal x clamps to 0); the pinch then doubles
+    // the stored zoom 2 into the max 4. The mock parent never commits back,
+    // so focusY stays unstored and is omitted at its default.
     expect(withActive.onWallpaperChange).toHaveBeenCalledWith({
       version: 1,
-      global: { url: "https://example.com/w.png", dim: 0.5, focusX: 0, zoom: 2 },
+      global: { url: "https://example.com/w.png", dim: 0.5, zoom: 4, focusX: 0 },
     });
   });
 
