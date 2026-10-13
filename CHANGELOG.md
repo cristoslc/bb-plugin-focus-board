@@ -7,6 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+#### Wallpaper
+
+- **Letterbox bars take the image's own edge color.** When a wallpaper leaves bars under Letterbox, the picker samples the image's averaged edge color once (CORS-permitting hosts only) and fills the bars with it instead of the theme background.
+  - The sampled color saves with the wallpaper, so the board never re-reads pixels; a host that refuses the read keeps the themed bars.
+
 #### Card animations
 
 - **Cards teleport with the transporter dissolve.** A card moving between lanes dissolves away in its old spot (the slot holds until the dissolve finishes, then the lane closes) and materializes into the new one as its space opens quickly around it; both sweeps ease in slowly and bloom brighter as they travel, each carrying its own shimmer: silver glints rising from the bottom as the card departs, amber glints descending from the top as it arrives. A view switch or a whole-board batch move keeps the plain reflow.
@@ -46,6 +51,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 #### Settings
 
+- **The wallpaper crop tunes over the image itself.** The picker's viewport flips layers: the wallpaper image paints at its own natural aspect, and a mocked-up board lays over it as a window at the board's exact ratio, so its place and size show which parts and how much of the image fill the board, bars included as window overhang. Dragging reframes, pinching zooms, the window takes arrow keys, and the lane and card silhouettes ride inside the window; the old board-shaped replica with its small focal square is gone.
 - **The Appearance tab is now the wallpaper's only home.** The board toolbar drops its wallpaper icon, and the picker renders inline in the settings' Appearance tab instead of popping over the toolbar; a wallpaper already stored keeps painting the board.
 - **The plugin CLI drops its config commands.** Sweep thresholds are set through `bb plugin config focus-board` or the board settings modal, so `bb focus-board config show` and `config set` retire and the CLI help names the surviving door.
 - **The Behavior tab hosts the sweep thresholds.** Each arm's count and unit edit the same declared settings Focus Board's configuration page already edits, the values render live in both places, and a rejected write names its failure right under the row.

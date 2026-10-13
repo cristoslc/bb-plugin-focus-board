@@ -269,6 +269,11 @@ export interface WallpaperLayer {
   focusX?: number;
   /** The focal point's vertical percent, same rules as `focusX`. */
   focusY?: number;
+  /** The letterbox canvas: bars that appear when the image under-fills a
+   *  board axis paint this color instead of the theme background. A six
+   *  digit hex sampled once from the image's averaged edge color; a
+   *  garbage stored value degrades to the theme by dropping the FIELD. */
+  canvas?: string;
 }
 
 export interface WallpaperSettings {
@@ -320,6 +325,14 @@ function clampWallpaperFocus(raw: unknown): number | undefined {
   return clampedWallpaperFocus(raw);
 }
 
+/** The letterbox canvas color: exactly six-digit hex (the sampler's own
+ *  output shape), lowercased; anything else degrades to the theme. */
+export function normalizeCanvasColor(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed.toLowerCase() : null;
+}
+
 /** True for http(s) and data image-reference URLs; everything else (a
  *  javascript:-style scheme, a plain word, an invalid URL) is refused so it
  *  can never reach a CSS url() or a committed wallpaper document. */
@@ -334,7 +347,7 @@ export function isAllowedWallpaperUrl(url: string): boolean {
 
 function parseWallpaperLayer(raw: unknown): WallpaperLayer | null {
   if (raw === null || typeof raw !== "object") return null;
-  const record = raw as { url?: unknown; dim?: unknown; darkUrl?: unknown; fit?: unknown; zoom?: unknown; focusX?: unknown; focusY?: unknown };
+  const record = raw as { url?: unknown; dim?: unknown; darkUrl?: unknown; fit?: unknown; zoom?: unknown; focusX?: unknown; focusY?: unknown; canvas?: unknown };
   if (typeof record.url !== "string") return null;
   const url = record.url.trim();
   if (url === "" || !isAllowedWallpaperUrl(url)) return null;
@@ -364,6 +377,8 @@ function parseWallpaperLayer(raw: unknown): WallpaperLayer | null {
   if (focusX !== undefined) layer.focusX = focusX;
   const focusY = clampWallpaperFocus(record.focusY);
   if (focusY !== undefined) layer.focusY = focusY;
+  const canvas = normalizeCanvasColor(record.canvas);
+  if (canvas !== null) layer.canvas = canvas;
   return layer;
 }
 

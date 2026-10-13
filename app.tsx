@@ -2665,8 +2665,13 @@ function BoardPage({ subPath }: { subPath: string }) {
       {activeWallpaper === null ? null : (
         // The wallpaper paints on a clipped child, not the root, so a zoom
         // > 1 can scale the image past the panel edge without ever
-        // scrolling or resizing the board.
-        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        // scrolling or resizing the board. The sampled canvas color fills
+        // the letterbox bars behind the image when it under-fills an axis.
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+          style={activeWallpaper.canvas !== undefined ? { backgroundColor: activeWallpaper.canvas } : undefined}
+        >
           <div
             className="absolute inset-0"
             style={wallpaperBackgroundStyle(activeWallpaper, darkScheme) ?? undefined}

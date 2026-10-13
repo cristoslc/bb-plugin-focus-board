@@ -127,6 +127,26 @@ describe("wallpaper persistence", () => {
     });
   });
 
+  it("round-trips the canvas letterbox color next to the layer", () => {
+    const settings = {
+      version: 1 as const,
+      global: { url: "https://example.com/w.png", dim: 0.3, fit: "contain", canvas: "#112233" },
+    };
+    expect(parseWallpaperStored(wallpaperStoredValue(settings))).toEqual(settings);
+    expect(wallpaperStoredValue(settings)).toBe(
+      '{"version":1,"global":{"url":"https://example.com/w.png","dim":0.3,"fit":"contain","canvas":"#112233"}}',
+    );
+  });
+
+  it("a canvas color normalizes to lowercase six-digit hex; garbage drops the FIELD", () => {
+    expect(parseWallpaperStored(JSON.stringify({ version: 1, global: { url: "https://a", dim: 0.3, canvas: "#AABBCC" } })).global?.canvas).toBe("#aabbcc");
+    for (const junk of ["red", 7, "javascript:alert(1)", "#12345", "#1122334", "", null]) {
+      expect(
+        parseWallpaperStored(JSON.stringify({ version: 1, global: { url: "https://a", dim: 0.3, canvas: junk } })).global,
+      ).toEqual({ url: "https://a", dim: 0.3 });
+    }
+  });
+
   it("round-trips the crop controls (fit, zoom, focal point) next to url and dim", () => {
     const settings = {
       version: 1 as const,
