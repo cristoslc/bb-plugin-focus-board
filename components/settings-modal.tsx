@@ -21,6 +21,9 @@ import {
   SWEEP_CAPS,
   sweepUnitFromSetting,
   sweepValueFromSetting,
+  DEFAULT_NEW_THREAD_SHORTCUT_KEY,
+  newThreadShortcutKeyFromSetting,
+  parseNewThreadShortcutDraft,
   type SweepSettingKey,
   type SweepValueKey,
   type SweepUnitKey,
@@ -76,11 +79,13 @@ export function SettingsModal({
   onTabChange,
   entries,
   escStopsRunningThread,
+  newThreadShortcutKey,
   sweep = DEFAULT_SWEEP,
   cardTransport,
   motionPref,
   wallpaper,
   onSetEscStopsRunningThread,
+  onSetNewThreadShortcutKey,
   onSetSweep,
   onSetCardTransport,
   onSetMotionPref,
@@ -98,6 +103,18 @@ export function SettingsModal({
    * rule as the board's runtime read (components/preferences.ts).
    */
   escStopsRunningThread: string | number | boolean | undefined;
+  /**
+   * The server-declared New Thread composer shortcut's raw stored value
+   * (components/preferences.ts): unset/loading shows the C default, an
+   * explicit stored empty string shows the shortcut off.
+   */
+  newThreadShortcutKey: string | number | boolean | undefined;
+  /**
+   * Called with the value to write to the host setting: a lowercased single
+   * letter or digit, or the empty string for off. A failed write is
+   * surfaced inline under the row, never as a silent revert.
+   */
+  onSetNewThreadShortcutKey: (value: string) => void | Promise<void>;
   /**
    * The four sweep threshold settings' raw stored values, read with the
    * same unset-means-default rule (components/preferences.ts) at render —
@@ -167,6 +184,10 @@ export function SettingsModal({
                 <EscStopsRunningRow
                   storedValue={escStopsRunningThread}
                   onSet={onSetEscStopsRunningThread}
+                />
+                <NewThreadShortcutRow
+                  storedValue={newThreadShortcutKey}
+                  onSet={onSetNewThreadShortcutKey}
                 />
                 <SweepThresholdRow
                   arm="done"
@@ -285,6 +306,113 @@ function AppearanceContent({
         aria-label="Escape stops a running thread first"
         aria-pressed={enabled}
         onClick={toggle}
+        className={cn(
+          "inline-flex h-6 shrink-0 items-center rounded-md border px-2 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          enabled
+            ? "border-transparent bg-primary text-primary-foreground hover:bg-primary/90"
+            : "bg-background text-muted-foreground hover:bg-accent",
+        )}
+      >
+        {enabled ? "On" : "Off"}
+      </button>
+    </div>
+  );
+}
+
+/** The Behavior tab's New Thread shortcut row: the board-composer hotkey
+ *  setting (the key field plus an on/off toggle — clearing the field and
+ *  the toggle write the same off state, so both surfaces stay truthful).
+ *  The field commits on blur or Enter like the sweep rows; an invalid draft
+ *  (anything but one letter or digit) writes nothing, surfaces inline, and
+ *  snaps back to the effective key. */
+function NewThreadShortcutRow({
+  storedValue,
+  onSet,
+}: {
+  storedValue: string | number | boolean | undefined;
+  onSet: (value: string) => void | Promise<void>;
+}) {
+  const effective = newThreadShortcutKeyFromSetting(storedValue);
+  const enabled = effective !== null;
+  const [draft, setDraft] = useState<string>(effective ?? "");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  // The host's confirmation re-renders this row; while loading or before
+  // the write confirms, the field keeps what the user typed.
+  useEffect(() => {
+    setDraft(effective ?? "");
+  }, [effective]);
+
+  const commit = () => {
+    setSaveError(null);
+    const parsed = parseNewThreadShortcutDraft(draft);
+    if (parsed === null) {
+      setDraft(effective ?? "");
+      setSaveError(
+        "Use a single letter or digit; clear the field or use the toggle to turn the shortcut off.",
+      );
+      return;
+    }
+    if (parsed === (effective ?? "")) return;
+    Promise.resolve(onSet(parsed)).catch((error: unknown) => {
+      // Fail loud at the point of choice: the write failed, the field stays
+      // true to the stored value, and the reason shows right here.
+      setSaveError(error instanceof Error ? error.message : String(error));
+    });
+  };
+  const toggleOff = () => {
+    setSaveError(null);
+    if (effective === null) return;
+    Promise.resolve(onSet("")).catch((error: unknown) => {
+      setSaveError(error instanceof Error ? error.message : String(error));
+    });
+  };
+  const toggleOn = () => {
+    setSaveError(null);
+    Promise.resolve(onSet(DEFAULT_NEW_THREAD_SHORTCUT_KEY)).catch(
+      (error: unknown) => {
+        setSaveError(error instanceof Error ? error.message : String(error));
+      },
+    );
+  };
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-foreground">
+          Board: New Thread composer shortcut
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          A single letter or digit that opens the New Thread composer while
+          the overview board is showing with no pane open. Default C; clear
+          the field (or toggle off) to turn the shortcut off.
+        </p>
+        <input
+          type="text"
+          aria-label="New Thread composer shortcut key"
+          value={draft}
+          maxLength={1}
+          spellCheck={false}
+          autoComplete="off"
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={commit}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              commit();
+            }
+          }}
+          className="mt-2 w-16 rounded-md border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+        {saveError !== null && (
+          <p className="mt-2 text-xs text-destructive" role="alert">
+            Saving failed: {saveError}
+          </p>
+        )}
+      </div>
+      <button
+        type="button"
+        aria-label="New Thread composer shortcut enabled"
+        aria-pressed={enabled}
+        onClick={enabled ? toggleOff : toggleOn}
         className={cn(
           "inline-flex h-6 shrink-0 items-center rounded-md border px-2 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           enabled

@@ -6,6 +6,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "Search and filters"
   },
   {
+    "text": "**The overview board opens the New Thread composer on a keyboard shortcut.** Pressing the configured key (default C) with no pane open opens the same composer the New Thread button does; typing in a pane never triggers it, and the key is changeable or switchable off in Settings → Behavior.",
+    "children": [],
+    "group": "New Thread composer"
+  },
+  {
     "text": "**Closing the thread pane releases the card it froze.** The pane-open push consumed its settle marker in a way that also ate the close's, so a closed pane's attention capture survived and the frozen family card stopped following live state (a running child could never lift it into Working until the next open or a drag). Now the close settle clears the capture, the fallback close clears it without a settle, and the decision lives in one pure `paneRouteAction` map.",
     "children": [],
     "group": "Board layout"

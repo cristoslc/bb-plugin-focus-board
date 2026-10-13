@@ -13,6 +13,10 @@ _Nothing unreleased — bullets land here as work merges._
 
 - **Mobile collapses the filter palette into a header toggle.** On a narrow screen the toolbar keeps New thread, search, the toggle, and the settings gear in one row, while View, the four filters, Clear, and the thread count hide inside an expandable ribbon that badges how many filters are active. The open/closed choice persists per browser and the desktop row is unchanged.
 
+#### New Thread composer
+
+- **The overview board opens the New Thread composer on a keyboard shortcut.** Pressing the configured key (default C) with no pane open opens the same composer the New Thread button does; typing in a pane never triggers it, and the key is changeable or switchable off in Settings → Behavior.
+
 ### Changed
 
 ### Fixed
