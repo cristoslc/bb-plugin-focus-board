@@ -26,7 +26,9 @@
 //   families are their own unit system there.
 // - A box owns its members' placement: members leave the flat list
 //   whenever the box does, and the runs pass below keeps them contiguous,
-//   in the column's own display order.
+//   in the column's own display order. An insert between members (a card
+//   landing mid-run) splits the run instead — one frame per adjacent
+//   slice, never a gather across the gap.
 //
 // Pure module: no host, no SDK, no React. The board's drag layer and the
 // rank store read the runs; lib/rank carries the unit-move write.
@@ -148,12 +150,14 @@ function stateIndexOf(state: ThreadState): number {
 /**
  * Wrap each column's display order into runs: box members gather into one
  * contiguous box item at the position of the FIRST member in the column's
- * own order, preserving relative member order; standalone cards keep their
- * slots. Under the split default the frame appears in EVERY lane holding at
- * least one live member: a slice of one (a group of one, or a multi-member
- * group's lone member in a lane) yields a box run around its single member —
- * role "solo" downstream, so it drags as a plain card but keeps the frame
- * (the outline is the drag-into target, and it is the highlight carrier).
+ * own order, preserving relative member order — and only while the members
+ * are adjacent (a non-member between them splits the run, one frame per
+ * slice); standalone cards keep their slots. Under the split default the
+ * frame appears in EVERY lane holding at least one live member: a slice of
+ * one (a group of one, or a multi-member group's lone member in a lane)
+ * yields a box run around its single member — role "solo" downstream, so it
+ * drags as a plain card but keeps the frame (the outline is the drag-into
+ * target, and it is the highlight carrier).
  */
 export function runsFromColumns(
   columns: readonly BoardColumn[],
@@ -181,6 +185,16 @@ export interface RunColumnLike {
  * group's lone member in a lane) yields a box run around its single member —
  * role "solo" downstream, so it drags as a plain card but keeps the frame
  * (the outline is the drag-into target, and it is the highlight carrier).
+ *
+ * A run never spans a non-member: when a foreign card sits BETWEEN two of
+ * the group's members (an insert — a relocation landing between them, a
+ * recency flip), the walk splits at the gap and renders one box item per
+ * adjacent slice, each keeping the frame. Gathering across the gap instead
+ * would render the whole group at the first member's slot and visually
+ * reorder a bystander card the column's own order never moved, plus swallow
+ * the member past the gap out of the lane's top-level card order (issue
+ * #106: unpinning a card between two boxed members read the lane as having
+ * lost the second member entirely).
  */
 export function columnRunItems(
   column: RunColumnLike,
@@ -188,7 +202,8 @@ export function columnRunItems(
 ): readonly GroupRunItem[] {
   const items: GroupRunItem[] = [];
   const consumedThisColumn = new Set<string>();
-  for (const thread of column.threads) {
+  for (let index = 0; index < column.threads.length; index += 1) {
+    const thread = column.threads[index]!;
     if (consumedThisColumn.has(thread.id)) continue;
     const box = groupBoxOf.get(thread.id);
     if (box === undefined) {
@@ -205,9 +220,16 @@ export function columnRunItems(
     // every in-box reorder the moment the store updates (reproduced live
     // 2026-10-10 — the box read reordered ranks and displayed the old
     // sequence, looking exactly like "reorder not working").
+    // The gather stops at the first non-member: a split run keeps each
+    // side's slice as its own frame at its own slot.
     const memberIds = new Set(box.members.map((member) => member.id));
-    const members = column.threads.filter((candidate) => memberIds.has(candidate.id));
-    for (const member of members) consumedThisColumn.add(member.id);
+    const members: PluginSidebarThread[] = [];
+    for (let cursor = index; cursor < column.threads.length; cursor += 1) {
+      const candidate = column.threads[cursor]!;
+      if (!memberIds.has(candidate.id)) break;
+      members.push(candidate);
+      consumedThisColumn.add(candidate.id);
+    }
     items.push({ kind: "box", box: { ...box, members } });
   }
   return items;

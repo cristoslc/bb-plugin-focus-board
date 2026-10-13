@@ -1,15 +1,15 @@
 # UAT report
 
-_Generated 2026-10-06T14:03:05.264Z by `npm run uat`._
+_Generated 2026-10-13T17:26:18.950Z by `npm run uat`._
 
 ## parent-lanes
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_pneffvegkv-1/bb-plugin-focus-board/tests/manual/uat-parent-lanes.yaml` · theme dark
+Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_ypbvuj7fz8-1/bb-plugin-focus-board/tests/manual/uat-parent-lanes.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
 | Parent-thread grouping shows family lanes and excludes loose threads | pass | ✓ text visible: "Parent thread lane fixture"; ✓ text visible: "Child thread lane fixture"; ✓ text hidden: "Standalone" |
-| The board opens with a family locked as the ruler lane and band tracks aligned | pass | ✓ locked lane: true; ✓ bands aligned across lanes; ✓ nest toggle: aria-checked=true aria-disabled=true; ✓ text hidden: "Standalone" |
+| The board opens with a family locked as the ruler lane and band tracks aligned | FAIL | ✓ locked lane: true; ✓ bands aligned across lanes; × nest toggle locked: true (Nest child threads checkbox not found); ✓ text hidden: "Standalone" |
 | A short pan that mostly brings the next lane in locks that lane | pass | ✓ locked lane: "thr_sweep_parent"; ✓ bands aligned across lanes |
 | Hovering a swimlane shades that row across every lane | pass | ✓ swimlane hover shades one row across lanes |
 | Clicking a lane header opens the parent thread's pane | pass | ✓ pane open; ✓ text visible: "Parent thread lane fixture"; ✓ url ends with /board/t/thr_parent_lane |

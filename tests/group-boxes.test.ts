@@ -371,6 +371,81 @@ describe("runsFromColumns — in-box member order follows the column's own order
   });
 });
 
+describe("runsFromColumns — a run never spans a non-member", () => {
+  // An insert into the run's middle (a card between two boxed members — the
+  // unpin reveal's relocation, a recency flip) must NOT make the walker
+  // gather across the gap: gathering would render the box at the first
+  // member's slot and swallow the members around the intervening card,
+  // visually reordering a bystander the column's own order never moved
+  // (reproduced live 2026-10-13, issue #106: unpinning a card between two
+  // boxed members vanished the second member from the lane's top-level
+  // order). A split run renders one frame per adjacent slice instead.
+  const membersOf = (ids: string[]) => ids.map((id, at) => thread({ id, status: "active", updatedAt: NOW - (at + 1) * 1000 }));
+  const runItemsOf = (ids: string[], ordered: string[]) => {
+    const threads = membersOf(ids);
+    // The cast threads are the group's members; thr_x stays unassigned.
+    const assignments: Record<string, string> = {};
+    for (const id of ids) {
+      if (id !== "thr_x") assignments[id] = "grp_auth";
+    }
+    const plan = planGroupBoxes(
+      threads,
+      groupOf(assignments),
+      NAMES,
+      "status",
+      context,
+      new Set(),
+      NOW,
+    );
+    const columns = buildColumns(
+      threads,
+      "status",
+      context,
+      new Map(),
+      new Set(),
+      NOW,
+      { "status:working": ordered },
+      plan.columnOverrides,
+    );
+    const working = columns.find((c) => c.id === "working");
+    const runs = runsFromColumns([working as never], plan.groupBoxOf);
+    return (runs as Map<string, readonly { kind: string; box?: { members: { id: string }[] }; thread?: { id: string } }[]>).get("working") as readonly {
+      kind: string;
+      box?: { members: { id: string }[] };
+      thread?: { id: string };
+    }[];
+  };
+  const labelOf = (item: { kind: string; box?: { members: { id: string }[] }; thread?: { id: string } }) =>
+    item.kind === "box"
+      ? `box(${item.box!.members.map((m) => m.id).join(",")})`
+      : `single(${item.thread!.id})`;
+
+  it("one foreign card between two boxed members splits the run in two", () => {
+    // Column order [a, x, b]: the run cannot gather b past x.
+    const planIds = ["thr_a", "thr_x", "thr_b"];
+    const items = runItemsOf(planIds, ["thr_a", "thr_x", "thr_b"]);
+    expect(items.map(labelOf)).toEqual(["box(thr_a)", "single(thr_x)", "box(thr_b)"]);
+  });
+
+  it("multi-member segments split with their own frames — order preserved", () => {
+    // Column order [a, b, x, c, d]: each side of x keeps its own slice.
+    const planIds = ["thr_a", "thr_b", "thr_x", "thr_c", "thr_d"];
+    const items = runItemsOf(planIds, ["thr_a", "thr_b", "thr_x", "thr_c", "thr_d"]);
+    expect(items.map(labelOf)).toEqual([
+      "box(thr_a,thr_b)",
+      "single(thr_x)",
+      "box(thr_c,thr_d)",
+    ]);
+  });
+
+  it("a member still adjacent to its run gathers with it (unaffected contiguity)", () => {
+    // Column order [a, b, x]: both members contiguous before x — one box.
+    const planIds = ["thr_a", "thr_b", "thr_x"];
+    const items = runItemsOf(planIds, ["thr_a", "thr_b", "thr_x"]);
+    expect(items.map(labelOf)).toEqual(["box(thr_a,thr_b)", "single(thr_x)"]);
+  });
+});
+
 describe("runsFromColumns", () => {
   const threads = [
     thread({ id: "thr_a", status: "active", updatedAt: NOW - 1000 }),

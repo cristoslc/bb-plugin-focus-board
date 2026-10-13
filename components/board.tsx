@@ -2983,7 +2983,12 @@ export function Board({
                       threadLi(runItem.thread)
                     ) : (
                       <li
-                        key={`group:${runItem.box.groupId}`}
+                        // One frame per run SLICE: a split run renders several
+                        // box items of one group in a column, so the key carries
+                        // the slice's member ids — a bare group id would collide.
+                        key={`group:${runItem.box.groupId}:${runItem.box.members
+                          .map((member) => member.id)
+                          .join(",")}`}
                         data-group-box={runItem.box.groupId}
                         data-transport-arrival={
                           boxArrivalFor(runItem.box.groupId) ? "wiping-in" : undefined

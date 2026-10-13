@@ -165,6 +165,42 @@ describe("the family box renders as one container around its members", () => {
     );
   });
 
+  it("an insert into the run's middle splits the frames — both members keep theirs", () => {
+    // Issue #106: a card landing BETWEEN two boxed members (its unpin
+    // relocation into the lane) must not let the run gather across it.
+    // Gathering rendered the whole group ahead of the inserted card and
+    // read as the second member vanishing from the lane's top-level order.
+    // The split: two frames of the same group, one per adjacent slice,
+    // and every card readable at the lane's top level, in display order.
+    const trio = [
+      thread({ id: "thr_a", status: "active", updatedAt: NOW - 1000 }),
+      thread({ id: "thr_x", status: "active", updatedAt: NOW - 1500 }),
+      thread({ id: "thr_b", status: "active", updatedAt: NOW - 2000 }),
+    ];
+    renderBoard(
+      trio,
+      new Map([
+        ["thr_a", { groupId: "grp_1", name: "Auth rework", members: [trio[0]!, trio[2]!] }],
+        ["thr_b", { groupId: "grp_1", name: "Auth rework", members: [trio[0]!, trio[2]!] }],
+      ]),
+    );
+    const frames = [...document.querySelectorAll('[data-group-box="grp_1"]')];
+    expect(frames).toHaveLength(2);
+    for (const frame of frames) {
+      expect(frame.querySelectorAll('[data-group-box-member="grp_1"]')).toHaveLength(1);
+      expect(frame.querySelector('[data-group-box-label="grp_1"]')?.textContent).toBe(
+        "Auth rework",
+      );
+    }
+    // The lane's top-level card order still reads [a, x, b] — the column's
+    // own order, with no bystander reordered around a gathered box.
+    const working = document.querySelector('section[data-column-id="working"]');
+    const top = [
+      ...working!.querySelectorAll(":scope > div > ul > li"),
+    ].map((li) => li.querySelector("[data-thread-card]")?.getAttribute("data-thread-card"));
+    expect(top).toEqual(["thr_a", "thr_x", "thr_b"]);
+  });
+
   it("an unassigned card renders with no box decoration", () => {
     renderBoard(members, new Map());
     expect(document.querySelector('[data-group-box]')).toBeNull();

@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-10-06T14:03:05.264Z by `npm run uat`._
+_Generated 2026-10-13T17:26:18.950Z by `npm run uat`._
 
 ## pane-phone
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_pneffvegkv-1/bb-plugin-focus-board/tests/manual/uat-pane-phone.yaml` · theme dark
+Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_ypbvuj7fz8-1/bb-plugin-focus-board/tests/manual/uat-pane-phone.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

@@ -20,6 +20,7 @@ _Nothing unreleased — bullets land here as work merges._
 #### Board layout
 
 - **Closing the thread pane releases the card it froze.** The pane-open push consumed its settle marker in a way that also ate the close's, so a closed pane's attention capture survived and the frozen family card stopped following live state (a running child could never lift it into Working until the next open or a drag). Now the close settle clears the capture, the fallback close clears it without a settle, and the decision lives in one pure `paneRouteAction` map.
+- **An insert into a group box's run keeps the lane's card order true.** A card landing between two of a boxed group's members used to be visually reordered, and the lane read as having lost the second member entirely; the run now splits at the gap and each slice keeps its own dashed frame.
 
 ## [1.3.0] - 2026-10-13
 

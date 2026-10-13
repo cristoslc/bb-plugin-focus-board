@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-10-06T14:03:05.264Z by `npm run uat`._
+_Generated 2026-10-13T17:26:18.950Z by `npm run uat`._
 
 ## pane-history
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_pneffvegkv-1/bb-plugin-focus-board/tests/manual/uat-pane-history.yaml` · theme dark
+Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_ypbvuj7fz8-1/bb-plugin-focus-board/tests/manual/uat-pane-history.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
@@ -17,5 +17,5 @@ Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees
 | Back after a close reopens the last pane — close is not lost work | pass | ✓ pane shows thr_uat_queue; ✓ url ends with /board/t/thr_uat_queue |
 | A deep link to the panel's thread subPath opens the board with that pane | pass | ✓ pane shows thr_rpc_auth; ✓ active card is thr_rpc_auth |
 | A restored card below the fold is scrolled into view | pass | ✓ pane shows thr_review_pr; ✓ active card is thr_review_pr; ✓ active card visible |
-| Relocating the active card (drop to Done) re-scrolls to its new lane | pass | ✓ pane shows thr_review_pr; ✓ active card is thr_review_pr; ✓ active card visible |
+| Relocating the active card (drop to Done) re-scrolls to its new lane | FAIL | ✓ pane shows thr_review_pr; ✓ active card is thr_review_pr; × active card visible (card scrolled out of view) |
 | A malformed deep link degrades to the plain board | pass | ✓ pane closed; ✓ active card is (none) |
