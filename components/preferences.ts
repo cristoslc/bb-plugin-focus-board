@@ -156,6 +156,45 @@ export function escStopsRunningFromSetting(
 }
 
 /**
+ * The server-declared string setting backing the board's New Thread
+ * composer shortcut (see server.ts `newThreadShortcutKey`). Lowercased and
+ * returned as the effective single key ("c" by default); an explicit empty
+ * string is the operator's off choice and returns null; while loading,
+ * unset, or a foreign stored shape (wrong type, more than one character,
+ * a non-alphanumeric character — the host schema never stores one, so only
+ * stale data could), the C default applies rather than trusting the value.
+ */
+export const DEFAULT_NEW_THREAD_SHORTCUT_KEY = "c";
+
+const NEW_THREAD_SHORTCUT_PATTERN = /^[a-z0-9]$/;
+
+export function newThreadShortcutKeyFromSetting(
+  value: string | number | boolean | undefined,
+): string | null {
+  if (typeof value !== "string") return DEFAULT_NEW_THREAD_SHORTCUT_KEY;
+  const normalized = value.toLowerCase();
+  // An explicitly empty store is the off choice; whitespace-only or any
+  // other malformed single field is a foreign value, never an off choice.
+  if (normalized === "") return null;
+  const trimmed = normalized.trim();
+  return trimmed.length === 1 && NEW_THREAD_SHORTCUT_PATTERN.test(trimmed)
+    ? trimmed
+    : DEFAULT_NEW_THREAD_SHORTCUT_KEY;
+}
+
+/**
+ * The settings modal's field draft, normalized the same way the runtime
+ * read is: a valid single letter or digit lowercases to the key to write,
+ * an empty draft is the off choice ("") , and anything else is invalid
+ * (null) — the row surfaces the failure instead of writing a guess.
+ */
+export function parseNewThreadShortcutDraft(draft: string): string | null {
+  const normalized = draft.trim().toLowerCase();
+  if (normalized === "") return "";
+  return NEW_THREAD_SHORTCUT_PATTERN.test(normalized) ? normalized : null;
+}
+
+/**
  * The card-transport appearance choice (the settings modal's Appearance tab),
  * localStorage-backed. `zoom` (the shrink-out/grow-in portal read) is the
  * shipped default — the operator flipped it in from the dissolve — so fresh

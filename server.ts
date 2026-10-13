@@ -677,6 +677,23 @@ export default async function plugin(bb: BbPluginApi) {
         "While a thread is running, Escape interrupts its turn instead of closing the pane; the pane closes with Escape once nothing is running, and a rapid double-tap never closes it.",
       default: true,
     },
+    // The overview board's New Thread composer shortcut. The board reads
+    // it reactively through the frontend `useSettings()` hook
+    // (components/preferences.ts) and the settings modal's Behavior tab
+    // edits it: a single letter or digit (stored lowercase), default C;
+    // an explicitly empty string turns the shortcut off. The schema only
+    // keeps obvious garbage out of the write; a stale foreign value the
+    // frontend falls back to the C default on (never trusts it).
+    newThreadShortcutKey: {
+      type: "string",
+      label: "Board: New Thread composer shortcut",
+      description:
+        "A single letter or digit that opens the New Thread composer from the overview board when no pane is open. Default C; clear the field to turn the shortcut off.",
+      experimental_schema: z
+        .string()
+        .regex(/^$|^[a-zA-Z0-9]$/, "Use a single letter or digit, or an empty string"),
+      default: "C",
+    },
     // Debug-mode scroll instrumentation for the pane's embedded chat
     // (docs/chat-click-jump-2026-09-29.md investigation). Ships OFF: the
     // committed default is off everywhere, so stable builds never

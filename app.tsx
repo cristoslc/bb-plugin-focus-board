@@ -28,6 +28,7 @@ import { BoardToolbar } from "./components/board-toolbar";
 import { ThreadPane } from "./components/thread-pane";
 import type { ThreadPaneThread } from "./components/thread-pane";
 import { useSearchFocusOnSlash } from "./hooks/use-search-focus";
+import { useNewThreadComposerShortcut } from "./hooks/use-new-thread-shortcut";
 import { useTicketStatuses } from "./hooks/use-ticket-statuses";
 import { NewThreadModal } from "./components/new-thread-modal";
 import type { SpawnedThread } from "./components/new-thread-modal";
@@ -132,6 +133,7 @@ import {
   PARENT_LANE_ORDER_KEY,
   collapsedFamiliesStoredValue,
   escStopsRunningFromSetting,
+  newThreadShortcutKeyFromSetting,
   nestStoredValue,
   parseCollapsedFamiliesStored,
   parseNestStored,
@@ -268,6 +270,12 @@ function BoardPage({ subPath }: { subPath: string }) {
   const escStopsRunningThread = escStopsRunningFromSetting(
     settingValues?.escStopsRunningThread,
   );
+  // The board's New Thread composer shortcut: the effective configured key
+  // (lowercased single letter/digit) or null when the operator turned the
+  // shortcut off; the C default applies while loading (components/preferences.ts).
+  const newThreadShortcutKey = newThreadShortcutKeyFromSetting(
+    settingValues?.newThreadShortcutKey,
+  );
   // The settings modal's Behavior tab writes the same host declaration the
   // detail page's config panel edits — a partial values patch on this
   // plugin's settings (the host stores settings per key, so the panel keys
@@ -282,6 +290,10 @@ function BoardPage({ subPath }: { subPath: string }) {
     async (value: boolean) => {
       await setPluginSettings({ escStopsRunningThread: value });
     },
+    [setPluginSettings],
+  );
+  const setNewThreadShortcutKey = useCallback(
+    (value: string) => setPluginSettings({ newThreadShortcutKey: value }),
     [setPluginSettings],
   );
   const setSweepThreshold = useCallback(
@@ -1876,6 +1888,16 @@ function BoardPage({ subPath }: { subPath: string }) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   useSearchFocusOnSlash({ enabled: openThread === null, searchInputRef });
 
+  // The configured New Thread shortcut key, live only from the overview
+  // board with no pane open (the hotkey's guards own the rest: editable
+  // targets, dialogs, modifier chords). While the composer itself is open
+  // the hotkey drops, so a stray second press cannot reseed the preset.
+  useNewThreadComposerShortcut({
+    enabled: openThread === null && !newThreadOpen,
+    hotkey: newThreadShortcutKey ?? "",
+    onActivate: openNewThread,
+  });
+
   // Opening (or switching) a pane pushes a panel route, so every pane is one
   // history entry and the back arrow walks back through the cards the user
   // opened — reopening a trail of panes they lost track of. Closing replaces
@@ -3031,6 +3053,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         onTabChange={handleTabChange}
         entries={whatsNewEntries}
         escStopsRunningThread={settingValues?.escStopsRunningThread}
+        newThreadShortcutKey={settingValues?.newThreadShortcutKey}
         sweep={{
           doneArchiveValue: settingValues?.doneArchiveValue,
           doneArchiveUnit: settingValues?.doneArchiveUnit,
@@ -3039,6 +3062,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         }}
         onSetSweep={setSweepThreshold}
         onSetEscStopsRunningThread={setEscStopsRunningThread}
+        onSetNewThreadShortcutKey={setNewThreadShortcutKey}
         cardTransport={cardTransport}
         motionPref={motionPref}
         wallpaper={wallpaper}

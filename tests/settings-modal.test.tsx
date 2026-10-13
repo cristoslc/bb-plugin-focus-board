@@ -24,6 +24,7 @@ const NULL_WALLPAPER: WallpaperSettings = { version: 1 as const, global: null };
 
 interface RenderHandlers {
   onSetEscStopsRunningThread: ReturnType<typeof vi.fn>;
+  onSetNewThreadShortcutKey: ReturnType<typeof vi.fn>;
   onSetSweep: ReturnType<typeof vi.fn>;
   onSetCardTransport: ReturnType<typeof vi.fn>;
   onSetMotionPref: ReturnType<typeof vi.fn>;
@@ -44,11 +45,13 @@ function renderModal(
     tab: SettingsTab;
     entries: readonly WhatsNewEntry[];
     escStopsRunningThread: boolean | undefined;
+    newThreadShortcutKey: string | undefined;
     sweep: typeof NULL_SWEEP;
     cardTransport: "none" | "teleport" | "zoom";
     motionPref: "system" | "reduce" | "full";
     wallpaper: WallpaperSettings;
     onSetEscStopsRunningThread: (value: boolean) => void | Promise<void>;
+    onSetNewThreadShortcutKey: (value: string) => void | Promise<void>;
     onSetSweep: (write: { key: string; value: number | string }) => void | Promise<void>;
     onSetCardTransport: (value: "none" | "teleport" | "zoom") => void;
     onSetMotionPref: (value: "system" | "reduce" | "full") => void;
@@ -58,6 +61,7 @@ function renderModal(
 ): RenderHandlers {
   const handlers = {
     onSetEscStopsRunningThread: vi.fn(),
+    onSetNewThreadShortcutKey: vi.fn(),
     onSetSweep: vi.fn(),
     onSetCardTransport: vi.fn(),
     onSetMotionPref: vi.fn(),
@@ -70,8 +74,10 @@ function renderModal(
       tab="behavior"
       entries={ENTRIES}
       escStopsRunningThread={undefined}
+      newThreadShortcutKey={undefined}
       sweep={NULL_SWEEP}
       onSetEscStopsRunningThread={handlers.onSetEscStopsRunningThread}
+      onSetNewThreadShortcutKey={handlers.onSetNewThreadShortcutKey}
       onSetSweep={handlers.onSetSweep}
       cardTransport="zoom"
       motionPref="system"
@@ -120,7 +126,9 @@ describe("settings modal: rail", () => {
         tab="behavior"
         entries={ENTRIES}
         escStopsRunningThread={undefined}
+        newThreadShortcutKey={undefined}
         onSetEscStopsRunningThread={vi.fn()}
+        onSetNewThreadShortcutKey={vi.fn()}
         onOpenChange={vi.fn()}
         onTabChange={onTabChange}
       />,
@@ -170,6 +178,103 @@ describe("settings modal: Behavior tab", () => {
     );
     const toggle = document.querySelector(
       'button[aria-label="Escape stops a running thread first"]',
+    ) as HTMLButtonElement;
+    fireEvent.click(toggle);
+    await screen.findByText(/the host refused the write/);
+  });
+});
+
+describe("settings modal: Behavior tab's New Thread shortcut row", () => {
+  it("shows the default key field and ON toggle when nothing is stored yet (loading)", () => {
+    renderModal();
+    const field = document.querySelector(
+      'input[aria-label="New Thread composer shortcut key"]',
+    ) as HTMLInputElement | null;
+    expect(field).not.toBeNull();
+    expect(field?.value).toBe("c");
+    const toggle = document.querySelector(
+      'button[aria-label="New Thread composer shortcut enabled"]',
+    ) as HTMLButtonElement | null;
+    expect(toggle?.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("an explicitly empty stored value shows the toggle OFF", () => {
+    renderModal({ newThreadShortcutKey: "" });
+    const toggle = document.querySelector(
+      'button[aria-label="New Thread composer shortcut enabled"]',
+    ) as HTMLButtonElement;
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("shows the stored key, normalized to lowercase", () => {
+    renderModal({ newThreadShortcutKey: "N" });
+    const field = document.querySelector(
+      'input[aria-label="New Thread composer shortcut key"]',
+    ) as HTMLInputElement;
+    expect(field.value).toBe("n");
+  });
+
+  it("a valid single-key edit commits on blur with the normalized key", () => {
+    const { onSetNewThreadShortcutKey } = renderModal();
+    const field = document.querySelector(
+      'input[aria-label="New Thread composer shortcut key"]',
+    ) as HTMLInputElement;
+    fireEvent.change(field, { target: { value: "N" } });
+    fireEvent.blur(field);
+    expect(onSetNewThreadShortcutKey).toHaveBeenCalledTimes(1);
+    expect(onSetNewThreadShortcutKey).toHaveBeenCalledWith("n");
+  });
+
+  it("clearing the field commits the off state (empty string)", () => {
+    const { onSetNewThreadShortcutKey } = renderModal({
+      newThreadShortcutKey: "c",
+    });
+    const field = document.querySelector(
+      'input[aria-label="New Thread composer shortcut key"]',
+    ) as HTMLInputElement;
+    fireEvent.change(field, { target: { value: "" } });
+    fireEvent.blur(field);
+    expect(onSetNewThreadShortcutKey).toHaveBeenCalledWith("");
+  });
+
+  it("an invalid edit writes nothing, surfaces the failure inline, and snaps back", () => {
+    const { onSetNewThreadShortcutKey } = renderModal();
+    const field = document.querySelector(
+      'input[aria-label="New Thread composer shortcut key"]',
+    ) as HTMLInputElement;
+    fireEvent.change(field, { target: { value: "cn" } });
+    fireEvent.blur(field);
+    expect(onSetNewThreadShortcutKey).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(/Saving failed: Use a single letter or digit/),
+    ).not.toBeNull();
+    expect(field.value).toBe("c");
+  });
+
+  it("toggling off writes the empty string; toggling on writes the default C", () => {
+    const { onSetNewThreadShortcutKey } = renderModal();
+    const toggle = document.querySelector(
+      'button[aria-label="New Thread composer shortcut enabled"]',
+    ) as HTMLButtonElement;
+    fireEvent.click(toggle);
+    expect(onSetNewThreadShortcutKey).toHaveBeenCalledWith("");
+
+    cleanup();
+    const reHandlers = renderModal({ newThreadShortcutKey: "" });
+    const reToggle = document.querySelector(
+      'button[aria-label="New Thread composer shortcut enabled"]',
+    ) as HTMLButtonElement;
+    fireEvent.click(reToggle);
+    expect(reHandlers.onSetNewThreadShortcutKey).toHaveBeenCalledWith("c");
+  });
+
+  it("a failed write surfaces the failure inline, not as a silent revert", async () => {
+    const { onSetNewThreadShortcutKey } = renderModal();
+    onSetNewThreadShortcutKey.mockRejectedValueOnce(
+      new Error("the host refused the write"),
+    );
+    const toggle = document.querySelector(
+      'button[aria-label="New Thread composer shortcut enabled"]',
     ) as HTMLButtonElement;
     fireEvent.click(toggle);
     await screen.findByText(/the host refused the write/);
@@ -378,12 +483,14 @@ describe("settings modal: Appearance tab", () => {
         tab="appearance"
         entries={ENTRIES}
         escStopsRunningThread={undefined}
+        newThreadShortcutKey={undefined}
         sweep={NULL_SWEEP}
         onSetSweep={vi.fn()}
         cardTransport="teleport"
         motionPref="system"
         wallpaper={NULL_WALLPAPER}
         onSetEscStopsRunningThread={vi.fn()}
+        onSetNewThreadShortcutKey={vi.fn()}
         onSetCardTransport={vi.fn()}
         onSetMotionPref={vi.fn()}
         onWallpaperChange={vi.fn()}
