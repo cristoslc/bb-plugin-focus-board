@@ -895,6 +895,12 @@ export function ParentLaneBoard({
                           menuActions={menuActionsFor(cell.thread)}
                           snoozeFor={snoozeFor}
                           activeThreadId={activeThreadId}
+                          // The family renders as sibling cells here, not
+                          // nested rows: when the lane holds the focused
+                          // thread, every cell of it wears the focus
+                          // spotlight's marker (surface stays with the
+                          // focused card itself — see ThreadCard).
+                          familySolid={activeLaneId === lane.id}
                           dimmed={dimmedIds.has(cell.thread.id)}
                           onOpen={() => onOpenThread(cell.thread.id)}
                           onOpenThread={onOpenThread}

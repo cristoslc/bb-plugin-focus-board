@@ -6,6 +6,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "Search and filters"
   },
   {
+    "text": "**The thread you open keeps its card lit while the rest of the board dims.** A card holds the solid hover surface for as long as its thread pane stays open, and the family it sits in holds the surface with it, while the unfocused cards recede to the hover shade.",
+    "children": [],
+    "group": "The board"
+  },
+  {
     "text": "**The toolbar reads as its own band.** The header row paints a muted tint shared by the light and dark themes, so its controls stand apart from the board body and the header is easy to find on a busy board.",
     "children": [],
     "group": "Toolbar"

@@ -1,0 +1,77 @@
+{
+  "check": "focus spotlight (pane-held card solid, others recede)",
+  "viewport": {
+    "width": 1280,
+    "height": 800,
+    "deviceScaleFactor": 2
+  },
+  "before": {
+    "clicked": {
+      "id": "thr_ship_release",
+      "faded": false,
+      "sweepHighlighted": false,
+      "focusSolid": false,
+      "rect": {
+        "x": 18,
+        "y": 89,
+        "width": 244,
+        "height": 77
+      },
+      "style": {
+        "backgroundColor": "oklch(0.195 0 0)",
+        "opacity": "1"
+      }
+    },
+    "resting": {
+      "id": "thr_roadmap",
+      "faded": false,
+      "sweepHighlighted": false,
+      "focusSolid": false,
+      "rect": {
+        "x": 18,
+        "y": 172,
+        "width": 244,
+        "height": 61
+      },
+      "style": {
+        "backgroundColor": "oklch(0.195 0 0)",
+        "opacity": "1"
+      }
+    },
+    "sibling": {
+      "id": "thr_roadmap",
+      "faded": false,
+      "sweepHighlighted": false,
+      "focusSolid": false,
+      "rect": {
+        "x": 18,
+        "y": 172,
+        "width": 244,
+        "height": 61
+      },
+      "style": {
+        "backgroundColor": "oklch(0.195 0 0)",
+        "opacity": "1"
+      }
+    }
+  },
+  "after": {
+    "focused": {
+      "id": "thr_ship_release",
+      "faded": false,
+      "sweepHighlighted": false,
+      "focusSolid": true,
+      "rect": {
+        "x": 18,
+        "y": 89,
+        "width": 244,
+        "height": 77
+      },
+      "style": {
+        "backgroundColor": "oklab(0.156 0 0)",
+        "opacity": "1"
+      }
+    }
+  },
+  "failures": []
+}

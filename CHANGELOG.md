@@ -11,6 +11,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **Mobile collapses the filter palette into a header toggle.** On a narrow screen the toolbar keeps New thread, search, the toggle, and the settings gear in one row, while View, the four filters, Clear, and the thread count hide inside an expandable ribbon that badges how many filters are active. The open/closed choice persists per browser.
 
+#### The board
+
+- **The thread you open keeps its card lit while the rest of the board dims.** A card holds the solid hover surface for as long as its thread pane stays open, and the family it sits in holds the surface with it, while the unfocused cards recede to the hover shade.
+
 ### Changed
 
 #### Toolbar
