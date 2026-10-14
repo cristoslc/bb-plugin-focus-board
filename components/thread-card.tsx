@@ -821,8 +821,13 @@ export function ThreadCard({
         isDone && (dimsByScrim ? "saturate-50" : "opacity-50 saturate-50"),
         dimmed && !dimsByScrim && "opacity-50",
         snoozed && !dimsByScrim && "opacity-50",
-        isSweepHighlighted &&
-          "ring-2 ring-amber-500 bg-amber-500/10 saturate-100 opacity-100",
+        // The amber wash is NOT a card background: a translucent bg here
+        // loses tailwind-merge's conflict against `bg-card` and REPLACES the
+        // opaque surface, so a selected card went transparent (the lane /
+        // wallpaper bled through — exactly the failure the HOVER_SURFACE
+        // note below forbids). The wash lives on the [data-sweep-tint]
+        // overlay further down; the card keeps its own opaque surface.
+        isSweepHighlighted && "ring-2 ring-amber-500 saturate-100 opacity-100",
         isSweepSelectable && "ring-1 ring-amber-500/40",
       )}
     >
@@ -854,6 +859,17 @@ export function ThreadCard({
           data-card-dim-scrim=""
           aria-hidden
           className="pointer-events-none absolute inset-0 z-10 rounded-md bg-card/50"
+        />
+      ) : null}
+      {isSweepHighlighted ? (
+        // The selection's amber wash sits ON the card as an overlay, the dim
+        // scrim's pattern: the card's own surface stays opaque, only the
+        // wash moves. See the highlight class note above for why this is
+        // not `bg-amber-500/10` on the card itself.
+        <span
+          data-sweep-tint=""
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-10 rounded-md bg-amber-500/10"
         />
       ) : null}
       <div className="flex items-stretch">
