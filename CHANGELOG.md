@@ -21,6 +21,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+#### Board scale
+
+- **A burst of realtime signals refetches the board once, not once per signal.** The done, link, ack, snooze, rank, and group echoes now wait out one quiet window: ten signals landing together settle as a single coalesced refetch pass, so a board with hundreds of threads stops repainting on every echo.
+
 ### Fixed
 
 #### Thread pane
