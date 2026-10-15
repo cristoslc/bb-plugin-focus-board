@@ -1,0 +1,101 @@
+{
+  "pageErrors": [],
+  "states": [
+    {
+      "label": "A-pane-closed",
+      "window": {
+        "w": 1280,
+        "h": 800
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "w": 1280,
+        "h": 800
+      },
+      "paint": {
+        "x": 0,
+        "y": 0,
+        "w": 1280,
+        "h": 800
+      },
+      "board": {
+        "x": 0,
+        "y": 0,
+        "w": 1280,
+        "h": 800
+      },
+      "pane": null,
+      "backgroundSize": "cover",
+      "backgroundPosition": "50% 50%",
+      "transform": "none",
+      "file": "/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_srbbvvacx9-1/bb-plugin-focus-board/docs/screenshots/repro-wallpaper-wobble/A-pane-closed.png"
+    },
+    {
+      "label": "B-pane-open",
+      "window": {
+        "w": 1280,
+        "h": 800
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "w": 1280,
+        "h": 800
+      },
+      "paint": {
+        "x": 0,
+        "y": 0,
+        "w": 1280,
+        "h": 800
+      },
+      "board": {
+        "x": 800,
+        "y": 0,
+        "w": 480,
+        "h": 800
+      },
+      "pane": {
+        "x": 800,
+        "y": 0,
+        "w": 480,
+        "h": 800
+      },
+      "backgroundSize": "cover",
+      "backgroundPosition": "50% 50%",
+      "transform": "none",
+      "file": "/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_srbbvvacx9-1/bb-plugin-focus-board/docs/screenshots/repro-wallpaper-wobble/B-pane-open.png"
+    },
+    {
+      "label": "C-pane-closed-again",
+      "window": {
+        "w": 1280,
+        "h": 800
+      },
+      "root": {
+        "x": 0,
+        "y": 0,
+        "w": 1280,
+        "h": 800
+      },
+      "paint": {
+        "x": 0,
+        "y": 0,
+        "w": 1280,
+        "h": 800
+      },
+      "board": {
+        "x": 0,
+        "y": 0,
+        "w": 1280,
+        "h": 800
+      },
+      "pane": null,
+      "backgroundSize": "cover",
+      "backgroundPosition": "50% 50%",
+      "transform": "none",
+      "file": "/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_srbbvvacx9-1/bb-plugin-focus-board/docs/screenshots/repro-wallpaper-wobble/C-pane-closed-again.png"
+    }
+  ],
+  "frameViolations": []
+}

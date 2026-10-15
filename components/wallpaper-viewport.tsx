@@ -17,22 +17,32 @@ export interface RectFraction {
   h: number;
 }
 
-/** The live board's shape at measure time: the panel's width/height aspect
- *  plus the fraction-space rects of the visible lanes and threads' cards. */
+/**
+ * The live board's shape at measure time, read in the paint's frame space
+ * (the window): the window's own aspect, the panel's footprint as fractions
+ * of the window (the porthole the board carves out of the wallpaper), plus
+ * the fraction-space rects of the visible lanes and threads' cards relative
+ * to the panel box. */
 export interface BoardGeometry {
-  aspect: number;
+  windowAspect: number;
+  panel: RectFraction;
   lanes: readonly RectFraction[];
   cards: readonly RectFraction[];
 }
 
 /**
  * The board panel's geometry, read straight off the DOM: everything is a
- * getBoundingClientRect at read time, no layout is invented here. Null when
+ * getBoundingClientRect at read time, no layout is invented here. The panel's
+ * box is read against the window's inner size, because that is the box the
+ * board's own paint anchors to (issue #201's window framing). Null when
  * no panel paints in this document (or it paints with a zero box) — the
  * viewport then falls back to the window's own aspect.
  */
 export function measureBoardGeometry(panel: Element | null): BoardGeometry | null {
   if (panel === null) return null;
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+  if (windowWidth <= 0 || windowHeight <= 0) return null;
   const box = panel.getBoundingClientRect();
   if (box.width <= 0 || box.height <= 0) return null;
   const relative = (element: Element): RectFraction => {
@@ -45,7 +55,13 @@ export function measureBoardGeometry(panel: Element | null): BoardGeometry | nul
     };
   };
   return {
-    aspect: box.width / box.height,
+    windowAspect: windowWidth / windowHeight,
+    panel: {
+      x: box.left / windowWidth,
+      y: box.top / windowHeight,
+      w: box.width / windowWidth,
+      h: box.height / windowHeight,
+    },
     lanes: Array.from(panel.querySelectorAll("[data-column-id]"), relative),
     cards: Array.from(panel.querySelectorAll("[data-thread-card]"), relative),
   };
@@ -95,10 +111,12 @@ interface ViewportProps {
 }
 
 /**
- * A scaled replica of the board panel: its real aspect ratio, the active
- * wallpaper painted with the exact crop math the board uses
- * (wallpaperBackgroundStyle), translucent lane and card silhouettes at
- * scale, and a draggable focus rectangle. Gestures speak percentages and
+ * A scaled replica of the paint's frame, the window: painted with the exact
+ * crop math the board uses (wallpaperBackgroundStyle), with the board's
+ * real footprint as a porthole carving out of the window plane — the host
+ * chrome outside it (a spread shadow, clipped by the frame), the wallpaper
+ * dim scrim and the translucent lane and card silhouettes at scale inside
+ * it, and a draggable focus rectangle. Gestures speak percentages and
  * zoom factors — one pointer drags the focal point, two pinch zoom — and
  * the rectangle answers arrow keys for keyboard users.
  */
@@ -106,7 +124,8 @@ export function WallpaperViewport({ layer, dark, geometry, onFocusChange, onZoom
   const rootRef = useRef<HTMLDivElement | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinchStart = useRef<{ distance: number; zoom: number } | null>(null);
-  const aspect = geometry?.aspect ?? window.innerWidth / window.innerHeight;
+  const panel = geometry?.panel ?? null;
+  const aspect = geometry?.windowAspect ?? window.innerWidth / window.innerHeight;
   const moveFocusTo = (clientX: number, clientY: number) => {
     const rect = rootRef.current?.getBoundingClientRect();
     if (rect === undefined || rect === null || rect.width <= 0 || rect.height <= 0) return;
@@ -166,24 +185,51 @@ export function WallpaperViewport({ layer, dark, geometry, onFocusChange, onZoom
       {layer !== null ? (
         <div data-wallpaper-paint="" className="absolute inset-0" style={wallpaperBackgroundStyle(layer, dark) ?? undefined} />
       ) : null}
-      {(geometry?.lanes ?? []).map((lane, index) => (
+      {panel === null ? null : (
         <div
-          key={`lane-${index}-${lane.x}-${lane.y}`}
-          data-wallpaper-silhouette="lane"
+          data-wallpaper-porthole=""
           aria-hidden
-          className="absolute rounded-md border border-foreground/10 bg-foreground/5"
-          style={{ left: `${lane.x * 100}%`, top: `${lane.y * 100}%`, width: `${lane.w * 100}%`, height: `${lane.h * 100}%` }}
-        />
-      ))}
-      {(geometry?.cards ?? []).map((card, index) => (
-        <div
-          key={`card-${index}-${card.x}-${card.y}`}
-          data-wallpaper-silhouette="card"
-          aria-hidden
-          className="absolute rounded-sm bg-foreground/20"
-          style={{ left: `${card.x * 100}%`, top: `${card.y * 100}%`, width: `${card.w * 100}%`, height: `${card.h * 100}%` }}
-        />
-      ))}
+          // The giant spread marks the host chrome around the board region:
+          // the shadow covers the paint everywhere the board does not carve a
+          // porthole out of the window plane, and the preview's own
+          // overflow-hidden keeps the spread inside the frame.
+          className="absolute overflow-hidden rounded-md border border-foreground/10"
+          style={{
+            left: `${panel.x * 100}%`,
+            top: `${panel.y * 100}%`,
+            width: `${panel.w * 100}%`,
+            height: `${panel.h * 100}%`,
+            boxShadow: "0 0 0 100000px var(--background)",
+          }}
+        >
+          {layer !== null ? (
+            <div
+              data-wallpaper-dim=""
+              aria-hidden
+              className="absolute inset-0"
+              style={{ backgroundColor: "var(--background)", opacity: layer.dim }}
+            />
+          ) : null}
+          {(geometry?.lanes ?? []).map((lane, index) => (
+            <div
+              key={`lane-${index}-${lane.x}-${lane.y}`}
+              data-wallpaper-silhouette="lane"
+              aria-hidden
+              className="absolute rounded-md border border-foreground/10 bg-foreground/5"
+              style={{ left: `${lane.x * 100}%`, top: `${lane.y * 100}%`, width: `${lane.w * 100}%`, height: `${lane.h * 100}%` }}
+            />
+          ))}
+          {(geometry?.cards ?? []).map((card, index) => (
+            <div
+              key={`card-${index}-${card.x}-${card.y}`}
+              data-wallpaper-silhouette="card"
+              aria-hidden
+              className="absolute rounded-sm bg-foreground/20"
+              style={{ left: `${card.x * 100}%`, top: `${card.y * 100}%`, width: `${card.w * 100}%`, height: `${card.h * 100}%` }}
+            />
+          ))}
+        </div>
+      )}
       {layer !== null ? (
         <button
           type="button"

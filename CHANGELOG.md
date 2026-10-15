@@ -27,6 +27,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+#### Wallpaper
+
+- **The wallpaper frames the window, not the board's viewport.** The wallpaper now paints into the bb window's box at the window's ratio: opening and closing the thread pane (or resizing a sidebar) carves the board's view out of one fixed image instead of refitting the crop, and the picker's viewport preview models the same framing.
+
 #### Child threads
 
 - **A nested child row shows its child's ticket chips.** A child thread that ties to a tracker item used to chip only as a standalone card, so the family view hid the tie. Its row carries the same chips now, a step smaller and inert: the row itself is one link.

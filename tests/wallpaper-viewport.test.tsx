@@ -25,7 +25,8 @@ function stubViewportRect(width: number, height: number): HTMLElement {
 }
 
 const GEOMETRY: BoardGeometry = {
-  aspect: 2,
+  windowAspect: 2,
+  panel: { x: 0.25, y: 0, w: 0.75, h: 1 },
   lanes: [{ x: 0, y: 0, w: 0.3, h: 1 }],
   cards: [{ x: 0.05, y: 0.1, w: 0.4, h: 0.4 }],
 };
@@ -33,7 +34,7 @@ const GEOMETRY: BoardGeometry = {
 afterEach(cleanup);
 
 describe("wallpaper viewport", () => {
-  it("paints the board's aspect ratio, the wallpaper replica, and the silhouettes at scale", () => {
+  it("models the window frame: the paint spans the preview, and the board's porthole carries dim and silhouettes", () => {
     render(
       <WallpaperViewport
         layer={{ url: "https://a/w.png", dim: 0, fit: "cover", zoom: 2, focusX: 25, focusY: 75 }}
@@ -45,13 +46,24 @@ describe("wallpaper viewport", () => {
     );
     const root = document.querySelector("[data-wallpaper-viewport]") as HTMLElement;
     expect(root.getAttribute("style")).toContain("aspect-ratio: 2");
+    // The paint is the window frame's plane: one full-bleed layer.
     const paint = root.querySelector("[data-wallpaper-paint]") as HTMLElement;
     expect(paint.getAttribute("style")).toContain('url("https://a/w.png")');
     expect(paint.getAttribute("style")).toContain("background-size: cover");
     expect(paint.getAttribute("style")).toContain("transform: scale(2)");
+    // The porthole repeats the board's own footprint as fractions of the
+    // window, and the host chrome outside it is the theme background.
+    const porthole = root.querySelector("[data-wallpaper-porthole]") as HTMLElement;
+    expect(porthole.getAttribute("style")).toContain("left: 25%");
+    expect(porthole.getAttribute("style")).toContain("top: 0%");
+    expect(porthole.getAttribute("style")).toContain("width: 75%");
+    expect(porthole.getAttribute("style")).toContain("height: 100%");
+    expect(porthole.getAttribute("style")).toContain("box-shadow");
+    // Lanes and cards stay panel-relative and place inside the porthole.
     const lane = root.querySelector('[data-wallpaper-silhouette="lane"]') as HTMLElement;
     expect(lane.getAttribute("style")).toContain("width: 30%");
     expect(lane.getAttribute("style")).toContain("height: 100%");
+    expect(porthole.contains(lane)).toBe(true);
     const card = root.querySelector('[data-wallpaper-silhouette="card"]') as HTMLElement;
     expect(card.getAttribute("style")).toContain("left: 5%");
     expect(card.getAttribute("style")).toContain("top: 10%");
@@ -59,7 +71,24 @@ describe("wallpaper viewport", () => {
     expect(card.getAttribute("style")).toContain("height: 40%");
   });
 
-  it("falls back to the window's aspect with no board and paints no silhouettes", () => {
+  it("the porthole paints the dim scrim under the silhouettes, matching the board's scrim", () => {
+    render(
+      <WallpaperViewport
+        layer={{ url: "https://a/w.png", dim: 0.3 }}
+        dark={false}
+        geometry={GEOMETRY}
+        onFocusChange={vi.fn()}
+        onZoomChange={vi.fn()}
+      />,
+    );
+    const dim = document.querySelector("[data-wallpaper-dim]") as HTMLElement;
+    const porthole = document.querySelector("[data-wallpaper-porthole]") as HTMLElement;
+    expect(porthole.contains(dim)).toBe(true);
+    expect(porthole.querySelectorAll("[data-wallpaper-dim] ~ [data-wallpaper-silhouette]").length).toBeGreaterThan(0);
+    expect(dim.getAttribute("style")).toContain("opacity: 0.3");
+  });
+
+  it("falls back to the window's aspect with no board and paints no silhouettes or porthole", () => {
     render(
       <WallpaperViewport
         layer={{ url: "https://a/w.png", dim: 0 }}
@@ -72,6 +101,7 @@ describe("wallpaper viewport", () => {
     const root = document.querySelector("[data-wallpaper-viewport]") as HTMLElement;
     expect(root.getAttribute("style")).toContain(`aspect-ratio: ${String(window.innerWidth / window.innerHeight)}`);
     expect(root.querySelector("[data-wallpaper-silhouette]")).toBeNull();
+    expect(root.querySelector("[data-wallpaper-porthole]")).toBeNull();
   });
 
   it("the focus rectangle marks the focal point and arrow keys nudge it", () => {
