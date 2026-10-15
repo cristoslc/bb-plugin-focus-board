@@ -652,6 +652,9 @@ export function BoardToolbar({
       return !open;
     });
   };
+  // The search button (between the query and the clear x) shows only while
+  // the field holds text AND is focused, so it tracks the input's focus.
+  const [searchFocused, setSearchFocused] = useState(false);
   // How many narrowing values are active right now — the badge the collapsed
   // toggle shows so hidden-but-in-force filters stay discoverable. The
   // family scope (Zoom to family) counts as one when it is in force.
@@ -682,7 +685,11 @@ export function BoardToolbar({
         never starves the row to wrapping — flexible on a collapsed header
         (compact media query or a narrow measured band), where it fills the
         space the collapsed palette frees up. The x clears when the field
-        holds text. */
+        holds text, and the search button sits left of the x while the
+        field holds text AND is focused: clicking it is the Enter-equivalent
+        (the search is live, so the click re-confirms the query and keeps
+        the field focused). The reserved trailing padding fits both buttons
+        without shifting the text when focus toggles the extra one. */
     <div className={cn("relative", collapsedHeader ? "min-w-0 flex-1" : "w-44 sm:w-56")}>
       <Icon
         name="Search"
@@ -693,10 +700,29 @@ export function BoardToolbar({
         ref={searchInputRef}
         value={search}
         onChange={(event) => onSearchChange(event.target.value)}
+        onFocus={() => setSearchFocused(true)}
+        onBlur={() => setSearchFocused(false)}
         placeholder="Search title or id…"
         aria-label="Search threads"
-        className={cn("h-8 pl-7 text-xs", search !== "" && "pr-8")}
+        className={cn("h-8 pl-7 text-xs", search !== "" && "pr-14")}
       />
+      {search !== "" && searchFocused ? (
+        <button
+          type="button"
+          aria-label="Search"
+          title="Search"
+          /* Keep focus on the input (a mousedown would blur it), so the
+              button stays visible through the click. */
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => {
+            onSearchChange(search);
+            searchInputRef?.current?.focus();
+          }}
+          className="absolute right-7 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-ring"
+        >
+          <Icon name="Search" className="size-3.5" aria-hidden />
+        </button>
+      ) : null}
       {search !== "" ? (
         <button
           type="button"

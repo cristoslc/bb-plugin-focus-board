@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+#### Board toolbar
+
+- **The board search field gains a search button while it holds text and is focused.** The button sits left of the clear x and clicks like Enter: it re-confirms the live search and keeps the field focused with its text. Blurring the field or clearing it hides the button.
+
 #### Groups and family boxes
 
 - **A collapsed family's child dot previews its child and opens it.** Hovering a dot shows that child's title and state; clicking a dot opens it in the thread pane without expanding the rows. The family's open child lists itself below the strip while the rest stay dots, and the strip's background still expands the family.
