@@ -45,6 +45,10 @@ import {
 } from "./components/grouping";
 import { staleErrorAckIds } from "./lib/error-ack-metadata";
 import {
+  createRefetchScheduler,
+  REFETCH_COALESCE_MS,
+} from "./lib/refetch-coalescer";
+import {
   buildFamilyIndex,
   familyRootIdOf,
   filterFamilies,
@@ -428,7 +432,10 @@ function BoardPage({ subPath }: { subPath: string }) {
     doneArchiveMs: DEFAULT_DONE_ARCHIVE_MS,
     idleArchiveMs: DEFAULT_IDLE_ARCHIVE_MS,
   });
-  useEffect(() => {
+  // Refetch units: the exact bodies the mount effect and the realtime
+  // signals both consume, named so the realtime coalescer (below) can run
+  // each once per pass.
+  const refetchDoneState = useCallback(() => {
     rpc.call("done_list").then(
       (result) => {
         setDoneIds(new Set(result.doneIds));
@@ -436,6 +443,8 @@ function BoardPage({ subPath }: { subPath: string }) {
       },
       () => {}, // Done marking is optional state; the board works without it.
     );
+    // Parks ride the done refetch: another panel (or the CLI path) may have
+    // parked or consumed a pin this panel has not mirrored.
     rpc.call("pin_parks_list").then(
       (result) => setParkIds(new Set(Object.keys(result.parks))),
       () => {}, // Parks gate nothing; an unloadable park list loses no pin.
@@ -448,54 +457,44 @@ function BoardPage({ subPath }: { subPath: string }) {
         }),
       () => {}, // Settings are optional; defaults apply when unreachable.
     );
+  }, [rpc, setDoneIds, setDoneExtras, setParkIds, setSweepConfig]);
+  const refetchLinks = useCallback(() => {
     rpc.call("link_list").then(
       (result) => setLinksByThread(linksFromRpc(result)),
       () => {}, // Links are optional state; the board works without them.
     );
+  }, [rpc, setLinksByThread]);
+  const refetchErrorAcks = useCallback(() => {
     rpc.call("error_acks_list").then(
       (result) => setErrorAckIds(new Set(result.ackIds)),
       () => {}, // Acks are optional state; the board works without them.
     );
-  }, [rpc]);
+  }, [rpc, setErrorAckIds]);
+  useEffect(() => {
+    refetchDoneState();
+    refetchLinks();
+    refetchErrorAcks();
+  }, [refetchDoneState, refetchLinks, refetchErrorAcks]);
+  // The realtime coalescer (issue #186): one shared debounce over every
+  // refetch-carrying signal, so a burst of signals — one write echoed
+  // across channels, or several writes landing together — produces one
+  // refetch pass, not one per signal. The mount refetches above stay
+  // immediate; only the signal path waits the quiet window.
+  const refetchScheduler = useMemo(() => createRefetchScheduler(REFETCH_COALESCE_MS), []);
+  useEffect(() => refetchScheduler.dispose, [refetchScheduler]);
   useRealtime("done-changed", () => {
-    rpc.call("done_list").then(
-      (result) => {
-        setDoneIds(new Set(result.doneIds));
-        setDoneExtras(recordsAsExtras(result.records));
-      },
-      () => {},
-    );
-    // Parks refetch on the same signal: another panel (or the CLI path)
-    // may have parked or consumed a pin this panel has not mirrored.
-    rpc.call("pin_parks_list").then(
-      (result) => setParkIds(new Set(Object.keys(result.parks))),
-      () => {},
-    );
-    rpc.call("sweep_config_get").then(
-      (result) =>
-        setSweepConfig({
-          doneArchiveMs: result.doneArchiveMs,
-          idleArchiveMs: result.idleArchiveMs,
-        }),
-      () => {},
-    );
+    refetchScheduler.schedule("done", refetchDoneState);
   });
   // The board's own link signal mirrors done-changed: every open panel
   // refetches the map, so a link written by the agent tool or the CLI
   // converges on the card that is already on screen.
   useRealtime("link-changed", () => {
-    rpc.call("link_list").then(
-      (result) => setLinksByThread(linksFromRpc(result)),
-      () => {}, // Links are optional state; the board works without them.
-    );
+    refetchScheduler.schedule("links", refetchLinks);
   });
   // The ack signal mirrors done-changed: every open board refetches the set
   // so a Clear error (menu, or any later surface) converges everywhere.
   useRealtime("error-ack-changed", () => {
-    rpc.call("error_acks_list").then(
-      (result) => setErrorAckIds(new Set(result.ackIds)),
-      () => {},
-    );
+    refetchScheduler.schedule("errorAcks", refetchErrorAcks);
   });
   // The board's snapshot is the DoneAgeSource implementation: stamps for
   // Done ages, keep flags as the sweep override.
@@ -537,7 +536,9 @@ function BoardPage({ subPath }: { subPath: string }) {
   useEffect(() => {
     refetchSnoozes();
   }, [refetchSnoozes]);
-  useRealtime("snooze-changed", refetchSnoozes);
+  useRealtime("snooze-changed", () => {
+    refetchScheduler.schedule("snoozes", refetchSnoozes);
+  });
   const snoozedIds = useMemo(
     () => new Set(Object.keys(snoozeRecords)),
     [snoozeRecords],
@@ -609,7 +610,9 @@ function BoardPage({ subPath }: { subPath: string }) {
   useEffect(() => {
     refetchRanks();
   }, [refetchRanks]);
-  useRealtime("rank-changed", refetchRanks);
+  useRealtime("rank-changed", () => {
+    refetchScheduler.schedule("ranks", refetchRanks);
+  });
 
   // Feature groups (the family boxes): the registry (names) and the
   // per-thread assignments, both optional state — the board renders a plain
@@ -629,7 +632,9 @@ function BoardPage({ subPath }: { subPath: string }) {
   useEffect(() => {
     refetchGroups();
   }, [refetchGroups]);
-  useRealtime("group-changed", refetchGroups);
+  useRealtime("group-changed", () => {
+    refetchScheduler.schedule("groups", refetchGroups);
+  });
   const setThreadGroup = useCallback(
     (threadId: string, groupId: string | null) => {
       // Optimistic; the group-changed refetch settles the truth — including

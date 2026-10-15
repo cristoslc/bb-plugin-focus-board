@@ -16,6 +16,16 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "Child threads"
   },
   {
+    "text": "**A burst of realtime signals refetches the board once, not once per signal.** The done, link, ack, snooze, rank, and group echoes now wait out one quiet window: ten signals landing together settle as a single coalesced refetch pass, so a board with hundreds of threads stops repainting on every echo.",
+    "children": [],
+    "group": "Board scale"
+  },
+  {
+    "text": "**A state change repaints only the changed cards, not the whole board.** The thread card is memoized on what it actually renders: toggling done, an ack, or a snooze on a board of hundreds of threads now re-renders just the affected card's subtree (and its family), while freshly rebuilt menus, dots, and closures on the untouched cards can no longer force a repaint.",
+    "children": [],
+    "group": "Cards"
+  },
+  {
     "text": "**Bare reference ids in pane messages become chips too.** Agents often drop the kind prefix and write `@proj_…` or `@thr_…` straight, and those tokens stayed dead text. The pane paints them like the full forms now, and a trailing `#msg=N` fragment is swallowed the same way.",
     "children": [],
     "group": "Thread pane"

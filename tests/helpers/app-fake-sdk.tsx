@@ -117,6 +117,10 @@ export function experimental_useSidebarThreads(): unknown {
   };
 }
 
+// The realtime signal channels: useRealtime registers handlers, tests fire
+// them through fireRealtime.
+const realtimeChannels = new Map<string, Set<(payload: unknown) => void>>();
+
 function mutateThread(threadId: string, patch: (thread: FakeSidebarThread) => FakeSidebarThread): void {
   store.threads = store.threads.map((thread) =>
     thread.id === threadId ? patch(thread) : thread,
@@ -186,13 +190,34 @@ export function experimental_usePluginId(): string {
   return "focus-board";
 }
 
-export function useRealtime(): void {}
+export function useRealtime(channel: string, handler: (payload: unknown) => void): void {
+  if (channel === undefined) return; // legacy no-arg stub signature
+  if (!realtimeChannels.has(channel)) realtimeChannels.set(channel, new Set());
+  realtimeChannels.get(channel)?.add(handler);
+}
+
+/** Every handler registered for `channel` (the fake equivalent of a realtime signal). */
+export function fireRealtime(channel: string, payload: unknown = {}): void {
+  for (const handler of [...realtimeChannels.get(channel) ?? []]) handler(payload);
+}
 
 const rpcSubscribers = new Set<(event: unknown) => void>();
 function publishThreadChanged(): void {
   for (const subscriber of [...rpcSubscribers]) {
     subscriber({ entity: "thread", changes: [] });
   }
+}
+/** Counted rpc activity: tests assert refetch coalescing through this log
+ * (one burst of signals must produce one call per list, not per signal). */
+const rpcCallLog: string[] = [];
+
+/** The methods rpc.call has handed the server so far; clear with clearRpcCallLog(). */
+export function rpcCalls(): readonly string[] {
+  return rpcCallLog;
+}
+
+export function clearRpcCallLog(): void {
+  rpcCallLog.length = 0;
 }
 
 // Feature-group fake state: the registry and the assignments the group_*
@@ -214,6 +239,7 @@ export function seedFakeGroups(
 }
 
 const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
+  rpcCallLog.push(method);
   switch (method) {
     case "done_list":
       return { doneIds: [], records: {} };

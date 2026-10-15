@@ -9,7 +9,7 @@
  */
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
-import { SIM_DEMO_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, type SimThread } from "./data";
+import { SIM_DEMO_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, scaleThreads, type SimThread } from "./data";
 import { applyMoveVisible } from "../../lib/rank";
 import { applyUnitMoveVisible } from "../../lib/rank-unit-move";
 // Pure constants only — lib/sweep would drag components/grouping into the
@@ -219,9 +219,19 @@ const FAIL_AUTOTITLE_KINDS = new Set(
     .map((kind) => kind.trim())
     .filter(Boolean),
 );
-let simThreads: readonly SimThread[] = DEMO_MODE
-  ? [...SIM_THREADS, ...SIM_DEMO_THREADS]
-  : SIM_THREADS;
+// `?scale=<n>` (issue #186): append n synthetic scale threads (data.ts
+// scaleThreads) so a bench drives the board at hundreds of cards. The
+// screenshot and UAT fixtures stay unchanged when the flag is absent.
+const SCALE_COUNT = Number(
+  new URLSearchParams(window.location.search).get("scale") ?? "0",
+);
+let simThreads: readonly SimThread[] = DEMO_MODE && SCALE_COUNT > 0
+  ? [...SIM_THREADS, ...SIM_DEMO_THREADS, ...scaleThreads(SCALE_COUNT)]
+  : DEMO_MODE
+    ? [...SIM_THREADS, ...SIM_DEMO_THREADS]
+    : SCALE_COUNT > 0
+      ? [...SIM_THREADS, ...scaleThreads(SCALE_COUNT)]
+      : SIM_THREADS;
 
 /** Threads archived in the harness; `threads.list({ archived: true })` serves these. */
 let simArchived: readonly SimThread[] = [];
@@ -463,6 +473,17 @@ export function experimental_NewThreadComposer(props: Record<string, unknown>): 
  */
 let simRanks: Record<string, string[]> = {};
 const uatCalls: { method: string; args?: unknown }[] = [];
+// The bench log (issue #186): every rpc method the sim serves, in order —
+// the burst probe counts refetch passes through it.
+const simRpcLog: string[] = [];
+// Threads marked done in the harness: the SIM_DONE_IDS fixture seeds it and
+// done_set mutates it (the real server's KV is the same shape).
+const simDoneIds = new Set<string>(SIM_DONE_IDS);
+
+/** Fire the registered realtime handlers for a channel (the host echo the sim fabricates). */
+function simFireRealtime(channel: string, payload: unknown = { entity: "thread", changes: [] }): void {
+  for (const handler of [...simRealtimeChannels.get(channel) ?? []]) handler(payload);
+}
 // The simulated declared-settings store the plugins.updateSettings mock
 // merges into and useSettings reads back; `?settings=` (main.tsx) seeds it
 // so a verify run can prove the modal renders previously-written values.
@@ -504,12 +525,30 @@ let simGroupAssignments: Record<string, string> = {
   resetCalls: () => {
     uatCalls.length = 0;
   },
+  simRpcLog: {
+    calls: () => structuredClone(simRpcLog),
+    clear: () => {
+      simRpcLog.length = 0;
+    },
+  },
+  /** Fire the registered realtime handlers for a channel (the burst driver). */
+  simSignal: (channel: string) => simFireRealtime(channel),
 };
 
 const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   uatCalls.push({ method, args });
+  simRpcLog.push(method);
   if (method === "done_list") {
-    return { doneIds: SIM_DONE_IDS, records: structuredClone(SIM_DONE_RECORDS) };
+    return { doneIds: [...simDoneIds], records: structuredClone(SIM_DONE_RECORDS) };
+  }
+  if (method === "done_set") {
+    // The mark-done write mirrors the real server: the done set mutates and
+    // every open panel hears the echo through its realtime registration.
+    const { threadId, done } = args as { threadId: string; done: boolean };
+    if (done) simDoneIds.add(threadId);
+    else simDoneIds.delete(threadId);
+    simFireRealtime("done-changed");
+    return { threadId, done };
   }
   if (method === "sweep_config_get") {
     // Resolved ms, mirroring the real server: defaults are 2 days per arm.
@@ -709,9 +748,15 @@ export function useRpc(): { call: (method: string, args?: unknown) => Promise<un
   return rpc;
 }
 
-export function useRealtime(_channel: string, _handler: (payload: unknown) => void): void {
-  // No realtime traffic in the harness.
+export function useRealtime(channel: string, handler: (payload: unknown) => void): void {
+  // The harness has no host realtime stream of its own, but the bench
+  // needs the signals deliverable: registered handlers fire through the
+  // page-level `__simSignal(channel)` hook (below).
+  if (!simRealtimeChannels.has(channel)) simRealtimeChannels.set(channel, new Set());
+  simRealtimeChannels.get(channel)?.add(handler);
 }
+
+const simRealtimeChannels = new Map<string, Set<(payload: unknown) => void>>();
 
 /**
  * The reactive plugin-settings hook: the harness simulates the host's

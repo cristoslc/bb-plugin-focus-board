@@ -61,6 +61,31 @@ export const SIM_DONE_RECORDS: Record<string, { doneAt: string }> = {
   thr_proj_done: { doneAt: new Date(SIM_NOW - 13 * DAY).toISOString() },
 };
 
+/**
+ * Scale-fixture builder (issue #186): `?scale=N` appends N synthetic
+ * top-level threads so board-scale behavior — hundreds of cards on one
+ * board — renders for benches and probes. Ages spread across ten days (the
+ * cards distribute over the idle columns), providers and statuses rotate,
+ * and ids all share the `thr_scale_` prefix so a driver can find them.
+ * Nothing else reads this fixture: the UAT suites stay pinned to the base
+ * one.
+ */
+export function scaleThreads(count: number): readonly SimThread[] {
+  return Array.from({ length: count }, (_, index) =>
+    thread({
+      id: `thr_scale_${index}`,
+      displayTitle: `Scale thread ${index}: board interactions at hundreds of threads`,
+      status: index % 7 === 0 ? "active" : "idle",
+      runtimeStatus: index % 7 === 0 ? "active" : "idle",
+      isUnread: index % 5 === 1,
+      lastReadAt: index % 5 === 1 ? SIM_NOW - 3 * HOUR : SIM_NOW - index * HOUR,
+      providerId: SIM_PROVIDERS[index % SIM_PROVIDERS.length].id,
+      projectId: SIM_PROJECTS[index % SIM_PROJECTS.length].id,
+      updatedAt: SIM_NOW - Math.min(index * 25 * MINUTE, 10 * DAY),
+    }),
+  );
+}
+
 export type SimThread = Record<string, unknown> & {
   id: string;
   updatedAt: number;

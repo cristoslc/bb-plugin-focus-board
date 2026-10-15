@@ -21,6 +21,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+#### Board scale
+
+- **A burst of realtime signals refetches the board once, not once per signal.** The done, link, ack, snooze, rank, and group echoes now wait out one quiet window: ten signals landing together settle as a single coalesced refetch pass, so a board with hundreds of threads stops repainting on every echo.
+
+#### Cards
+
+- **A state change repaints only the changed cards, not the whole board.** The thread card is memoized on what it actually renders: toggling done, an ack, or a snooze on a board of hundreds of threads now re-renders just the affected card's subtree (and its family), while freshly rebuilt menus, dots, and closures on the untouched cards can no longer force a repaint.
+
 ### Fixed
 
 #### Thread pane
