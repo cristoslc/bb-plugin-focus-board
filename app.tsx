@@ -149,7 +149,6 @@ import {
   parseGroupStored,
   parseParentLaneOrderStored,
   parseWallpaperStored,
-  wallpaperBackgroundStyle,
   readStored,
   readStoredText,
   writeStored,
@@ -176,6 +175,7 @@ import {
 import { type ArchiveUnit } from "./lib/duration";
 import { usePrefersDarkScheme } from "./components/ui/hooks/use-media-query";
 import { WallpaperActiveProvider } from "./components/wallpaper-contrast";
+import { WallpaperPaintLayer } from "./components/wallpaper-paint";
 import { EmptyState } from "./components/empty-state";
 import { SettingsModal, type SettingsTab } from "./components/settings-modal";
 import { AppearanceSettingsSection } from "./components/settings-section";
@@ -852,6 +852,10 @@ function BoardPage({ subPath }: { subPath: string }) {
     setWallpaper(next);
     writeStored(WALLPAPER_KEY, wallpaperStoredValue(next));
   }, []);
+  // The paint's anchor point: the panel root's box, read by
+  // useWallpaperPaintFrame (components/wallpaper-paint.tsx) to place the
+  // wallpaper relative to the window, not to the panel.
+  const panelRef = useRef<HTMLDivElement | null>(null);
   // Appearance tab: the card-transport read and the motion override, backed
   // by the same tolerant localStorage stores every other board preference
   // uses. Defaults keep today's board untouched (the dissolve plays; the
@@ -2962,20 +2966,19 @@ function BoardPage({ subPath }: { subPath: string }) {
     <div
       // Always relative: the panel-scoped pane sheet (a narrow panel on a
       // desktop window) anchors to this root, and so do the wallpaper
-      // layers when a wallpaper is active.
+      // layers when a wallpaper is active. The ref feeds the paint's
+      // window-frame measurement.
+      ref={panelRef}
       className="relative flex h-full min-h-0"
       data-focus-board-panel=""
     >
       {activeWallpaper === null ? null : (
         // The wallpaper paints on a clipped child, not the root, so a zoom
         // > 1 can scale the image past the panel edge without ever
-        // scrolling or resizing the board.
-        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div
-            className="absolute inset-0"
-            style={wallpaperBackgroundStyle(activeWallpaper, darkScheme) ?? undefined}
-          />
-        </div>
+        // scrolling or resizing the board. The paint anchors to the window's
+        // box (issue #201): the crop derives from the window's ratio, and a
+        // thread pane toggle or sidebar drag only carves the porthole.
+        <WallpaperPaintLayer layer={activeWallpaper} dark={darkScheme} panelRef={panelRef} />
       )}
       {activeWallpaper === null ? null : (
         <div
