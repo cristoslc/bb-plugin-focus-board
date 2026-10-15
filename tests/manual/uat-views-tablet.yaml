@@ -44,6 +44,14 @@ steps:
       - column: unread
         ordered: [thr_review_pr, thr_rpc_auth, thr_uat_queue]
 
+  - id: horizontal-cross-lane-done-drop-at-tablet-width
+    title: A cross-lane state drop lands in the Done row at tablet width
+    goto: "?groupBy=status&laneDirection=horizontal"
+    drag_to_column: { from: thr_rpc_auth, column: done }
+    assert:
+      - rpc_called_method: done_set
+      - no_visible_error: true
+
   - id: parent-view-renders-at-tablet-width
     title: The Parent-thread view renders its family lanes at tablet width
     goto: "?groupBy=parent"

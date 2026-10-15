@@ -89,3 +89,98 @@ steps:
       - click_aria: "Vertical"
     assert:
       - lane_direction: vertical
+
+  # ── The rest of the draggable surface, on the horizontal board ──────────
+  # The row read must carry every gesture the column board carries, not just
+  # the same-lane reorder: state drops, floor appends, the nest third, the
+  # family-box unit drag, and the refusal banner all split on the row's x.
+
+  - id: horizontal-cross-lane-done-drop
+    title: Dropping an Unread card on the Done row marks it done
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert_before_drag:
+      - column: done
+        ordered: [thr_pane_padding, thr_license, thr_proj_family]
+    drag_to_column: { from: thr_rpc_auth, column: done }
+    assert:
+      - rpc_called_method: done_set
+      - column: done
+        ordered: [thr_rpc_auth, thr_pane_padding, thr_license, thr_proj_family]
+      - no_visible_error: true
+
+  - id: horizontal-drop-on-pinned-row-pins
+    title: Dropping an Unread card on the Pinned row pins it without a rank write
+    goto: "?groupBy=status&laneDirection=horizontal"
+    drag_to_column: { from: thr_review_pr, column: pinned }
+    assert:
+      # The new pin lands after the more recently pinned fixture card (pin
+      # recency: ship 6h vs roadmap 2d), before the older pin.
+      - column: pinned
+        ordered: [thr_ship_release, thr_review_pr, thr_roadmap]
+      - rpc_not_called: rank_move
+      - no_visible_error: true
+
+  - id: horizontal-floor-drop-appends
+    title: Releasing a card on its row's trailing floor appends it
+    goto: "?groupBy=status&laneDirection=horizontal"
+    drag_to_column: { from: thr_rpc_auth, column: unread }
+    assert:
+      # A same-lane floor drop is the append: rpc_auth leaves the front.
+      - column: unread
+        ordered: [thr_uat_queue, thr_review_pr, thr_rpc_auth]
+      - rpc_called: { columnKey: "status:unread", threadId: thr_rpc_auth, beforeId: null, toEnd: true }
+
+  - id: horizontal-onto-drop-nests
+    title: Dropping onto a card's middle nests across the row's width
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert_before_drag:
+      - nest_ring: { from: thr_rpc_auth, to: thr_uat_queue, shown: true }
+    drag: { from: thr_rpc_auth, to: thr_uat_queue, edge: onto }
+    assert:
+      - rpc_called_method: thread_reparent
+      - rank_slots: { column: unread, count: 2 }
+      - nested_row: { id: thr_rpc_auth, shown: true }
+
+  - id: horizontal-box-drag-moves-the-whole-box
+    title: Dragging a boxed card moves the whole family box along the row
+    # The group fixture's two members gather into one dashed frame in the
+    # Working row; a unit drag before the sweep fixture's card parks the
+    # whole box behind it in display order.
+    goto: "?groupBy=status&laneDirection=horizontal"
+    drag: { from: thr_column_sort, to: thr_sweep_parent, edge: after }
+    assert:
+      - column: working
+        ordered: [thr_sweep_parent, thr_column_sort, thr_drag_done]
+      # The move ranks the drop point's whole prefix, so the sweep fixture's
+      # card joins the store in front of the boxed pair.
+      - store: { "status:working": [thr_sweep_parent, thr_column_sort, thr_drag_done] }
+
+  - id: horizontal-unidentified-drop-refuses-quietly
+    title: A drag whose payload lost its id refuses without an error banner
+    goto: "?groupBy=status&laneDirection=horizontal"
+    drag_unidentified: { from: thr_roadmap, to: thr_ship_release, edge: before }
+    assert:
+      # The same contract uat-rank pins: the lost payload falls back to the
+      # live drag ref, so the drop still attributes the card and reorders —
+      # no error banner (the fallback is the resilience, not a refusal).
+      - column: pinned
+        ordered: [thr_roadmap, thr_ship_release]
+      - no_visible_error: true
+
+  - id: horizontal-reveal-brings-the-destination-row-into-view
+    title: A menu relocation brings an offscreen destination row into view
+    # The rows board scrolls vertically and each row scrolls its own flow:
+    # scroll down to push the top Pinned row offscreen, then Pin — the
+    # reveal claim must slide the container back up (the transposed
+    # containerSlideX), not leave the card in a row the operator cannot see.
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert_before_drag:
+      - column: pinned
+        ordered: [thr_ship_release, thr_roadmap]
+    scroll: { dy: 800, target: columns }
+    menu: { card: thr_review_pr, item: "Pin" }
+    assert:
+      # The new pin lands between the two fixture pins (pin recency).
+      - column: pinned
+        ordered: [thr_ship_release, thr_review_pr, thr_roadmap]
+      - column_card_visible: thr_review_pr

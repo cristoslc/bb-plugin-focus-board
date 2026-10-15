@@ -97,3 +97,66 @@ steps:
     assert:
       - text_visible: "Parent thread lane fixture"
       - text_visible: "Child thread lane fixture"
+
+  # ── The same views on the horizontal lane read (issue #153) ─────────────
+  # The direction is a layout read only: every grouping must derive the
+  # identical lanes and orders when the lanes are rows. (The parent view
+  # renders its own lane board and is out of scope for the direction;
+  # uat-parent-lanes.yaml covers it.)
+
+  - id: horizontal-attention-groups-the-same
+    title: The horizontal Attention board derives the same state and age lanes
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert:
+      - lane_direction: horizontal
+      - column: unread
+        ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]
+      - column: working
+        ordered: [thr_column_sort, thr_drag_done, thr_sweep_parent]
+
+  - id: horizontal-recency-buckets-the-same
+    title: The horizontal Last activity board keeps its age buckets and orders
+    goto: "?groupBy=recency&laneDirection=horizontal"
+    assert:
+      - text_visible: "Today"
+      - text_visible: "A while ago"
+      - column: recent
+        ordered: [thr_column_sort, thr_drag_done, thr_permissions, thr_glyph_glue, thr_kbd_focus, thr_rpc_auth, thr_deploy_fail, thr_toolbar_labels]
+      - column: today
+        ordered: [thr_uat_queue, thr_review_pr, thr_flaky_ci, thr_readme_quickstart]
+
+  - id: horizontal-project-view-the-same
+    title: The horizontal Project view splits the same project lanes
+    goto: "?groupBy=project&laneDirection=horizontal"
+    assert:
+      - text_visible: "API Gateway"
+      - column: proj_api
+        ordered: [thr_deploy_fail, thr_toolbar_labels, thr_env_edge]
+
+  - id: horizontal-provider-view-the-same
+    title: The horizontal Provider view splits the same provider lanes
+    goto: "?groupBy=provider&laneDirection=horizontal"
+    assert:
+      - column: claude-code
+        ordered: [thr_deploy_fail, thr_readme_quickstart, thr_env_edge]
+
+  - id: horizontal-machine-view-the-same
+    title: The horizontal Machine view groups by the same host lane
+    goto: "?groupBy=machine&laneDirection=horizontal"
+    assert:
+      - text_visible: "MacBook Pro"
+      - text_hidden: "No machine"
+
+  - id: horizontal-group-view-the-same
+    title: The horizontal Group view keeps the assignment lanes and the No group bucket
+    goto: "?groupBy=group&laneDirection=horizontal"
+    assert:
+      - text_visible: "No group"
+      - column: grp_chat_imagegent
+        ordered: [thr_column_sort, thr_drag_done]
+
+  - id: horizontal-none-view-the-same
+    title: The horizontal Threads view renders the same single flat lane
+    goto: "?groupBy=none&laneDirection=horizontal"
+    assert:
+      - text_visible: "Threads"
