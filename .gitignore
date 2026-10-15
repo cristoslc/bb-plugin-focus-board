@@ -4,3 +4,4 @@ node_modules/
 .subagents/
 prompts/
 docs/screenshots/repro-mobile-scroll-snap/
+docs/uat/shots/

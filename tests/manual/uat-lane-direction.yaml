@@ -15,6 +15,7 @@ harness:
 defaults:
   groupBy: status
   theme: dark
+shots: true
 
 steps:
   - id: the-shipped-default-stays-vertical

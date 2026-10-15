@@ -7,6 +7,7 @@
  * compiled Tailwind output and only contains classes the plugin's own source
  * uses, so utility classes invented here would silently not exist.
  */
+import { useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
 import { SIM_DEMO_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, type SimThread } from "./data";
@@ -190,6 +191,16 @@ export function experimental_usePluginId(): string {
 }
 
 export function experimental_useSidebarThreads(): unknown {
+  // Subscribe to the sidebar's revision so a host push re-renders the board.
+  useSyncExternalStore(
+    (onStoreChange) => {
+      sidebarListenerSet.add(onStoreChange);
+      return () => {
+        sidebarListenerSet.delete(onStoreChange);
+      };
+    },
+    () => simThreadsRevision,
+  );
   return {
     status: "ready",
     // The live array, not the constant: setPinned rewrites it, and the app's
@@ -221,6 +232,42 @@ const FAIL_AUTOTITLE_KINDS = new Set(
 let simThreads: readonly SimThread[] = DEMO_MODE
   ? [...SIM_THREADS, ...SIM_DEMO_THREADS]
   : SIM_THREADS;
+
+/**
+ * The sidebar store's revision: the React hook subscribes to it, so a host
+ * push (or a mock action's rewrite) re-renders the board against the fresh
+ * array — the way real bb's sidebar hook re-reads over its subscription.
+ * Without this, a simulated push only re-rendered surfaces the app happened
+ * to re-render for its own reasons, so UAT could never race a live update
+ * against an in-flight gesture.
+ */
+let simThreadsRevision = 0;
+const sidebarListenerSet = new Set<() => void>();
+
+/** Rewrite the simulated sidebar and wake every reader (the hook, the realtime subscribers). */
+function bumpSimThreads(
+  next: readonly SimThread[],
+  changes: readonly string[] = ["updated"],
+): void {
+  simThreads = next;
+  simThreadsRevision += 1;
+  for (const listener of sidebarListenerSet) listener();
+  for (const subscriber of mockSubscribers) {
+    subscriber.callback({ entity: "thread", changes: [...changes] });
+  }
+}
+
+/** The thread patch a UAT driver or the fuzz engine pushes mid-suite. */
+function pushThreadUpdate(
+  threadId: string,
+  patch: Record<string, unknown>,
+): { ok: boolean; revision: number } {
+  const next = simThreads.map((thread) =>
+    thread.id === threadId ? ({ ...thread, ...patch } as SimThread) : thread,
+  );
+  bumpSimThreads(next);
+  return { ok: true, revision: simThreadsRevision };
+}
 
 /** Threads archived in the harness; `threads.list({ archived: true })` serves these. */
 let simArchived: readonly SimThread[] = [];
@@ -464,6 +511,11 @@ let simGroupAssignments: Record<string, string> = {
   resetCalls: () => {
     uatCalls.length = 0;
   },
+  // A mid-suite thread patch: rewrites the simulated sidebar (fresh array
+  // identity, so the app's memo chain re-derives every lane) and wakes both
+  // the React hook and the realtime subscribers — the shape of a real host
+  // push, which races whatever gesture the driver has in flight.
+  pushThreadUpdate,
 };
 
 const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {

@@ -152,6 +152,45 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   flipping the open board live both ways. The runner's drag and line probes
   read the board's `data-lane-direction` and split on the flow axis, so a
   suite exercises whichever read the page mounts.
+- `uat-host-push-races.yaml` — live host pushes raced against in-flight
+  gestures: the mock's sidebar is now a real reactive store, so a push
+  update (the `push_update` gesture) can promote, lift, or reseat a card
+  WHILE an insertion-line hover is armed, with the board invariants
+  asserting the aftermath.
+- `uat-fuzz.yaml` — the gesture fuzz (model-based): `fuzz: { steps, seed }`
+  picks gestures off the live DOM (drags with every edge, state drops,
+  keyboard through the browser's REAL key delivery, pointer clicks, menu
+  actions, host pushes, Escape) and asserts the board invariants after
+  every one. Deterministic per seed; a failure prints the trail.
+
+## Invariants (suite-level `invariants: true`)
+
+Three board laws asserted after every step (opt out per step with
+`invariants: false`): one top-level lane per thread (the Done projection's
+family card the only legal second home), a lane's displayed cards that
+appear in its stored rank keep the stored relative order, and no refusal
+banner on screen.
+
+## Matrix (suite-level `matrix: { viewports, themes }`)
+
+Every declared cell (viewport × theme) re-runs the suite's same steps and
+writes its own report (`<suite>.vWxH-theme.md`), so a regression names its
+cell. Cheap suites matrix on both axes; heavy ones stay single-cell.
+
+## Other runner knobs
+
+- `shots: true` captures a per-step PNG under `docs/uat/shots/` (gitignored;
+  artifacts for humans, no pixel diffing).
+- `push_update: { threadId, patch }` — a host push whose patch (status,
+  unread, pending flag) lands mid-step, racing whatever is in flight.
+- `wheel_pan` accepts `{ dx, dy, target }` (the columns board included).
+- `hover` with `{ from, to, edge }` arms a card's insertion line as a
+  gesture (the setup half the race suites need); without a `from` it keeps
+  the board-area hover behavior it already had.
+- Ports hand out from a pid-derived random base (two concurrent UAT
+  sessions on one repo no longer collide), the harness child spawns vite
+  directly so a strictPort failure names itself instead of riding another
+  runner's server, and a taken port retries a few slots ahead.
 
 ## Notes
 

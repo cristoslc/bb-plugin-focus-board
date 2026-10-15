@@ -17,6 +17,16 @@ harness:
 defaults:
   groupBy: status
   theme: dark
+# The view sweep is cheap enough to run on a matrix: desktop and tablet
+# widths, dark and light themes — every cell re-runs the same steps and
+# writes its own report, so a view regression names its cell.
+matrix:
+  viewports:
+    - { width: 1920, height: 1080 }
+    - { width: 768, height: 1024 }
+  themes:
+    - dark
+    - light
 
 steps:
   - id: attention-groups-by-state-then-age

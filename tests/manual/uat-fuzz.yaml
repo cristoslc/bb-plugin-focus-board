@@ -1,0 +1,29 @@
+# Operator-assisted E2E: the gesture fuzz (model-based testing).
+#
+# The runner picks `steps` gestures off the board's own live DOM with a fixed
+# seed — same-lane reorders (edges and the nest third), cross-lane state
+# drops, keyboard reorders through the browser's REAL key delivery, real
+# pointer card clicks, right-click menu actions, and host pushes that
+# re-derive the lanes mid-run. After EVERY gesture the board invariants must
+# hold: one top-level lane per thread (the Done projection the only second
+# home), stored cards keep their stored order, no refusal banner on screen.
+# A failing run prints the seed and the last 30 gestures so the sequence
+# replays exactly.
+#
+# Run: npm run uat -- tests/manual/uat-fuzz.yaml
+suite: gesture-fuzz
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5196
+defaults:
+  groupBy: status
+  theme: dark
+  invariants: true
+
+fuzz:
+  # Fixed seed, deterministic: bump the seed deliberately when you want a new
+  # exploration, never to make a failure go away.
+  steps: 100
+  seed: 2026
+
+steps: []

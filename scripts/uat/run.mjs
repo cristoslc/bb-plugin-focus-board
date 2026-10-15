@@ -41,21 +41,55 @@ const suiteFiles =
 
 /** Start vite and resolve once the harness is serving. */
 async function startHarness(port) {
+  // Spawn vite's bin directly (no npx): npx wraps vite in a launcher process
+  // whose exit does not track a strictPort failure, and a missed exit makes
+  // the readiness poll ride ANOTHER runner's server answering on the same
+  // port — the failure that once had a suite assert against a stranger's
+  // harness.
   const child = spawn(
-    "npx",
-    ["vite", "--config", HARNESS_CONFIG, "--port", String(port), "--strictPort"],
+    process.execPath,
+    ["node_modules/vite/bin/vite.js", "--config", HARNESS_CONFIG, "--port", String(port), "--strictPort"],
     { stdio: ["ignore", "pipe", "pipe"] },
   );
+  // The readiness poll must never mistake a SQUATTER for our harness: if
+  // the port is already owned by another runner's vite (a crashed or
+  // concurrent UAT session), strictPort makes OUR child die, the squatter
+  // answers the poll, and a suite would then run against a stranger's
+  // server with confusing null-board assertions. The child's exit fails the
+  // start loudly instead.
+  let childDied = null;
+  child.on("exit", (code) => {
+    childDied = code ?? "signal";
+  });
   child.stderr.on("data", (chunk) => {
     const text = String(chunk);
     if (/error/i.test(text)) process.stderr.write(`  vite: ${text}`);
   });
   const base = `http://localhost:${port}/`;
   for (let attempt = 0; attempt < 100; attempt++) {
+    if (childDied !== null) {
+      throw new Error(
+        `harness on ${base} did not start (child exited ${childDied} — the port is likely owned by another runner)`,
+      );
+    }
     try {
       const response = await fetch(base);
-      if (response.ok) return { child, base };
-    } catch {
+      if (response.ok && childDied === null) {
+        // A squatter's server can answer first and die or exit right after
+        // (the other runner finishing between poll and use), so hold for a
+        // beat and re-check the child before declaring readiness.
+        await sleep(300);
+        if (childDied !== null) {
+          throw new Error(
+            `harness on ${base} did not start (child exited ${childDied} — the port is likely owned by another runner)`,
+          );
+        }
+        return { child, base };
+      }
+    } catch (error) {
+      if (childDied !== null) {
+        throw error instanceof Error ? error : new Error(String(error));
+      }
       // Not up yet.
     }
     await sleep(200);
@@ -599,6 +633,124 @@ const pageFocusLabelled = ({ label }) => {
  * land — the retry only covers React scheduling jitter, it never clicks a
  * stale item.
  */
+/**
+ * The board invariants a suite with `invariants: true` (and the fuzz and
+ * race engines) asserts after every gesture. Three hold regardless of what
+ * the gesture was, so any future step inherits them:
+ *
+ * 1. Every thread renders top-level in exactly ONE lane — the family's Done
+ *    projection card is the one legal second home, and only beside "done"
+ *    (the same multiplicity rule the transport planner applies).
+ * 2. The cards of a lane that ARE in its stored rank keep the stored
+ *    relative order (a sparse order constrains its members, nothing more).
+ * 3. No refusal or sweep-refusal banner is on screen unless the step asked
+ *    for one — a silent-failure tripwire for gesture sequences nobody
+ *    hand-wrote.
+ */
+const pageInvariants = () => {
+  const problems = [];
+  const laneOf = new Map();
+  const displayedOf = new Map();
+  for (const section of document.querySelectorAll("section[data-column-id]")) {
+    const columnId = section.getAttribute("data-column-id");
+    const topSlots = [...section.querySelectorAll(":scope > div > ul > li")].filter(
+      // Transport ghosts hold the card's id in its OLD lane for a second;
+      // they are decoration, not board state.
+      (li) => li.getAttribute("data-transport-ghost") === null && li.getAttribute("aria-hidden") !== "true",
+    );
+    const displayed = topSlots.flatMap((li) => {
+      if (li.getAttribute("data-group-box") !== null) {
+        // A group frame's members each own a slot inside the frame; the
+        // frame itself owns none.
+        return [...li.querySelectorAll(":scope > div > ul > li")].flatMap((slot) => {
+          if (slot.getAttribute("data-transport-ghost") !== null) return [];
+          return [slot.querySelector("a[href]")?.getAttribute("href")?.split("/").pop() ?? "?"];
+        });
+      }
+      return [li.querySelector(":scope a[href]")?.getAttribute("href")?.split("/").pop() ?? "?"];
+    });
+    displayedOf.set(columnId, displayed);
+    for (const threadId of displayed) {
+      const lanes = laneOf.get(threadId) ?? [];
+      lanes.push(columnId);
+      laneOf.set(threadId, lanes);
+    }
+  }
+  for (const [threadId, lanes] of laneOf) {
+    const okMultiplicity = lanes.length === 1 || (lanes.length === 2 && lanes.includes("done"));
+    if (!okMultiplicity) {
+      problems.push(`thread ${threadId} renders top-level in ${lanes.join("+")}`);
+    }
+  }
+  const groupBy = window.localStorage.getItem("focus-board:groupBy") ?? "status";
+  const ranks = window.__uat.ranks();
+  for (const [columnId, displayed] of displayedOf) {
+    const rankKey = columnId === "pinned" || columnId === "done" ? columnId : `${groupBy}:${columnId}`;
+    const stored = ranks[rankKey] ?? [];
+    const displayedSet = new Set(displayed);
+    const displayedStored = displayed.filter((id) => stored.includes(id));
+    // The stored order belongs to the column: cards that left (pinned away,
+    // archived) keep their entries without rendering here, so the display
+    // must match the stored RELATIVE order of the cards still in the lane,
+    // not the raw stored array's positions.
+    const storedVisible = stored.filter((id) => displayedSet.has(id));
+    for (let index = 0; index < displayedStored.length; index += 1) {
+      if (displayedStored[index] !== storedVisible[index]) {
+        problems.push(
+          `lane ${columnId} shows its stored cards out of stored order (${displayedStored.join(",")} vs stored-visible ${storedVisible.join(",")})`,
+        );
+        break;
+      }
+    }
+  }
+  const banner = document.querySelector('[data-testid="rank-error-banner"], [data-testid="sweep-refusal"]');
+  if (banner !== null) {
+    problems.push(`refusal banner on screen: ${banner.textContent?.trim().slice(0, 90)}`);
+  }
+  return { ok: problems.length === 0, problems };
+};
+
+/**
+ * The board state the fuzz engine reads between gestures: whatever lanes
+ * exist right now, the top-level cards in each, and whether the settings
+ * modal is open (so a stray Escape closes it before the next gesture).
+ */
+const pageFuzzState = () => {
+  const lanes = [];
+  for (const section of document.querySelectorAll("section[data-column-id]")) {
+    const columnId = section.getAttribute("data-column-id");
+    const cards = [...section.querySelectorAll(":scope > div > ul > li")]
+      .filter((li) => li.getAttribute("data-transport-ghost") === null && li.getAttribute("aria-hidden") !== "true")
+      .flatMap((li) =>
+        li.getAttribute("data-group-box") !== null
+          ? [...li.querySelectorAll(":scope > div > ul > li")]
+              .filter((slot) => slot.getAttribute("data-transport-ghost") === null)
+              .map((slot) => slot.querySelector("a[href]")?.getAttribute("href")?.split("/").pop() ?? "?")
+          : [li.querySelector(":scope a[href]")?.getAttribute("href")?.split("/").pop() ?? "?"],
+      );
+    lanes.push({ columnId, cards });
+  }
+  return {
+    lanes,
+    boardOpen: document.querySelector("[data-columns-board]") !== null,
+    modalOpen: document.querySelector('[role="dialog"]') !== null,
+  };
+};
+
+/**
+ * One seeded RNG (mulberry32): the fuzz engine is deterministic per seed,
+ * so a failing sequence replays exactly.
+ */
+function mulberry32(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 const pageMenu = async ({ card, item }) => {
   const host = document.querySelector(`[data-thread-card="${CSS.escape(card)}"]`);
   if (!host) throw new Error(`menu: no card ${card}`);
@@ -787,12 +939,16 @@ const pageBoardNoiseRead = ({ holdMs }) =>
   });
 
 /** Real wheel input: 10 discrete wheel ticks through the input pipeline. */
-const wheelPan = async (page, dx) => {
-  const board = await page.$("[data-parent-board]");
+const wheelPan = async (page, { dx = 130, dy = 0, target = "lanes" }) => {
+  const board = await page.$(
+    target === "columns" ? "[data-columns-board]" : "[data-parent-board]",
+  );
   if (!board) throw new Error("board_quiet wheel: no board element");
   const box = await board.boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  for (let i = 0; i < 10; i++) await page.mouse.wheel({ deltaX: dx / 10 });
+  for (let i = 0; i < 10; i++) {
+    await page.mouse.wheel({ deltaX: dx / 10, deltaY: dy / 10 });
+  }
 };
 
 /**
@@ -1266,10 +1422,22 @@ async function check(step, page, gestureResults = []) {
     if (rule.lane_direction !== undefined) {
       // The board declares its lane direction on the scroll container
       // (data-lane-direction), so a suite can pin the layout the
-      // lane-direction preference produced (issue #153's UAT surface).
-      const got = await page.evaluate(
-        () => document.querySelector("[data-columns-board]")?.getAttribute("data-lane-direction") ?? null,
-      );
+      // lane-direction preference produced (issue #153's UAT surface). The
+      // read retries briefly: the goto's own wait can resolve on a surface
+      // that precedes the columns board's commit, and a bare moment-read
+      // then reports a null that was never a real board state.
+      const got = await (async () => {
+        const deadline = Date.now() + 2000;
+        let value = null;
+        while (Date.now() < deadline) {
+          value = await page.evaluate(
+            () => document.querySelector("[data-columns-board]")?.getAttribute("data-lane-direction") ?? null,
+          );
+          if (value !== null) return value;
+          await sleep(200);
+        }
+        return value;
+      })();
       expect(
         `lane direction: ${rule.lane_direction}`,
         got === rule.lane_direction,
@@ -1306,7 +1474,7 @@ async function check(step, page, gestureResults = []) {
         // mode: wheel pans with real wheel events through the browser's
         // input pipeline instead of a scrollLeft assignment.
         await page.evaluate(pageBoardNoiseArm);
-        await wheelPan(page, want.dx ?? 480);
+        await wheelPan(page, { dx: want.dx ?? 480 });
         noise = await page.evaluate(pageBoardNoiseRead, { holdMs: want.hold_ms ?? 2500 });
       } else {
         noise = await page.evaluate(pageBoardNoise, {
@@ -1487,30 +1655,223 @@ async function check(step, page, gestureResults = []) {
   return results;
 }
 
-async function runSuite(file, { port, browser }) {
+/**
+ * The gesture fuzz (suite-level `fuzz: { steps, seed }`): a deterministic
+ * per-seed sequence of board gestures picked off the live DOM — same-lane
+ * reorders (edges and the nest third included), cross-lane state drops,
+ * keyboard reorders through the REAL input pipeline (focus + Alt+arrow on
+ * the browser's own key delivery), real-pointer card clicks, right-click
+ * menu actions, host pushes that re-derive the lanes mid-suite, and Escape.
+ * After every gesture the board invariants must hold, or the run fails with
+ * the seed and the gesture trail that broke it. This is the difference
+ * between "every behavior we scripted is tested" and "every sequence that
+ * can happen gets tested".
+ */
+async function runFuzz(suite, { page, report }) {
+  const steps = Number(suite.fuzz.steps ?? 120);
+  const seed = Number(suite.fuzz.seed ?? 1);
+  const rng = mulberry32(seed);
+  const trail = [];
+  const results = [];
+  let ok = true;
+  const stop = (problem) => {
+    ok = false;
+    results.push({ name: "fuzz invariant broke", ok: false, detail: problem });
+  };
+  const PUSH_PATCHES = [
+    { isUnread: true },
+    { isUnread: false },
+    { status: "active" },
+    { status: "idle" },
+    { hasPendingInteraction: true },
+    { hasPendingInteraction: false },
+  ];
+  const MENU_ITEMS = ["Pin", "Unpin", "Mark Done", "Mark Not Done", "Mark Unread", "Mark Read"];
+  for (let index = 0; index < steps && ok; index += 1) {
+    let state = null;
+    try {
+      state = await page.evaluate(pageFuzzState);
+    } catch (error) {
+      stop(`state read failed: ${String(error?.message ?? error)}`);
+      break;
+    }
+    const lanes = state.lanes.filter((lane) => lane.cards.length > 0);
+    const cardIds = [...new Set(lanes.flatMap((lane) => lane.cards))];
+    const pick = (list) => list[Math.floor(rng() * list.length)];
+    let gesture = { kind: "noop" };
+    const roll = rng();
+    if (state.modalOpen) {
+      gesture = { kind: "press_escape" };
+    } else if (state.boardOpen && lanes.length > 0 && cardIds.length > 0) {
+      if (roll < 0.28) {
+        const lane = pick(lanes);
+        if (lane.cards.length >= 2) {
+          const from = pick(lane.cards);
+          const others = lane.cards.filter((id) => id !== from);
+          gesture = {
+            kind: "drag",
+            from,
+            to: pick(others),
+            edge: roll < 0.18 ? "onto" : roll < 0.23 ? "before" : "after",
+          };
+        }
+      } else if (roll < 0.48) {
+        const lane = pick(lanes);
+        const from = pick(lane.cards);
+        const targets =
+          lane.columnId === "done" ? ["pinned"]
+          : lane.columnId === "pinned" ? ["done", "unread"]
+          : lane.columnId === "unread" ? ["done", "pinned"]
+          : ["done", "pinned", "unread"];
+        gesture = { kind: "drag_to_column", from, column: pick(targets) };
+      } else if (roll < 0.60) {
+        const steppable = lanes.filter((lane) => lane.cards.length >= 2);
+        if (steppable.length > 0) {
+          const lane = pick(steppable);
+          gesture = {
+            kind: "real_key",
+            card: pick(lane.cards),
+            key: pick(["ArrowUp", "ArrowDown"]),
+          };
+        }
+      } else if (roll < 0.72) {
+        const lane = pick(lanes);
+        gesture = { kind: "menu", card: pick(lane.cards), item: pick(MENU_ITEMS) };
+      } else if (roll < 0.80) {
+        gesture = { kind: "click", card: pick(cardIds) };
+      } else if (roll < 0.94) {
+        gesture = { kind: "push_update", threadId: pick(cardIds), patch: pick(PUSH_PATCHES) };
+      } else {
+        gesture = { kind: "press_escape" };
+      }
+    }
+    trail.push(JSON.stringify(gesture));
+    try {
+      if (gesture.kind === "drag") {
+        const outcome = await page.evaluate(pageDrag, gesture);
+        if (outcome.dropped === false) trail.push(`skipped: ${outcome.reason}`);
+        await sleep(250);
+      } else if (gesture.kind === "drag_to_column") {
+        await page.evaluate(pageDragToColumn, gesture);
+        await sleep(250);
+      } else if (gesture.kind === "real_key") {
+        // The keyboard path a real operator uses: focus the card, then the
+        // browser's own key delivery carries the Alt+arrow.
+        const focused = await page.evaluate((card) => {
+          const anchor = document.querySelector(
+            `li[data-rank-slot="${CSS.escape(card)}"] a[href]`,
+          );
+          if (anchor === null) return false;
+          anchor.focus();
+          return document.activeElement === anchor;
+        }, gesture.card);
+        trail.push(`focused:${focused}`);
+        if (focused) {
+          await page.keyboard.down("Alt");
+          await page.keyboard.press(gesture.key);
+          await page.keyboard.up("Alt");
+        }
+        await sleep(300);
+      } else if (gesture.kind === "menu") {
+        try {
+          await page.evaluate(pageMenu, gesture);
+        } catch {
+          trail.push("menu item not offered — skipped");
+        }
+        await sleep(500);
+      } else if (gesture.kind === "click") {
+        // Real pointer travel, not el.click(): hits whatever is on top and
+        // exercises the hover-driven attention captures like a person.
+        const box = await page.evaluate((card) => {
+          const el = document.querySelector(`[data-thread-card="${CSS.escape(card)}"] a[href], a[data-thread-card="${CSS.escape(card)}"]`);
+          if (el === null) return null;
+          const rect = el.getBoundingClientRect();
+          return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        }, gesture.card);
+        if (box !== null) {
+          await page.mouse.move(box.x, box.y);
+          await page.mouse.click(box.x, box.y);
+        }
+        await sleep(300);
+      } else if (gesture.kind === "press_escape") {
+        await page.keyboard.press("Escape");
+        await sleep(200);
+      } else if (gesture.kind === "push_update") {
+        await page.evaluate(
+          (p) => globalThis.__uat.pushThreadUpdate(p.threadId, p.patch),
+          { threadId: gesture.threadId, patch: gesture.patch },
+        );
+        await sleep(400);
+      }
+    } catch (error) {
+      stop(`gesture ${JSON.stringify(gesture)} threw: ${String(error?.message ?? error)}`);
+      break;
+    }
+    const inv = await page.evaluate(pageInvariants);
+    if (!inv.ok) {
+      stop(inv.problems.join("; "));
+    }
+  }
+  results.push({
+    name: `fuzz: ${steps} seeded gestures (seed ${seed})`,
+    ok,
+    detail: ok ? "every gesture left the board consistent" : "board invariant failed",
+  });
+  report.steps.push({
+    id: `fuzz-${steps}-seed-${seed}`,
+    title: `Fuzz ${steps} gestures (seed ${seed})`,
+    ok,
+    results,
+  });
+  const mark = ok ? "pass" : "FAIL";
+  console.log(`  ${mark}  fuzz-${steps}-seed-${seed}`);
+  if (!ok) {
+    // The trail lands IN the report so a failed sequence replays: the last
+    // 30 gestures before the break are what matter.
+    console.log("        gesture trail (last 30):");
+    for (const entry of trail.slice(-30)) console.log(`          ${entry}`);
+    report.fuzzTrail = trail.slice(-30);
+  }
+}
+
+async function runSuite(file, { port, browser, cell = null }) {
   const suite = parse(await readFile(file, "utf8"));
-  const theme = suite.defaults?.theme ?? "dark";
+  const theme = cell?.theme ?? suite.defaults?.theme ?? "dark";
   const groupBy = suite.defaults?.groupBy ?? "status";
-  const viewport = suite.defaults?.viewport ?? { width: 1920, height: 1080 };
+  const viewport = cell?.viewport ?? suite.defaults?.viewport ?? { width: 1920, height: 1080 };
+  // A matrix cell gets a report-space suffix (`v768x1024-light`) so per-cell
+  // shots and filenames never collide across cells.
+  const cellSuffix = cell === null ? "" : `-${cell.label}`;
   const { child, base } = await startHarness(port);
   const page = await browser.newPage();
   await page.setViewport(viewport);
-  const report = { suite: suite.suite, file, theme, steps: [] };
+  const report = {
+    suite: suite.suite,
+    file,
+    theme,
+    cell: cell?.label ?? null,
+    steps: [],
+  };
 
   try {
+    let navigated = false;
+    const gotoBoard = async (url) => {
+      // Before any document script runs, so the app and the helpers share
+      // one page.
+      await page.evaluateOnNewDocument(installProtectedDrag);
+      await page.goto(`${base}${url}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+      // The board surface: a grouped board (sections) or an empty state.
+      // The parent-thread view legitimately renders no sections when a
+      // filter/search drops every family, so the wait must accept both.
+      await page.waitForSelector("section[aria-label], [role=status]", { timeout: 30_000 });
+      await page.evaluate((t) => document.documentElement.classList.toggle("dark", t === "dark"), theme);
+      await page.evaluate(() => globalThis.__uat.resetCalls());
+      await sleep(300);
+      navigated = true;
+    };
     for (const step of suite.steps) {
       if (step.goto !== undefined) {
-        // Before any document script runs, so the app and the helpers share
-        // one page.
-        await page.evaluateOnNewDocument(installProtectedDrag);
-        await page.goto(`${base}${step.goto}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-        // The board surface: a grouped board (sections) or an empty state.
-        // The parent-thread view legitimately renders no sections when a
-        // filter/search drops every family, so the wait must accept both.
-        await page.waitForSelector("section[aria-label], [role=status]", { timeout: 30_000 });
-        await page.evaluate((t) => document.documentElement.classList.toggle("dark", t === "dark"), theme);
-        await page.evaluate(() => globalThis.__uat.resetCalls());
-        await sleep(300);
+        await gotoBoard(step.goto);
       }
       // Assertions declared before the gesture, so a step can prove both the
       // starting state and the resulting one.
@@ -1525,7 +1886,7 @@ async function runSuite(file, { port, browser }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "drag_child_to_header", "hover_header", "hover", "key", "back", "click", "click_aria", "type", "menu", "scroll", "wheel_pan", "resize", "sleep", "press_escape", "push_url"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "drag_child_to_header", "hover_header", "hover", "key", "back", "click", "click_aria", "type", "menu", "scroll", "wheel_pan", "resize", "sleep", "press_escape", "push_url", "push_update"];
       let gestureFailed = false;
       // A gesture that cannot even run (its own element is absent — a
       // regression deleted what the step targets) records the step and
@@ -1603,9 +1964,15 @@ async function runSuite(file, { port, browser }) {
             }
           } else if (gesture === "hover") {
             // A hover with a board y-fraction moves the real mouse into that
-            // swimlane band (used by the band_hover assertion); other hovers
+            // swimlane band (used by the band_hover assertion); a card hover
+            // ({ from, to, edge }) arms the insertion line THROUGH the
+            // protected-drag machinery and keeps the drag alive — the state a
+            // host push then races in the race suites. Other hovers
             // carry their own assertion-side evaluation already.
-            if (payload && payload.board_y !== undefined) {
+            if (payload && payload.from !== undefined) {
+              await page.evaluate(pageHover, payload);
+              await sleep(200);
+            } else if (payload && payload.board_y !== undefined) {
               const rect = await page.evaluate(() => {
                 const board = document.querySelector("[data-parent-board]");
                 if (!board) return null;
@@ -1656,7 +2023,11 @@ async function runSuite(file, { port, browser }) {
           } else if (gesture === "wheel_pan") {
             // A real wheel pan through the input pipeline (the same path the
             // operator's trackpad uses), then a settle wait.
-            await wheelPan(page, payload?.dx ?? 130);
+            await wheelPan(page, {
+              dx: payload?.dx ?? 130,
+              dy: payload?.dy ?? 0,
+              target: payload?.target ?? "lanes",
+            });
             await sleep(Math.max(0, Number(payload?.settle_ms ?? 2500)));
           } else if (gesture === "resize") {
             // A viewport change while the lock is held re-runs the layout; let
@@ -1685,6 +2056,15 @@ async function runSuite(file, { port, browser }) {
               payload,
             );
             await sleep(200);
+          } else if (gesture === "push_update") {
+            // A host push with the gesture's patch (status, flags, age): the
+            // simulated sidebar rewrites and the board re-derives live — the
+            // thing a real bb does while an operator gestures.
+            await page.evaluate(
+              (p) => globalThis.__uat.pushThreadUpdate(p.threadId, p.patch ?? {}),
+              { threadId: payload.threadId, patch: payload.patch ?? {} },
+            );
+            await sleep(400);
           }
           if (gestureFailed) break;
         }
@@ -1702,7 +2082,25 @@ async function runSuite(file, { port, browser }) {
       // A drag that cannot start records itself and skips the step's own
       // assertions, as before the gesture loop existed.
       if (gestureFailed) continue;
+      // Suite-level invariants: the three board laws (one lane per thread
+      // with the Done projection the only second home, stored cards keep
+      // their stored order, no refusal banner) hold after whatever gesture
+      // just ran. A step may opt out with `invariants: false`.
+      const invariantResults =
+        suite.defaults?.invariants === true && step.invariants !== false
+          ? await (async () => {
+              const inv = await page.evaluate(pageInvariants);
+              return [
+                {
+                  name: "board invariants",
+                  ok: inv.ok,
+                  detail: inv.problems.join("; ") || "lane membership, stored order, and banners all clean",
+                },
+              ];
+            })()
+          : [];
       const results = [
+        ...invariantResults,
         ...preResults,
         ...(rule_has(step, "expect_drop_refused") ? [] : gestureResults),
         ...(await check(step, page, gestureResults)),
@@ -1718,6 +2116,23 @@ async function runSuite(file, { port, browser }) {
       for (const r of results) {
         if (!r.ok) console.log(`        × ${r.name}: ${r.detail}`);
       }
+      if (suite.defaults?.shots === true) {
+        // A per-step artifact for humans (no pixel diffing — the value is
+        // "what did the board look like at this step", kept beside the
+        // report). Cell suffixes keep matrix cells out of each other's way.
+        await mkdir(`${REPORT_DIR}shots/${report.suite}`, { recursive: true });
+        await page.screenshot({
+          path: `${REPORT_DIR}shots/${report.suite}/${step.id}${cellSuffix}.png`,
+        });
+      }
+    }
+    if (suite.fuzz !== undefined) {
+      // A fuzz-only suite declares no steps; the engine still needs the
+      // mounted board, so drive one navigation from the suite defaults.
+      if (!navigated) {
+        await gotoBoard(`?groupBy=${groupBy}&laneDirection=vertical`);
+      }
+      await runFuzz(suite, { page, report });
     }
   } finally {
     await page.close();
@@ -1734,10 +2149,47 @@ const browser = await puppeteer.launch({
 });
 
 const reports = [];
-let port = 5199;
+let port = 21000 + (process.pid % 20000);
 for (const file of suiteFiles) {
   console.log(`\n${file}`);
-  reports.push(await runSuite(file, { port: port++, browser }));
+  const suite = parse(await readFile(file, "utf8"));
+  // A suite may declare a matrix (viewports × themes): every cell re-runs
+  // the same steps with that cell's viewport and theme, each writing its own
+  // report so a regression names its cell.
+  const cells = [];
+  for (const viewport of suite.matrix?.viewports ?? [null]) {
+    for (const theme of suite.matrix?.themes ?? [null]) {
+      const label =
+        viewport === null && theme === null
+          ? null
+          : `v${viewport?.width ?? 1920}x${viewport?.height ?? 1080}-${theme ?? "dark"}`;
+      cells.push({
+        label,
+        viewport: viewport ?? undefined,
+        theme: theme ?? undefined,
+      });
+    }
+  }
+  for (const cell of cells) {
+    // Port handout with retry: another runner (a concurrent bb thread's UAT,
+    // a crashed session's stray vite) can own a handed-out port; retrying a
+    // few ports ahead beats a confusing cross-runner test run.
+    let attemptPort = port;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      try {
+        reports.push(await runSuite(file, { port: attemptPort, browser, cell }));
+        port = attemptPort;
+        break;
+      } catch (error) {
+        if (attempt === 3 || !String(error?.message ?? error).includes("owned by another runner")) {
+          throw error;
+        }
+        attemptPort += 7;
+        port = attemptPort;
+        console.log(`  (port ${attemptPort - 7} taken; retrying on ${attemptPort})`);
+      }
+    }
+  }
 }
 await browser.close();
 
@@ -1746,19 +2198,29 @@ const stamp = new Date().toISOString();
 // One report per suite, named after it: a combined run that wrote a single
 // file (the first suite's name) left every other suite's report stale — an
 // old pass sitting in docs/uat while the run that just failed wrote nothing
-// to the file someone actually opens.
+// to the file someone actually opens. A matrix cell appends its cell label.
 if (reports.length === 0) throw new Error("no suites ran");
 const outFiles = [];
 for (const report of reports) {
   const suiteLines = ["# UAT report", "", `_Generated ${stamp} by \`npm run uat\`._`, ""];
-  suiteLines.push(`## ${report.suite}`, "", `Source: \`${report.file}\` · theme ${report.theme}`, "");
+  suiteLines.push(
+    `## ${report.suite}${report.cell === null ? "" : ` (${report.cell})`}`,
+    "",
+    `Source: \`${report.file}\` · theme ${report.theme}`,
+    "",
+  );
   suiteLines.push("| Step | Result | Detail |", "| --- | --- | --- |");
   for (const step of report.steps) {
     const detail = step.results.map((r) => `${r.ok ? "✓" : "×"} ${r.name}${r.ok || !r.detail ? "" : ` (${r.detail})`}`).join("; ");
     suiteLines.push(`| ${step.title} | ${step.ok ? "pass" : "FAIL"} | ${detail} |`);
   }
+  if (report.fuzzTrail !== undefined) {
+    suiteLines.push("", "Fuzz gesture trail (last 30 before the break):", "");
+    for (const entry of report.fuzzTrail) suiteLines.push(`- \`${entry}\``);
+    suiteLines.push("");
+  }
   suiteLines.push("");
-  const outFile = `${REPORT_DIR}${report.suite}.md`;
+  const outFile = `${REPORT_DIR}${report.suite}${report.cell === null ? "" : `.${report.cell}`}.md`;
   await writeFile(outFile, suiteLines.join("\n"));
   outFiles.push(outFile);
 }

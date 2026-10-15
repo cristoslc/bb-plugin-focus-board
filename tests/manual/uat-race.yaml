@@ -1,0 +1,77 @@
+# Operator-assisted E2E: host pushes racing in-flight gestures.
+#
+# The mock's sidebar is now a real reactive store (a push rewrites the array
+# and re-renders the board the way bb's host push does), so this suite can do
+# the thing the board's own comments name as its historically bug-dense seam:
+# a live update reassembling the board WHILE a gesture's promise is armed.
+# The board invariants run after every step (suite-level `invariants: true`).
+#
+# Run: npm run uat -- tests/manual/uat-race.yaml
+suite: host-push-races
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5197
+defaults:
+  groupBy: status
+  theme: dark
+  invariants: true
+
+steps:
+  - id: push-relocates-the-hovered-card
+    title: A push that relocates the hovered card leaves no lie behind
+    # The insertion-line hover on thr_rpc_auth is armed when the push promotes
+    # that card out of Unread: the board re-derives, the hovered slot
+    # unmounts, and the armed promise must die with it — no banner, no line
+    # parked on a lane the card no longer renders in, no reorder written.
+    goto: "?groupBy=status"
+    gestures:
+      - hover: { from: thr_review_pr, to: thr_rpc_auth, edge: before }
+      - push_update: { threadId: thr_rpc_auth, patch: { status: "active" } }
+    assert:
+      - no_visible_error: true
+      # The remaining two unread cards kept their order; the relocated card
+      # wrote no rank and moved to Working.
+      - column: unread
+        ordered: [thr_uat_queue, thr_review_pr]
+      - rpc_not_called: rank_move
+
+  - id: push-lifts-a-family-mid-gesture-window
+    title: A push that lifts a family across lanes keeps the board consistent
+    # Marking the sweep family's PARENT needing-attention lifts the whole
+    # family into Needs you; the invariant block (lane membership, stored
+    # order, banners) must hold the same way it does for scripted gestures.
+    goto: "?groupBy=status"
+    gestures:
+      - push_update: { threadId: thr_sweep_parent, patch: { hasPendingInteraction: true } }
+    assert:
+      - no_visible_error: true
+      # The family card lifts out of Working (the family lifts on its
+      # parent's own pending state) into Needs you, after the lane's
+      # existing attended cards (permissions 7m, the error deploy card 35m).
+      - column: working
+        ordered: [thr_column_sort, thr_drag_done]
+      - column: attention
+        ordered: [thr_permissions, thr_deploy_fail, thr_sweep_parent]
+
+  - id: push-settles-an-attended-card
+    title: A push clearing the pending flag and marking unread reseats the card
+    goto: "?groupBy=status"
+    gestures:
+      - push_update: { threadId: thr_permissions, patch: { hasPendingInteraction: false, isUnread: true } }
+    assert:
+      - no_visible_error: true
+      # The attended card leaves Needs you, and as unread it leads Unread.
+      - column: unread
+        ordered: [thr_permissions, thr_rpc_auth, thr_uat_queue, thr_review_pr]
+
+  - id: push-mid-hover-then-fresh-drag-still-works
+    title: The drag pipeline survives a push raced under an armed hover
+    goto: "?groupBy=status"
+    gestures:
+      - hover: { from: thr_review_pr, to: thr_rpc_auth, edge: before }
+      - push_update: { threadId: thr_rpc_auth, patch: { status: "active" } }
+      - drag: { from: thr_review_pr, to: thr_uat_queue, edge: before }
+    assert:
+      - no_visible_error: true
+      - column: unread
+        ordered: [thr_review_pr, thr_uat_queue]
