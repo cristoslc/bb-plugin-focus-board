@@ -64,6 +64,9 @@ export const TRANSPORT_BATCH_CAP = 12;
 // the card land together. Additive by design: the dissolve stays the default
 // and a variant is selected by name.
 
+/** Which way a lane's card flow runs (the lane-direction setting's read). */
+export type TransportAxis = "vertical" | "horizontal";
+
 /** The lane-transport animation a board plays: the dissolve or the zoom. */
 export type TransportVariantId = "dissolve" | "zoom";
 
@@ -486,37 +489,44 @@ export function wipeInKeyframes(): Keyframe[] {
 
 /**
  * The arrival's growth frames: the NEW slot's space itself opens from
- * nothing to the card's measured height, so the lane's neighbors slide as
- * the card materializes instead of jumping to a fixed-size reveal. The
- * card's own rest margins are never touched — the end frame equals the
- * slot's natural layout exactly (the flex gap supplies the spacing).
+ * nothing to the card's measured size, so the lane's neighbors slide as the
+ * card materializes instead of jumping to a fixed-size reveal. The card's
+ * own rest margins are never touched — the end frame equals the slot's
+ * natural layout exactly (the flex gap supplies the spacing). The measured
+ * axis is the lane flow's: a vertical lane's slot grows its height, a
+ * horizontal lane's its width.
  */
-export function arrivalGrowKeyframes(heightPx: number): Keyframe[] {
-  return [{ maxHeight: "0px", offset: 0 }, { maxHeight: `${heightPx}px` }];
+export function arrivalGrowKeyframes(sizePx: number, axis: TransportAxis = "vertical"): Keyframe[] {
+  const prop = axis === "horizontal" ? "maxWidth" : "maxHeight";
+  return [{ [prop]: "0px", offset: 0 }, { [prop]: `${sizePx}px` }];
 }
 
 /**
  * The collapse frames: the emptied slot's reserved space closes to EXACTLY
- * the no-ghost layout. Flex `gap` still reserves spacing around a zero-height
- * item, so the margins borrow half the row gap on each side — the final
+ * the no-ghost layout. Flex `gap` still reserves spacing around a zero-size
+ * item, so the margins borrow half the flow gap on each side — the final
  * frame is pixel-identical to the ghost's removal, and removing the node
- * after the animation lands without a pop.
+ * after the animation lands without a pop. The flow gap rides the two
+ * margins across the flow (top/bottom in a vertical lane, left/right in a
+ * horizontal one), matching the caller's measured start margins.
  */
 export function ghostCollapseKeyframes(
-  heightPx: number,
+  sizePx: number,
   rowGapPx: number,
-  startMarginTopPx: string = "0px",
-  startMarginBottomPx: string = "0px",
+  startMarginStartPx: string = "0px",
+  startMarginEndPx: string = "0px",
+  axis: TransportAxis = "vertical",
 ): Keyframe[] {
+  const prop = axis === "horizontal" ? "maxWidth" : "maxHeight";
   const gapHalf = `${-(rowGapPx / 2)}px`;
   return [
     {
-      maxHeight: `${heightPx}px`,
-      marginTop: startMarginTopPx,
-      marginBottom: startMarginBottomPx,
+      [prop]: `${sizePx}px`,
+      [`margin${axis === "horizontal" ? "Left" : "Top"}`]: startMarginStartPx,
+      [`margin${axis === "horizontal" ? "Right" : "Bottom"}`]: startMarginEndPx,
       offset: 0,
     },
-    { maxHeight: "0px", marginTop: gapHalf, marginBottom: gapHalf },
+    { [prop]: "0px", [`margin${axis === "horizontal" ? "Left" : "Top"}`]: gapHalf, [`margin${axis === "horizontal" ? "Right" : "Bottom"}`]: gapHalf },
   ];
 }
 
@@ -659,11 +669,13 @@ export function sparkKeyframes(spark: TransportSpark): Keyframe[] {
 /**
  * The row gap of a lane's card list in px (Tailwind's gap-1.5 = 6px; jsdom
  * computes it empty). Measured, not assumed, so a theme change to the gap
- * keeps the collapse seamless.
+ * keeps the collapse seamless. The gap rides the lane flow: the list's
+ * `columnGap` in a horizontal lane (its slots lay in a row), the `rowGap`
+ * otherwise.
  */
-export function cardRowGapPx(list: Element | null): number {
+export function cardRowGapPx(list: Element | null, axis: TransportAxis = "vertical"): number {
   if (list === null) return 6;
-  const gap = getComputedStyle(list).rowGap;
+  const gap = getComputedStyle(list)[axis === "horizontal" ? "columnGap" : "rowGap"];
   const parsed = Number.parseFloat(gap);
   return Number.isFinite(parsed) ? parsed : 6;
 }
@@ -675,7 +687,7 @@ export function cardRowGapPx(list: Element | null): number {
  * jump the invisible ghost's neighbors before the smooth close begins.
  * An unreadable computed value reads as 0px (a ghost with no own margin).
  */
-export function computedMarginPx(element: Element, side: "Top" | "Bottom"): string {
+export function computedMarginPx(element: Element, side: "Left" | "Right" | "Top" | "Bottom"): string {
   const raw = getComputedStyle(element)[`margin${side}`];
   const parsed = Number.parseFloat(raw);
   return Number.isFinite(parsed) ? `${parsed}px` : "0px";

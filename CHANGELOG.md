@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+#### Board layout
+
+- **The board's lanes can run horizontal.** A "Lane direction" choice in the Appearance settings tab (mirrored on the plugin configuration page) turns the shipped column board into lanes as rows, each lane's cards flowing left to right; the choice persists across sessions.
+
 ### Changed
 
 #### Thread pane

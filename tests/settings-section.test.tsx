@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import {
   CARD_TRANSPORT_KEY,
+  LANE_DIRECTION_KEY,
   MOTION_PREF_KEY,
   WALLPAPER_KEY,
 } from "../components/preferences";
@@ -26,7 +27,7 @@ describe("configuration-page Appearance section", () => {
     render(<AppearanceSettingsSection />);
     const card = [...document.querySelectorAll('[role="radio"][aria-checked="true"]')]
       .map((el) => el.textContent);
-    expect(card).toEqual(["Zoom out / in", "Use my system setting"]);
+    expect(card).toEqual(["Zoom out / in", "Use my system setting", "Vertical"]);
     const unit = screen.getByLabelText("Motion");
     expect(unit).not.toBeNull();
   });
@@ -35,11 +36,19 @@ describe("configuration-page Appearance section", () => {
     seeded({
       [CARD_TRANSPORT_KEY]: "teleport",
       [MOTION_PREF_KEY]: "full",
+      [LANE_DIRECTION_KEY]: "horizontal",
     });
     render(<AppearanceSettingsSection />);
     const checked = [...document.querySelectorAll('[role="radio"][aria-checked="true"]')]
       .map((el) => el.textContent);
-    expect(checked).toEqual(["Teleport", "Always play in full"]);
+    expect(checked).toEqual(["Teleport", "Always play in full", "Horizontal"]);
+  });
+
+  it("a lane-direction pick writes the modal's localStorage key", () => {
+    seeded({});
+    render(<AppearanceSettingsSection />);
+    fireEvent.click(screen.getByRole("radio", { name: "Horizontal" }));
+    expect(window.localStorage.getItem(LANE_DIRECTION_KEY)).toBe("horizontal");
   });
 
   it("a transport pick writes the modal's localStorage key through the shared serializer", () => {

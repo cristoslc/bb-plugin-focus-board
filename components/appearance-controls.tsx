@@ -131,6 +131,40 @@ export function MotionChoice({
   );
 }
 
+/**
+ * The lane direction's board layout read: the shipped vertical column board,
+ * or the horizontal row board (issue #153).
+ */
+export function LaneDirectionChoice({
+  selected,
+  onSelect,
+}: {
+  selected: "vertical" | "horizontal";
+  onSelect: (value: "vertical" | "horizontal") => void;
+}) {
+  return (
+    <ChoiceRow
+      ariaLabel="Lane direction"
+      label="Lane direction"
+      description="Which way the board's lanes run."
+      options={[
+        {
+          value: "vertical",
+          name: "Vertical",
+          title: "The shipped read: lanes as columns, cards stacking downward.",
+        },
+        {
+          value: "horizontal",
+          name: "Horizontal",
+          title: "Lanes as rows; the cards in each lane flow left to right.",
+        },
+      ]}
+      selected={selected}
+      onSelect={(value) => onSelect(value as "vertical" | "horizontal")}
+    />
+  );
+}
+
 /** The wallpaper group: the board's backdrop through its one inline picker. */
 export function WallpaperGroup({
   wallpaper,

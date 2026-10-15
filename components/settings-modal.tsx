@@ -9,6 +9,7 @@ import type { WallpaperSettings } from "@/components/preferences";
 import { WhatsNewFeed } from "@/components/whats-new-feed";
 import {
   CardTransportChoice,
+  LaneDirectionChoice,
   MotionChoice,
   WallpaperGroup,
 } from "@/components/appearance-controls";
@@ -79,11 +80,13 @@ export function SettingsModal({
   sweep = DEFAULT_SWEEP,
   cardTransport,
   motionPref,
+  laneDirection,
   wallpaper,
   onSetEscStopsRunningThread,
   onSetSweep,
   onSetCardTransport,
   onSetMotionPref,
+  onSetLaneDirection,
   onWallpaperChange,
 }: {
   open: boolean;
@@ -119,10 +122,13 @@ export function SettingsModal({
   cardTransport: "none" | "teleport" | "zoom";
   /** The Appearance tab's motion preference. */
   motionPref: "system" | "reduce" | "full";
+  /** The Appearance tab's lane-direction choice (components/preferences.ts). */
+  laneDirection: "vertical" | "horizontal";
   /** The board wallpaper document, rendered by the same picker the toolbar hosts. */
   wallpaper: WallpaperSettings;
   onSetCardTransport: (value: "none" | "teleport" | "zoom") => void;
   onSetMotionPref: (value: "system" | "reduce" | "full") => void;
+  onSetLaneDirection: (value: "vertical" | "horizontal") => void;
   onWallpaperChange: (next: WallpaperSettings) => void;
 }) {
   if (!open) return null;
@@ -193,9 +199,11 @@ export function SettingsModal({
               <AppearanceContent
                 cardTransport={cardTransport}
                 motionPref={motionPref}
+                laneDirection={laneDirection}
                 wallpaper={wallpaper}
                 onSetCardTransport={onSetCardTransport}
                 onSetMotionPref={onSetMotionPref}
+                onSetLaneDirection={onSetLaneDirection}
                 onWallpaperChange={onWallpaperChange}
               />
             )}
@@ -220,16 +228,20 @@ export function SettingsModal({
 function AppearanceContent({
   cardTransport,
   motionPref,
+  laneDirection,
   wallpaper,
   onSetCardTransport,
   onSetMotionPref,
+  onSetLaneDirection,
   onWallpaperChange,
 }: {
   cardTransport: "none" | "teleport" | "zoom";
   motionPref: "system" | "reduce" | "full";
+  laneDirection: "vertical" | "horizontal";
   wallpaper: WallpaperSettings;
   onSetCardTransport: (value: "none" | "teleport" | "zoom") => void;
   onSetMotionPref: (value: "system" | "reduce" | "full") => void;
+  onSetLaneDirection: (value: "vertical" | "horizontal") => void;
   onWallpaperChange: (next: WallpaperSettings) => void;
 }) {
   return (
@@ -239,6 +251,7 @@ function AppearanceContent({
         onSelect={onSetCardTransport}
       />
       <MotionChoice selected={motionPref} onSelect={onSetMotionPref} />
+      <LaneDirectionChoice selected={laneDirection} onSelect={onSetLaneDirection} />
       <WallpaperGroup wallpaper={wallpaper} onWallpaperChange={onWallpaperChange} />
     </div>
   );

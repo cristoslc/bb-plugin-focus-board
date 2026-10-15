@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   CARD_TRANSPORT_KEY,
   COLLAPSED_FAMILIES_KEY,
+  LANE_DIRECTION_KEY,
   MOTION_PREF_KEY,
   NEST_CHILDREN_KEY,
   WALLPAPER_KEY,
+  laneDirectionStoredValue,
   cardTransportStoredValue,
   collapsedFamiliesStoredValue,
   escStopsRunningFromSetting,
@@ -12,6 +14,7 @@ import {
   parseCardTransportStored,
   parseCollapsedFamiliesStored,
   parseGroupStored,
+  parseLaneDirectionStored,
   parseMotionStored,
   parseNestStored,
   parseParentLaneOrderStored,
@@ -347,11 +350,22 @@ describe("simultaneous corruption (every key garbage at once)", () => {
     }
   });
 
+  it("parses the lane direction preference; the vertical column board is the default", () => {
+    expect(LANE_DIRECTION_KEY).toBe("focus-board:laneDirection");
+    expect(parseLaneDirectionStored("vertical")).toBe("vertical");
+    expect(parseLaneDirectionStored("horizontal")).toBe("horizontal");
+    expect(laneDirectionStoredValue("horizontal")).toBe("horizontal");
+    for (const raw of [null, "", "not json", "rows", "column", "V", "H"]) {
+      expect(parseLaneDirectionStored(raw)).toBe("vertical");
+    }
+  });
+
   it("every parser survives the full garbage list and returns its documented fallback", () => {
     for (const raw of garbage) {
       expect(parseNestStored(raw)).toBe(true); // default ON
       expect(parseGroupStored(raw)).toBe("status"); // Attention fallback
       expect(parseParentLaneOrderStored(raw)).toBe("recency");
+      expect(parseLaneDirectionStored(raw)).toBe("vertical");
       expect(parseWallpaperStored(raw)).toEqual({ version: 1, global: null });
       expect(parseCollapsedFamiliesStored(raw)).toBeInstanceOf(Set);
       for (const id of parseCollapsedFamiliesStored(raw)) {

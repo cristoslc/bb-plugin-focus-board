@@ -505,6 +505,27 @@ describe("wipe keyframes", () => {
     expect(frames[frames.length - 1].marginTop).toBe("-3px");
     expect(frames[frames.length - 1].marginBottom).toBe("-3px");
   });
+
+  it("a horizontal lane's arrival grows the slot along the flow's width axis", () => {
+    const frames = arrivalGrowKeyframes(240, "horizontal");
+    expect(frames).toHaveLength(2);
+    expect(frames[0].maxWidth).toBe("0px");
+    expect(frames[frames.length - 1].maxWidth).toBe("240px");
+    expect(frames[0].maxHeight).toBeUndefined();
+    expect(frames[frames.length - 1].maxHeight).toBeUndefined();
+  });
+
+  it("a horizontal lane's collapse closes the ghost's width and borrows nothing extra", () => {
+    const frames = ghostCollapseKeyframes(120, 6, "6px", "0px", "horizontal");
+    expect(frames[0].maxWidth).toBe("120px");
+    expect(frames[0].marginLeft).toBe("6px");
+    expect(frames[0].marginRight).toBe("0px");
+    expect(frames[frames.length - 1].maxWidth).toBe("0px");
+    // The horizontal flow's gap sits on the left/right margins instead.
+    expect(frames[frames.length - 1].marginLeft).toBe("-3px");
+    expect(frames[frames.length - 1].marginRight).toBe("-3px");
+    expect(frames[frames.length - 1].maxHeight).toBeUndefined();
+  });
 });
 
 describe("shimmerSparks", () => {

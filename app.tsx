@@ -152,9 +152,13 @@ import {
   MOTION_PREF_KEY,
   parseCardTransportStored,
   cardTransportStoredValue,
+  LANE_DIRECTION_KEY,
+  parseLaneDirectionStored,
+  laneDirectionStoredValue,
   parseMotionStored,
   motionStoredValue,
   type CardTransportPref,
+  type LaneDirectionPref,
   type MotionPref,
   type SweepSettingKey,
 } from "./components/preferences";
@@ -796,6 +800,16 @@ function BoardPage({ subPath }: { subPath: string }) {
   const persistMotionPref = useCallback((value: MotionPref) => {
     setMotionPref(value);
     writeStored(MOTION_PREF_KEY, motionStoredValue(value));
+  }, []);
+  // Appearance tab: the board lane direction's read. Vertical keeps today's
+  // column board; horizontal reads every lane as a row (issue #153). Backed
+  // by the same tolerant store; the choice hands straight to the Board.
+  const [laneDirection, setLaneDirection] = useState<LaneDirectionPref>(() =>
+    parseLaneDirectionStored(readStoredText(LANE_DIRECTION_KEY, "")),
+  );
+  const persistLaneDirection = useCallback((value: LaneDirectionPref) => {
+    setLaneDirection(value);
+    writeStored(LANE_DIRECTION_KEY, laneDirectionStoredValue(value));
   }, []);
   // Scheme read for the wallpaper's dark variant: the hook lives with the
   // media-query hooks and flips live (a change listener, no reload).
@@ -2809,6 +2823,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             activeThreadId={openThreadId}
             cardTransport={cardTransport}
             motionPref={motionPref}
+            laneDirection={laneDirection}
             doneIds={doneIds}
             nestedChildrenByParent={nestedChildrenByParent}
             childCountByParent={assembly?.childCountByParent ?? new Map()}
@@ -3098,9 +3113,11 @@ function BoardPage({ subPath }: { subPath: string }) {
         onSetEscStopsRunningThread={setEscStopsRunningThread}
         cardTransport={cardTransport}
         motionPref={motionPref}
+        laneDirection={laneDirection}
         wallpaper={wallpaper}
         onSetCardTransport={persistCardTransport}
         onSetMotionPref={persistMotionPref}
+        onSetLaneDirection={persistLaneDirection}
         onWallpaperChange={persistWallpaper}
       />
       {snoozeDialogFor === null ? null : (() => {
