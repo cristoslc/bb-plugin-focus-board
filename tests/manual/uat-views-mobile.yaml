@@ -1,0 +1,67 @@
+# Operator-assisted E2E: the board's views at a phone viewport.
+#
+# The harness mounts the actual app.tsx against the mocked SDK
+# (scripts/screenshot) at 390×844 (iPhone-class). The full desktop sweep of
+# views lives in uat-board-views.yaml; this suite proves the views that
+# matter on a phone render as boards (not broken layouts), that opening a
+# card produces the pane, and that the horizontal lane read (issue #153)
+# works at phone width too.
+#
+# Run: npm run uat -- tests/manual/uat-views-mobile.yaml
+suite: views-mobile
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5192
+defaults:
+  groupBy: status
+  theme: dark
+  viewport: { width: 390, height: 844 }
+
+steps:
+  - id: attention-renders-at-phone-width
+    title: The Attention board renders its lanes at 390×844
+    goto: "?groupBy=status"
+    assert:
+      - lane_direction: vertical
+      - text_visible: "Unread"
+      - column: unread
+        ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]
+
+  - id: a-card-click-opens-the-pane
+    title: Clicking a card opens the pane at phone width
+    goto: "?groupBy=status"
+    click: { card: thr_rpc_auth }
+    assert:
+      - pane: { threadId: thr_rpc_auth }
+
+  - id: escape-closes-the-phone-pane
+    title: Escape closes the pane back onto the board
+    press_escape: true
+    assert:
+      - pane: { open: false }
+
+  - id: recency-renders-its-buckets-at-phone-width
+    title: The Last activity board renders its age buckets at phone width
+    goto: "?groupBy=recency"
+    assert:
+      - text_visible: "Today"
+      - text_visible: "A while ago"
+
+  - id: horizontal-lane-rows-render-at-phone-width
+    title: The horizontal lane read lays its rows out at phone width
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert:
+      - lane_direction: horizontal
+      - text_visible: "Unread"
+      - column: unread
+        ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]
+      # The lane row holds its own horizontal scroll (the 160px header strip
+      # plus a 240px card exceeds 390px), so a whole-card-in-board-viewport
+      # assertion does not apply here: the row scrolls, the board doesn't.
+
+  - id: group-view-renders-at-phone-width
+    title: The Group view renders its buckets at phone width
+    goto: "?groupBy=group"
+    assert:
+      - text_visible: "No group"
+      - text_visible: "chat-imagegent"

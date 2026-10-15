@@ -137,6 +137,21 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   opens the full-screen sheet, the compact actions menu carries Full Screen
   (the standalone button is dropped on compact), and choosing it runs the
   maximize path (the mock's navigation is a no-op, so the pane stays).
+- `uat-board-views.yaml` — every board view variant on the desktop surface
+  (Attention, Last activity, Project, Provider, Machine, Group, Threads, and
+  the Parent-thread view): the lanes each grouping derives and, where the
+  fixture's order is derivable, the cards' order inside them. The parent
+  view's panning has its own suite (`uat-parent-lanes.yaml`).
+- `uat-views-mobile.yaml` / `uat-views-tablet.yaml` — the views that matter
+  at a phone (390×844) and tablet (768×1024) viewport, including the pane at
+  phone width and a real drag on the horizontal lane read.
+- `uat-lane-direction.yaml` — the lane-direction preference on the real
+  board (issue #153): the vertical default, the horizontal rows on desktop,
+  a drop, both insertion-line edges, and Alt+ArrowLeft/Right along the row,
+  Alt+ArrowUp doing nothing on a horizontal board, and the Appearance tab
+  flipping the open board live both ways. The runner's drag and line probes
+  read the board's `data-lane-direction` and split on the flow axis, so a
+  suite exercises whichever read the page mounts.
 
 ## Notes
 

@@ -121,11 +121,27 @@ const pageDrag = ({ from, to, edge }) => {
   if (!carried) return { dropped: false, reason: "drag payload carried no rank marker" };
 
   const box = target.getBoundingClientRect();
-  const clientY =
-    edge === "onto" ? box.top + box.height * 0.5
-    : edge === "before" ? box.top + box.height * 0.2
-    : box.top + box.height * 0.8;
-  const point = { bubbles: true, cancelable: true, dataTransfer: transfer, clientX: box.left + 8, clientY };
+  // The board's own axis marker picks the split: a vertical lane splits
+  // before/after on the pointer's y (top/bottom halves); a horizontal lane
+  // row splits on the pointer's x (left/right thirds) and ignores the y.
+  const horizontal =
+    document.querySelector("[data-columns-board]")?.getAttribute("data-lane-direction") ===
+    "horizontal";
+  const clientX = horizontal
+    ? edge === "onto"
+      ? box.left + box.width * 0.5
+      : edge === "before"
+        ? box.left + box.width * 0.2
+        : box.left + box.width * 0.8
+    : box.left + 8;
+  const clientY = horizontal
+    ? box.top + 8
+    : edge === "onto"
+      ? box.top + box.height * 0.5
+      : edge === "before"
+        ? box.top + box.height * 0.2
+        : box.top + box.height * 0.8;
+  const point = { bubbles: true, cancelable: true, dataTransfer: transfer, clientX, clientY };
 
   // Protected mode: the payload is unreadable while the pointer moves.
   transfer._armRead(false);
@@ -326,20 +342,29 @@ const pageHoverHeader = ({ from, to, edge, column, leave }) => {
   const lineOn = target ?? source;
   if (!leave) {
     const box = lineOn.getBoundingClientRect();
-    const clientY =
-      edge === "before" ? box.top + box.height * 0.2 : box.top + box.height * 0.8;
+    // Axis-aware like every drop: a vertical lane splits on y, a horizontal
+    // lane row on x (its y is ignored by the drop-zone math).
+    const horizontal =
+      document.querySelector("[data-columns-board]")?.getAttribute("data-lane-direction") ===
+      "horizontal";
+    const clientX = horizontal
+      ? edge === "before" ? box.left + box.width * 0.2 : box.left + box.width * 0.8
+      : box.left + 8;
+    const clientY = horizontal ? box.top + 8 : edge === "before" ? box.top + box.height * 0.2 : box.top + box.height * 0.8;
     const over = new DragEvent("dragover", {
       bubbles: true,
       cancelable: true,
       dataTransfer: transfer,
-      clientX: box.left + 8,
+      clientX,
       clientY,
     });
     lineOn.dispatchEvent(over);
     return { stage: "hover", dropAllowed: over.defaultPrevented };
   }
   const classes = [...lineOn.classList];
-  const wasShown = classes.some((cls) => cls.includes("inset-x-0"));
+  // The insertion line rides the flow edge: the cross-axis (inset-*) is
+  // what marks it, so a horizontal lane's line matches inset-y-0.
+  const wasShown = classes.some((cls) => cls.includes("inset-x-0") || cls.includes("inset-y-0"));
   lineOn.dispatchEvent(
     new DragEvent("dragleave", { bubbles: true, dataTransfer: transfer, relatedTarget: header }),
   );
@@ -373,16 +398,23 @@ const pageHover = ({ from, to, edge }) => {
     new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: transfer }),
   );
   const box = target.getBoundingClientRect();
-  const clientY =
-    edge === "onto" ? box.top + box.height * 0.5
-    : edge === "before" ? box.top + box.height * 0.2
-    : box.top + box.height * 0.8;
+  // Axis-aware split, same rule pageDrag runs: vertical lanes on y,
+  // horizontal lane rows on x (the row's y is ignored by the zone math).
+  const horizontal =
+    document.querySelector("[data-columns-board]")?.getAttribute("data-lane-direction") ===
+    "horizontal";
+  const clientX = horizontal
+    ? edge === "onto" ? box.left + box.width * 0.5 : edge === "before" ? box.left + box.width * 0.2 : box.left + box.width * 0.8
+    : box.left + 8;
+  const clientY = horizontal
+    ? box.top + 8
+    : edge === "onto" ? box.top + box.height * 0.5 : edge === "before" ? box.top + box.height * 0.2 : box.top + box.height * 0.8;
   transfer._armRead(false);
   const over = new DragEvent("dragover", {
     bubbles: true,
     cancelable: true,
     dataTransfer: transfer,
-    clientX: box.left + 8,
+    clientX,
     clientY,
   });
   target.dispatchEvent(over);
@@ -393,10 +425,17 @@ const pageHover = ({ from, to, edge }) => {
 const pageLineShown = ({ to, edge }) => {
   const target = document.querySelector(`li[data-rank-slot="${to}"]`);
   if (!target) return { shown: false, reason: "no slot" };
+  // The line reads the flow axis: a vertical lane's line spans the width
+  // (height is the meaningful size), a horizontal lane row's line is a
+  // vertical bar whose width is the meaningful size.
+  const horizontal =
+    document.querySelector("[data-columns-board]")?.getAttribute("data-lane-direction") ===
+    "horizontal";
   const style = getComputedStyle(target, edge === "before" ? "::before" : "::after");
+  const size = horizontal ? style.width : style.height;
   return {
-    shown: style.content !== "none" && style.height !== "0px" && style.display !== "none",
-    reason: `content=${style.content} height=${style.height}`,
+    shown: style.content !== "none" && size !== "0px" && style.display !== "none",
+    reason: `content=${style.content} size=${size}`,
   };
 };
 
@@ -439,11 +478,18 @@ const pageDragUnidentified = ({ from, to, edge }) => {
   // Strip the id, keeping the lane marker: the lane is known, the card is not.
   transfer.clearData("text/focus-board-id");
   const box = target.getBoundingClientRect();
-  const clientY =
-    edge === "onto" ? box.top + box.height * 0.5
-    : edge === "before" ? box.top + box.height * 0.2
-    : box.top + box.height * 0.8;
-  const point = { bubbles: true, cancelable: true, dataTransfer: transfer, clientX: box.left + 8, clientY };
+  // Axis-aware split, same rule pageDrag runs: vertical lanes on y,
+  // horizontal lane rows on x.
+  const horizontal =
+    document.querySelector("[data-columns-board]")?.getAttribute("data-lane-direction") ===
+    "horizontal";
+  const clientX = horizontal
+    ? edge === "onto" ? box.left + box.width * 0.5 : edge === "before" ? box.left + box.width * 0.2 : box.left + box.width * 0.8
+    : box.left + 8;
+  const clientY = horizontal
+    ? box.top + 8
+    : edge === "onto" ? box.top + box.height * 0.5 : edge === "before" ? box.top + box.height * 0.2 : box.top + box.height * 0.8;
+  const point = { bubbles: true, cancelable: true, dataTransfer: transfer, clientX, clientY };
   transfer._armRead(false);
   target.dispatchEvent(new DragEvent("dragover", point));
   transfer._armRead(true);
@@ -1216,6 +1262,19 @@ async function check(step, page, gestureResults = []) {
     if (rule.card_visible !== undefined) {
       const got = await page.evaluate(pageCardVisible, rule.card_visible);
       expect(`card visible: ${rule.card_visible}`, got.ok === true, got.reason);
+    }
+    if (rule.lane_direction !== undefined) {
+      // The board declares its lane direction on the scroll container
+      // (data-lane-direction), so a suite can pin the layout the
+      // lane-direction preference produced (issue #153's UAT surface).
+      const got = await page.evaluate(
+        () => document.querySelector("[data-columns-board]")?.getAttribute("data-lane-direction") ?? null,
+      );
+      expect(
+        `lane direction: ${rule.lane_direction}`,
+        got === rule.lane_direction,
+        `board declared ${JSON.stringify(got)}`,
+      );
     }
     if (rule.band_hover !== undefined) {
       const got = await page.evaluate(pageBandHover);

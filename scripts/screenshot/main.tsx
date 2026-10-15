@@ -9,6 +9,7 @@ import {
   mountRegisteredPanel,
   seedSimSettings,
 } from "./mock-sdk";
+import { CURRENT_UNRELEASED_FINGERPRINT } from "../../lib/whats-new";
 
 // Seed before the app's useState initializers read localStorage (they run at
 // render time below, after these writes).
@@ -38,11 +39,24 @@ if (lastSeenVersion !== null) {
 }
 const lastSeenUnreleased = params.get("lastSeenUnreleased");
 if (lastSeenUnreleased !== null) {
+  // A "current" seed means this build's own fingerprint: the harness mounts
+  // with the What's-new pulse quiet (the plain settings gear) without
+  // knowing the changelog's current unreleased fingerprint from YAML.
   window.localStorage.setItem(
     "focus-board:lastSeenUnreleased",
-    lastSeenUnreleased,
+    lastSeenUnreleased === "current"
+      ? CURRENT_UNRELEASED_FINGERPRINT
+      : lastSeenUnreleased,
   );
 }
+
+// Seed the board lane direction (the Appearance tab's choice): absent →
+// "vertical", so no stale value from an earlier page load can leak into a
+// run. `?laneDirection=horizontal` mounts the horizontal row board.
+window.localStorage.setItem(
+  "focus-board:laneDirection",
+  params.get("laneDirection") ?? "vertical",
+);
 
 // Seed the persisted collapsed-family store: `?collapsed=id1,id2` folds those
 // family cards in the shot (the COLLAPSED_FAMILIES_KEY list the app's fold
