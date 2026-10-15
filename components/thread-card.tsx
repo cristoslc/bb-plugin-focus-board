@@ -1,9 +1,9 @@
-import { type DragEvent, type ReactNode, useState } from "react";
+import { isValidElement, memo, type DragEvent, type ReactNode, useState } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { threadState, THREAD_STATE_LABELS } from "./grouping";
-import { resolveRepoSlug } from "@/lib/tickets";
+import { resolveRepoSlug, type TicketRef } from "@/lib/tickets";
 import {
   ticketChipRows,
   ticketChipIconHref,
@@ -57,7 +57,7 @@ const DOT_CLASS: Record<string, string> = {
   idle: "bg-muted-foreground/30",
 };
 
-interface ThreadCardProps {
+export interface ThreadCardProps {
   thread: PluginSidebarThread;
   stateDot: ReactNode;
   isActive: boolean;
@@ -599,7 +599,7 @@ function ChildRow({
   );
 }
 
-export function ThreadCard({
+export function ThreadCardImpl({
   thread,
   stateDot,
   isActive,
@@ -1344,4 +1344,231 @@ export function ThreadCard({
       }
     />
   );
+}
+
+/**
+ * The ids whose membership in a set-state this card consumes directly: its
+ * own row(s) — the dot, the accent, the dim — plus every nested child row
+ * and sub-row it renders (their dots and done-dimming read the same sets).
+ * A state-set's content changing without any of these memberships changing
+ * is invisible to this card; the memo comparator treats the props equal
+ * (issue #186).
+ */
+function cardSetIds(props: ThreadCardProps): string[] {
+  const ids = [props.thread.id];
+  const children = props.childThreads;
+  if (children !== undefined) {
+    for (const child of children) {
+      ids.push(child.id);
+      for (const sub of props.grandchildThreadsByParent?.get(child.id) ?? []) {
+        ids.push(sub.id);
+      }
+    }
+  }
+  return ids;
+}
+
+/** Membership equality for the ids a card renders: identity-equal sets
+ * short-circuit; otherwise every relevant id's membership must match. */
+function sameSetMembership(
+  prev: ReadonlySet<string> | undefined,
+  next: ReadonlySet<string> | undefined,
+  ids: readonly string[],
+): boolean {
+  if (prev === next) return true;
+  for (const id of ids) {
+    if ((prev?.has(id) ?? false) !== (next?.has(id) ?? false)) return false;
+  }
+  return true;
+}
+
+/**
+ * The done checkbox's run and each menu entry's run are closure-built per
+ * board render, so their identity churns with the board's render loop;
+ * only the card's OWN observable state (its flags, baked into the array at
+ * build time) can make a stale run act on wrong state — and when that
+ * state changes, a compared primitive or the menu's id/label content
+ * changes with it (a card whose flags changed re-renders and gets a fresh
+ * menu; a card whose menu content matches the fresh build acts correctly).
+ * The comparator therefore compares ACTIONS BY CONTENT — id, label, icon,
+ * danger, divider — never by closure identity.
+ */
+function sameMenuActions(
+  prev: readonly CardMenuAction[] | undefined,
+  next: readonly CardMenuAction[] | undefined,
+): boolean {
+  if (prev === next) return true;
+  if (prev === undefined || next === undefined) return false;
+  if (prev.length !== next.length) return false;
+  return prev.every((action, index) => {
+    const other = next[index];
+    if (other === undefined) return false;
+    return (
+      action.id === other.id &&
+      action.label === other.label &&
+      action.icon === other.icon &&
+      action.danger === other.danger &&
+      action.dividerAbove === other.dividerAbove
+    );
+  });
+}
+
+/**
+ * The board's StateDot is a pure function of (thread, errorAcks), but it
+ * arrives as a freshly-built element each render (identity churn). The
+ * comparator sees through it when it is the known shape — a StateDot-like
+ * element whose props are exactly { thread } and/or { errorAcks }:
+ * otherwise it must not guess, and re-renders.
+ */
+function sameStateDot(
+  prev: ReactNode,
+  next: ReactNode,
+  ids: readonly string[],
+): boolean {
+  if (prev === next) return true;
+  if (!isValidElement(prev) || !isValidElement(next)) return false;
+  if (prev.type !== next.type) return false;
+  const prevDotProps = prev.props as Record<string, unknown>;
+  const nextDotProps = next.props as Record<string, unknown>;
+  const keys = Object.keys(nextDotProps);
+  if (keys.length === 0) return Object.keys(prevDotProps).length === 0;
+  if (!keys.every((key) => key === "thread" || key === "errorAcks")) return false;
+  if (keys.length !== Object.keys(prevDotProps).length) return false;
+  if (prevDotProps.thread !== nextDotProps.thread) return false;
+  if (nextDotProps.errorAcks === undefined && prevDotProps.errorAcks === undefined) return true;
+  return sameSetMembership(
+    prevDotProps.errorAcks as ReadonlySet<string> | undefined,
+    nextDotProps.errorAcks as ReadonlySet<string> | undefined,
+    ids,
+  );
+}
+
+/** The card's ticket refs, re-derived straight from the props (the same
+ * inputs the card body uses; `gated` off skips the validation filter —
+ * the RAW refs the membership probes need). */
+function cardRefsOf(
+  props: ThreadCardProps,
+  gated: boolean,
+): readonly TicketRef[] {
+  const branch = props.thread.environment?.branchName ?? props.thread.host?.name ?? "";
+  return cardTicketRefs({
+    title: props.thread.displayTitle,
+    branch,
+    ...(props.repoHrefBase !== undefined ? { repoHrefBase: props.repoHrefBase } : {}),
+    linkedIssues: props.linkedIssues,
+    ...(gated && props.validatedHrefs !== undefined ? { validatedHrefs: props.validatedHrefs } : {}),
+  });
+}
+
+/**
+ * issue #186's memo: the board renders ~500 cards through this one
+ * component; a state change (an echo's refetch, an optimistic write) used
+ * to re-render every mounted card because the call site rebuilds every
+ * prop per render. The comparator is SEMANTIC, not identity-based:
+ *
+ * - the thread and every primitive flag compare by identity/value;
+ * - the state-set props (done, acks) compare by the memberships THIS card
+ *   renders (own ids + nested rows), not by set identity;
+ * - the dot element and the menu arrays compare by content;
+ * - the per-item lookups (snooze, ticket status) compare by their results;
+ * - the closures (drag gestures, open handlers, attention reports) compare
+ *   never — their captured per-card state cannot go stale without a
+ *   compared prop changing with it, and the board-scoped closures they
+ *   reach into (sweep anchor, pins) read refs.
+ */
+export function sameCardProps(prev: ThreadCardProps, next: ThreadCardProps): boolean {
+  if (prev.thread !== next.thread) return false;
+  if (prev.stateDot !== next.stateDot) {
+    if (!sameStateDot(prev.stateDot, next.stateDot, cardSetIds(next))) return false;
+  }
+  // Primitive surface: every flag the card's render branches on.
+  for (const key of [
+    "isActive",
+    "isDone",
+    "isSweepHighlighted",
+    "isSweeping",
+    "isSweepSelecting",
+    "isSweepSelectable",
+    "projectName",
+    "repoHrefBase",
+    "childCount",
+    "dimmed",
+    "rankKey",
+    "activeThreadId",
+    "isTransportGhost",
+    "compact",
+    "isCollapsed",
+  ] as const) {
+    if (prev[key] !== next[key]) return false;
+  }
+  const ids = cardSetIds(next);
+  if (!sameSetMembership(prev.doneIds, next.doneIds, ids)) return false;
+  if (!sameSetMembership(prev.errorAckIds, next.errorAckIds, ids)) return false;
+  // Whole-card content that is not a flag: the chip inputs and the maps.
+  const prevLinks = prev.linkedIssues;
+  const nextLinks = next.linkedIssues;
+  if (prevLinks !== nextLinks) {
+    if (prevLinks === undefined || nextLinks === undefined) return false;
+    if (prevLinks.length !== nextLinks.length) return false;
+    for (let index = 0; index < prevLinks.length; index++) {
+      if (!sameThreadLink(prevLinks[index], nextLinks[index])) return false;
+    }
+  }
+  if (prev.validatedHrefs !== next.validatedHrefs) {
+    // The raw (ungated) ref urls: identical whenever this comparison has
+    // reached here — the thread and the link list are already content-equal.
+    const hrefs = cardRefsOf(next, false).map((ref) => ref.href ?? "").filter(Boolean);
+    if (!sameSetMembership(prev.validatedHrefs, next.validatedHrefs, hrefs)) return false;
+  }
+  if (prev.statusFor !== next.statusFor) {
+    const repo = next.repoHrefBase === undefined ? null : resolveRepoSlug(next.repoHrefBase);
+    for (const ref of cardRefsOf(next, true)) {
+      if (ref.tracker !== "github" || ref.number === undefined) continue;
+      const statusRepo = ticketStatusRepo(ref, repo);
+      const before = prev.statusFor?.(statusRepo, ref.number);
+      const after = next.statusFor?.(statusRepo, ref.number);
+      if (before?.kind !== after?.kind || before?.state !== after?.state) return false;
+    }
+  }
+  if (prev.childThreads !== next.childThreads) return false;
+  if (prev.grandchildThreadsByParent !== next.grandchildThreadsByParent) return false;
+  if (prev.childRankDrag?.line?.childId !== next.childRankDrag?.line?.childId) return false;
+  if (prev.childRankDrag?.line?.zone !== next.childRankDrag?.line?.zone) return false;
+  // Menus: content-equal is the bar (closures churn by design).
+  if (!sameMenuActions(prev.menuActions, next.menuActions)) return false;
+  const prevChildMenus = prev.childMenuActions;
+  const nextChildMenus = next.childMenuActions;
+  if (prevChildMenus !== nextChildMenus) {
+    if (prevChildMenus === undefined || nextChildMenus === undefined) return false;
+    for (const child of next.childThreads ?? []) {
+      if (!sameMenuActions(prevChildMenus(child), nextChildMenus(child))) return false;
+    }
+  }
+  // Per-id lookups the card consumes as results: compare results, not
+  // lookup identity.
+  if (prev.snoozeFor !== next.snoozeFor) {
+    if (prev.snoozeFor === undefined || next.snoozeFor === undefined) return false;
+    for (const id of ids) {
+      if (prev.snoozeFor(id) !== next.snoozeFor(id)) return false;
+    }
+  }
+  return true;
+}
+
+export const ThreadCard = memo(ThreadCardImpl, sameCardProps);
+
+/** Content equality of one stored link (lib/link-metadata's discriminated
+ * union): the fields the chip row renders, never the object identity the
+ * per-refetch parsing rebuilds. */
+function sameThreadLink(a: ThreadLink | undefined, b: ThreadLink | undefined): boolean {
+  if (a === undefined || b === undefined) return a === b;
+  if (a.tracker !== b.tracker) return false;
+  if (a.createdAt !== b.createdAt || a.source !== b.source) return false;
+  if (a.tracker === "github" && b.tracker === "github") {
+    return a.repo === b.repo && a.issue === b.issue && a.kind === b.kind && a.href === b.href;
+  }
+  if (a.tracker === "external" && b.tracker === "external") {
+    return a.url === b.url && a.hostname === b.hostname && (a.label ?? null) === (b.label ?? null);
+  }
+  return false;
 }
