@@ -194,15 +194,17 @@ export function groupMenuActions(options: {
 /**
  * The GROUP BOX's own right-click menu: the actions the box's surface
  * (label, padding, gaps — not its member cards, whose own menus win) offers
- * over the whole group. Three entries, in fixed order: the spawn ("New
+ * over the whole group. Four entries, in fixed order: the spawn ("New
  * thread in group…" — the preset that seeds the composer from the
  * members' majority and tags the result into the group), the rename (the
- * same inline label editor the box label's click opens), and the ungroup
- * (the delete-with-confirm, armed in place — the label editor's two-click
- * pattern carried into the menu).
+ * same inline label editor the box label's click opens), the isolate
+ * ("Show only this group's issues" — the caller writes the Group filter
+ * down to just this group), and the ungroup (the delete-with-confirm,
+ * armed in place — the label editor's two-click pattern carried into the
+ * menu).
  *
  * Every capability is optional: an unwired one is OMITTED, never a dead
- * entry. All three unwired → an empty menu — the board must not open one.
+ * entry. All four unwired → an empty menu — the board must not open one.
  * Pure like groupMenuActions so tests pin the order, labels, icons and
  * the armed flip without rendering the board.
  */
@@ -221,6 +223,8 @@ export function groupBoxMenuActions(options: {
   spawn: (() => void) | undefined;
   /** Start the box label's inline rename editor. */
   rename: (() => void) | undefined;
+  /** Write the Group filter down to only this group (persisted by the caller). */
+  isolate: (() => void) | undefined;
   /** Run the confirmed ungroup (the caller arms; the lib only renders). */
   ungroup: (() => void) | undefined;
 }): readonly GroupBoxMenuAction[] {
@@ -239,6 +243,14 @@ export function groupBoxMenuActions(options: {
       label: "Rename group…",
       icon: "Edit",
       run: options.rename,
+    });
+  }
+  if (options.isolate !== undefined) {
+    entries.push({
+      id: "show-only-group",
+      label: "Show only this group's issues",
+      icon: "FilterHorizontal",
+      run: options.isolate,
     });
   }
   if (options.ungroup !== undefined) {

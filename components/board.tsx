@@ -335,6 +335,14 @@ interface BoardProps {
    * the menu offers no spawn entry.
    */
   onNewThreadInGroup?: (groupId: string) => void;
+  /**
+   * Restrict the Group filter to one group (the box context menu's "Show
+   * only this group's issues"): the caller owns the filter state — the menu
+   * entry reports the group id, and the write plus its persistence are the
+   * caller's, the same write the filter menu's checkbox for that group
+   * makes. Unwired → the menu offers no isolate entry.
+   */
+  onShowOnlyGroup?: (groupId: string) => void;
   /** Family members that did not match the active filters; rendered dimmed. */
   dimmedIds: ReadonlySet<string>;
   /**
@@ -633,6 +641,7 @@ export function Board({
   onRenameGroup,
   onDeleteGroup,
   onNewThreadInGroup,
+  onShowOnlyGroup,
   onJoinGroup,
   dimmedIds,
   collapsedFamilyIds,
@@ -3145,7 +3154,8 @@ export function Board({
                           if (
                             onNewThreadInGroup === undefined &&
                             onRenameGroup === undefined &&
-                            onDeleteGroup === undefined
+                            onDeleteGroup === undefined &&
+                            onShowOnlyGroup === undefined
                           ) {
                             return;
                           }
@@ -3507,6 +3517,14 @@ export function Board({
                     const groupId = groupMenu.groupId;
                     closeGroupMenu();
                     startLabelRename(groupId);
+                  },
+            isolate:
+              onShowOnlyGroup === undefined
+                ? undefined
+                : () => {
+                    const groupId = groupMenu.groupId;
+                    closeGroupMenu();
+                    onShowOnlyGroup(groupId);
                   },
             ungroup:
               onDeleteGroup === undefined

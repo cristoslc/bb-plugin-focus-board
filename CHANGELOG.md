@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+#### Search and filters
+
+- **Right-clicking a group box now offers "Show only this group's issues".** The entry sets the Group filter to just that group, and the toolbar filter menu brings every group back.
+
 ### Changed
 
 #### Thread pane

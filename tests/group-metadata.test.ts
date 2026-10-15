@@ -139,21 +139,24 @@ describe("the metadata key contract", () => {
 });
 
 describe("groupBoxMenuActions (the group box's own right-click menu)", () => {
-  it("carries all three entries in order: spawn, rename, ungroup-all", () => {
+  it("carries all four entries in order: spawn, rename, show-only-group, ungroup-all", () => {
     const actions = groupBoxMenuActions({
       armed: false,
       spawn: () => undefined,
       rename: () => undefined,
+      isolate: () => undefined,
       ungroup: () => undefined,
     });
     expect(actions.map((action) => action.id)).toEqual([
       "new-thread-in-group",
       "rename-group",
+      "show-only-group",
       "ungroup-all",
     ]);
     expect(actions.map((action) => action.label)).toEqual([
       "New thread in group…",
       "Rename group…",
+      "Show only this group's issues",
       "Ungroup all members",
     ]);
   });
@@ -164,6 +167,7 @@ describe("groupBoxMenuActions (the group box's own right-click menu)", () => {
       armed: false,
       spawn: () => (ran = "spawn"),
       rename: () => (ran = "rename"),
+      isolate: () => (ran = "isolate"),
       ungroup: () => (ran = "ungroup"),
     });
     for (const action of actions) action.run();
@@ -172,15 +176,43 @@ describe("groupBoxMenuActions (the group box's own right-click menu)", () => {
 
   it("an unwired capability is omitted, never a dead menu entry", () => {
     expect(
-      groupBoxMenuActions({ armed: false, spawn: undefined, rename: undefined, ungroup: undefined }),
+      groupBoxMenuActions({
+        armed: false,
+        spawn: undefined,
+        rename: undefined,
+        isolate: undefined,
+        ungroup: undefined,
+      }),
     ).toEqual([]);
     const spawnOnly = groupBoxMenuActions({
       armed: false,
       spawn: () => undefined,
       rename: undefined,
+      isolate: undefined,
       ungroup: undefined,
     });
     expect(spawnOnly.map((action) => action.id)).toEqual(["new-thread-in-group"]);
+    const isolateOnly = groupBoxMenuActions({
+      armed: false,
+      spawn: undefined,
+      rename: undefined,
+      isolate: () => undefined,
+      ungroup: undefined,
+    });
+    expect(isolateOnly.map((action) => action.id)).toEqual(["show-only-group"]);
+  });
+
+  it("the isolate entry never arms: no click-again wording, no danger tint", () => {
+    const actions = groupBoxMenuActions({
+      armed: true,
+      spawn: () => undefined,
+      rename: () => undefined,
+      isolate: () => undefined,
+      ungroup: () => undefined,
+    });
+    const isolate = actions.find((action) => action.id === "show-only-group")!;
+    expect(isolate.label).toBe("Show only this group's issues");
+    expect(isolate.danger).toBeUndefined();
   });
 
   it("the ungroup entry arms in place: the armed menu says click-again and draws danger", () => {
@@ -188,6 +220,7 @@ describe("groupBoxMenuActions (the group box's own right-click menu)", () => {
       armed: true,
       spawn: () => undefined,
       rename: () => undefined,
+      isolate: () => undefined,
       ungroup: () => undefined,
     });
     const ungroup = armed.find((action) => action.id === "ungroup-all")!;

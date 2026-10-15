@@ -25,6 +25,7 @@ function renderBoard(
     onNewThreadInGroup?: (groupId: string) => void;
     onRenameGroup?: (groupId: string, name: string) => void;
     onDeleteGroup?: (groupId: string) => void;
+    onShowOnlyGroup?: (groupId: string) => void;
     menuActionsFor?: BoardProps["menuActionsFor"];
   } = {},
 ) {
@@ -51,6 +52,7 @@ function renderBoard(
     onNewThreadInGroup: options.onNewThreadInGroup,
     onRenameGroup: options.onRenameGroup,
     onDeleteGroup: options.onDeleteGroup,
+    onShowOnlyGroup: options.onShowOnlyGroup,
   } as unknown as BoardProps;
   render(<Board {...props} />);
 }
@@ -74,11 +76,12 @@ function openGroupMenu() {
 const menus = () => screen.queryAllByRole("menu");
 
 describe("right-click on the group box", () => {
-  it("opens one group menu naming the group, with all three entries", () => {
+  it("opens one group menu naming the group, with all four entries", () => {
     renderBoard(members, groupBoxOf, {
       onNewThreadInGroup: () => {},
       onRenameGroup: () => {},
       onDeleteGroup: () => {},
+      onShowOnlyGroup: () => {},
     });
     openGroupMenu();
     const open = menus();
@@ -87,8 +90,31 @@ describe("right-click on the group box", () => {
     expect(text).toContain("Auth rework");
     expect(text).toContain("New thread in group…");
     expect(text).toContain("Rename group…");
+    expect(text).toContain("Show only this group's issues");
     expect(text).toContain("Ungroup all members");
     expect(text).not.toContain("Open thread");
+  });
+
+  it("Show only this group's issues reports the group id", () => {
+    const onShowOnlyGroup = vi.fn();
+    renderBoard(members, groupBoxOf, { onShowOnlyGroup });
+    openGroupMenu();
+    fireEvent.click(screen.getByText("Show only this group's issues"));
+    expect(onShowOnlyGroup).toHaveBeenCalledWith("grp_auth");
+    // The write closes the menu behind it.
+    expect(menus()).toHaveLength(0);
+  });
+
+  it("an unwired isolate capability leaves the entry out of the menu", () => {
+    renderBoard(members, groupBoxOf, {
+      onNewThreadInGroup: () => {},
+      onRenameGroup: () => {},
+      onDeleteGroup: () => {},
+    });
+    openGroupMenu();
+    const open = menus();
+    expect(open).toHaveLength(1);
+    expect(open[0].textContent ?? "").not.toContain("Show only this group's issues");
   });
 
   it("New thread in group… reports the group id", () => {

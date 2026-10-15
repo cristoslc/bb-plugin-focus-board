@@ -1212,6 +1212,18 @@ function BoardPage({ subPath }: { subPath: string }) {
     },
     [groupBy, filter, projects, filterOptions, persistFilter],
   );
+  // The group box context menu's "Show only this group's issues": the same
+  // write the filter menu's checkbox for that group makes — the Group filter
+  // narrowed to just this bucket, every other bucket dropped (an empty check
+  // state on the menu's other rows). persistFilter stores it, so the
+  // restriction survives a reload until the operator widens or clears the
+  // Group filter in the toolbar.
+  const showOnlyGroup = useCallback(
+    (groupId: string) => {
+      persistFilter({ ...filter, groups: new Set([groupId]) });
+    },
+    [filter, persistFilter],
+  );
   // The board card's label for a thread's project (lib/project-name): rows
   // from the sidebar's project list render their real name; bb's personal
   // project and unresolvable ids render "No project" — the term bb's own
@@ -2825,6 +2837,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             onRenameGroup={renameGroup}
             onDeleteGroup={deleteGroup}
             onNewThreadInGroup={openNewThreadInGroup}
+            onShowOnlyGroup={showOnlyGroup}
             collapsedFamilyIds={collapsedFamilies}
             onFamilyCollapsedChange={setFamilyCollapsed}
             dimmedIds={dimmedIds}
