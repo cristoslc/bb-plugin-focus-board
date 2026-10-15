@@ -42,21 +42,25 @@ console.log(JSON.stringify({ cardCount }));
 /**
  * One done-toggle measurement: hover-arm is unnecessary (opacity does not
  * block clicks), so the first click arms and the second fires the write.
- * The settle watch: wait until the card's data-done-checkbox is gone…
- * actually the card KEEPS its checkbox (it mirrors done); the settle
- * signal is the moved card's `opacity-50` class (done treatment) arriving.
+ * The settle watch: the moved card's `opacity-50` class (done treatment)
+ * arriving on the fresh node, plus the LONG TASKS the gesture's commit
+ * produced on the main thread — the render cost the memoization targets.
  */
 async function measureToggle(threadId) {
-  const cleared = await page.evaluate(
-    (id) => {
-      const log = globalThis.__uat?.simRpcLog;
-      if (log) log.clear();
-      return true;
-    },
-    threadId,
-  );
-  if (!cleared) throw new Error("harness: __uat.simRpcLog is missing");
+  await page.evaluate((id) => {
+    const log = globalThis.__uat?.simRpcLog;
+    if (log) log.clear();
+    globalThis.__benchWindow = { start: 0, tasks: [] };
+    return true;
+  }, threadId);
   const result = await page.evaluate(async (id) => {
+    const watch = globalThis.__benchWindow;
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        watch.tasks.push(Math.round(entry.duration));
+      }
+    });
+    observer.observe({ entryTypes: ["longtask"] });
     const start = performance.now();
     const card = document.querySelector(`[data-thread-card="${id}"]`);
     if (!card) throw new Error(`missing card ${id}`);
@@ -82,12 +86,15 @@ async function measureToggle(threadId) {
       };
       tick();
     });
-    return performance.now() - start;
+    const settled = performance.now() - start;
+    observer.disconnect();
+    // The echo's coalesced pass lands ~50ms after the write; drain it into
+    // the same long-task window.
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    return { settled: Math.round(settled), longTasks: watch.tasks };
   }, threadId);
-  // The echo's coalesced pass rides right after; drain before the next round.
-  await new Promise((resolve) => setTimeout(resolve, 350));
   const calls = await page.evaluate(() => globalThis.__uat.simRpcLog.calls());
-  console.log(JSON.stringify({ toggleDone: Math.round(result), echoRpcCalls: calls.length }));
+  console.log(JSON.stringify({ toggleDone: result.settled, longTasks: result.longTasks, echoRpcCalls: calls.length }));
   return result;
 }
 
@@ -95,20 +102,48 @@ for (const index of [3, 17, 41, 66, 90]) {
   await measureToggle(`thr_scale_${index}`);
 }
 
-// The burst: ten done-changed signals inside one animation-frame window.
+// The burst: ten done-changed signals inside one animation-frame window,
+// measured for refetch passes AND main-thread block time (the render side
+// of the burst, which the memoization shrinks).
 const burst = await page.evaluate(async () => {
   const log = globalThis.__uat.simRpcLog;
   log.clear();
+  const watch = globalThis.__benchWindow = { start: 0, tasks: [] };
+  const observer = new PerformanceObserver((list) => {
+    for (const entry of list.getEntries()) watch.tasks.push(Math.round(entry.duration));
+  });
+  observer.observe({ entryTypes: ["longtask"] });
   const start = performance.now();
   for (let i = 0; i < 10; i++) globalThis.__uat.simSignal("done-changed");
   await new Promise((resolve) => requestAnimationFrame(resolve));
   // The coalesced pass fires a quiet window (50ms) after the burst.
   await new Promise((resolve) => setTimeout(resolve, 300));
-  return { elapsed: performance.now() - start, calls: log.calls() };
+  observer.disconnect();
+  return { elapsed: performance.now() - start, calls: log.calls(), longTasks: watch.tasks };
 });
+// One done-changed echo whose data did not change: the render-side cost of
+// A signal with nothing to update — post-memoization it should skip every
+// card's subtree (no 500-card re-render), pre-memoization it repainted.
+const idleEcho = await page.evaluate(async () => {
+  const log = globalThis.__uat.simRpcLog;
+  log.clear();
+  const watch = globalThis.__benchWindow = { start: 0, tasks: [] };
+  const observer = new PerformanceObserver((list) => {
+    for (const entry of list.getEntries()) watch.tasks.push(Math.round(entry.duration));
+  });
+  observer.observe({ entryTypes: ["longtask"] });
+  const start = performance.now();
+  globalThis.__uat.simSignal("done-changed");
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  observer.disconnect();
+  return { elapsed: performance.now() - start, longTasks: watch.tasks };
+});
+console.log(JSON.stringify({ idleEchoWallMs: Math.round(idleEcho.elapsed), idleEchoLongTasks: idleEcho.longTasks }));
+
 const counts = {};
 for (const method of burst.calls) counts[method] = (counts[method] ?? 0) + 1;
-console.log(JSON.stringify({ burstRpcCalls: counts, burstWallMs: Math.round(burst.elapsed) }));
+console.log(JSON.stringify({ burstRpcCalls: counts, burstWallMs: Math.round(burst.elapsed), burstLongTasks: burst.longTasks }));
 
 await browser.close();
 console.log("done");
