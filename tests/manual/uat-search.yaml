@@ -1,0 +1,93 @@
+# Operator-assisted E2E: the board toolbar's search box logic.
+#
+# The search filters live while a query is typed (the title-or-id scan), the
+# "x" in the field clears it and refocuses the empty field, and — issue #207 —
+# the field's own search button appears only while the field holds text AND is
+# focused, as the Enter-equivalent: a real Chrome click would normally move
+# focus to the button, and the click must leave it in the input instead, which
+# is why the button is still there after it is clicked (assertions jsdom
+# cannot make: jsdom's synthetic clicks never move focus at all).
+#
+# Query fixture: "roadmap" matches only "Plan Q4 plugin roadmap"; "thr_roadmap"
+# pins the id path; "xyzzyqqq" matches nothing.
+#
+# Run: npm run uat -- tests/manual/uat-search.yaml
+suite: search-field
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5176
+defaults:
+  groupBy: status
+  theme: dark
+
+steps:
+  - id: fresh-board-shows-the-unfiltered-palette
+    title: The plain board shows the cards and a search box with no search button
+    goto: "?groupBy=status"
+    assert:
+      - text_visible: "Plan Q4 plugin roadmap"
+      - text_visible: "Ship 0.1.1: column ordering fix + release notes"
+      - aria_absent: Search
+      - aria_absent: "Clear search"
+
+  - id: typing-narrows-the-board-and-shows-the-button
+    title: A typed title query narrows the board and the search button appears in the field
+    type: { into: Search threads, text: roadmap }
+    assert:
+      - text_visible: "Plan Q4 plugin roadmap"
+      - text_hidden: "Ship 0.1.1: column ordering fix + release notes"
+      - text_hidden: "Deploy failed: missing DATABASE_URL secret"
+      - aria_present: "Clear search"
+      - aria_present: Search
+
+  - id: button-click-reconfirms-like-enter
+    title: Clicking the search button re-confirms the query and the field keeps focus
+    click_aria: Search
+    assert:
+      # The board state is the Enter state: still filtered, nothing cleared.
+      - text_visible: "Plan Q4 plugin roadmap"
+      - text_hidden: "Ship 0.1.1: column ordering fix + release notes"
+      # The real-Chrome half of the contract: a click would normally blur the
+      # field into the button, so the button must still be there.
+      - aria_present: Search
+      - aria_present: "Clear search"
+
+  - id: blur-hides-only-the-button
+    title: Letting the field's focus go hides the search button and keeps the query
+    blur: Search threads
+    assert:
+      - aria_absent: Search
+      - aria_present: "Clear search"
+      - text_visible: "Plan Q4 plugin roadmap"
+      - text_hidden: "Ship 0.1.1: column ordering fix + release notes"
+
+  - id: clear-x-resets-the-board
+    title: The clear x empties the query, the board spreads back out, and no button rides the refocused empty field
+    click_aria: "Clear search"
+    assert:
+      - text_visible: "Plan Q4 plugin roadmap"
+      - text_visible: "Ship 0.1.1: column ordering fix + release notes"
+      # The clear click refocuses the input, so the button must be gone
+      # because the field is EMPTY, not because of any focus loss.
+      - aria_absent: Search
+      - aria_absent: "Clear search"
+
+  - id: a-query-that-matches-nothing
+    title: A no-match query empties the board while the button still rides the focused field
+    goto: "?groupBy=status"
+    type: { into: Search threads, text: xyzzyqqq }
+    assert:
+      - text_hidden: "Plan Q4 plugin roadmap"
+      - text_hidden: "Ship 0.1.1: column ordering fix + release notes"
+      # The button tracks the field's state (text + focus), not the results.
+      - aria_present: Search
+      - aria_present: "Clear search"
+
+  - id: the-id-path-also-narrows
+    title: Searching by thread id reaches the same card as the title
+    goto: "?groupBy=status"
+    type: { into: Search threads, text: thr_roadmap }
+    assert:
+      - text_visible: "Plan Q4 plugin roadmap"
+      - text_hidden: "Ship 0.1.1: column ordering fix + release notes"
+      - text_hidden: "Deploy failed: missing DATABASE_URL secret"
