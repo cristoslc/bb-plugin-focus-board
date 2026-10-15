@@ -252,6 +252,29 @@ export function motionStoredValue(value: MotionPref): MotionPref {
 }
 
 /**
+ * The board lane direction (the Appearance tab's layout choice): `vertical`
+ * is the shipped default — lanes as columns, cards stacking downward — and
+ * `horizontal` reads every lane as a row, its cards flowing left-to-right,
+ * with the board scrolling vertically between lanes.
+ */
+export type LaneDirectionPref = "vertical" | "horizontal";
+
+export const LANE_DIRECTION_KEY = "focus-board:laneDirection";
+
+const ALLOWED_LANE_DIRECTION: readonly LaneDirectionPref[] = ["vertical", "horizontal"];
+
+/** Validate the stored lane direction; anything stale or unknown falls back to vertical. */
+export function parseLaneDirectionStored(raw: string | null): LaneDirectionPref {
+  return (ALLOWED_LANE_DIRECTION as readonly string[]).includes(raw ?? "")
+    ? (raw as LaneDirectionPref)
+    : "vertical";
+}
+
+export function laneDirectionStoredValue(value: LaneDirectionPref): LaneDirectionPref {
+  return value;
+}
+
+/**
  * The board wallpaper's localStorage persistence. Versioned document with a
  * single GLOBAL layer for now; per-project / per-group overrides extend this
  * same document (version 2) instead of growing sibling keys, so every scope

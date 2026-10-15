@@ -1,0 +1,91 @@
+# Operator-assisted E2E: the lane-direction preference on the real board.
+#
+# The harness mounts the actual app.tsx against the mocked SDK
+# (scripts/screenshot). The lane direction is a real layout read (issue
+# #153): this suite proves the shipped default stays the vertical column
+# board, the horizontal read renders lanes as rows, and the drag, insertion
+# line, and keyboard reorders all follow the row's left-to-right flow — plus
+# the settings path flipping the board live without a reload.
+#
+# Run: npm run uat -- tests/manual/uat-lane-direction.yaml
+suite: lane-direction
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5194
+defaults:
+  groupBy: status
+  theme: dark
+
+steps:
+  - id: the-shipped-default-stays-vertical
+    title: A board with no stored choice renders the vertical column layout
+    goto: "?groupBy=status"
+    assert:
+      - lane_direction: vertical
+      - column: unread
+        ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]
+
+  - id: horizontal-renders-lanes-as-rows
+    title: The horizontal read renders lanes as rows with the same lanes and cards
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert:
+      - lane_direction: horizontal
+      - text_visible: "Unread"
+      - column: unread
+        ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]
+      - rank_slots: { column: unread, count: 3 }
+
+  - id: horizontal-drop-reorders-along-the-row
+    title: A same-row drop ranks along the left-to-right flow
+    goto: "?groupBy=status&laneDirection=horizontal"
+    drag: { from: thr_review_pr, to: thr_rpc_auth, edge: before }
+    assert:
+      - column: unread
+        ordered: [thr_review_pr, thr_rpc_auth, thr_uat_queue]
+      - store: { "status:unread": [thr_review_pr] }
+      - rpc_called: { columnKey: "status:unread", threadId: thr_review_pr, beforeId: thr_rpc_auth, toEnd: false }
+
+  - id: horizontal-line-splits-on-the-cards-sides
+    title: The insertion line draws on the hovered card's left/right edges
+    goto: "?groupBy=status&laneDirection=horizontal"
+    hover: { from: thr_review_pr, to: thr_rpc_auth, edge: before }
+    assert:
+      - insertion_line: { from: thr_review_pr, to: thr_rpc_auth, edge: before }
+      - insertion_line: { from: thr_review_pr, to: thr_rpc_auth, edge: after }
+
+  - id: horizontal-keyboard-steps-left-and-right
+    title: Alt+ArrowLeft / Alt+ArrowRight step a card along the row
+    goto: "?groupBy=status&laneDirection=horizontal"
+    gestures:
+      - key: { card: thr_uat_queue, key: ArrowLeft, alt: true }
+      - key: { card: thr_rpc_auth, key: ArrowRight, alt: true }
+    assert:
+      # uat_queue steps back over rpc_auth; rpc_auth then steps forward past
+      # review_pr, anchoring on nothing (append at the row's end).
+      - column: unread
+        ordered: [thr_uat_queue, thr_review_pr, thr_rpc_auth]
+
+  - id: vertical-keys-do-nothing-on-a-horizontal-board
+    title: Alt+ArrowUp is not a horizontal-board reorder key
+    goto: "?groupBy=status&laneDirection=horizontal"
+    key: { card: thr_uat_queue, key: ArrowUp, alt: true }
+    assert:
+      - column: unread
+        ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]
+
+  - id: the-settings-choice-flips-the-board-live
+    title: Picking Horizontal in the Appearance tab re-lays the open board at once
+    goto: "?groupBy=status&laneDirection=vertical&lastSeenUnreleased=current"
+    gestures:
+      - click_aria: "Focus Board settings"
+      - click_aria: "Appearance"
+      - click_aria: "Horizontal"
+    assert:
+      - lane_direction: horizontal
+
+  - id: the-settings-choice-flips-back
+    title: Picking Vertical flips the live board straight back
+    gestures:
+      - click_aria: "Vertical"
+    assert:
+      - lane_direction: vertical

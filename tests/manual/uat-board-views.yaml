@@ -1,0 +1,99 @@
+# Operator-assisted E2E: every board view variant, on the desktop surface.
+#
+# The harness mounts the actual app.tsx against the mocked SDK
+# (scripts/screenshot) and this suite visits each grouping the View menu
+# offers — Attention (status), Last activity (recency), Project, Provider,
+# Machine, Group, Threads (none), and the Parent-thread view — asserting the
+# lanes each view derives and, where the fixture's recency order is fully
+# derivable, the cards' order inside them. The parent view's panning and
+# locking behavior has its own suite (uat-parent-lanes.yaml); this one just
+# proves the view renders.
+#
+# Run: npm run uat -- tests/manual/uat-board-views.yaml
+suite: board-views
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5191
+defaults:
+  groupBy: status
+  theme: dark
+
+steps:
+  - id: attention-groups-by-state-then-age
+    title: The Attention (status) board groups cards by state and idle age
+    goto: "?groupBy=status"
+    assert:
+      - text_visible: "Unread"
+      - column: unread
+        ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]
+      # Active top-level cards: the pinned-and-running thread leads the
+      # Pinned lane, and the sweep fixture's family (its sweep workers run)
+      # lifts into Working after the two loose actives in recency order.
+      - column: working
+        ordered: [thr_column_sort, thr_drag_done, thr_sweep_parent]
+      - rank_slots: { column: unread, count: 3 }
+
+  - id: recency-buckets-every-thread-by-age
+    title: The Last activity board buckets every thread by age, newest lane left
+    goto: "?groupBy=recency"
+    assert:
+      - text_visible: "Recent"
+      - text_visible: "Today"
+      - text_visible: "Earlier"
+      - text_visible: "A while ago"
+      # The sub-hour lane: running threads lead the lane's age order (the
+      # active pair first), then the rest newest first (the pinned-and-
+      # running thread rides in Pinned on every board).
+      - column: recent
+        ordered: [thr_column_sort, thr_drag_done, thr_permissions, thr_glyph_glue, thr_kbd_focus, thr_rpc_auth, thr_deploy_fail, thr_toolbar_labels]
+      # The one-to-one-day lane, newest first.
+      - column: today
+        ordered: [thr_uat_queue, thr_review_pr, thr_flaky_ci, thr_readme_quickstart]
+
+  - id: project-view-splits-by-project
+    title: The Project view splits the board into one lane per project
+    goto: "?groupBy=project"
+    assert:
+      - text_visible: "API Gateway"
+      - text_visible: "Web App"
+      - column: proj_api
+        ordered: [thr_deploy_fail, thr_toolbar_labels, thr_env_edge]
+
+  - id: provider-view-splits-by-provider
+    title: The Provider view splits the board into one lane per provider
+    goto: "?groupBy=provider"
+    assert:
+      - text_visible: "Claude Code"
+      - text_visible: "Codex"
+      - column: claude-code
+        ordered: [thr_deploy_fail, thr_readme_quickstart, thr_env_edge]
+
+  - id: machine-view-splits-by-host
+    title: The Machine view groups by the host name and has no machine-less lane
+    goto: "?groupBy=machine"
+    assert:
+      - text_visible: "MacBook Pro"
+      - text_hidden: "No machine"
+
+  - id: group-view-splits-by-assignment
+    title: The Group view lanes by feature-group assignment with a No group bucket
+    goto: "?groupBy=group"
+    assert:
+      - text_visible: "chat-imagegent"
+      - text_visible: "No group"
+      # The assigned pair, newest first.
+      - column: grp_chat_imagegent
+        ordered: [thr_column_sort, thr_drag_done]
+
+  - id: none-view-is-one-flat-list
+    title: The Threads (no grouping) view renders a single flat lane
+    goto: "?groupBy=none"
+    assert:
+      - text_visible: "Threads"
+
+  - id: parent-view-renders-family-lanes
+    title: The Parent-thread view renders the family lanes (loose threads excluded)
+    goto: "?groupBy=parent"
+    assert:
+      - text_visible: "Parent thread lane fixture"
+      - text_visible: "Child thread lane fixture"

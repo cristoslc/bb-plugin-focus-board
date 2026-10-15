@@ -26,7 +26,7 @@ import { useCardSpotlightStyles } from "./card-spotlight";
 import { MenuPopover } from "./menu-popover";
 import type { ThreadLink } from "../lib/link-metadata";
 import { groupBoxMenuActions } from "../lib/group-metadata";
-import { containerSlideX, listScrollY } from "./board-scroll";
+import { containerSlideY, containerSlideX, dropZoneForPoint, listScrollX, listScrollY } from "./board-scroll";
 import type { CardMenuAction } from "./thread-card-menu";
 import type { BrowserRevealNotice } from "@/lib/browser-reveal";
 import { Icon } from "@/components/ui/icon";
@@ -92,6 +92,7 @@ import {
   type LaneTransport,
   type RunUnit,
   type TransportArrivalPhase,
+  type TransportAxis,
   type TransportOutPhase,
   type TransportPlay,
   type TransportSpark,
@@ -511,6 +512,18 @@ interface BoardProps {
    */
   motionPref?: "system" | "reduce" | "full";
   /**
+   * The Appearance tab's lane direction (issue #153): `vertical` (default)
+   * is the shipped column board (lanes as columns, cards stacking downward);
+   * `horizontal` reads every lane as a row, its cards flowing left-to-right,
+   * with the board scrolling vertically between lanes. It is a REAL LAYOUT
+   * read, not just styling: every flow-aware piece follows it — the
+   * drop-zone thirds split on the flow axis, the insertion line renders on
+   * the flow edge, the reorder keys become Left/Right, the keep-in-view
+   * corrections slide the new axes, and the transport's ghost collapse and
+   * arrival grow measure the flow axis.
+   */
+  laneDirection?: "vertical" | "horizontal";
+  /**
    * The sweep's way out, whatever state it is in: an armed mode exits
    * (disarm), a running sweep stops before its next archive. The board
    * renders the button and labels it per state; the caller dispatches.
@@ -674,11 +687,19 @@ export function Board({
   onSweepConfirm,
   cardTransport,
   motionPref = "system",
+  // The lane direction: a Board called without it renders the shipped
+  // vertical column board exactly as before.
+  laneDirection = "vertical",
   onSweepCancel,
 }: BoardProps) {
   // The spotlight rule (components/card-spotlight.ts) is document-global CSS;
   // each board mounts it idempotently, so whichever board renders first wins.
   useCardSpotlightStyles();
+  // One flow read for every axis-aware site: which way the board scrolls,
+  // which rect axis the drop thirds split on, which keys reorder, and which
+  // dimension the transport's ghost collapse and arrival grow measure.
+  const flowAxis: TransportAxis = laneDirection;
+  const horizontalLanes = flowAxis === "horizontal";
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   // The column floor an UNNEST hover lights up (amber). Kept separate from
   // dragOverColumn so the two affordances cannot argue over ring color: the
@@ -754,17 +775,29 @@ export function Board({
     const keepActiveCardInView = () => {
       const card = firstRealCard(container, activeThreadId);
       if (!(card instanceof HTMLElement)) return;
-      // Horizontal: the pane opening (or a drag resize) narrows the visible
-      // range; slide the card back inside it. Vertical: a lane taller than
-      // the board scrolls its own list, and a card that history just restored
-      // (deep link, back/forward — no click preceded it) can sit below the
-      // fold; the list is adjusted directly — never scrollIntoView, which
-      // would scroll every ancestor including the host page.
+      // The container slides along ITS OWN scroll axis: horizontal, the
+      // pane opening (or a drag resize) narrows the visible range; vertical
+      // (horizontal lane rows), a lane row beyond the board's visible range
+      // slides that scroll. The lane's own list always corrects its card
+      // along the card flow inside it — a vertical lane's list scrolls its
+      // stack, a horizontal lane's row scrolls its flow — and a card that
+      // history just restored (deep link, back/forward — no click preceded
+      // it) can sit beyond the fold; the list is adjusted directly — never
+      // scrollIntoView, which would scroll every ancestor including the
+      // host page.
       const cardRect = card.getBoundingClientRect();
-      container.scrollLeft += containerSlideX(container.getBoundingClientRect(), cardRect);
+      if (horizontalLanes) {
+        container.scrollTop += containerSlideY(container.getBoundingClientRect(), cardRect);
+      } else {
+        container.scrollLeft += containerSlideX(container.getBoundingClientRect(), cardRect);
+      }
       const list = card.closest("[data-card-list]");
       if (list instanceof HTMLElement) {
-        list.scrollTop += listScrollY(list.getBoundingClientRect(), cardRect);
+        if (horizontalLanes) {
+          list.scrollLeft += listScrollX(list.getBoundingClientRect(), cardRect);
+        } else {
+          list.scrollTop += listScrollY(list.getBoundingClientRect(), cardRect);
+        }
       }
     };
     keepActiveCardInView();
@@ -786,8 +819,9 @@ export function Board({
     observer.observe(container);
     return () => observer.disconnect();
     // activeCardLaneId re-fits when the active card relocates (pin, done,
-    // archive, grouping change) without firing on same-lane data refreshes.
-  }, [activeThreadId, activeCardLaneId]);
+    // archive, grouping change) without firing on same-lane data refreshes;
+    // a direction flip re-lays the board, so it refits the same way.
+  }, [activeThreadId, activeCardLaneId, laneDirection]);
 
   // One-shot, intent-scoped bring-into-view (`revealRequest` from app.tsx):
   // every menu action that relocates a card — Pin/Unpin into or out of the
@@ -840,13 +874,21 @@ export function Board({
       return;
     }
     const cardRect = card.getBoundingClientRect();
-    container.scrollLeft += containerSlideX(container.getBoundingClientRect(), cardRect);
+    if (horizontalLanes) {
+      container.scrollTop += containerSlideY(container.getBoundingClientRect(), cardRect);
+    } else {
+      container.scrollLeft += containerSlideX(container.getBoundingClientRect(), cardRect);
+    }
     const list = card.closest("[data-card-list]");
     if (list instanceof HTMLElement) {
-      list.scrollTop += listScrollY(list.getBoundingClientRect(), cardRect);
+      if (horizontalLanes) {
+        list.scrollLeft += listScrollX(list.getBoundingClientRect(), cardRect);
+      } else {
+        list.scrollTop += listScrollY(list.getBoundingClientRect(), cardRect);
+      }
     }
     claim.consumed = true;
-  }, [reveal, columns]);
+  }, [reveal, columns, laneDirection]);
 
   // ── The lane transport dissolve ─────────────────────────────────────────
   // A card relocating between lanes in one commit does not teleport: its old
@@ -914,13 +956,14 @@ export function Board({
   const transportElsRef = useRef(new Map<string, HTMLElement | null>());
   const startedWipesRef = useRef(new Set<string>());
   // Pre-clip geometry, captured the commit the ghost first rendered: the
-  // collapsing phase's static max-height-0 styles are already ON the ghost
+  // collapsing phase's static max-size-0 styles are already ON the ghost
   // when the collapse animation starts, so a getBoundingClientRect() there
   // measures 0 and the smooth close would collapse from nothing (an instant
   // jump). The wipe-start commit's unclipped slot is the only honest place
-  // to read the ghost's height and margins.
+  // to read the ghost's flow size and margins (the height in a vertical
+  // lane, the width in a horizontal one).
   const transportMetricsRef = useRef(
-    new Map<string, { heightPx: number; marginTopPx: string; marginBottomPx: string }>(),
+    new Map<string, { sizePx: number; marginStartPx: string; marginEndPx: string }>(),
   );
 
   // Diff the lane map. A grouping change re-derives EVERY lane at once and
@@ -1180,10 +1223,15 @@ export function Board({
       if (!transportMetricsRef.current.has(metricKey)) {
         const outEl = transportElsRef.current.get(outKey);
         if (outEl !== null && outEl !== undefined) {
+          // The flow axis the lane renders: the ghost's slot collapses along
+          // it (the width in a horizontal lane, the height in a vertical
+          // one), so the measured metrics read the same axis.
           transportMetricsRef.current.set(metricKey, {
-            heightPx: outEl.getBoundingClientRect().height,
-            marginTopPx: computedMarginPx(outEl, "Top"),
-            marginBottomPx: computedMarginPx(outEl, "Bottom"),
+            sizePx: horizontalLanes
+              ? outEl.getBoundingClientRect().width
+              : outEl.getBoundingClientRect().height,
+            marginStartPx: computedMarginPx(outEl, horizontalLanes ? "Left" : "Top"),
+            marginEndPx: computedMarginPx(outEl, horizontalLanes ? "Right" : "Bottom"),
           });
         }
       }
@@ -1220,22 +1268,29 @@ export function Board({
         effectiveTransportVariant === "zoom" ? TRANSPORT_ZOOM_IN_EASE : TRANSPORT_EASE,
       );
       // The dissolve rides the space growing: the new slot opens from zero
-      // height to its measured height so the lane's neighbors slide as the
-      // card materializes (scrollHeight reads through the slot's static
-      // max-height-0 clip). The grow is its own quick clock — it opens well
-      // before the dissolve-in ends, so the shimmer plays over an open
-      // space instead of trailing it. Skipped with no measurable height
+      // size to its measured size on the FLOW axis (height in a vertical
+      // lane, width in a horizontal one) so the lane's neighbors slide as
+      // the card materializes (the scroll* read goes through the slot's
+      // static max-size-0 clip). The grow is its own quick clock — it opens
+      // well before the dissolve-in ends, so the shimmer plays over an open
+      // space instead of trailing it. Skipped with no measurable size
       // (jsdom, or a slot the layout has not sized yet).
+      const arrivalSlotSize =
+        arrivalSlotEl === null || arrivalSlotEl === undefined
+          ? 0
+          : horizontalLanes
+            ? arrivalSlotEl.scrollWidth
+            : arrivalSlotEl.scrollHeight;
       if (
         arrivalSlotEl !== null &&
         arrivalSlotEl !== undefined &&
         typeof arrivalSlotEl.animate === "function" &&
-        arrivalSlotEl.scrollHeight > 0
+        arrivalSlotSize > 0
       ) {
         startWipe(
           `grow:${transport.threadId}@${transport.gen}`,
           arrivalSlotEl,
-          arrivalGrowKeyframes(arrivalSlotEl.scrollHeight),
+          arrivalGrowKeyframes(arrivalSlotSize, flowAxis),
           // The dissolve's space opens early under its materialize; the
           // zoom's space expands on the SAME clock as the card's growth, so
           // the space and the card land together.
@@ -1273,15 +1328,18 @@ export function Board({
             ghost,
             ghostCollapseKeyframes(
               metrics !== undefined
-                ? metrics.heightPx
-                : ghost.scrollHeight,
-              cardRowGapPx(ghost.parentElement),
+                ? metrics.sizePx
+                : horizontalLanes
+                  ? ghost.scrollWidth
+                  : ghost.scrollHeight,
+              cardRowGapPx(ghost.parentElement, flowAxis),
               metrics !== undefined
-                ? metrics.marginTopPx
-                : computedMarginPx(ghost, "Top"),
+                ? metrics.marginStartPx
+                : computedMarginPx(ghost, horizontalLanes ? "Left" : "Top"),
               metrics !== undefined
-                ? metrics.marginBottomPx
-                : computedMarginPx(ghost, "Bottom"),
+                ? metrics.marginEndPx
+                : computedMarginPx(ghost, horizontalLanes ? "Right" : "Bottom"),
+              flowAxis,
             ),
             // The zoom's slot close rides the shrink's clock and ease (the
             // space recedes with the card); the dissolve keeps its own
@@ -1651,8 +1709,16 @@ export function Board({
     element?: Element,
   ): DropZone {
     const rect = (element ?? event.currentTarget).getBoundingClientRect();
-    const y = event.clientY - rect.top;
-    const edge: Half = y < rect.height / 2 ? "before" : "after";
+    // The thirds split on the lane flow's axis: top/bottom in a vertical
+    // lane, left/right in a horizontal one (the point's other coordinate is
+    // ignored — a horizontal lane's drop never splits on its y).
+    const zone = dropZoneForPoint(
+      flowAxis,
+      rect,
+      event.clientX,
+      event.clientY,
+      true,
+    );
     if (
       onReparent === undefined ||
       childId === null ||
@@ -1660,11 +1726,13 @@ export function Board({
       childId === targetId ||
       reparentRefusalFromParents(rawParentOf ?? EMPTY_PARENT_OF, childId, targetId) !== null
     ) {
-      return edge;
+      // A refused nest edge falls back to the plain insertion halves: the
+      // middle third never advertises a drop the guard would refuse.
+      return zone === "onto"
+        ? dropZoneForPoint(flowAxis, rect, event.clientX, event.clientY, false)
+        : zone;
     }
-    if (y < rect.height / 3) return "before";
-    if (y > (rect.height * 2) / 3) return "after";
-    return "onto";
+    return zone;
   }
 
   /**
@@ -1879,8 +1947,15 @@ export function Board({
         ref={scrollRef}
         onClick={handleBackgroundClick}
         data-columns-board
+        data-lane-direction={laneDirection}
         className={cn(
-          "min-h-0 flex-1 overflow-x-auto overflow-y-hidden px-3 pb-3 pt-2",
+          "min-h-0 flex-1 px-3 pb-3 pt-2",
+          // The scroll follows the lane direction: vertical lanes sit in one
+          // horizontally scrolling row (today's board); horizontal lanes
+          // stack as rows the board scrolls vertically.
+          horizontalLanes
+            ? "overflow-y-auto overflow-x-hidden"
+            : "overflow-x-auto overflow-y-hidden",
         )}
       >
         {/* The insertion line is the only visual feedback a reorder gives, so
@@ -1888,7 +1963,12 @@ export function Board({
         <p aria-live="polite" className="sr-only">
           {announcement}
         </p>
-        <div className="flex h-full min-h-0 items-stretch gap-4">
+        <div
+          className={cn(
+            "flex h-full min-h-0 items-stretch gap-4",
+            horizontalLanes && "flex-col",
+          )}
+        >
         {columns.map((column) => {
           const dropHandler = dropHandlerFor(column.id);
           const isDropTarget = dropHandler !== null;
@@ -2169,7 +2249,13 @@ export function Board({
                 if (childOf !== null && onReparent !== undefined) commitUnnest(threadId);
               }}
               className={cn(
-                "flex h-full min-h-0 w-64 shrink-0 flex-col rounded-lg transition-colors",
+                // Vertical lanes: one fixed-width column, full board height.
+                // Horizontal lanes: one fixed-height row spanning the width
+                // (the lanes row scrolls vertically between rows), its cards
+                // flowing rightward inside the row's card list.
+                horizontalLanes
+                  ? "flex h-72 w-full min-h-0 min-w-0 shrink-0 flex-row rounded-lg transition-colors"
+                  : "flex h-full min-h-0 w-64 shrink-0 flex-col rounded-lg transition-colors",
                 familyFloorColumn === column.id
                   // Amber is the family drop color — the same signal the nest
                   // ring on cards gives — so "un-nests on release" is legible
@@ -2181,11 +2267,15 @@ export function Board({
               <header
                 className={cn(
                   // `group` lights the hover-revealed hide-lane icon.
-                  "group flex items-baseline gap-1.5 px-1 pb-1.5 transition-colors",
+                  // Vertical: a slim top strip. Horizontal: a narrow left
+                  // strip the lane's label stacks down.
+                  horizontalLanes
+                    ? "group flex w-40 shrink-0 flex-col items-start gap-1 pb-1 pl-1 pr-1 pt-1.5 transition-colors"
+                    : "group flex items-baseline gap-1.5 px-1 pb-1.5 transition-colors",
                   // Grow the hit strip only while a drag flies, and grow it
                   // with negated margins so no card moves beneath the cursor:
                   // +4px each side here, -4px back from the content flow.
-                  dragInFlight && "px-2 pb-2.5 -mx-1 -mb-1",
+                  dragInFlight && (horizontalLanes ? "-my-1 px-2 py-2.5" : "px-2 pb-2.5 -mx-1 -mb-1"),
                   familyHeaderColumn === column.id
                     ? "rounded-md ring-2 ring-amber-500 bg-accent/40"
                     : null,
@@ -2356,7 +2446,12 @@ export function Board({
               </header>
               <div
                 data-card-list
-                className="min-h-0 flex-1 overflow-y-auto rounded-lg bg-muted/30 p-1.5"
+                className={cn(
+                  "min-h-0 flex-1 rounded-lg bg-muted/30 p-1.5",
+                  // The list scrolls along the lane flow: a vertical lane's
+                  // stack scrolls its own Y, a horizontal lane's row its X.
+                  horizontalLanes ? "overflow-x-auto" : "overflow-y-auto",
+                )}
               >
                 {column.threads.length === 0 && dragOverColumn !== column.id ? (
                   column.id === "working" ? (
@@ -2438,23 +2533,32 @@ export function Board({
                     style={
                       ghostPlay !== undefined && ghostPlay.phase === "collapsing"
                         ? {
-                            // The static END state of the collapse; a
-                            // WAAPI-capable browser animates the measured
-                            // collapse OVER it (the animation's fill keeps
-                            // its frames winning), and a no-WAAPI
-                            // environment lands here instantly.
-                            maxHeight: "0px",
+                            // The static END state of the collapse, worn on
+                            // the lane flow's axis (the zoom/collapse
+                            // keyframes carry the matching animated close).
+                            ...(horizontalLanes
+                              ? { maxWidth: "0px" }
+                              : { maxHeight: "0px" }),
                             overflow: "hidden",
-                            marginTop: `-${TRANSPORT_ROW_GAP_PX / 2}px`,
-                            marginBottom: `-${TRANSPORT_ROW_GAP_PX / 2}px`,
+                            ...(horizontalLanes
+                              ? {
+                                  marginLeft: `-${TRANSPORT_ROW_GAP_PX / 2}px`,
+                                  marginRight: `-${TRANSPORT_ROW_GAP_PX / 2}px`,
+                                }
+                              : {
+                                  marginTop: `-${TRANSPORT_ROW_GAP_PX / 2}px`,
+                                  marginBottom: `-${TRANSPORT_ROW_GAP_PX / 2}px`,
+                                }),
                           }
                         : arrivingFade
                           ? // Clipped shut until the grow animation opens the
-                            // slot's height — the FADE no longer rides here:
+                            // slot's size — the FADE no longer rides here:
                             // it claims the card wrapper inside (see
                             // data-transport-fade), so the glint layer keeps
                             // full brightness through the whole arrival.
-                            { maxHeight: "0px", overflow: "hidden" }
+                            horizontalLanes
+                            ? { maxWidth: "0px", overflow: "hidden" }
+                            : { maxHeight: "0px", overflow: "hidden" }
                           : undefined
                     }
                     ref={(el) => {
@@ -2746,7 +2850,16 @@ export function Board({
                           (event) => {
                             if (!ranking) return;
                             if (!event.altKey) return;
-                            if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+                            // The reorder keys follow the lane flow: Up/Down
+                            // step along a vertical lane's stack, Left/Right
+                            // along a horizontal lane's row.
+                            const goingBack = horizontalLanes
+                              ? event.key === "ArrowLeft"
+                              : event.key === "ArrowUp";
+                            const goingForward = horizontalLanes
+                              ? event.key === "ArrowRight"
+                              : event.key === "ArrowDown";
+                            if (!goingBack && !goingForward) return;
                             const at = shownThreads.indexOf(thread);
                             const visibleIds = shownThreads.map((candidate) => candidate.id);
                             const unit = unitOf(thread.id);
@@ -2762,7 +2875,7 @@ export function Board({
                               const lastIdx = visibleIds.indexOf(
                                 stepInfo.memberIds[stepInfo.memberIds.length - 1],
                               );
-                              if (event.key === "ArrowUp") {
+                              if (goingBack) {
                                 if (firstIdx <= 0) return;
                                 const target = unitMoveTarget(
                                   visibleIds,
@@ -2794,14 +2907,15 @@ export function Board({
                               commitMove(column, thread.id, target.beforeId, target.toEnd, visibleIds, unit);
                               return;
                             }
-                            const to = event.key === "ArrowUp" ? at - 1 : at + 1;
+                            const to = goingBack ? at - 1 : at + 1;
                             if (to < 0 || to >= shownThreads.length) return;
                             event.preventDefault();
-                            // Up anchors on the card being stepped over; down
-                            // anchors on the one after the destination, or
-                            // appends when the card is already last.
+                            // Back anchors on the card being stepped over;
+                            // forward anchors on the one after the
+                            // destination, or appends when the card is
+                            // already last in the flow.
                             const beforeId =
-                              event.key === "ArrowUp"
+                              goingBack
                                 ? shownThreads[to].id
                                 : (shownThreads[to + 1]?.id ?? null);
                             commitMove(column, thread.id, beforeId, beforeId === null, visibleIds);
@@ -2809,6 +2923,9 @@ export function Board({
                         }
                         className={cn(
                           "relative",
+                          // A horizontal lane's slot holds the card's fixed
+                          // width so the row's flow spaces every card evenly.
+                          horizontalLanes && "w-60 shrink-0",
                           ghostPlay !== undefined && "pointer-events-none",
                           rankDrop?.columnId === column.id && rankDrop.threadId === thread.id && (
                             rankDrop.zone === "onto"
@@ -2819,8 +2936,15 @@ export function Board({
                               // insertion line's lane-color affordance.
                               ? "after:absolute after:inset-0 after:rounded-lg after:ring-2 after:ring-amber-500 after:bg-amber-500/10"
                               : rankDrop.zone === "before"
-                                ? "before:absolute before:inset-x-0 before:-top-0.5 before:h-0.5 before:rounded-full before:bg-ring"
-                                : "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-ring"
+                                // The line sits on the flow edge the drop
+                                // would insert at: top/bottom in a vertical
+                                // lane, left/right in a horizontal one.
+                                ? horizontalLanes
+                                  ? "before:absolute before:inset-y-0 before:-left-0.5 before:w-0.5 before:rounded-full before:bg-ring"
+                                  : "before:absolute before:inset-x-0 before:-top-0.5 before:h-0.5 before:rounded-full before:bg-ring"
+                                : horizontalLanes
+                                  ? "after:absolute after:inset-y-0 after:-right-0.5 after:w-0.5 after:rounded-full after:bg-ring"
+                                  : "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-ring"
                           ),
                         )}
                       >
@@ -3000,7 +3124,10 @@ export function Board({
                       key={`transport:${play.threadId}`}
                       aria-hidden
                       {...({ inert: "" } as unknown as Record<string, never>)}
-                      className="pointer-events-none relative mt-1.5"
+                      className={cn(
+                        "pointer-events-none relative",
+                        horizontalLanes ? "ml-1.5 w-60 shrink-0" : "mt-1.5",
+                      )}
                       data-group-box={play.threadId}
                       data-transport-ghost=""
                       data-transport-out={play.phase}
@@ -3011,10 +3138,19 @@ export function Board({
                               // card ghost's (the animation's fill keeps its
                               // frames winning in a browser; a no-WAAPI
                               // environment lands here instantly).
-                              maxHeight: "0px",
+                              ...(horizontalLanes
+                                ? { maxWidth: "0px" }
+                                : { maxHeight: "0px" }),
                               overflow: "hidden",
-                              marginTop: `-${TRANSPORT_ROW_GAP_PX / 2}px`,
-                              marginBottom: `-${TRANSPORT_ROW_GAP_PX / 2}px`,
+                              ...(horizontalLanes
+                                ? {
+                                    marginLeft: `-${TRANSPORT_ROW_GAP_PX / 2}px`,
+                                    marginRight: `-${TRANSPORT_ROW_GAP_PX / 2}px`,
+                                  }
+                                : {
+                                    marginTop: `-${TRANSPORT_ROW_GAP_PX / 2}px`,
+                                    marginBottom: `-${TRANSPORT_ROW_GAP_PX / 2}px`,
+                                  }),
                             }
                           : undefined
                       }
@@ -3032,7 +3168,7 @@ export function Board({
                         >
                           {play.boxName}
                         </span>
-                        <ul className="flex flex-col gap-1.5">
+                        <ul className={cn("flex gap-1.5", horizontalLanes ? "flex-row" : "flex-col")}>
                           {(play.members ?? []).map((member) => threadLi(member))}
                         </ul>
                         {transportSparksOn ? (
@@ -3121,7 +3257,9 @@ export function Board({
                               // (data-transport-fade), so the glint layer, a
                               // sibling of that container, keeps full
                               // brightness through the whole arrival.
-                              { maxHeight: "0px", overflow: "hidden" }
+                              horizontalLanes
+                              ? { maxWidth: "0px", overflow: "hidden" }
+                              : { maxHeight: "0px", overflow: "hidden" }
                             : undefined
                         }
                         ref={(el) => {
@@ -3133,7 +3271,10 @@ export function Board({
                             );
                           }
                         }}
-                        className="relative mt-1.5"
+                        className={cn(
+                          "relative",
+                          horizontalLanes ? "ml-1.5 shrink-0" : "mt-1.5",
+                        )}
                         onContextMenu={(event) => {
                           // The box context menu covers the box's own
                           // surface — label, padding, gaps, and the group
@@ -3419,7 +3560,7 @@ export function Board({
                                   {runItem.box.name}
                                 </span>
                               )}
-                              <ul className="flex flex-col gap-1.5">
+                              <ul className={cn("flex gap-1.5", horizontalLanes ? "flex-row" : "flex-col")}>
                                 {runItem.box.members.map((boxMember, memberIndex) =>
                                   threadLi(
                                     boxMember,
@@ -3443,7 +3584,7 @@ export function Board({
                           </li>
                     );
                   return (
-                    <ul className="flex flex-col gap-1.5">
+                    <ul className={cn("flex gap-1.5", horizontalLanes ? "flex-row" : "flex-col")}>
                       {insertGhostSlots(columnRuns, laneOutGhosts).map((entry) =>
                         entry.kind === "ghost"
                           ? entry.ghost.members !== undefined
@@ -3468,7 +3609,12 @@ export function Board({
                     type="button"
                     onClick={onNewTask}
                     className={cn(
-                      "mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border px-3 py-2",
+                      // A slot of its own, on either axis: below the Working
+                      // stack (vertical) or beside it in the row's flow
+                      // (horizontal).
+                      horizontalLanes
+                        ? "ml-1.5 flex w-60 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-border px-3 py-2"
+                        : "mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border px-3 py-2",
                       "text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground",
                       "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     )}

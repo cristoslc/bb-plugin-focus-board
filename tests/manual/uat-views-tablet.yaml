@@ -1,0 +1,52 @@
+# Operator-assisted E2E: the board's views at a tablet viewport.
+#
+# The harness mounts the actual app.tsx against the mocked SDK
+# (scripts/screenshot) at 768×1024 (iPad-class) — the in-between width where
+# the desktop palette stops fitting but the phone sheet behaviors have not
+# engaged. A subset of the view sweep plus one real drag on the horizontal
+# lane read (issue #153).
+#
+# Run: npm run uat -- tests/manual/uat-views-tablet.yaml
+suite: views-tablet
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5193
+defaults:
+  groupBy: status
+  theme: dark
+  viewport: { width: 768, height: 1024 }
+
+steps:
+  - id: attention-renders-at-tablet-width
+    title: The Attention board renders its lanes at 768×1024
+    goto: "?groupBy=status"
+    assert:
+      - lane_direction: vertical
+      - text_visible: "Unread"
+      - column: unread
+        ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]
+
+  - id: project-view-renders-at-tablet-width
+    title: The Project view splits lanes at tablet width
+    goto: "?groupBy=project"
+    assert:
+      - text_visible: "API Gateway"
+      - column: proj_api
+        ordered: [thr_deploy_fail, thr_toolbar_labels, thr_env_edge]
+
+  - id: horizontal-drag-reorders-at-tablet-width
+    title: A drag on the horizontal lane read ranks along the row at tablet width
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert_before_drag:
+      - lane_direction: horizontal
+    drag: { from: thr_review_pr, to: thr_rpc_auth, edge: before }
+    assert:
+      - column: unread
+        ordered: [thr_review_pr, thr_rpc_auth, thr_uat_queue]
+
+  - id: parent-view-renders-at-tablet-width
+    title: The Parent-thread view renders its family lanes at tablet width
+    goto: "?groupBy=parent"
+    assert:
+      - text_visible: "Parent thread lane fixture"
+      - text_visible: "Child thread lane fixture"

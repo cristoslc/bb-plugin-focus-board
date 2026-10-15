@@ -2,6 +2,11 @@
 
 Fine-grained notes that don't belong in the README's feature list.
 
+## Board layout
+
+- The board's lanes run one of two ways (a choice in the Appearance settings tab and the plugin configuration page, persisted like the other appearance choices): Vertical, the shipped default, lanes as columns and cards stacking downward; Horizontal, lanes as rows the board scrolls between, each lane's cards flowing left to right. The direction is a real layout read: the drag insertion line splits on the lane's flow axis, the Alt+arrow reorder keys become Alt+Left / Alt+Right on a horizontal board, the keep-in-view corrections slide the flow's axes, and the lane-move animation measures its slot collapse and arrival grow along the flow.
+- Horizontal lane rows hold a fixed height and the cards keep the vertical lane's card width, so a lane whose cards overflow the row scrolls its own flow horizontally.
+
 ## Grouping
 
 - In Parent-thread mode lanes sort by family recency (most recently touched family at left) and can optionally group by project.

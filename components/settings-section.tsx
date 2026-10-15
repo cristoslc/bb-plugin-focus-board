@@ -1,22 +1,27 @@
 import { useState } from "react";
 import {
   CardTransportChoice,
+  LaneDirectionChoice,
   MotionChoice,
   WallpaperGroup,
 } from "@/components/appearance-controls";
 import {
   CARD_TRANSPORT_KEY,
+  LANE_DIRECTION_KEY,
   MOTION_PREF_KEY,
   WALLPAPER_KEY,
   cardTransportStoredValue,
+  laneDirectionStoredValue,
   motionStoredValue,
   parseCardTransportStored,
+  parseLaneDirectionStored,
   parseMotionStored,
   parseWallpaperStored,
   readStoredText,
   wallpaperStoredValue,
   writeStored,
   type CardTransportPref,
+  type LaneDirectionPref,
   type MotionPref,
   type WallpaperSettings,
 } from "@/components/preferences";
@@ -39,6 +44,9 @@ export function AppearanceSettingsSection() {
   const [motionPref, setMotionPref] = useState<MotionPref>(
     () => parseMotionStored(readStoredText(MOTION_PREF_KEY, "")),
   );
+  const [laneDirection, setLaneDirection] = useState<LaneDirectionPref>(
+    () => parseLaneDirectionStored(readStoredText(LANE_DIRECTION_KEY, "")),
+  );
   const [wallpaper, setWallpaper] = useState<WallpaperSettings>(
     () => parseWallpaperStored(readStoredText(WALLPAPER_KEY, "")),
   );
@@ -57,6 +65,13 @@ export function AppearanceSettingsSection() {
         onSelect={(value) => {
           writeStored(MOTION_PREF_KEY, motionStoredValue(value));
           setMotionPref(value);
+        }}
+      />
+      <LaneDirectionChoice
+        selected={laneDirection}
+        onSelect={(value) => {
+          writeStored(LANE_DIRECTION_KEY, laneDirectionStoredValue(value));
+          setLaneDirection(value);
         }}
       />
       <WallpaperGroup
