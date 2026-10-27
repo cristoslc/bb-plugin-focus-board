@@ -891,9 +891,18 @@ function BoardPage({ subPath }: { subPath: string }) {
   const refetchFamilyState = useCallback(() => {
     rpc.call("family_state_list").then(
       (result) => {
+        // Guarded, not trusted: the zod contract says both arrays are there,
+        // but a host running a different plugin build could answer without
+        // them, and an unvalidated `undefined` would throw during the read
+        // (the rank refetch's same guard).
+        const raw = result as { collapsedFamilies?: unknown; hideIdleChildren?: unknown };
         const server: FamilyStateStore = {
-          collapsedFamilies: result.collapsedFamilies,
-          hideIdleChildren: result.hideIdleChildren,
+          collapsedFamilies: Array.isArray(raw.collapsedFamilies)
+            ? raw.collapsedFamilies.filter((id): id is string => typeof id === "string")
+            : [],
+          hideIdleChildren: Array.isArray(raw.hideIdleChildren)
+            ? raw.hideIdleChildren.filter((id): id is string => typeof id === "string")
+            : [],
         };
         const firstRead = !familyStateHydratedRef.current;
         familyStateHydratedRef.current = true;
