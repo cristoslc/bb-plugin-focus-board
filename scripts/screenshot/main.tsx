@@ -106,6 +106,22 @@ if (settingsSeed !== null) {
   seedSimSettings(JSON.parse(settingsSeed) as Record<string, string | number | boolean>);
 }
 
+// Seed the harness's family-state server row (the plugin KV row the fold and
+// idle-hide gestures write): `?familyState={"collapsedFamilies":[...]}` JSON.
+// The app reads this row on mount, so a suite can prove the mount hydration
+// from the server. The `?collapsed=` localStorage seed above still folds
+// cards, now through the one-time migration.
+const familyStateSeed = params.get("familyState");
+if (familyStateSeed !== null) {
+  const uat = (globalThis as unknown as {
+    __uat?: { seedFamilyState: (state: { collapsedFamilies?: string[]; hideIdleChildren?: string[] }) => void };
+  }).__uat;
+  if (!uat) throw new Error("harness: family-state seeding requested but __uat is missing");
+  uat.seedFamilyState(
+    JSON.parse(familyStateSeed) as { collapsedFamilies?: string[]; hideIdleChildren?: string[] },
+  );
+}
+
 // `?page=configuration` mounts the registered settings section bare (the
 // harness has no host plugin-detail page) instead of the board panel, so
 // the headless verify can drive the mirrored Appearance controls.

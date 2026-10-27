@@ -58,6 +58,9 @@ const validInputs: Record<Method, unknown> = {
   group_rename: { groupId: "grp_x", name: "Auth rework" },
   group_set: { threadId: "thr_x", groupId: null },
   group_delete: { groupId: "grp_x" },
+  family_state_list: null,
+  family_state_set: { key: "collapsedFamilies", id: "thr_x", on: true },
+  family_state_merge: { collapsedFamilies: ["thr_x"], hideIdleChildren: [] },
   pulse_rates: null,
 };
 
@@ -70,6 +73,7 @@ const nullInputMethods: Method[] = [
   "sweep_config_get",
   "link_list",
   "error_acks_list",
+  "family_state_list",
   "pulse_rates",
 ];
 

@@ -149,10 +149,9 @@ import {
   NEST_CHILDREN_KEY,
   PARENT_LANE_ORDER_KEY,
   applyStoredSetDelta,
-  collapsedFamiliesStoredValue,
+  clearStored,
   collapsedGroupsStoredValue,
   escStopsRunningFromSetting,
-  hideIdleChildrenStoredValue,
   newThreadShortcutKeyFromSetting,
   nestStoredValue,
   parseCollapsedFamiliesStored,
@@ -192,6 +191,10 @@ import {
   type SweepSettingKey,
 } from "./components/preferences";
 import { type ArchiveUnit } from "./lib/duration";
+import {
+  familyStateMigration,
+  type FamilyStateStore,
+} from "./lib/family-state";
 import { usePrefersDarkScheme } from "./components/ui/hooks/use-media-query";
 import { WallpaperActiveProvider } from "./components/wallpaper-contrast";
 import { WallpaperPaintLayer } from "./components/wallpaper-paint";
@@ -864,21 +867,92 @@ function BoardPage({ subPath }: { subPath: string }) {
   const [parentLaneOrder, setParentLaneOrder] = useState<ParentLaneOrder>(() =>
     parseParentLaneOrderStored(readStored(PARENT_LANE_ORDER_KEY, ["recency", "project"], "recency")),
   );
-  // Collapsed family cards: the parent ids whose nested rows are collapsed,
-  // persisted like every other board preference. Anything absent renders
-  // expanded — the stored list only ever records deliberate collapses, so a
-  // reload re-opens exactly the families the operator folded.
-  const [collapsedFamilies, setCollapsedFamilies] = useState<ReadonlySet<string>>(() =>
-    parseCollapsedFamiliesStored(readStoredText(COLLAPSED_FAMILIES_KEY, "")),
+  // Collapsed family cards and the idle-children filter are deliberate-toggle
+  // sets that now live on the bb server (one plugin KV row, lib/family-state),
+  // not in browser localStorage: the same fold and hide read on every window
+  // AND every machine. Both start empty and hydrate from `family_state_list`
+  // just below; each set only ever records deliberate toggles, so an id absent
+  // from it renders expanded / not hidden.
+  const [collapsedFamilies, setCollapsedFamilies] = useState<ReadonlySet<string>>(
+    () => new Set(),
   );
-  // Hide-idle-children families: the parent ids (Done projections keyed
-  // `done:<parent id>`, same as the fold) whose child sections hide their
-  // idle children. Same deliberate-toggle-only shape as the collapsed set:
-  // a family never toggled renders its children, and a corrupt stored list
-  // degrades to nobody hidden.
-  const [hideIdleFamilies, setHideIdleFamilies] = useState<ReadonlySet<string>>(() =>
-    parseHideIdleChildrenStored(readStoredText(HIDE_IDLE_CHILDREN_KEY, "")),
+  const [hideIdleFamilies, setHideIdleFamilies] = useState<ReadonlySet<string>>(
+    () => new Set(),
   );
+  // A family-state write the host rejected (the fold/idle toggle did not
+  // save): the toggle rolls back to the server's truth and this names the
+  // failure. Null when the last write landed.
+  const [familyStateSaveError, setFamilyStateSaveError] = useState<string | null>(
+    null,
+  );
+  // Flips true once the first server read (or its migration) has settled, so
+  // the one-time localStorage migration below runs exactly once per mount.
+  const familyStateHydratedRef = useRef(false);
+  const refetchFamilyState = useCallback(() => {
+    rpc.call("family_state_list").then(
+      (result) => {
+        const server: FamilyStateStore = {
+          collapsedFamilies: result.collapsedFamilies,
+          hideIdleChildren: result.hideIdleChildren,
+        };
+        const firstRead = !familyStateHydratedRef.current;
+        familyStateHydratedRef.current = true;
+        if (firstRead) {
+          // One-time migration: the server row is the truth from here on. If
+          // it is empty and localStorage still holds folds (an operator
+          // upgrading from the localStorage era), union them in; only a
+          // successful write retires the legacy keys, so a failed migration
+          // keeps the folds on screen and retries on the next load.
+          const localCollapsed = parseCollapsedFamiliesStored(
+            readStoredText(COLLAPSED_FAMILIES_KEY, ""),
+          );
+          const localHideIdle = parseHideIdleChildrenStored(
+            readStoredText(HIDE_IDLE_CHILDREN_KEY, ""),
+          );
+          const migration = familyStateMigration(server, {
+            collapsedFamilies: [...localCollapsed],
+            hideIdleChildren: [...localHideIdle],
+          });
+          if (migration !== null) {
+            rpc
+              .call("family_state_merge", {
+                collapsedFamilies: [...migration.collapsedFamilies],
+                hideIdleChildren: [...migration.hideIdleChildren],
+              })
+              .then(
+                (merged) => {
+                  setCollapsedFamilies(new Set(merged.collapsedFamilies));
+                  setHideIdleFamilies(new Set(merged.hideIdleChildren));
+                  clearStored(COLLAPSED_FAMILIES_KEY);
+                  clearStored(HIDE_IDLE_CHILDREN_KEY);
+                },
+                () => {
+                  // The migration write failed: keep the folds on screen and
+                  // leave the legacy keys in place so the next load retries.
+                  setCollapsedFamilies(new Set(migration.collapsedFamilies));
+                  setHideIdleFamilies(new Set(migration.hideIdleChildren));
+                },
+              );
+            return;
+          }
+          // Server authoritative (or nothing to migrate): retire the keys.
+          clearStored(COLLAPSED_FAMILIES_KEY);
+          clearStored(HIDE_IDLE_CHILDREN_KEY);
+        }
+        setCollapsedFamilies(new Set(server.collapsedFamilies));
+        setHideIdleFamilies(new Set(server.hideIdleChildren));
+      },
+      () => {}, // Family fold state is optional; the board works without it.
+    );
+  }, [rpc]);
+  useEffect(() => {
+    refetchFamilyState();
+  }, [refetchFamilyState]);
+  // A fold or hide written by any surface (another window, another machine,
+  // the migration above) converges here through the coalesced refetch.
+  useRealtime("family-state-changed", () => {
+    refetchScheduler.schedule("familyState", refetchFamilyState);
+  });
   // Collapsed family boxes: the GROUP ids whose dashed boxes fold into one
   // normal-size card. Same deliberate-toggle-only shape as the family fold:
   // an id absent from the stored list renders expanded, and a corrupt stored
@@ -928,30 +1002,15 @@ function BoardPage({ subPath }: { subPath: string }) {
   }, []);
   // Cross-window propagation (the storage listener): a second bb window's
   // panel is a second document over the same localStorage, and its writes
-  // fire a `storage` event reaching every document but its own. The three
-  // field-losing-prone keys hydrate here — the two deliberately-toggled
-  // sets through set-delta application (a remote fold joins the local set,
-  // a remote expansion drops out, and the local set's own ids are never
-  // touched) and the wallpaper document wholesale through its normal
-  // parser. Scalar keys (groupBy, search, paneWidth, motion, card transport,
-  // the per-dimension filter keys) are last-write-wins by design: each
-  // write owns its whole key, so no hydration is needed and none runs.
-  const hydrateCollapsedFamilies = useCallback(
-    (oldRaw: string | null, newRaw: string | null) => {
-      setCollapsedFamilies((current) =>
-        applyStoredSetDelta(current, oldRaw, newRaw, parseCollapsedFamiliesStored),
-      );
-    },
-    [],
-  );
-  const hydrateHideIdleFamilies = useCallback(
-    (oldRaw: string | null, newRaw: string | null) => {
-      setHideIdleFamilies((current) =>
-        applyStoredSetDelta(current, oldRaw, newRaw, parseHideIdleChildrenStored),
-      );
-    },
-    [],
-  );
+  // fire a `storage` event reaching every document but its own. The wallpaper
+  // document hydrates wholesale through its normal parser and the group-box
+  // fold through set-delta application. The FAMILY fold and idle-hide sets no
+  // longer ride this listener: they now live on the server and converge
+  // through the `family-state-changed` signal above, so they follow a second
+  // window AND a second machine. Scalar keys (groupBy, search, paneWidth,
+  // motion, card transport, the per-dimension filter keys) are
+  // last-write-wins by design: each write owns its whole key, so no hydration
+  // is needed and none runs.
   const hydrateWallpaper = useCallback((_oldRaw: string | null, newRaw: string | null) => {
     setWallpaper(parseWallpaperStored(newRaw ?? ""));
   }, []);
@@ -964,8 +1023,6 @@ function BoardPage({ subPath }: { subPath: string }) {
     [],
   );
   useCrossWindowStorage([
-    { key: COLLAPSED_FAMILIES_KEY, onRemoteChange: hydrateCollapsedFamilies },
-    { key: HIDE_IDLE_CHILDREN_KEY, onRemoteChange: hydrateHideIdleFamilies },
     { key: COLLAPSED_GROUPS_KEY, onRemoteChange: hydrateCollapsedGroups },
     { key: WALLPAPER_KEY, onRemoteChange: hydrateWallpaper },
   ]);
@@ -1346,53 +1403,64 @@ function BoardPage({ subPath }: { subPath: string }) {
   }, []);
   // Deliberate-toggle sets: state is the UI's source of truth, the mount
   // run repairs a corrupt stored list once (repairStoredList), and every
-  // local mutation writes at its call site — a one-id delta against the
-  // stored list as it stands at that instant (toggleStoredSetId). There is
-  // deliberately NO state-driven whole-set write-back effect anymore: one
-  // built from possibly stale state is exactly what erased another bb
-  // window's fold (issue #245) the moment this window toggled its own.
+  // local mutation writes its one-id delta against the stored list as it
+  // stands at that instant (toggleStoredSetId), so a concurrent bb window's
+  // unrelated fold survives. There is deliberately NO state-driven whole-set
+  // write-back effect: one built from possibly stale state is exactly what
+  // erased another bb window's fold (issue #245). This path now covers the
+  // per-GROUP box fold only — the per-FAMILY fold and idle-hide sets moved to
+  // the server row above (lib/family-state).
   useEffect(() => {
-    repairStoredList(COLLAPSED_FAMILIES_KEY, parseCollapsedFamiliesStored, collapsedFamiliesStoredValue);
-    repairStoredList(HIDE_IDLE_CHILDREN_KEY, parseHideIdleChildrenStored, hideIdleChildrenStoredValue);
     repairStoredList(COLLAPSED_GROUPS_KEY, parseCollapsedGroupsStored, collapsedGroupsStoredValue);
   }, []);
-  const setFamilyCollapsed = useCallback((parentId: string, collapsed: boolean) => {
-    setCollapsedFamilies((current) => {
-      const next = new Set(current);
-      if (collapsed) next.add(parentId);
-      else next.delete(parentId);
-      return next;
-    });
-    toggleStoredSetId(
-      COLLAPSED_FAMILIES_KEY,
-      parentId,
-      collapsed,
-      parseCollapsedFamiliesStored,
-      collapsedFamiliesStoredValue,
-    );
-  }, []);
-  // Hide-idle set, same write discipline as the fold: the mount run's
-  // one-shot repair, and the id delta written at the mutation site.
-  const setFamilyHideIdle = useCallback((parentId: string, hide: boolean) => {
-    setHideIdleFamilies((current) => {
-      const next = new Set(current);
-      if (hide) next.add(parentId);
-      else next.delete(parentId);
-      return next;
-    });
-    toggleStoredSetId(
-      HIDE_IDLE_CHILDREN_KEY,
-      parentId,
-      hide,
-      parseHideIdleChildrenStored,
-      hideIdleChildrenStoredValue,
-    );
-  }, []);
-  // The collapsed group boxes, same write discipline as the family fold: a
-  // local toggle updates this window's state and writes its one-id delta
-  // against the stored list (a concurrent bb window's fold survives), the
-  // mount run repairs a corrupt stored list once, and a remote window's
-  // toggle hydrates through the storage listener above.
+  // The per-family fold: optimistic local state for an instant chevron, then
+  // the server write. A rejected write rolls the toggle back to the server's
+  // truth and names the failure (never a silent unsaved fold).
+  const setFamilyCollapsed = useCallback(
+    (parentId: string, collapsed: boolean) => {
+      setCollapsedFamilies((current) => {
+        const next = new Set(current);
+        if (collapsed) next.add(parentId);
+        else next.delete(parentId);
+        return next;
+      });
+      rpc
+        .call("family_state_set", { key: "collapsedFamilies", id: parentId, on: collapsed })
+        .catch((error: unknown) => {
+          refetchFamilyState();
+          setFamilyStateSaveError(
+            error instanceof Error ? error.message : String(error),
+          );
+        });
+    },
+    [rpc, refetchFamilyState],
+  );
+  // The idle-children hide: same optimistic write and same rollback.
+  const setFamilyHideIdle = useCallback(
+    (parentId: string, hide: boolean) => {
+      setHideIdleFamilies((current) => {
+        const next = new Set(current);
+        if (hide) next.add(parentId);
+        else next.delete(parentId);
+        return next;
+      });
+      rpc
+        .call("family_state_set", { key: "hideIdleChildren", id: parentId, on: hide })
+        .catch((error: unknown) => {
+          refetchFamilyState();
+          setFamilyStateSaveError(
+            error instanceof Error ? error.message : String(error),
+          );
+        });
+    },
+    [rpc, refetchFamilyState],
+  );
+  // The collapsed group boxes keep the localStorage write discipline: a local
+  // toggle updates this window's state and writes its one-id delta against
+  // the stored list (a concurrent bb window's fold survives), the mount run
+  // repairs a corrupt stored list once, and a remote window's toggle hydrates
+  // through the storage listener above. This per-GROUP fold is a deliberate
+  // non-goal of the family-state move (see the pull request).
   const setGroupCollapsed = useCallback((groupId: string, collapsed: boolean) => {
     setCollapsedGroups((current) => {
       const next = new Set(current);
@@ -3393,6 +3461,8 @@ function BoardPage({ subPath }: { subPath: string }) {
             onDismissSweepNotice={clearSweepNotice}
             rankSaveError={rankSaveError}
             onDismissRankSaveError={() => setRankSaveError(null)}
+            familyStateSaveError={familyStateSaveError}
+            onDismissFamilyStateSaveError={() => setFamilyStateSaveError(null)}
             browserNotice={browserNotice}
             onDismissBrowserNotice={clearBrowserNotice}
             onSweepUndo={undoSweepFor}

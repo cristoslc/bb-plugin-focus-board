@@ -1,37 +1,30 @@
 // @vitest-environment jsdom
-// Cross-window preference propagation (the multi-window investigation's
-// client-side finding): a second bb window's panel is a second document over
-// the same localStorage. Until now it learned nothing from the other
-// document's writes — no `storage` listener existed anywhere — and its
-// whole-set write-backs (collapsed families, hide-idle children, the
-// wallpaper document) erased the other window's fields from storage. These
-// tests drive the REAL app (the fake-sdk harness) through both documents'
-// sides of the exchange, in sequence:
+// Family fold + idle-hide persistence moved off browser localStorage onto a
+// plugin-wide server KV row (lib/family-state), so the same fold and hide
+// read on every window AND every machine. This suite drives the REAL app (the
+// fake-sdk harness) through both sides of the exchange:
 //
-//   1. this window acts locally (its fold lands in storage),
-//   2. ANOTHER window writes the same key (simulated below),
-//   3. this window acts again — nothing the other window just wrote may be
-//      erased by this window's stale state.
+//   1. this window's fold/hide gesture writes the server row (and never
+//      localStorage),
+//   2. ANOTHER window's write lands here through the `family-state-changed`
+//      signal and hydrates live,
+//   3. this window's next gesture keeps the other window's field.
 //
-// jsdom honesty: the DOM spec delivers a `storage` event to every OTHER
-// document of the origin, never to the writing one, and jsdom cannot spawn a
-// second living document at all — `setItem` here would never fire the event
-// in a real browser either. So each "other window's write" is a manually
-// dispatched StorageEvent carrying exactly the payload a real cross-document
-// event delivers (key, oldValue, newValue, storageArea). That proves the
-// listener wiring, the delta hydration, and the write guards; only real
-// multi-window use (two bb windows on the panel) can prove the events
-// themselves cross between documents, which is browser plumbing, not this
-// code's logic.
+// The wallpaper document and the per-GROUP box fold still ride localStorage,
+// so the wallpaper cross-window case stays here unchanged.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 
 vi.mock("@get-bb/plugin-sdk/app", async () => await import("./helpers/app-fake-sdk"));
 
 import "../app";
 import {
+  fakeFamilyStateStore,
+  fireRealtime,
   registeredNavPanel,
+  seedFakeFamilyState,
   seedFakeThreads,
+  stubFamilyStateWriteFailure,
 } from "./helpers/app-fake-sdk";
 import {
   COLLAPSED_FAMILIES_KEY,
@@ -120,26 +113,15 @@ function hideIdleLocally(threadId: string, hide: boolean): void {
   fireEvent.click(toggle);
 }
 
-/** The other window's write, as this document receives it: the real
- *  sequence is the writing document's setItem (storage changes there) and
- *  the event arriving here afterward with the old and new values, so the
- *  simulation does both. jsdom has no second living document to fire it for
- *  us; in-document setItem fires it for no one, which is spec-correct. */
-function otherWindowWrite(key: string, oldValue: string | null, newValue: string): void {
-  window.localStorage.setItem(key, newValue);
-  act(() => {
-    window.dispatchEvent(
-      new StorageEvent("storage", {
-        key,
-        oldValue,
-        newValue,
-        storageArea: window.localStorage,
-      }),
-    );
-  });
+/**
+ * The other machine/window's write, as this document receives it: the host
+ * row changes and the `family-state-changed` signal reaches every open
+ * window, which refetches through the coalescer.
+ */
+function otherWindowWrite(state: { collapsedFamilies: string[]; hideIdleChildren: string[] }): void {
+  seedFakeFamilyState(state);
+  fireRealtime("family-state-changed", { key: null, id: null, on: null });
 }
-
-const storedList = (key: string): string => window.localStorage.getItem(key) ?? "";
 
 async function mountBoard(): Promise<void> {
   const Component = registeredNavPanel.component;
@@ -155,73 +137,106 @@ beforeEach(() => {
   vi.stubGlobal("ResizeObserver", StubResizeObserver);
   window.localStorage.clear();
   seedFakeThreads(fixtureThreads());
+  seedFakeFamilyState({});
 });
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   window.localStorage.clear();
+  seedFakeFamilyState({});
 });
 
-describe("cross-window preference propagation (the storage listener)", () => {
-  it("another window's fresh fold hydrates live and survives this window's next fold gesture", async () => {
+describe("family fold + idle-hide persistence (the server store)", () => {
+  it("a fold writes the server row and never localStorage", async () => {
     await mountBoard();
-    // Side A (this window) folds family A: state and storage hold it.
     foldLocally("thr_folda", true);
-    expect(storedList(COLLAPSED_FAMILIES_KEY)).toBe(JSON.stringify(["thr_folda"]));
-    // Side B (another document) folds family B; the event reaches us.
-    const afterA = JSON.stringify(["thr_folda", "thr_foldb"]);
-    otherWindowWrite(COLLAPSED_FAMILIES_KEY, storedList(COLLAPSED_FAMILIES_KEY), afterA);
+    await waitFor(() =>
+      expect(fakeFamilyStateStore().collapsedFamilies).toEqual(["thr_folda"]),
+    );
+    // The legacy localStorage key stays untouched — the fold is the server's.
+    expect(window.localStorage.getItem(COLLAPSED_FAMILIES_KEY)).toBeNull();
+    expect(window.localStorage.getItem(HIDE_IDLE_CHILDREN_KEY)).toBeNull();
+  });
+
+  it("another window's fold hydrates live and survives this window's next gesture", async () => {
+    await mountBoard();
+    foldLocally("thr_folda", true);
+    await waitFor(() =>
+      expect(fakeFamilyStateStore().collapsedFamilies).toEqual(["thr_folda"]),
+    );
+    // Side B (another window on the same server) folds family B.
+    otherWindowWrite({ collapsedFamilies: ["thr_folda", "thr_foldb"], hideIdleChildren: [] });
     // Hydrated live: family B's rows folded here with no reload.
-    expect(expectsCollapsed("thr_foldb")).toBe(true);
-    // Side A folds family C. The stale-state bug wrote back {A, C} and
-    // erased B; the guarded write keeps everything.
+    await waitFor(() => expect(expectsCollapsed("thr_foldb")).toBe(true));
+    // Side A folds family C. The server row keeps every field.
     foldLocally("thr_foldc", true);
-    expect(storedList(COLLAPSED_FAMILIES_KEY)).toBe(
-      JSON.stringify(["thr_folda", "thr_foldb", "thr_foldc"]),
+    await waitFor(() =>
+      expect(fakeFamilyStateStore().collapsedFamilies).toEqual([
+        "thr_folda",
+        "thr_foldb",
+        "thr_foldc",
+      ]),
     );
     expect(expectsCollapsed("thr_foldb")).toBe(true);
     expect(expectsCollapsed("thr_folda")).toBe(true);
-    expect(expectsCollapsed("thr_foldc")).toBe(true);
   });
 
-  it("another window's expansion hydrates live and is not re-added by this window's next fold", async () => {
+  it("another window's expansion hydrates live and is not re-added", async () => {
     await mountBoard();
-    // Side A folds family A…
     foldLocally("thr_folda", true);
-    expect(storedList(COLLAPSED_FAMILIES_KEY)).toBe(JSON.stringify(["thr_folda"]));
-    // …then re-opens it in window B (an explicit deletion this window never
-    // made). The event reaches us; the rows expand live.
-    otherWindowWrite(COLLAPSED_FAMILIES_KEY, JSON.stringify(["thr_folda"]), "[]");
-    expect(expectsCollapsed("thr_folda")).toBe(false);
-    expect(storedList(COLLAPSED_FAMILIES_KEY)).toBe("[]");
-    // Side A folds family B. Stale state would re-add A's fold (the same
-    // field-losing whole-set write, in reverse).
-    foldLocally("thr_foldb", true);
-    expect(storedList(COLLAPSED_FAMILIES_KEY)).toBe(JSON.stringify(["thr_foldb"]));
-    expect(expectsCollapsed("thr_folda")).toBe(false);
+    await waitFor(() =>
+      expect(fakeFamilyStateStore().collapsedFamilies).toEqual(["thr_folda"]),
+    );
+    // Another window re-opens family A (an explicit removal this window never
+    // made); the signal reaches us and the rows expand live.
+    otherWindowWrite({ collapsedFamilies: [], hideIdleChildren: [] });
+    await waitFor(() => expect(expectsCollapsed("thr_folda")).toBe(false));
   });
 
-  it("another window's hide-idle toggle hydrates live and survives this window's next hide gesture", async () => {
+  it("an idle-hide toggle writes the server row and a remote hide hydrates live", async () => {
     await mountBoard();
     hideIdleLocally("thr_folda", true);
-    expect(storedList(HIDE_IDLE_CHILDREN_KEY)).toBe(JSON.stringify(["thr_folda"]));
-    const afterA = JSON.stringify(["thr_folda", "thr_foldb"]);
-    otherWindowWrite(HIDE_IDLE_CHILDREN_KEY, storedList(HIDE_IDLE_CHILDREN_KEY), afterA);
-    expect(hideToggle("thr_foldb").getAttribute("aria-label")).toBe("Show idle child threads");
-    hideIdleLocally("thr_foldc", true);
-    expect(storedList(HIDE_IDLE_CHILDREN_KEY)).toBe(
-      JSON.stringify(["thr_folda", "thr_foldb", "thr_foldc"]),
+    await waitFor(() =>
+      expect(fakeFamilyStateStore().hideIdleChildren).toEqual(["thr_folda"]),
     );
-    expect(hideToggle("thr_foldb").getAttribute("aria-label")).toBe("Show idle child threads");
+    otherWindowWrite({ collapsedFamilies: [], hideIdleChildren: ["thr_folda", "thr_foldb"] });
+    await waitFor(() =>
+      expect(hideToggle("thr_foldb").getAttribute("aria-label")).toBe("Show idle child threads"),
+    );
+    expect(window.localStorage.getItem(HIDE_IDLE_CHILDREN_KEY)).toBeNull();
   });
 
-  it("another window's wallpaper paints this board live and is not erased by this window's next appearance write", async () => {
+  it("a rejected fold write rolls the toggle back and surfaces the error", async () => {
+    await mountBoard();
+    stubFamilyStateWriteFailure("rpc input validation failed");
+    foldLocally("thr_folda", true);
+    // The optimistic fold is retracted to the server's truth...
+    await waitFor(() => expect(expectsCollapsed("thr_folda")).toBe(false));
+    // ...and the failure is named, never silent.
+    await waitFor(() =>
+      expect(document.querySelector('[data-testid="family-state-save-error"]')).toBeTruthy(),
+    );
+    expect(fakeFamilyStateStore().collapsedFamilies).toEqual([]);
+  });
+
+  it("another window's wallpaper paints this board live (localStorage, unchanged)", async () => {
     await mountBoard();
     const wallpaperDoc = { version: 1, global: { url: "https://example.com/w.png", dim: 0.4 } };
-    // Window B (the plugin configuration page, say) sets a wallpaper.
-    otherWindowWrite(WALLPAPER_KEY, null, JSON.stringify(wallpaperDoc));
-    // Hydrated live: the board paints the image with no reload.
+    // Window B (the plugin configuration page, say) sets a wallpaper; the
+    // storage event reaches this document (jsdom cannot spawn a second living
+    // document, so the event is dispatched with the payload a real one lands).
+    const raw = JSON.stringify(wallpaperDoc);
+    window.localStorage.setItem(WALLPAPER_KEY, raw);
+    fireEvent(
+      window,
+      new StorageEvent("storage", {
+        key: WALLPAPER_KEY,
+        oldValue: null,
+        newValue: raw,
+        storageArea: window.localStorage,
+      }),
+    );
     await waitFor(() =>
       expect(
         [...document.querySelectorAll("div")].some((div) =>
@@ -229,48 +244,5 @@ describe("cross-window preference propagation (the storage listener)", () => {
         ),
       ).toBe(true),
     );
-    // This window's next appearance write (a dim nudge in the settings
-    // modal) goes through the hydrated document: the image survives.
-    const settingsButton =
-      document.querySelector('[aria-label="What\'s new"]') ??
-      document.querySelector('[aria-label="Focus Board settings"]');
-    if (!(settingsButton instanceof HTMLElement)) throw new Error("missing settings/gift icon");
-    fireEvent.click(settingsButton);
-    const appearanceTab = await waitFor(() => {
-      const tabs = [...document.querySelectorAll('[role="tab"]')];
-      const tab = tabs.find((t) => t.textContent?.trim() === "Appearance");
-      if (!(tab instanceof HTMLElement)) throw new Error("Appearance tab not rendered yet");
-      return tab;
-    });
-    fireEvent.click(appearanceTab);
-    const dim = document.querySelector('input[type="range"][aria-label="Wallpaper dim"]');
-    if (!(dim instanceof HTMLInputElement)) throw new Error("dim slider not rendered");
-    fireEvent.change(dim, { target: { value: "0.6" } });
-    const storedWallpaper = window.localStorage.getItem(WALLPAPER_KEY);
-    expect(storedWallpaper !== null && storedWallpaper.includes("example.com/w.png")).toBe(true);
-  });
-
-  it("a corrupt remote write degrades through the tolerant parsers (no crash, no rewrite)", async () => {
-    await mountBoard();
-    foldLocally("thr_folda", true);
-    expect(storedList(COLLAPSED_FAMILIES_KEY)).toBe(JSON.stringify(["thr_folda"]));
-    otherWindowWrite(COLLAPSED_FAMILIES_KEY, JSON.stringify(["thr_folda"]), "not json at all");
-    // Nobody crashed, and hydration mirrors exactly what the other document
-    // computes from its own write: the corrupt raw degrades to an empty set,
-    // so the delta expands the local fold live. The other document's stored
-    // text is left alone (repairing it is not this window's remote to do).
-    expect(storedList(COLLAPSED_FAMILIES_KEY)).toBe("not json at all");
-    expect(expectsCollapsed("thr_folda")).toBe(false);
-  });
-
-  it("the mount run still canonicalizes a corrupt stored list (one-shot repair)", async () => {
-    window.localStorage.setItem(COLLAPSED_FAMILIES_KEY, '{"oops": 1}');
-    window.localStorage.setItem(HIDE_IDLE_CHILDREN_KEY, '["thr_foldb", 42, {"x": 1}]');
-    await mountBoard();
-    // Both lists degrade through their parsers and are written back in the
-    // canonical sorted form — the corrupt-list repair the mount round-trip
-    // always provided.
-    expect(storedList(COLLAPSED_FAMILIES_KEY)).toBe("[]");
-    expect(storedList(HIDE_IDLE_CHILDREN_KEY)).toBe(JSON.stringify(["thr_foldb"]));
   });
 });

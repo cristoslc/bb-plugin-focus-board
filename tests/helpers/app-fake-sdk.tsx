@@ -275,6 +275,41 @@ export function seedFakeGroups(
   fakeGroupSeq = 0;
 }
 
+// Family fold + idle-hide server state: ONE module store the family_state_*
+// writes mutate, seeded and read by tests. The app hydrates from it on mount
+// and converges from the writes' own realtime echoes, exactly as it does
+// against a live host.
+let fakeFamilyState: { collapsedFamilies: string[]; hideIdleChildren: string[] } = {
+  collapsedFamilies: [],
+  hideIdleChildren: [],
+};
+let familyStateWriteFailure: string | null = null;
+
+/** Seed the fake family-state server row (call in beforeEach to reset it). */
+export function seedFakeFamilyState(state: {
+  collapsedFamilies?: string[];
+  hideIdleChildren?: string[];
+}): void {
+  fakeFamilyState = {
+    collapsedFamilies: [...(state.collapsedFamilies ?? [])],
+    hideIdleChildren: [...(state.hideIdleChildren ?? [])],
+  };
+  familyStateWriteFailure = null;
+}
+
+/** The fake family-state server row, as the host holds it. */
+export function fakeFamilyStateStore(): {
+  collapsedFamilies: string[];
+  hideIdleChildren: string[];
+} {
+  return structuredClone(fakeFamilyState);
+}
+
+/** Reject every family_state write with `message` until cleared (null = serve). */
+export function stubFamilyStateWriteFailure(message: string | null): void {
+  familyStateWriteFailure = message;
+}
+
 const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   rpcCalls.push({ method, args });
   switch (method) {
@@ -369,6 +404,35 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     }
     case "tracker_validate":
       return { results: {} };
+    case "family_state_list":
+      return {
+        collapsedFamilies: [...fakeFamilyState.collapsedFamilies],
+        hideIdleChildren: [...fakeFamilyState.hideIdleChildren],
+      };
+    case "family_state_set": {
+      if (familyStateWriteFailure !== null) throw new Error(familyStateWriteFailure);
+      const { key, id, on } = args as {
+        key: "collapsedFamilies" | "hideIdleChildren";
+        id: string;
+        on: boolean;
+      };
+      const set = new Set(fakeFamilyState[key]);
+      if (on) set.add(id);
+      else set.delete(id);
+      fakeFamilyState = { ...fakeFamilyState, [key]: [...set].sort() };
+      fireRealtime("family-state-changed", { key, id, on });
+      return { key, id, on };
+    }
+    case "family_state_merge": {
+      if (familyStateWriteFailure !== null) throw new Error(familyStateWriteFailure);
+      const incoming = args as { collapsedFamilies: string[]; hideIdleChildren: string[] };
+      fakeFamilyState = {
+        collapsedFamilies: [...new Set([...fakeFamilyState.collapsedFamilies, ...incoming.collapsedFamilies])].sort(),
+        hideIdleChildren: [...new Set([...fakeFamilyState.hideIdleChildren, ...incoming.hideIdleChildren])].sort(),
+      };
+      fireRealtime("family-state-changed", { key: null, id: null, on: null });
+      return structuredClone(fakeFamilyState);
+    }
     default:
       // The real server rejects unknown/misrouted methods too; the board's
       // callers all attach a failure path or catch.
