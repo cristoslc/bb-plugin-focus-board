@@ -73,6 +73,16 @@ import {
   pruneEmptyGroups,
   type GroupRecord,
 } from "./lib/group-metadata";
+import {
+  FAMILY_STATE_KEYS,
+  FAMILY_STATE_KV_KEY,
+  familyStateRowFromStore,
+  mergeFamilyStateIds,
+  parseFamilyStateStore,
+  sameFamilyState,
+  toggleFamilyStateId,
+  type FamilyStateStore,
+} from "./lib/family-state";
 import { RANK_KV_KEY } from "./lib/rank";
 import {
   applyRankMoveFractions,
@@ -587,6 +597,61 @@ export const rpcContract = defineRpcContract({
     output: z.object({ groupId: z.string().min(1) }),
   },
   /**
+   * Family fold + idle-hide state, moved off browser localStorage so the two
+   * sets follow across every window AND every machine (lib/family-state).
+   * ONE plugin-wide KV row, key "focus-board:family-state" →
+   * { collapsedFamilies: string[], hideIdleChildren: string[] }, exactly the
+   * shape of the plugin's other board-global stores (the groups registry,
+   * the done index, the rank orders, the keep flags). The row holds PARENT
+   * thread ids plus Done-projection keys `done:<parent id>`, which is why a
+   * per-thread metadata surface does not fit: the key space is not thread
+   * ids. An id absent from a list renders expanded / not-hidden (the
+   * default), so a list only ever records deliberate toggles.
+   */
+  family_state_list: {
+    input: z.null(),
+    output: z.object({
+      collapsedFamilies: z.array(z.string()),
+      hideIdleChildren: z.array(z.string()),
+    }),
+  },
+  /**
+   * One deliberate toggle: add or remove one id in one of the two sets. A
+   * single-id delta against the stored row (the shape the old localStorage
+   * write guards used), applied under the server's KV write lock so a
+   * concurrent toggle from another window is never erased by a stale
+   * snapshot. A no-op toggle writes nothing and publishes nothing.
+   */
+  family_state_set: {
+    input: z.object({
+      key: z.enum(FAMILY_STATE_KEYS),
+      // Parent thread ids and `done:<parent id>` projection keys; a generous
+      // cap bounds the row entry without constraining any real id.
+      id: z.string().min(1).max(200),
+      on: z.boolean(),
+    }),
+    output: z.object({
+      key: z.enum(FAMILY_STATE_KEYS),
+      id: z.string(),
+      on: z.boolean(),
+    }),
+  },
+  /**
+   * The one-time localStorage migration write: union the operator's stored
+   * folds into the server row. Never removes, so it can only preserve state;
+   * one atomic KV write, so a partial migration is impossible.
+   */
+  family_state_merge: {
+    input: z.object({
+      collapsedFamilies: z.array(z.string().min(1).max(200)).max(5000),
+      hideIdleChildren: z.array(z.string().min(1).max(200)).max(5000),
+    }),
+    output: z.object({
+      collapsedFamilies: z.array(z.string()),
+      hideIdleChildren: z.array(z.string()),
+    }),
+  },
+  /**
    * Token burn rates for the working dots' pulse (issue #279), in tokens per
    * second, read from the sampler's in-memory rings (lib/thread-pulse). A
    * thread absent from `rates` has no measurable rate yet: absence is the
@@ -635,6 +700,12 @@ const RANK_CHANGED = "rank-changed";
  *  membership map — one event covers both shapes because a prune touches
  *  neither thread's assignment yet moves every other member's label. */
 const GROUP_CHANGED = "group-changed";
+/** Realtime signal after any family-state write (a fold/idle toggle, or the
+ *  one-time migration merge). Payload names the toggle { key, id, on } (the
+ *  migration merge sends { key: null, id: null, on: null }); consumers
+ *  refetch both sets, so a payload the consumer reads blind cannot desync a
+ *  board that missed an earlier event. */
+const FAMILY_STATE_CHANGED = "family-state-changed";
 /** Legacy KV key written before the metadata migration. */
 const LEGACY_DONE_KEY = "done-thread-ids";
 /** Per-thread sweep keep flags, independent of Done marks. */
@@ -979,6 +1050,24 @@ export default async function plugin(bb: BbPluginApi) {
 
   async function writeGroupsStore(store: Readonly<Record<string, GroupRecord>>): Promise<void> {
     await bb.storage.kv.set(GROUPS_KV_KEY, groupsRowFromStore(store));
+  }
+
+  // --- Family fold + idle-hide state (lib/family-state) ---
+  //
+  // ONE plugin-wide KV row holding both deliberate-toggle sets. The board's
+  // fold and idle-hide gestures, the cross-window/cross-machine convergence,
+  // and the one-time localStorage migration all move through these two
+  // helpers; the row is a whole-row read-merge-write like every other KV
+  // store, so every writer serializes on withKvWriteLock.
+
+  async function readFamilyState(): Promise<FamilyStateStore> {
+    // get returns an untyped row; parseFamilyStateStore validates it and
+    // throws on a present-but-malformed row (fail loud, never coerce).
+    return parseFamilyStateStore(await bb.storage.kv.get(FAMILY_STATE_KV_KEY));
+  }
+
+  async function writeFamilyState(store: FamilyStateStore): Promise<void> {
+    await bb.storage.kv.set(FAMILY_STATE_KV_KEY, familyStateRowFromStore(store));
   }
 
   async function readGroupAssignment(
@@ -2526,6 +2615,37 @@ export default async function plugin(bb: BbPluginApi) {
       await deleteGroup(groupId);
       return { groupId };
     },
+    family_state_list: async () => {
+      // The read the board hydrates from on mount and on every signal: one
+      // row, no thread scan.
+      const store = await readFamilyState();
+      return familyStateRowFromStore(store);
+    },
+    family_state_set: async ({ key, id, on }) =>
+      // The whole read-merge-write runs under the KV write lock: two windows
+      // folding different families at once both survive instead of the later
+      // write erasing the first from a stale snapshot.
+      withKvWriteLock(async () => {
+        const store = await readFamilyState();
+        const next = toggleFamilyStateId(store, key, id, on);
+        // A no-op toggle (the id already in the requested state) writes
+        // nothing and signals nothing, like every other idempotent write.
+        if (next === store) return { key, id, on };
+        await writeFamilyState(next);
+        bb.realtime.publish(FAMILY_STATE_CHANGED, { key, id, on });
+        return { key, id, on };
+      }),
+    family_state_merge: async (incoming) =>
+      // The one-time localStorage migration: union, never replace, so a
+      // migration cannot erase a fold a newer window wrote.
+      withKvWriteLock(async () => {
+        const store = await readFamilyState();
+        const next = mergeFamilyStateIds(store, incoming);
+        if (sameFamilyState(store, next)) return familyStateRowFromStore(store);
+        await writeFamilyState(next);
+        bb.realtime.publish(FAMILY_STATE_CHANGED, { key: null, id: null, on: null });
+        return familyStateRowFromStore(next);
+      }),
   });
 
   // --- CLI: bb focus-board ---

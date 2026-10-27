@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+#### Cards and chips
+
+- **A family's fold and its idle-children filter now follow you to every bb window and machine.** They used to save only in browser localStorage, so a second machine opened every family expanded; the choice now saves to the board's server state, and a fold in one window lands live in the others.
+
 ### Fixed
 
 #### Thread pane

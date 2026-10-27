@@ -516,6 +516,13 @@ interface BoardProps {
   rankSaveError?: string | null;
   onDismissRankSaveError?: () => void;
   /**
+   * A family-state write the host rejected (a fold or idle-hide toggle that
+   * did not save): the toggle rolled back to the server's truth and this names
+   * the failure; null hides the banner.
+   */
+  familyStateSaveError?: string | null;
+  onDismissFamilyStateSaveError?: () => void;
+  /**
    * The browser-reveal gesture's honest outcome on the operator's board
    * surface (a thread with no controlled tab, a stuck-hidden tab, or a
    * listing failure); null hides the banner.
@@ -672,6 +679,8 @@ export function Board({
   onDismissSweepNotice,
   rankSaveError = null,
   onDismissRankSaveError,
+  familyStateSaveError = null,
+  onDismissFamilyStateSaveError,
   browserNotice = null,
   onDismissBrowserNotice,
   onSweepUndo,
@@ -2224,6 +2233,26 @@ export function Board({
               type="button"
               onClick={() => onDismissRankSaveError?.()}
               aria-label="Dismiss save error"
+              title="Dismiss"
+              className="shrink-0 rounded p-0.5 text-destructive/70 dark:text-red-400/70 transition-colors hover:bg-destructive/10 hover:text-destructive dark:hover:text-red-400 focus-visible:outline focus-visible:outline-1 focus-visible:outline-destructive"
+            >
+              <Icon name="X" className="size-3" aria-hidden />
+            </button>
+          </div>
+        ) : null}
+        {familyStateSaveError !== null ? (
+          <div
+            role="status"
+            data-testid="family-state-save-error"
+            className="mx-3 mb-1 flex items-center justify-between gap-2 rounded border border-destructive/40 bg-red-50 dark:bg-red-950 px-2 py-1 text-[11px] text-destructive dark:text-red-400"
+          >
+            {/* A fold/idle write the host rejected: the toggle rolled back to
+                the server's truth — this banner is the only word about it. */}
+            <p className="min-w-0">The fold didn't save: {familyStateSaveError}</p>
+            <button
+              type="button"
+              onClick={() => onDismissFamilyStateSaveError?.()}
+              aria-label="Dismiss fold save error"
               title="Dismiss"
               className="shrink-0 rounded p-0.5 text-destructive/70 dark:text-red-400/70 transition-colors hover:bg-destructive/10 hover:text-destructive dark:hover:text-red-400 focus-visible:outline focus-visible:outline-1 focus-visible:outline-destructive"
             >

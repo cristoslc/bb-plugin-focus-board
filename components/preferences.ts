@@ -277,6 +277,20 @@ export function writeStored(key: string, value: string): void {
 }
 
 /**
+ * Drop a legacy stored key outright. Used by the one-time migration that
+ * moves a preference onto a server store: once the server row holds the
+ * value, the legacy localStorage key is deleted so no later read can revive
+ * stale state (the same retire-the-key rule the done migration follows).
+ */
+export function clearStored(key: string): void {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // Embedded contexts without localStorage have nothing to clear.
+  }
+}
+
+/**
  * The server-declared boolean setting backing the thread pane's Escape
  * behavior (see server.ts `escStopsRunningThread`). Only an explicit stored
  * `false` is off: while loading, unset (default applied host-side as true),

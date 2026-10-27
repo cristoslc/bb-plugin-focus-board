@@ -568,6 +568,15 @@ const simRpcLog: string[] = [];
 // Threads marked done in the harness: the SIM_DONE_IDS fixture seeds it and
 // done_set mutates it (the real server's KV is the same shape).
 const simDoneIds = new Set<string>(SIM_DONE_IDS);
+// Family fold + idle-hide server state, mirroring the server's one KV row
+// (`focus-board:family-state`): { collapsedFamilies, hideIdleChildren },
+// seeded from `?familyState=` (JSON) and mutated by family_state_set/merge.
+// `__uat.familyState()` reads it, so a suite can assert the server row the
+// fold gesture wrote, not the deprecated localStorage keys.
+let simFamilyState: { collapsedFamilies: string[]; hideIdleChildren: string[] } = {
+  collapsedFamilies: [],
+  hideIdleChildren: [],
+};
 
 /** Fire the registered realtime handlers for a channel (the host echo the sim fabricates). */
 function simFireRealtime(channel: string, payload: unknown = { entity: "thread", changes: [] }): void {
@@ -629,6 +638,13 @@ for (const group of WORKPULSE_DATA.groups) {
   resetCalls: () => {
     uatCalls.length = 0;
   },
+  seedFamilyState: (state: { collapsedFamilies?: string[]; hideIdleChildren?: string[] }) => {
+    simFamilyState = {
+      collapsedFamilies: [...(state.collapsedFamilies ?? [])],
+      hideIdleChildren: [...(state.hideIdleChildren ?? [])],
+    };
+  },
+  familyState: () => structuredClone(simFamilyState),
   simRpcLog: {
     calls: () => structuredClone(simRpcLog),
     clear: () => {
@@ -859,6 +875,34 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     });
     simRanks = result.next;
     return { columnKey, order: result.order };
+  }
+  if (method === "family_state_list") {
+    return {
+      collapsedFamilies: [...simFamilyState.collapsedFamilies],
+      hideIdleChildren: [...simFamilyState.hideIdleChildren],
+    };
+  }
+  if (method === "family_state_set") {
+    const { key, id, on } = args as {
+      key: "collapsedFamilies" | "hideIdleChildren";
+      id: string;
+      on: boolean;
+    };
+    const set = new Set(simFamilyState[key]);
+    if (on) set.add(id);
+    else set.delete(id);
+    simFamilyState = { ...simFamilyState, [key]: [...set].sort() };
+    simFireRealtime("family-state-changed", { key, id, on });
+    return { key, id, on };
+  }
+  if (method === "family_state_merge") {
+    const incoming = args as { collapsedFamilies: string[]; hideIdleChildren: string[] };
+    simFamilyState = {
+      collapsedFamilies: [...new Set([...simFamilyState.collapsedFamilies, ...incoming.collapsedFamilies])].sort(),
+      hideIdleChildren: [...new Set([...simFamilyState.hideIdleChildren, ...incoming.hideIdleChildren])].sort(),
+    };
+    simFireRealtime("family-state-changed", { key: null, id: null, on: null });
+    return structuredClone(simFamilyState);
   }
   return {};
 };

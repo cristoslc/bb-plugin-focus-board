@@ -1,0 +1,65 @@
+# Operator-assisted E2E: the family fold + idle-hide state lives on the
+# server (the plugin KV row `focus-board:family-state`), not in browser
+# localStorage, so it follows across windows and machines.
+#
+# jsdom pins the wiring; this suite proves the real app in real Chrome: the
+# fold and idle-eye gestures write the `family_state_set` payload (asserted
+# from the mock's call log, which is the server surface), and a fresh mount
+# reads a seeded server row and renders folded/hidden with no localStorage in
+# play.
+#
+# Run: npm run uat -- tests/manual/uat-family-state.yaml
+#
+# The harness holds ONE page, so two real bb windows and a second machine are
+# out of reach here. The write payload, the localStorage-free commit, and the
+# mount read from the seeded server row are the strongest real-browser
+# evidence the one-page harness can give; the live cross-window convergence is
+# covered by the jsdom two-document simulation
+# (tests/preferences-cross-window-sync.test.tsx).
+#
+# Fixture: thr_gutter_family (a three-tier family, every member idle) in the
+# "A while ago" lane, so the fold chevron and the idle eye both exist.
+suite: family-state-server-persistence
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5173
+defaults:
+  groupBy: status
+  theme: dark
+
+steps:
+  - id: fold-writes-the-server-row
+    title: Folding a family writes family_state_set with the fold, and never localStorage
+    goto: "?groupBy=status"
+    gestures:
+      - click_aria: { label: "Collapse subthreads", within: thr_gutter_family }
+    assert:
+      - aria_present: "Expand subthreads"
+      - rpc_last: { method: "family_state_set", args: { key: "collapsedFamilies", id: thr_gutter_family, on: true } }
+      - rpc_not_called: "family_state_merge"
+
+  - id: idle-eye-writes-the-server-row
+    title: The idle-children eye writes family_state_set with the hide
+    goto: "?groupBy=status"
+    gestures:
+      - click_aria: { label: "Hide idle child threads", within: thr_gutter_family }
+    assert:
+      - aria_present: "Show idle child threads"
+      - rpc_last: { method: "family_state_set", args: { key: "hideIdleChildren", id: thr_gutter_family, on: true } }
+
+  - id: mount-reads-the-server-row
+    title: A seeded server row renders folded and hidden on mount, with no localStorage
+    goto: '?groupBy=status&familyState={"collapsedFamilies":["thr_gutter_family"],"hideIdleChildren":["thr_gutter_family"]}'
+    assert:
+      - aria_present: "Expand subthreads"
+      - aria_present: "Show idle child threads"
+      - nested_row: { id: thr_gutter_family_c0, shown: false }
+
+  - id: unfold-writes-the-cleared-row
+    title: Unfolding writes family_state_set with on false
+    goto: '?groupBy=status&familyState={"collapsedFamilies":["thr_gutter_family"],"hideIdleChildren":[]}'
+    gestures:
+      - click_aria: { label: "Expand subthreads", within: thr_gutter_family }
+    assert:
+      - aria_present: "Collapse subthreads"
+      - rpc_last: { method: "family_state_set", args: { key: "collapsedFamilies", id: thr_gutter_family, on: false } }
