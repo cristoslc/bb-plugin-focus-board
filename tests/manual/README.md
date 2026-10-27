@@ -191,6 +191,15 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   empty field carries no button, a no-match query empties the board while the
   button still rides the field, and the id path reaches the same card.
 
+- `uat-family-state.yaml` — the family fold and idle-hide state lives on the
+  server, not in browser localStorage: folding a family and clicking the
+  idle-children eye write the `family_state_set` payload the mock's call log
+  records, and a `goto` reload with a seeded `?familyState=` server row renders
+  the fold and hide on mount. The harness holds one page, so two real windows
+  and a second machine are beyond it; the jsdom two-document simulation
+  (`tests/preferences-cross-window-sync.test.tsx`) covers the live
+  cross-window convergence.
+
 - `uat-board-views.yaml` — every board view variant on the desktop surface
   (Attention, Last activity, Project, Provider, Machine, Group, Threads, and
   the Parent-thread view): the lanes each grouping derives and, where the
