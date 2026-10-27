@@ -7,7 +7,7 @@
  * compiled Tailwind output and only contains classes the plugin's own source
  * uses, so utility classes invented here would silently not exist.
  */
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
 import { SIM_ATTENTION_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_ORCH_FAMILY_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimThread } from "./data";
@@ -969,6 +969,103 @@ function inlineMarkup(text: string): ReactNode {
   );
 }
 
+/**
+ * Does this harness run ask for the host-faithful queued-send row? Captured
+ * once at module load, before the app's router rewrites the URL to its hash
+ * route (which drops the query), so `?queuedSend=1` is still readable here.
+ */
+const QUEUED_SEND_FIXTURE =
+  typeof window !== "undefined" && new URLSearchParams(window.location.search).has("queuedSend");
+
+/**
+ * A host-faithful queued-message row, pinned to bb's own QueuedMessagesList
+ * markup and classes (issue #296). The point is the classes: bb's row control
+ * is `opacity-0 pointer-events-none` at rest and leans on the host's
+ * `@media (hover:none)` reveal utilities to become tappable on a touch device,
+ * while the Send control lives in a container hidden below `md` until the "…"
+ * control reveals it. The harness loads the plugin's compiled `app.css`,
+ * scoped to the plugin root exactly as bb scopes it, so a row built with the
+ * host's classes exercises the real collision. Rendered only with
+ * `?queuedSend=1`; Send removes the row so a suite can prove the whole tap
+ * path.
+ *
+ * The two touch-reveal utilities are assembled from pieces on purpose: were
+ * they written literally here, the plugin build's Tailwind pass (it scans the
+ * harness too) would emit them into app.css, and the UAT would pass on a tree
+ * that never re-asserts them. Assembled, the shipped sheet can only carry them
+ * because the pane does (src of truth: components/thread-pane.tsx).
+ */
+const HOST_TOUCH_REVEAL = ["[@media(hover:none)]:", "pointer-events-auto ", "[@media(hover:none)]:", "opacity-100"].join("");
+
+function MockQueuedSendRow(): ReactNode {
+  const [sent, setSent] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  if (sent) {
+    return (
+      <div data-queued-send-sent="" className="px-1 text-2xs text-muted-foreground">
+        Queued message sent
+      </div>
+    );
+  }
+  return (
+    <div
+      data-queued-messages-mode="drawer"
+      className="relative z-10 flex flex-col overflow-hidden rounded-xl border border-border bg-card"
+    >
+      <header className="shrink-0">
+        <button
+          type="button"
+          aria-label="Toggle queued messages"
+          aria-expanded={revealed}
+          onClick={() => setRevealed((value) => !value)}
+          className="flex w-full items-center gap-2 px-3 py-2 text-xs"
+        >
+          <span className="font-normal">Queue</span>
+          <span className="ml-auto text-subtle-foreground">1</span>
+        </button>
+      </header>
+      <ul className="group/queue pt-1">
+        <li
+          data-queued-message-row="1"
+          className="group/dispatch-row relative border-b border-border/35 px-2.5 py-0.5 last:border-b-0"
+        >
+          <div className="flex items-center gap-1.5">
+            <div className="min-w-0 flex-1 py-1">
+              <div className="truncate text-xs text-foreground">Queued probe message</div>
+            </div>
+            <div
+              data-queued-message-actions=""
+              className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 items-center gap-0.5 rounded-md opacity-0 transition-opacity duration-[120ms] ease-out md:flex ${
+                revealed
+                  ? "flex max-md:pointer-events-auto max-md:opacity-100"
+                  : "max-md:hidden"
+              }`}
+            >
+              <button
+                type="button"
+                aria-label="Send queued message 1 now"
+                onClick={() => setSent(true)}
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground"
+              >
+                Send now
+              </button>
+            </div>
+            <button
+              type="button"
+              aria-label="Queued message 1 actions"
+              aria-expanded={revealed}
+              onClick={() => setRevealed((value) => !value)}
+              className={`pointer-events-none absolute right-2.5 top-1/2 inline-flex size-7 shrink-0 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity duration-[120ms] ease-out md:hidden ${HOST_TOUCH_REVEAL}`}
+            >
+              ⋯
+            </button>
+          </div>
+        </li>
+      </ul>
+    </div>
+  );
+}
+
 function MockChat({ threadId }: { threadId: string }): ReactNode {
   const messages = CONVERSATIONS[threadId] ?? CONVERSATIONS.default;
   const bubble = (role: "user" | "agent", content: ReactNode, key: string): ReactNode => (
@@ -1007,6 +1104,7 @@ function MockChat({ threadId }: { threadId: string }): ReactNode {
         </div>
         {messages.map((message, index) => bubble(message.role, inlineMarkup(message.text), String(index)))}
       </div>
+      {QUEUED_SEND_FIXTURE ? <MockQueuedSendRow /> : null}
       <div
         style={{
           display: "flex",
