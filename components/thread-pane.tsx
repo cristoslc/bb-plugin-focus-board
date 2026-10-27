@@ -1160,9 +1160,23 @@ export function ThreadPane({
           on the interaction row), so this card rebuilds recent decisions from
           the raw event log. */}
       <DecidedQuestionsCard threadId={thread.id} />
+      {/* The host's embedded ThreadChat lives here. bb scopes our plugin
+          stylesheet with `:where([data-bb-plugin="focus-board"],
+          [data-bb-plugin-root]:not([data-bb-plugin]))` and appends it after
+          bb's global utilities, so our own scoped `.pointer-events-none` and
+          `.opacity-0` outrank the host's `[@media(hover:none)]` touch reveal
+          on any host element inside this root. The queued-message row's
+          actions control is the case that bites: on a phone it stays
+          `opacity:0` and `pointer-events:none`, so the row's "…" is invisible
+          and Send is unreachable. Emitting the host's own touch utilities
+          from this subtree carries them into our scoped sheet, where they win
+          by order and restore the host control exactly as bb's own thread
+          page renders it. The host class names are mirrored on purpose; the
+          durable fix belongs to bb's plugin CSS scoping (issue #296). */}
       <div
         ref={chatBodyRef}
-        className="min-h-0 flex-1"
+        data-pane-chat-body=""
+        className="min-h-0 flex-1 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
         onClickCapture={onChatBodyClickCapture}
         onKeyDownCapture={onChatKeyDownCapture}
       >

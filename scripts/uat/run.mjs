@@ -834,6 +834,86 @@ const pageAriaProbe = (label) => {
 };
 
 /**
+ * The queued-message row's touch reveal, end to end (issue #296). bb's row
+ * control is `opacity-0 pointer-events-none` at rest and leans on the host's
+ * `@media (hover:none)` reveal utilities to become tappable on a touch device.
+ * Inside the plugin root bb's scoped plugin sheet could outrank those host
+ * utilities, so the control stayed invisible and Send was unreachable. This
+ * probe demands the real thing: the control must compute painted AND be the
+ * element at its own center (hit-testable), the Send control must be hidden
+ * first, then the probe taps the reveal, taps Send, and requires the row to go
+ * away. Every check is computed-style or hit-test work in the live document,
+ * so a class-presence change alone cannot satisfy it.
+ */
+const pageQueuedSendReach = async (payload) => {
+  const row = payload?.row ?? 1;
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const revealLabel = `Queued message ${row} actions`;
+  const sendLabel = `Send queued message ${row} now`;
+  const reveal = document.querySelector(`[aria-label="${revealLabel}"]`);
+  if (reveal === null) return { ok: false, reason: `no reveal control (${revealLabel})` };
+  const revealCs = getComputedStyle(reveal);
+  const revealBox = reveal.getBoundingClientRect();
+  if (
+    revealCs.opacity === "0" ||
+    revealCs.pointerEvents === "none" ||
+    revealBox.width === 0 ||
+    revealBox.height === 0
+  ) {
+    return {
+      ok: false,
+      reason: `reveal not painted on touch: opacity ${revealCs.opacity}, pointer-events ${revealCs.pointerEvents}, box ${Math.round(revealBox.width)}x${Math.round(revealBox.height)}`,
+    };
+  }
+  const cx = revealBox.left + revealBox.width / 2;
+  const cy = revealBox.top + revealBox.height / 2;
+  const hit = document.elementFromPoint(cx, cy);
+  if (hit === null || !(hit === reveal || reveal.contains(hit))) {
+    return {
+      ok: false,
+      reason: `reveal not hit-testable: center (${Math.round(cx)},${Math.round(cy)}) lands on ${
+        hit?.getAttribute?.("aria-label") ?? hit?.tagName ?? "nothing"
+      }`,
+    };
+  }
+  const send = document.querySelector(`[aria-label="${sendLabel}"]`);
+  const sendBox = send?.getBoundingClientRect() ?? null;
+  const sendHiddenBefore =
+    send === null ||
+    sendBox.width === 0 ||
+    sendBox.height === 0 ||
+    getComputedStyle(send).pointerEvents === "none";
+  if (!sendHiddenBefore) {
+    return { ok: false, reason: "Send was reachable before the reveal was tapped" };
+  }
+  hit.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  await wait(160);
+  const sendAfter = document.querySelector(`[aria-label="${sendLabel}"]`);
+  if (sendAfter === null) {
+    return { ok: false, reason: "tapping the reveal removed the row instead of revealing Send" };
+  }
+  const sendCs = getComputedStyle(sendAfter);
+  const sendBoxAfter = sendAfter.getBoundingClientRect();
+  if (
+    sendCs.opacity === "0" ||
+    sendCs.pointerEvents === "none" ||
+    sendBoxAfter.width === 0 ||
+    sendBoxAfter.height === 0
+  ) {
+    return {
+      ok: false,
+      reason: `Send stayed hidden after the reveal tap: opacity ${sendCs.opacity}, pointer-events ${sendCs.pointerEvents}, box ${Math.round(sendBoxAfter.width)}x${Math.round(sendBoxAfter.height)}`,
+    };
+  }
+  sendAfter.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  await wait(160);
+  const gone =
+    document.querySelector(`[data-queued-message-row="${row}"]`) === null &&
+    document.querySelector(`[aria-label="${sendLabel}"]`) === null;
+  return { ok: gone, reason: gone ? "" : "the queued row survived the Send tap" };
+};
+
+/**
  * A card's right-click menu: dispatch a real contextmenu event on the card
  * (the menu handler lives on ThreadCardMenu's wrapper and the card's anchor
  * contextmenu bubbles up to it), wait for the menu to open, then click the
@@ -2031,6 +2111,15 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
         `control absent: ${JSON.stringify(rule.aria_absent)}`,
         !got.present,
         got.present ? "still on the page" : "absent",
+      );
+    }
+    if (rule.queued_send_reach !== undefined) {
+      const payload = rule.queued_send_reach === true ? {} : rule.queued_send_reach;
+      const got = await page.evaluate(pageQueuedSendReach, payload);
+      expect(
+        "queued-send reveal is tappable on touch and Send sends the row",
+        got.ok,
+        got.ok ? "tapped the reveal, tapped Send, row gone" : got.reason,
       );
     }
     if (rule.text_visible !== undefined) {

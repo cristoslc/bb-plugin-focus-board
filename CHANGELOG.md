@@ -11,6 +11,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+#### Thread pane
+
+- **The pane's queued-message Send button works on a phone again.** bb's queued row reveals its "…" control on a touch device through a `@media (hover:none)` utility, and the plugin's own scoped `.opacity-0` was outranking that utility inside the pane, so the row's Send stayed unreachable. The pane now re-asserts the host's touch utilities, so the control behaves exactly as it does on bb's own thread page.
+
 ## [1.7.0] - 2026-10-22
 
 ### Added

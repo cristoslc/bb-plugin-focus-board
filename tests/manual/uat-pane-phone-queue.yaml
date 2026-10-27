@@ -1,0 +1,21 @@
+suite: pane-phone-queue
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5184
+defaults:
+  groupBy: status
+  theme: dark
+  # The repo's phone baseline plus real touch emulation (`hasTouch`), which is
+  # what makes `@media (hover: none)` and `(pointer: coarse)` match: without it
+  # the harness reports a fine pointer and the host's queued-row reveal is
+  # hidden by design, so the step would pass vacuously.
+  viewport: { width: 390, height: 844, hasTouch: true, isMobile: true }
+steps:
+  - id: a-phone-taps-the-queued-row-reveal-and-sends
+    title: On a phone the pane's queued-row reveal control is tappable and Send clears the row (issue #296)
+    goto: "?groupBy=status&queuedSend=1"
+    click: { card: thr_uat_queue }
+    assert:
+      - pane: { threadId: thr_uat_queue }
+      - queued_send_reach: { row: 1 }
+      - no_visible_error: true
