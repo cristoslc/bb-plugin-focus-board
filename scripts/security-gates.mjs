@@ -11,11 +11,14 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { seamForFetch } from "./security-seams.mjs";
+import { notifyGateFailure } from "./release-notify.mjs";
 
 let failed = false;
+let violations = 0;
 const report = (line) => console.log(line);
 const violation = (line) => {
   failed = true;
+  violations += 1;
   console.error(`GATE VIOLATION: ${line}`);
 };
 
@@ -152,4 +155,10 @@ report(
     ? "security gates FAILED"
     : `security gates passed: audit clean (both trees), sink scan over ${files.length} shipped files with the documented allowlists`,
 );
+if (failed) {
+  // The release notification contract (release.md §2b): name the failed gate
+  // on the operator's channel. Best effort by design; never changes the exit
+  // code below.
+  await notifyGateFailure({ gate: "gates", detail: `${violations} gate violation(s)` });
+}
 process.exit(failed ? 1 : 0);

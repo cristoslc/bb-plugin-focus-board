@@ -25,6 +25,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
 import { startHarness } from "./harness.mjs";
+import { notifyGateFailure } from "../release-notify.mjs";
 
 const CHROME =
   process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
@@ -180,6 +181,13 @@ try {
 
 if (failures.length > 0) {
   for (const f of failures) console.error(`FAILED ${f}`);
+  // The release notification contract (release.md §2b): name the failed gate
+  // on the operator's channel before the throw. Best effort; the throw's own
+  // exit code is untouched.
+  await notifyGateFailure({
+    gate: "release-shots",
+    detail: `${failures.length} of ${SHOTS.length} shots failed`,
+  });
   throw new Error(`${failures.length} of ${SHOTS.length} release-safety shots failed`);
 }
 console.log(`${SHOTS.length} shots captured in ${OUT_DIR}`);
