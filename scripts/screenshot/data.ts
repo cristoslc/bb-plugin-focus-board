@@ -503,6 +503,64 @@ export const SIM_DEMO_THREADS: readonly SimThread[] = [
     updatedAt: SIM_NOW - 23 * MINUTE,
     lastReadAt: SIM_NOW - 22 * MINUTE,
   }),
+  // Issue #104's placement contract, one card per clause (the store links
+  // live in mock-sdk.tsx's simLinks). Titles carry no #N so each card's chips
+  // come only from the links:
+  //   typical — one short issue + one PR + a tag
+  //   cluster — two short issues sharing the left half + a PR
+  //   wrap    — a long id list inside the midpoint cap + a PR
+  //   long    — one long external ticket id that bumps the PR down
+  //   shrink  — one very long external id that scales instead of breaking
+  //   tags    — a PR with a long hyphenated tag under it
+  thread({
+    id: "thr_chip_typical",
+    displayTitle: "Card teleport effect on rank",
+    status: "idle",
+    updatedAt: SIM_NOW - 24 * MINUTE,
+    lastReadAt: SIM_NOW - 23 * MINUTE,
+  }),
+  thread({
+    id: "thr_chip_cluster",
+    displayTitle: "Rank handles drag from the lane rail",
+    status: "idle",
+    updatedAt: SIM_NOW - 25 * MINUTE,
+    lastReadAt: SIM_NOW - 24 * MINUTE,
+  }),
+  thread({
+    id: "thr_chip_wrap",
+    displayTitle: "Board teleport effect across many ids",
+    status: "idle",
+    updatedAt: SIM_NOW - 26 * MINUTE,
+    lastReadAt: SIM_NOW - 25 * MINUTE,
+  }),
+  thread({
+    id: "thr_chip_long",
+    displayTitle: "Lane resize guard for the family card",
+    status: "idle",
+    updatedAt: SIM_NOW - 27 * MINUTE,
+    lastReadAt: SIM_NOW - 26 * MINUTE,
+  }),
+  thread({
+    id: "thr_chip_shrink",
+    displayTitle: "Notification preferences export",
+    status: "idle",
+    updatedAt: SIM_NOW - 28 * MINUTE,
+    lastReadAt: SIM_NOW - 27 * MINUTE,
+  }),
+  thread({
+    id: "thr_chip_tags",
+    displayTitle: "Card teleport effect with tags",
+    status: "idle",
+    updatedAt: SIM_NOW - 29 * MINUTE,
+    lastReadAt: SIM_NOW - 28 * MINUTE,
+  }),
+  thread({
+    id: "thr_chip_tag_row",
+    displayTitle: "Rank handles drag from the lane rail here",
+    status: "idle",
+    updatedAt: SIM_NOW - 30 * MINUTE,
+    lastReadAt: SIM_NOW - 29 * MINUTE,
+  }),
   // Family D — chip + nested children (issue #192): the parent card carries a
   // ticket chip (title ref) alongside an expanded child row and a grandchild
   // sub-row, so the right-gutter measurement has the reported combination —

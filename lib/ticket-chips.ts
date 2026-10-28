@@ -6,12 +6,15 @@
 // - One provider per row: a row keys by provider ("github") or, for
 //   external trackers, by hostname. GitHub issues and Forgejo PRs never
 //   share a row — two providers, two rows.
-// - At most two chips per row: the provider's issues chip first (left) and
-//   its PRs chip second (right). With no issues at all, the PRs chip still
-//   starts at the left — a single-chip row places its one chip left, and
-//   the render pairs rows as [issues, pulls] so the wrapping reflow drops
-//   the right chip onto the next line when labels run long (that next line
-//   keeps the same provider).
+// - Two item chips per row at most: the provider's issues chip and its PRs
+//   chip. Placement is the card's job (components/thread-card): the issues
+//   chip claims the first row's left within the midpoint cap, the PRs chip
+//   the first row's right.
+// - A third bucket per row: `tags`. An external link whose label is free
+//   text names no tracker item, so it is a tag, and the card puts tags in a
+//   bottom-right, right-anchored block (issue #104). An item number, a
+//   Forgejo-shaped item URL, or a WORD-123 tracker key all name an item and
+//   stay in the issue/PR chips.
 // - Each chip holds the provider's IDs for that kind. Every ID links to its
 //   own item; the provider mark links to that kind's LIST page — the repo's
 //   filtered page where a base is known (a GitHub row: repo /issues|/pulls;
@@ -53,6 +56,13 @@ export interface TicketChipRow {
   issues?: TicketChip;
   /** The PRs chip; absent when this provider contributes none. */
   pulls?: TicketChip;
+  /**
+   * Free-text label chips: external links with no item number, so they name
+   * no tracker item and earn no issue/PR glyph. The card renders one tag
+   * chip per ref in its bottom-right block (issue #104). Absent when the
+   * provider contributes none.
+   */
+  tags?: TicketRef[];
 }
 
 export interface TicketChipRowsOptions {
@@ -111,6 +121,7 @@ export function ticketChipRows(
       base = item?.base ?? fallbackForgejo ?? undefined;
       kind = ref.kind ?? item?.kind ?? "issue";
     }
+    const namesItem = ticketRefNamesItem(ref);
     let row = byKey.get(key);
     if (row === undefined) {
       row = { key, provider: github ? "github" : "external", ...(hostname !== undefined ? { hostname } : {}) };
@@ -118,6 +129,14 @@ export function ticketChipRows(
       rows.push(row);
     }
     if (row.base === undefined && base !== undefined) row.base = base;
+    // A free-text label names no tracker item, so it is a tag, not a chip in
+    // the issue/PR pair (issue #104). An item number, an item URL, or a
+    // WORD-123 tracker key all name an item; a bare word ("triage",
+    // "focus-board") does not.
+    if (!namesItem) {
+      (row.tags ??= []).push(ref);
+      continue;
+    }
     let chip: TicketChip | undefined = kind === "pull" ? row.pulls : row.issues;
     if (chip === undefined) {
       chip = { kind, refs: [] };
@@ -127,6 +146,27 @@ export function ticketChipRows(
     chip.refs.push(ref);
   }
   return rows;
+}
+
+/**
+ * A tracker key's shape: "PROJ-142", "MOBDEVLONG-100323" — the WORD-123 form
+ * docs/plans/2026-09-25-tracker-mirroring-ticket-id-detection-link-out.md
+ * defines (an uppercase key of two or more characters, a hyphen, digits). A
+ * hyphenated lowercase slug ("focus-board", "release-v2-alpha") is not a key.
+ */
+const TRACKER_KEY = /^[A-Z][A-Z0-9]+-\d+$/;
+
+/**
+ * True when `ref` names a tracker item rather than carrying a free-text label:
+ * a GitHub ref, an external ref with an item number or an item URL, or an
+ * external label shaped like a tracker key. The card keeps these in its
+ * issue/PR chips (issue #104).
+ */
+export function ticketRefNamesItem(ref: TicketRef): boolean {
+  if (ref.tracker === "github") return true;
+  if (ref.number !== undefined) return true;
+  if (ref.href !== undefined && forgejoItemUrl(ref.href) !== null) return true;
+  return TRACKER_KEY.test(ticketChipIdText(ref));
 }
 
 /**

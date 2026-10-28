@@ -1,0 +1,82 @@
+{
+  "prefix": "before",
+  "results": [
+    {
+      "card": "thr_chip_typical",
+      "label": "one short issue + one PR + a tag",
+      "problems": [
+        "chip area missing"
+      ],
+      "measurements": {
+        "ok": false,
+        "reason": "chip area missing"
+      }
+    },
+    {
+      "card": "thr_chip_cluster",
+      "label": "two short issues + a PR",
+      "problems": [
+        "chip area missing"
+      ],
+      "measurements": {
+        "ok": false,
+        "reason": "chip area missing"
+      }
+    },
+    {
+      "card": "thr_chip_wrap",
+      "label": "a long id list held to the midpoint cap",
+      "problems": [
+        "chip area missing"
+      ],
+      "measurements": {
+        "ok": false,
+        "reason": "chip area missing"
+      }
+    },
+    {
+      "card": "thr_chip_long",
+      "label": "one long external ticket bumps the PR down",
+      "problems": [
+        "chip area missing"
+      ],
+      "measurements": {
+        "ok": false,
+        "reason": "chip area missing"
+      }
+    },
+    {
+      "card": "thr_chip_shrink",
+      "label": "one very long id scales to fit, never breaks",
+      "problems": [
+        "chip area missing"
+      ],
+      "measurements": {
+        "ok": false,
+        "reason": "chip area missing"
+      }
+    },
+    {
+      "card": "thr_chip_tags",
+      "label": "a PR with a long hyphenated tag under it",
+      "problems": [
+        "chip area missing"
+      ],
+      "measurements": {
+        "ok": false,
+        "reason": "chip area missing"
+      }
+    },
+    {
+      "card": "thr_chip_tag_row",
+      "label": "with no PR a tag rides the first row's right end",
+      "problems": [
+        "chip area missing"
+      ],
+      "measurements": {
+        "ok": false,
+        "reason": "chip area missing"
+      }
+    }
+  ]
+}

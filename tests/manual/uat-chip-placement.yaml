@@ -1,0 +1,67 @@
+# Issue #104's chip placement contract, measured on the real card in Chrome.
+#
+# jsdom pins the DOM model (thread-card-ticket-chips.test.tsx); it cannot
+# measure geometry, so the placement rules live here: the issues region stays
+# inside the midpoint + gutter cap (or claims the whole row for a single
+# ticket name), the PRs region ends at the row's right edge and is bumped to
+# the next row only when the issues claim the room, and the tag block is
+# right-anchored at no more than 75% of the row, under the PR when there is
+# one. The fixture cards (`thr_chip_*`, demo mode) are one per clause.
+#
+# The 480px viewport is deliberate: the columns board's lane content width
+# settles at 226px there, which is where the wrap, bump, and shrink clauses
+# actually bite. A wider viewport fits the long fixtures without reflowing, so
+# the checks would pass vacuously.
+#
+# Run: npm run uat -- tests/manual/uat-chip-placement.yaml
+suite: chip-placement
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5196
+defaults:
+  groupBy: status
+  theme: dark
+  viewport: { width: 480, height: 1100 }
+
+steps:
+  - id: typical-issue-left-pr-right-tag-bottom
+    title: A short issue sits first row left, the PR first row right, the tag bottom-right
+    goto: "?demo=1&groupBy=status"
+    assert:
+      - chip_placement: { card: thr_chip_typical, cap: full, prBumped: false, tagsUnderPr: true }
+
+  - id: two-short-issues-share-the-left-half
+    title: Two short issue ids share the left half and the PR keeps the right
+    assert:
+      - chip_placement: { card: thr_chip_cluster, cap: midpoint, prBumped: false }
+
+  - id: many-issues-reflow-inside-the-midpoint-cap
+    title: A long id list reflows inside the midpoint cap, PR still right
+    assert:
+      - chip_placement: { card: thr_chip_wrap, cap: midpoint, prBumped: false }
+
+  - id: long-ticket-takes-the-row-and-bumps-the-pr
+    title: One long external ticket claims the whole row and bumps the PR down, still right
+    assert:
+      - chip_placement: { card: thr_chip_long, cap: full, prBumped: true }
+
+  - id: very-long-id-scales-instead-of-breaking
+    title: A very long id scales its text to stay on one line
+    assert:
+      - chip_placement: { card: thr_chip_shrink, cap: full, shrinks: true }
+
+  - id: tags-sit-under-the-pr-bottom-right
+    title: With a PR present the tags sit below it, right-anchored, at no more than 75%
+    assert:
+      - chip_placement: { card: thr_chip_tags, cap: midpoint, prBumped: false, tagsUnderPr: true }
+
+  - id: tag-rides-the-first-row-without-a-pr
+    title: With no PR the tag rides the first row's right end
+    assert:
+      - chip_placement: { card: thr_chip_tag_row, cap: full, tagsSameRow: true }
+
+  - id: placement-holds-in-the-light-theme
+    title: The same placement holds with the light token set
+    theme: light
+    assert:
+      - chip_placement: { card: thr_chip_tags, cap: midpoint, prBumped: false, tagsUnderPr: true }

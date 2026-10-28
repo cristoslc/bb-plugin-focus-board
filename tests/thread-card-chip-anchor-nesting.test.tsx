@@ -98,9 +98,15 @@ describe("chip anchors never nest inside a card link (issue #127 hardening)", ()
   it("several chips on one card keep every chip anchor outside the card's link", () => {
     renderCard({ linkedIssues: [githubIssue(12), githubPull(16), unknownTracker] });
     const card = cardRoot();
-    // Non-vacuous: three chips across two provider rows really render.
+    // Non-vacuous: three chips across the three placement regions really
+    // render (issue #104 replaced the per-provider row wrappers with the
+    // issues / pulls / tags regions, so the chips themselves carry the
+    // provider key).
     expect(card.querySelectorAll("[data-ticket-chip]").length).toBe(3);
-    expect(card.querySelectorAll("[data-provider-row]").length).toBe(2);
+    expect(card.querySelectorAll("[data-provider-row]").length).toBe(3);
+    // The issues and pulls regions hold them; PROJ-142 is a WORD-123 key, so
+    // it stays a ticket in the issues region rather than a tag.
+    expect(card.querySelectorAll("[data-ticket-chip-region]").length).toBe(2);
     // The link-bearing chips are anchors; the inert one is a span (below).
     expect(card.querySelectorAll("a[data-ticket-chip-mark]").length).toBe(2);
     expect(card.querySelectorAll("a[data-ticket-id]").length).toBe(3);

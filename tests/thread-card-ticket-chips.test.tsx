@@ -151,7 +151,7 @@ describe("linked store chips — distinct PR vs issue glyphs", () => {
     expect(chipEl.querySelector("img")?.getAttribute("src")).toBe("https://git.cove/favicon.ico");
   });
 
-  it("a forgejo PR and issue from the store share one row as two chips", async () => {
+  it("a forgejo PR and issue from the store render as two chips, issue first", async () => {
     renderCard("purge MetaMCP remnants", {
       repoHrefBase: "https://git.cove/cristos/Homelab",
       linkedIssues: [
@@ -159,16 +159,21 @@ describe("linked store chips — distinct PR vs issue glyphs", () => {
         { tracker: "external", url: "https://git.cove/cristos/Homelab/issues/39", hostname: "git.cove", createdAt: "b", source: "agent" },
       ],
     });
-    await waitFor(() => {
-      if (document.querySelectorAll("[data-ticket-chip]").length < 2) throw new Error("want two chips");
+    const chips = await waitFor(() => {
+      const els = document.querySelectorAll("[data-ticket-chip]");
+      if (els.length < 2) throw new Error("want two chips");
+      return els;
     });
-    const row = document.querySelector('[data-provider-row="git.cove"]');
-    const chips = row?.querySelectorAll("[data-ticket-chip]") ?? [];
-    expect(chips.length).toBe(2);
+    // Issue #104 moved the pair out of one per-provider row into the card's
+    // issues and pulls regions; both chips keep the same provider key.
+    expect(chips[0].getAttribute("data-provider-row")).toBe("git.cove");
+    expect(chips[1].getAttribute("data-provider-row")).toBe("git.cove");
     expect(chips[0].querySelector('[data-ticket-id="#39"]')).not.toBeNull();
     expect(chips[1].querySelector('[data-ticket-id="#42"]')).not.toBeNull();
     expect(chips[0].querySelector('[data-icon="IssueOpen"]')).not.toBeNull();
     expect(chips[1].querySelector('[data-icon="PullRequest"]')).not.toBeNull();
+    expect(chips[0].closest('[data-ticket-chip-region="issues"]')).not.toBeNull();
+    expect(chips[1].closest('[data-ticket-chip-region="pulls"]')).not.toBeNull();
   });
 
   it("a three-item Cove thread renders all three ids, each linking its own item", async () => {
@@ -359,5 +364,182 @@ describe("DOM validity — no link nests inside the card's own link (issue #171)
     expect(anchors.length).toBeGreaterThanOrEqual(2);
     const nested = anchors.filter((el) => el.parentElement?.closest("a") !== null);
     expect(nested.map((el) => el.getAttribute("href"))).toEqual([]);
+  });
+});
+
+// Issue #104's placement contract: issues first row left (capped at the
+// midpoint when it holds several ids), PRs first row right (bumped only when
+// the issues claim the room), tags bottom-right and right-anchored under a PR
+// (riding row one when there is none). Geometry is the UAT suite's job; these
+// pins hold the DOM model the CSS reads.
+describe("chip placement contract (issue #104)", () => {
+  type Link = import("../lib/link-metadata").GitHubItemLink;
+  type External = import("../lib/link-metadata").ExternalItemLink;
+
+  const issue = (n: number): Link => ({
+    tracker: "github",
+    repo: "owner/repo",
+    issue: n,
+    kind: "issue",
+    href: `${BASE}/issues/${n}`,
+    createdAt: "2026-10-09T00:00:00.000Z",
+    source: "agent",
+  });
+  const pull = (n: number): Link => ({ ...issue(n), kind: "pull", href: `${BASE}/pull/${n}` });
+  /** An external tracker ITEM: an item URL plus a display label (a key). */
+  const extItem = (label: string, n: number): External => ({
+    tracker: "external",
+    url: `https://forge.example/org/app/issues/${n}`,
+    hostname: "forge.example",
+    label,
+    createdAt: "2026-10-09T00:00:00.000Z",
+    source: "agent",
+  });
+  /** A free-text label: no item number, no tracker key shape. */
+  const tag = (label: string): External => ({
+    tracker: "external",
+    url: `https://linear.app/t/${label}`,
+    hostname: "linear.app",
+    label,
+    createdAt: "2026-10-09T00:00:00.000Z",
+    source: "operator",
+  });
+
+  function region(name: "issues" | "pulls" | "tags"): Element {
+    const el = document.querySelector(`[data-ticket-chip-region="${name}"]`);
+    if (el === null) throw new Error(`missing ${name} region`);
+    return el;
+  }
+  function regionClass(name: "issues" | "pulls" | "tags"): string {
+    return region(name).getAttribute("class") ?? "";
+  }
+
+  it("a short issue sits in the issues region and the PR in the pulls region", async () => {
+    renderCard("Card teleport effect on rank", { linkedIssues: [issue(142), pull(87)] });
+    await waitFor(() => {
+      if (region("issues").querySelector('[data-ticket-id="#142"]') === null) {
+        throw new Error("issue not in the issues region");
+      }
+    });
+    expect(region("pulls").querySelector('[data-ticket-id="#87"]')).not.toBeNull();
+    // The PR region is right-anchored — `ml-auto` is the whole mechanism.
+    expect(regionClass("pulls")).toContain("ml-auto");
+    // A single id may claim the whole row; the cap only holds a list.
+    expect(regionClass("issues")).toContain("max-w-full");
+    expect(regionClass("issues")).not.toContain("max-w-[calc(50%-2px)]");
+  });
+
+  it("several issue ids hold the issues region to the midpoint cap", async () => {
+    renderCard("Board teleport effect", {
+      linkedIssues: [issue(44), issue(102), issue(7), pull(41)],
+    });
+    await waitFor(() => {
+      if (region("issues").querySelectorAll("[data-ticket-id]").length < 3) {
+        throw new Error("issue ids not grouped");
+      }
+    });
+    // Midpoint + gutter: the list reflows inside the left half, so the PR chip
+    // keeps the first row's right end.
+    expect(regionClass("issues")).toContain("max-w-[calc(50%-2px)]");
+    // Surplus ids wrap onto fresh lines INSIDE the region.
+    expect(regionClass("issues")).toContain("flex-wrap");
+    expect(region("pulls").querySelector('[data-ticket-id="#41"]')).not.toBeNull();
+  });
+
+  it("a lone long ticket may take the whole first row and bump the PR", async () => {
+    renderCard("Lane resize guard for the family card", {
+      linkedIssues: [extItem("MOBDEVLONG-100323", 100323), pull(87)],
+    });
+    await waitFor(() => {
+      if (region("issues").querySelector('[data-ticket-id="MOBDEVLONG-100323"]') === null) {
+        throw new Error("long external ticket missing");
+      }
+    });
+    expect(regionClass("issues")).toContain("max-w-full");
+    expect(regionClass("issues")).not.toContain("max-w-[calc(50%-2px)]");
+    // Still right-anchored: when the issues region fills row one, the pulls
+    // region wraps and `ml-auto` keeps it at that line's right end.
+    expect(regionClass("pulls")).toContain("ml-auto");
+    expect(regionClass("pulls")).toContain("flex-wrap");
+  });
+
+  it("no ticket id ever breaks across lines", () => {
+    renderCard("#101 #102 #103 #104 #105 #106 #107 #108 resolve");
+    const ids = Array.from(document.querySelectorAll("[data-ticket-id]"));
+    expect(ids.length).toBeGreaterThanOrEqual(4);
+    for (const id of ids) {
+      expect(id.getAttribute("class") ?? "").toContain("whitespace-nowrap");
+    }
+  });
+
+  it("a long id arms the fit path; a short id never measures", () => {
+    const long = renderCard("Notification preferences export", {
+      linkedIssues: [extItem("MOBDEVSERVICENOTIFICATIONSPREFERENCES-100323", 100323)],
+    });
+    const fitFlow = document.querySelector("[data-ticket-ids-fit]");
+    expect(fitFlow).not.toBeNull();
+    expect(fitFlow?.getAttribute("class") ?? "").toContain("flex-wrap");
+    long.unmount();
+    renderCard("resolve #17");
+    expect(document.querySelector("[data-ticket-ids-fit]")).toBeNull();
+  });
+
+  it("with a PR present the tag block takes its own line under it", async () => {
+    renderCard("Card teleport effect", {
+      linkedIssues: [issue(142), pull(87), tag("triage")],
+    });
+    await waitFor(() => {
+      if (region("tags").querySelector('[data-ticket-id="triage"]') === null) {
+        throw new Error("tag not in the tags region");
+      }
+    });
+    const cls = regionClass("tags");
+    expect(cls).toContain("basis-full");
+    expect(cls).toContain("ml-auto");
+    expect(cls).toContain("max-w-[75%]");
+    expect(cls).toContain("items-end");
+  });
+
+  it("with no PR a tag may ride the first line's right end", async () => {
+    renderCard("Rank handles drag", { linkedIssues: [issue(44), tag("badging")] });
+    await waitFor(() => {
+      if (region("tags").querySelector('[data-ticket-id="badging"]') === null) {
+        throw new Error("tag not in the tags region");
+      }
+    });
+    expect(regionClass("tags")).not.toContain("basis-full");
+    expect(regionClass("tags")).toContain("ml-auto");
+  });
+
+  it("a tag wraps at its hyphens, never shrinks, and never breaks mid-word", async () => {
+    renderCard("Card teleport effect", {
+      linkedIssues: [issue(142), pull(87), tag("mobile-notifications-badging-rollout-v12-alpha")],
+    });
+    const tagText = await waitFor(() => {
+      const el = region("tags").querySelector(
+        '[data-ticket-id="mobile-notifications-badging-rollout-v12-alpha"]',
+      );
+      if (el === null) throw new Error("long tag missing");
+      return el;
+    });
+    // Normal wrapping: CSS breaks at hyphens, and `word-break: normal` keeps it
+    // from breaking inside a word. No nowrap, no fit hook — the tag keeps its
+    // text size.
+    expect(tagText.getAttribute("class") ?? "").toContain("break-normal");
+    expect(tagText.getAttribute("class") ?? "").not.toContain("whitespace-nowrap");
+    expect(region("tags").querySelectorAll("[data-ticket-ids-fit]").length).toBe(0);
+  });
+
+  it("a tag chip is marked by the generic globe, not a provider mark", async () => {
+    renderCard("Rank handles drag", { linkedIssues: [tag("triage")] });
+    const globe = await waitFor(() => {
+      const el = region("tags").querySelector('[data-icon="Globe"]');
+      if (el === null) throw new Error("tag is missing its globe mark");
+      return el;
+    });
+    expect(globe).not.toBeNull();
+    // The item chips' GitHub mark never appears in the tag block.
+    expect(region("tags").querySelector('[data-icon="GithubMark"]')).toBeNull();
+    expect(region("tags").querySelector("img")).toBeNull();
   });
 });

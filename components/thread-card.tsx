@@ -23,7 +23,27 @@ import { describeWakeAt } from "../lib/snooze";
 import { usePortalScopeProps } from "../lib/portal-scope";
 import { deriveCardStatus } from "./card-status";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
+import { useTicketChipFit } from "./use-ticket-chip-fit";
 import { useWallpaperActive } from "./wallpaper-contrast";
+
+/**
+ * The chip placement contract (issue #104): the issues block is held to the
+ * first row's left half — the midpoint plus a small gutter — whenever it holds
+ * several ids, so its id list reflows onto fresh lines instead of sliding under
+ * the PRs block. A lone ticket name may claim the whole row instead.
+ */
+const CHIP_MIDPOINT_CAP = "max-w-[calc(50%-2px)]";
+const CHIP_FULL_ROW = "max-w-full";
+
+/** The tag block's ceiling: it may claim up to 75% of the row, right-anchored. */
+const CHIP_TAG_MAX_WIDTH = "max-w-[75%]";
+
+/**
+ * An id long enough to need the fit path. Short ids (`#43`) never overflow at
+ * any lane width, so only chips carrying a long external key arm the measuring
+ * observer — the board's many short-id cards pay nothing.
+ */
+const LONG_ID_CHARS = 10;
 
 /**
  * The select-with-modifiers gesture on a sweep-mode card click, reduced to
@@ -584,8 +604,15 @@ function ProviderTicketChip({
   // — short ids do for three or fewer; very long external labels that wrap
   // stay centered, a harmless cosmetic drift.
   const singleRow = chip.refs.length <= 3;
+  // A long id (an external ticket key) may overflow its chip; the fit hook
+  // scales the text down to keep it on one line (issue #104, mock 5). Short
+  // ids never overflow, so they skip the measurement entirely.
+  const needsFit =
+    !condensed &&
+    chip.refs.some((ref) => ticketChipIdText(ref).length > LONG_ID_CHARS);
+  const idsFlowRef = useTicketChipFit(needsFit);
   const className = cn(
-    "inline-flex gap-x-1 rounded bg-muted py-0.5 font-mono leading-none text-muted-foreground",
+    "inline-flex min-w-0 max-w-full gap-x-1 rounded bg-muted py-0.5 font-mono leading-none text-muted-foreground",
     // The condensed cut (nested child rows): one min-height and text step
     // down plus a tighter pad, per the operator's spec — smaller, more
     // compressed than the full card's chip row.
@@ -691,7 +718,7 @@ function ProviderTicketChip({
     // bubble that the cursor cannot cover. The hover title keeps its state
     // role; the id itself rides an aria-label for keyboard and screen
     // readers.
-    const cell = "group/id relative inline-flex origin-left transition-transform hover:scale-110";
+    const cell = "group/id relative inline-flex origin-left whitespace-nowrap transition-transform hover:scale-110";
     const bubble = (
       <span
         data-ticket-tip=""
@@ -728,18 +755,73 @@ function ProviderTicketChip({
     );
   });
   return (
-    <span className={className} data-ticket-chip="">
+    <span className={className} data-ticket-chip="" data-provider-row={row.key}>
       {markElement}
       {kindGlyph}
       {/* The ids sit in a wrapping flex flow: no fixed tracks, so a short
           list reserves no phantom width (the empty-column-gap trap of the
-          old three-track grid) and a long list of wide external labels
-          wraps onto extra lines instead of overflowing the card. min-w-0
-          lets the shell shrink with the row so this flow, not the shell,
-          does the wrapping; the mark and glyph never join the id flow. */}
-      <span data-ticket-ids className="flex min-w-0 flex-wrap gap-x-2 gap-y-0.5">
+          old three-track grid) and a list of wide external labels wraps onto
+          extra lines instead of overflowing the card. min-w-0 lets the shell
+          shrink with the row so this flow, not the shell, does the wrapping;
+          the mark and glyph never join the id flow. Every id stays nowrap, so
+          the flow breaks only BETWEEN ids, never inside one; a lone id wider
+          than the room scales down through useTicketChipFit instead of
+          breaking (issue #104). */}
+      <span
+        ref={idsFlowRef}
+        data-ticket-ids
+        data-ticket-ids-fit={needsFit ? "" : undefined}
+        className="flex min-w-0 flex-wrap gap-x-2 gap-y-0.5"
+      >
         {ids}
       </span>
+    </span>
+  );
+}
+
+/**
+ * One tag chip (issue #104): a free-text external label — an external link that
+ * names no tracker item, so it earns no issue/PR glyph and never joins the
+ * issue/PR pair. A tag names a theme rather than an item's source, so its mark
+ * is the generic globe instead of a favicon.
+ *
+ * Placement is the card's: tags live in a bottom-right, right-anchored block.
+ * The text never shrinks and never breaks mid-word; it wraps only at its own
+ * word separators (the hyphens in a slug like
+ * `mobile-notifications-badging-rollout-v12-alpha`), which is CSS's default
+ * break set once `white-space` stays normal.
+ */
+function TagChip({ row, tagRef }: { row: TicketChipRow; tagRef: TicketRef }) {
+  const text = ticketChipIdText(tagRef);
+  return (
+    <span
+      className="inline-flex min-h-5 min-w-0 max-w-full items-center gap-x-1 rounded bg-muted px-1 py-0.5 font-mono text-[10px] leading-none text-muted-foreground"
+      data-ticket-chip=""
+      data-ticket-tag={row.key}
+      data-provider-row={row.key}
+    >
+      {/* An inert mark: a tag is not a list page, so it links nothing. */}
+      <span className="inline-flex shrink-0" data-ticket-chip-mark="">
+        <Icon name="Globe" className="size-3 shrink-0" aria-hidden />
+      </span>
+      {tagRef.href === undefined ? (
+        <span className="min-w-0 break-normal" data-ticket-id={text}>
+          {text}
+        </span>
+      ) : (
+        <a
+          href={tagRef.href}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(event) => event.stopPropagation()}
+          title={text}
+          aria-label={text}
+          className="min-w-0 break-normal"
+          data-ticket-id={text}
+        >
+          {text}
+        </a>
+      )}
     </span>
   );
 }
@@ -1045,6 +1127,26 @@ export function ThreadCardImpl({
     ...(validatedHrefs !== undefined ? { validatedHrefs } : {}),
   });
   const chipRows = ticketRefs.length === 0 || compact ? [] : ticketChipRows(ticketRefs);
+  // Issue #104's placement contract. The card's chip area is three regions:
+  // the issue chips (first row, left, capped at the midpoint when they hold
+  // several ids), the PR chips (first row, right), and the tags (bottom-right,
+  // right-anchored). Chips gather across providers on purpose: a long external
+  // item id and another provider's PR share row one, which is what the
+  // contract's mock 4 draws.
+  const issueChips: { row: TicketChipRow; chip: TicketChip }[] = [];
+  const pullChips: { row: TicketChipRow; chip: TicketChip }[] = [];
+  const tagChips: { row: TicketChipRow; ref: TicketRef }[] = [];
+  for (const row of chipRows) {
+    if (row.issues !== undefined) issueChips.push({ row, chip: row.issues });
+    if (row.pulls !== undefined) pullChips.push({ row, chip: row.pulls });
+    for (const ref of row.tags ?? []) tagChips.push({ row, ref });
+  }
+  const issueRefCount = issueChips.reduce((count, entry) => count + entry.chip.refs.length, 0);
+  // A lone ticket name may claim the whole first row (the PR chip then bumps
+  // to the next row, still right-anchored); several ids stay inside the left
+  // half so the PR chip keeps row one's right end.
+  const issuesWidthClass = issueRefCount > 1 ? CHIP_MIDPOINT_CAP : CHIP_FULL_ROW;
+  const hasChips = issueChips.length + pullChips.length + tagChips.length > 0;
   // Issue #191: nested child rows show the child's own chips — the same
   // `cardTicketRefs` call the child chips with standalone (title + branch
   // scan, the project's repo base, the store links via `childLinkedIssuesFor`,
@@ -1624,7 +1726,7 @@ export function ThreadCardImpl({
             }}
             className={cn(
               "relative focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              compact ? "px-2 py-1" : chipRows.length === 0 ? "px-3 py-2" : "px-3 pt-2",
+              compact ? "px-2 py-1" : hasChips ? "px-3 pt-2" : "px-3 py-2",
             )}
           >
             <div className="flex items-center gap-1.5 pl-1.5">
@@ -1686,29 +1788,78 @@ export function ThreadCardImpl({
               {branch === "" ? null : <span className="text-muted-foreground/40"> · {branch}</span>}
             </p>
           </a>
-          {chipRows.length === 0 ? null : (
-            <div className="mt-1 flex flex-col gap-1 px-3 pb-2 pl-1.5">
-              {chipRows.map((row) => (
-                // One provider per row; issues chip first and the PRs chip
-                // after it. justify-between spreads the pair — issues left,
-                // PRs right — while flex-wrap reflows the right chip onto
-                // the row's next line when the labels run long (a PRs-only
-                // row places its single chip left).
+          {hasChips ? (
+            // Issue #104's chip area: three regions on a wrapping flex line.
+            // The issues region keeps a lone row-anchor per provider; the
+            // pulls and tags regions are right-anchored by `ml-auto`, which
+            // also holds a wrapped block at its line's right end. The tag
+            // block forces its own line when a PR shares the card, and may
+            // ride row one when none does.
+            <div
+              className="mt-1 flex flex-wrap items-start gap-1 px-3 pb-2 pl-1.5"
+              data-ticket-chip-area=""
+            >
+              {issueChips.length === 0 ? null : (
+                // Issues: first row, left. Several ids never cross the
+                // midpoint + gutter cap; surplus ids start fresh lines inside
+                // the chip instead. A lone ticket name may take the whole
+                // row, which pushes the PR chip down.
                 <div
-                  key={row.key}
-                  data-provider-row={row.key}
-                  className="flex flex-wrap justify-between gap-1"
+                  className={cn("flex min-w-0 flex-wrap items-start gap-1", issuesWidthClass)}
+                  data-ticket-chip-region="issues"
                 >
-                  {row.issues === undefined ? null : (
-                    <ProviderTicketChip row={row} chip={row.issues} statusFor={statusFor} projectRepo={repo} />
-                  )}
-                  {row.pulls === undefined ? null : (
-                    <ProviderTicketChip row={row} chip={row.pulls} statusFor={statusFor} projectRepo={repo} />
-                  )}
+                  {issueChips.map((entry) => (
+                    <ProviderTicketChip
+                      key={`issue:${entry.row.key}`}
+                      row={entry.row}
+                      chip={entry.chip}
+                      statusFor={statusFor}
+                      projectRepo={repo}
+                    />
+                  ))}
                 </div>
-              ))}
+              )}
+              {pullChips.length === 0 ? null : (
+                // PRs: the first row's right end, bumped to the next row's
+                // right end only when the issues region claims the room.
+                <div
+                  className="ml-auto flex min-w-0 flex-wrap items-start justify-end gap-1"
+                  data-ticket-chip-region="pulls"
+                >
+                  {pullChips.map((entry) => (
+                    <ProviderTicketChip
+                      key={`pull:${entry.row.key}`}
+                      row={entry.row}
+                      chip={entry.chip}
+                      statusFor={statusFor}
+                      projectRepo={repo}
+                    />
+                  ))}
+                </div>
+              )}
+              {tagChips.length === 0 ? null : (
+                // Tags: bottom-right, right-anchored, under the PR block when
+                // there is one. The block stops at 75% of the row and a long
+                // tag wraps at its hyphens there rather than shrinking.
+                <div
+                  className={cn(
+                    "ml-auto flex min-w-0 flex-col items-end gap-1",
+                    CHIP_TAG_MAX_WIDTH,
+                    pullChips.length > 0 ? "basis-full" : undefined,
+                  )}
+                  data-ticket-chip-region="tags"
+                >
+                  {tagChips.map((entry) => (
+                    <TagChip
+                      key={`tag:${entry.row.key}:${entry.ref.raw}`}
+                      row={entry.row}
+                      tagRef={entry.ref}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          ) : null}
         </div>
         {chipCount > 0 ? (
           // Family-size metadata only: the collapsed rows' dot strip lives in

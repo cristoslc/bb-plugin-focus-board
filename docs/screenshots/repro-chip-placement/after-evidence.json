@@ -1,0 +1,400 @@
+{
+  "prefix": "after",
+  "results": [
+    {
+      "card": "thr_chip_typical",
+      "label": "one short issue + one PR + a tag",
+      "problems": [],
+      "measurements": {
+        "ok": true,
+        "area": {
+          "left": 124,
+          "right": 350,
+          "width": 226
+        },
+        "midpoint": 237,
+        "issues": {
+          "left": 124,
+          "right": 187.89,
+          "top": 223,
+          "bottom": 243,
+          "width": 63.89,
+          "height": 20
+        },
+        "pulls": {
+          "left": 291.27,
+          "right": 350,
+          "top": 223,
+          "bottom": 243,
+          "width": 58.73,
+          "height": 20
+        },
+        "tags": {
+          "left": 180.5,
+          "right": 350,
+          "top": 247,
+          "bottom": 267,
+          "width": 169.5,
+          "height": 20
+        },
+        "ids": [
+          {
+            "text": "#142",
+            "width": 23.89,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          },
+          {
+            "text": "#87",
+            "width": 18.73,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          }
+        ],
+        "idsFontSize": "10px",
+        "tagIds": [
+          {
+            "text": "focus-board",
+            "width": 59.36,
+            "height": 10,
+            "fontSize": "10px",
+            "lines": 1
+          }
+        ]
+      }
+    },
+    {
+      "card": "thr_chip_cluster",
+      "label": "two short issues + a PR",
+      "problems": [],
+      "measurements": {
+        "ok": true,
+        "area": {
+          "left": 124,
+          "right": 350,
+          "width": 226
+        },
+        "midpoint": 237,
+        "issues": {
+          "left": 124,
+          "right": 219.64,
+          "top": 354,
+          "bottom": 374,
+          "width": 95.64,
+          "height": 20
+        },
+        "pulls": {
+          "left": 291.27,
+          "right": 350,
+          "top": 354,
+          "bottom": 374,
+          "width": 58.73,
+          "height": 20
+        },
+        "tags": null,
+        "ids": [
+          {
+            "text": "#142",
+            "width": 23.89,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          },
+          {
+            "text": "#102",
+            "width": 23.75,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          },
+          {
+            "text": "#87",
+            "width": 18.73,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          }
+        ],
+        "idsFontSize": "10px",
+        "tagIds": []
+      }
+    },
+    {
+      "card": "thr_chip_wrap",
+      "label": "a long id list held to the midpoint cap",
+      "problems": [],
+      "measurements": {
+        "ok": true,
+        "area": {
+          "left": 124,
+          "right": 350,
+          "width": 226
+        },
+        "midpoint": 237,
+        "issues": {
+          "left": 124,
+          "right": 235,
+          "top": 461,
+          "bottom": 519,
+          "width": 111,
+          "height": 58
+        },
+        "pulls": {
+          "left": 291.27,
+          "right": 350,
+          "top": 461,
+          "bottom": 481,
+          "width": 58.73,
+          "height": 20
+        },
+        "tags": null,
+        "ids": [
+          {
+            "text": "#1420",
+            "width": 30.3,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          },
+          {
+            "text": "#23841",
+            "width": 36.67,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          },
+          {
+            "text": "#8675309",
+            "width": 50.7,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          },
+          {
+            "text": "#4418",
+            "width": 30.55,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          },
+          {
+            "text": "#87",
+            "width": 18.73,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          }
+        ],
+        "idsFontSize": "10px",
+        "tagIds": []
+      }
+    },
+    {
+      "card": "thr_chip_long",
+      "label": "one long external ticket bumps the PR down",
+      "problems": [],
+      "measurements": {
+        "ok": true,
+        "area": {
+          "left": 124,
+          "right": 350,
+          "width": 226
+        },
+        "midpoint": 237,
+        "issues": {
+          "left": 124,
+          "right": 331.42,
+          "top": 606,
+          "bottom": 626,
+          "width": 207.42,
+          "height": 20
+        },
+        "pulls": {
+          "left": 291.27,
+          "right": 350,
+          "top": 630,
+          "bottom": 650,
+          "width": 58.73,
+          "height": 20
+        },
+        "tags": null,
+        "ids": [
+          {
+            "text": "MOBDEVLONGPLATFORM-100323",
+            "width": 167.42,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          },
+          {
+            "text": "#87",
+            "width": 18.73,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          }
+        ],
+        "idsFontSize": "10px",
+        "tagIds": []
+      }
+    },
+    {
+      "card": "thr_chip_shrink",
+      "label": "one very long id scales to fit, never breaks",
+      "problems": [],
+      "measurements": {
+        "ok": true,
+        "area": {
+          "left": 124,
+          "right": 350,
+          "width": 226
+        },
+        "midpoint": 237,
+        "issues": {
+          "left": 124,
+          "right": 350,
+          "top": 721,
+          "bottom": 741,
+          "width": 226,
+          "height": 20
+        },
+        "pulls": null,
+        "tags": null,
+        "ids": [
+          {
+            "text": "MOBDEVSERVICENOTIFICATIONSPREFERENCES-100323",
+            "width": 186.09,
+            "height": 7,
+            "fontSize": "6.5px",
+            "nowrap": true
+          }
+        ],
+        "idsFontSize": "6.5px",
+        "tagIds": []
+      }
+    },
+    {
+      "card": "thr_chip_tags",
+      "label": "a PR with a long hyphenated tag under it",
+      "problems": [],
+      "measurements": {
+        "ok": true,
+        "area": {
+          "left": 124,
+          "right": 350,
+          "width": 226
+        },
+        "midpoint": 237,
+        "issues": {
+          "left": 124,
+          "right": 187.89,
+          "top": 812,
+          "bottom": 832,
+          "width": 63.89,
+          "height": 20
+        },
+        "pulls": {
+          "left": 291.27,
+          "right": 350,
+          "top": 812,
+          "bottom": 832,
+          "width": 58.73,
+          "height": 20
+        },
+        "tags": {
+          "left": 180.5,
+          "right": 350,
+          "top": 836,
+          "bottom": 884,
+          "width": 169.5,
+          "height": 48
+        },
+        "ids": [
+          {
+            "text": "#142",
+            "width": 23.89,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          },
+          {
+            "text": "#87",
+            "width": 18.73,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          }
+        ],
+        "idsFontSize": "10px",
+        "tagIds": [
+          {
+            "text": "mobile-notifications-badging-rollout-v12-alpha",
+            "width": 145.5,
+            "height": 20,
+            "fontSize": "10px",
+            "lines": 1
+          },
+          {
+            "text": "triage",
+            "width": 27.95,
+            "height": 10,
+            "fontSize": "10px",
+            "lines": 1
+          }
+        ]
+      }
+    },
+    {
+      "card": "thr_chip_tag_row",
+      "label": "with no PR a tag rides the first row's right end",
+      "problems": [],
+      "measurements": {
+        "ok": true,
+        "area": {
+          "left": 124,
+          "right": 350,
+          "width": 226
+        },
+        "midpoint": 237,
+        "issues": {
+          "left": 124,
+          "right": 187.89,
+          "top": 971,
+          "bottom": 991,
+          "width": 63.89,
+          "height": 20
+        },
+        "pulls": null,
+        "tags": {
+          "left": 286.88,
+          "right": 350,
+          "top": 971,
+          "bottom": 991,
+          "width": 63.13,
+          "height": 20
+        },
+        "ids": [
+          {
+            "text": "#142",
+            "width": 23.89,
+            "height": 12,
+            "fontSize": "10px",
+            "nowrap": true
+          }
+        ],
+        "idsFontSize": "10px",
+        "tagIds": [
+          {
+            "text": "badging",
+            "width": 39.13,
+            "height": 10,
+            "fontSize": "10px",
+            "lines": 1
+          }
+        ]
+      }
+    }
+  ]
+}
