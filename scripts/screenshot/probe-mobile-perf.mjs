@@ -6,6 +6,9 @@
 //     board's first card paints, total blocking time (long tasks over 50ms)
 //   - interaction windows: wall time, React commit count, long tasks
 //     (count + summed ms), animation frames and dropped frames
+//   - the thread pane's open and close, each repeated PROBE_PANE_CYCLES times
+//     and reported as a median: click-to-pane-appear, click-to-first-paint,
+//     and the long-task/commit/dropped-frame load of the same span
 //   - scroll: the same, while a busy lane is scrolled with real touch/wheel
 //   - optional Chrome trace per phase for the style/layout/paint breakdown
 //
@@ -15,10 +18,22 @@
 //
 // Honors CHROME_PATH, HARNESS_URL, OUT_DIR, PROBE_TRACE=1 (emit
 // docs/screenshots/probe-mobile-perf/trace-<phase>.json plus a rolled-up
-// breakdown), and PROBE_CPU=<n> (CDP Emulation.setCPUThrottlingRate — a
-// mid-range phone sits several times slower than the dev machine's M3 Pro, so
-// the default runs at 4x). The 390x844 viewport is the release harness's
-// phone size.
+// breakdown), PROBE_PANE_PROFILE=1 (a CPU profile of the pane's open and
+// close), PROBE_PANE_CYCLES (default 5, 0 skips the pane section),
+// PROBE_SETTLE_MS (default 500, the tail after the pane appears or goes),
+// PROBE_VIEWPORT=desktop (1440x900, the non-mobile control), PROBE_BOARDS
+// (comma-separated board names, for one board's worth of attribution work),
+// and PROBE_CPU=<n> (CDP Emulation.setCPUThrottlingRate — a mid-range phone
+// sits several times slower than the dev machine's M3 Pro, so the default runs
+// at 4x). The 390x844 viewport is the release harness's phone size.
+//
+// Attribution switches, for pricing one mechanism rather than the whole pane:
+// PROBE_EXTRA_CSS=<file> attaches a candidate stylesheet after load,
+// PROBE_DROP_SPOTLIGHT=focus|all strips the card spotlight's focus arm (or the
+// whole rule) from the injected <style>, and PROBE_DEBUG=1 forwards the page's
+// console to this one. A stylesheet override cannot replace
+// PROBE_DROP_SPOTLIGHT: the declarations stop applying while the :has() rules
+// keep invalidating every card, which is the cost under test.
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import puppeteer from "puppeteer-core";
 
@@ -26,10 +41,27 @@ const CHROME = process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Conte
 const BASE = process.env.HARNESS_URL ?? "http://localhost:5173/";
 const OUT = process.env.OUT_DIR ?? new URL("../../docs/screenshots/probe-mobile-perf/", import.meta.url).pathname;
 const TRACE = process.env.PROBE_TRACE === "1";
+// Per-pane-phase CPU profile (open and close). Separate from TRACE because the
+// trace is the expensive part and the profile answers "which function".
+const PANE_PROFILE = process.env.PROBE_PANE_PROFILE === "1";
 const CPU = Number(process.env.PROBE_CPU ?? "4");
 
 const PHONE = { width: 390, height: 844 };
-const LONG_TASK_MS = 50;
+const DESKTOP = { width: 1440, height: 900 };
+// The pane cycles run at the same width as the rest of the board. Desktop is
+// the control: whatever cost survives there is inherent to the pane, and only
+// the difference is mobile-specific.
+const DESKTOP_VIEWPORT = process.env.PROBE_VIEWPORT === "desktop";
+const VIEWPORT = DESKTOP_VIEWPORT ? DESKTOP : PHONE;
+// Open/close repetitions, so the reported number is a median rather than one
+// sample. 5 keeps a full run under a couple of minutes at 4x throttle.
+const PANE_CYCLES = Number(process.env.PROBE_PANE_CYCLES ?? "5");
+// Tail window after the pane has appeared (open) or gone (close): long tasks,
+// commits and dropped frames are counted over the whole open+tail span so two
+// runs at different speeds are compared over the same amount of work.
+const SETTLE_MS = Number(process.env.PROBE_SETTLE_MS ?? "500");
+const PANE_SEL = 'aside[aria-label^="Thread:"]';
+const PANE_CLOSE_SEL = '[aria-label="Close thread pane"]';
 
 // ── The in-page instrument ────────────────────────────────────────────────
 // Installed before any app code runs (evaluateOnNewDocument): a React commit
@@ -114,6 +146,45 @@ function installInstrument() {
   w.__perf.mark = (name) => {
     w.__perf.events.push({ name, t: performance.now() });
     return w.__perf.events.length - 1;
+  };
+  /** Every card's own anchor, in document order. A card wrapper can precede
+   *  its anchor, and a card also owns chip anchors (tracker links), so each
+   *  card resolves to its FIRST anchor instead of trusting any anchor under
+   *  it — the same rule the UAT runner's card click uses. */
+  w.__perf.cardAnchors = (sel) => {
+    const anchors = [];
+    for (const host of document.querySelectorAll(`${sel} [data-thread-card]`)) {
+      const anchor = host.matches("a[href]") ? host : host.querySelector("a[href]");
+      if (anchor !== null && !anchors.includes(anchor)) anchors.push(anchor);
+    }
+    return anchors;
+  };
+  /** Resolve when `sel` appears ("present") or disappears ("absent"), with
+   *  the in-page timestamp. Polling from the driver would add up to two frames
+   *  of its own latency to every sample, which is most of the number being
+   *  measured at phone widths. */
+  w.__perf.watchSelector = (sel, want) => {
+    w.__perf.watchedAt = null;
+    const done = () => {
+      const present = document.querySelector(sel) !== null;
+      if (present !== (want === "present")) return false;
+      w.__perf.watchedAt = performance.now();
+      return true;
+    };
+    if (done()) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      const observer = new MutationObserver(() => {
+        if (done()) {
+          observer.disconnect();
+          resolve(true);
+        }
+      });
+      observer.observe(document, { childList: true, subtree: true });
+      setTimeout(() => {
+        observer.disconnect();
+        resolve(false);
+      }, 15_000);
+    });
   };
   /** Summarize the window between two marks. */
   w.__perf.window = (fromIndex, toIndex) => {
@@ -299,8 +370,10 @@ const results = { machine: null, boards: [] };
 
 results.machine = {
   chrome: await browser.version(),
-  viewport: PHONE,
+  viewport: VIEWPORT,
+  viewportMode: DESKTOP_VIEWPORT ? "desktop" : "phone",
   cpuThrottleRate: CPU,
+  paneCycles: PANE_CYCLES,
   base: BASE,
   userAgent: await (async () => {
     const p = await browser.newPage();
@@ -310,15 +383,46 @@ results.machine = {
   })(),
 };
 
-/** Open the harness at a phone viewport with the instrument installed. */
+/** Open the harness at the probe viewport with the instrument installed. */
 async function openBoard(query) {
   const page = await browser.newPage();
+  if (process.env.PROBE_DEBUG === "1") {
+    page.on("console", (m) => console.error("PAGE:", m.type(), m.text()));
+  }
   await page.evaluateOnNewDocument(installInstrument);
-  await page.setViewport({ ...PHONE, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await page.setViewport({
+    ...VIEWPORT,
+    deviceScaleFactor: 2,
+    isMobile: !DESKTOP_VIEWPORT,
+    hasTouch: !DESKTOP_VIEWPORT,
+  });
   const session = await page.createCDPSession();
   await session.send("Emulation.setCPUThrottlingRate", { rate: CPU });
   await page.goto(`${BASE}${query}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
   await page.waitForSelector("[data-thread-card]", { timeout: 60_000 });
+  // PROBE_EXTRA_CSS=<file> attaches a candidate stylesheet after load, for
+  // attribution runs: the difference against the baseline is that one rule.
+  if (process.env.PROBE_EXTRA_CSS) {
+    await page.addStyleTag({ content: readFile(process.env.PROBE_EXTRA_CSS, "utf8") });
+  }
+  // PROBE_DROP_SPOTLIGHT removes card-spotlight rules: "all" deletes the
+  // injected <style>, "focus" keeps only the pointer arm. An override
+  // stylesheet cannot stand in for this: the declarations stop applying but
+  // the :has() rules still invalidate every card, which is the cost under
+  // test.
+  const dropSpotlight = process.env.PROBE_DROP_SPOTLIGHT;
+  if (dropSpotlight !== undefined) {
+    await page.evaluate((mode) => {
+      const style = document.getElementById("focus-board-card-spotlight");
+      if (style === null) return;
+      if (mode === "all" || style.textContent === null) {
+        style.remove();
+        return;
+      }
+      const focusArm = style.textContent.indexOf("/* The focus arm:");
+      if (focusArm > 0) style.textContent = style.textContent.slice(0, focusArm);
+    }, dropSpotlight);
+  }
   await new Promise((r) => setTimeout(r, 800));
   return page;
 }
@@ -338,11 +442,149 @@ async function windowed(page, label, action) {
   }, from);
 }
 
+/** Open the thread pane once, timed from the card's own click to the pane
+ *  appearing. The click is dispatched on the card anchor itself rather than at
+ *  a computed point: a card's geometric centre can land on its done checkbox
+ *  or a chip, and a chip click opens the tracker instead of the pane. The
+ *  cost being measured is the pane's mount and paint, not pointer hit-testing.
+ *  `appearMs` is the felt latency; the window summary covers the whole span, so
+ *  long tasks, commits and dropped frames count the same work in both
+ *  directions. */
+async function paneOpenOnce(page, boardSel, cardIndex) {
+  const target = await page.evaluate(
+    (sel, index) => {
+      const anchors = window.__perf.cardAnchors(sel);
+      if (anchors.length === 0) return null;
+      const el = anchors[index % anchors.length];
+      el.scrollIntoView({ block: "center", inline: "center" });
+      return { title: el.getAttribute("href") };
+    },
+    boardSel,
+    cardIndex,
+  );
+  if (target === null) {
+    console.error("paneOpenOnce: no card anchor", boardSel);
+    return null;
+  }
+  // Settle the scroll before the timed window opens, so the board's own
+  // scroll cost is not attributed to the pane.
+  await page.evaluate(
+    () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+  );
+  const from = await page.evaluate(
+    (sel, index, paneSel) => {
+      const anchors = window.__perf.cardAnchors(sel);
+      const el = anchors[index % anchors.length];
+      // The card-render counter rides the probe-only ThreadCard wrapper, so it
+      // says whether opening the pane re-rendered the board.
+      globalThis.__cardRenders = 0;
+      const mark = window.__perf.mark("pane-open");
+      window.__perf.paneReady = window.__perf.watchSelector(paneSel, "present");
+      el.click();
+      return mark;
+    },
+    boardSel,
+    cardIndex,
+    PANE_SEL,
+  );
+  const appeared = await page.evaluate(() => window.__perf.paneReady);
+  if (appeared !== true) {
+    console.error("pane did not open", target.title, await page.evaluate(() => location.hash));
+    throw new Error(`pane did not open for ${target.title}`);
+  }
+  const appearMs = await page.evaluate(
+    (mark) => Math.round(window.__perf.watchedAt - window.__perf.events[mark].t),
+    from,
+  );
+  // Two frames is the pane's first painted commit.
+  await page.evaluate(
+    () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+  );
+  const paintedMs = await page.evaluate(
+    (mark) => Math.round(performance.now() - window.__perf.events[mark].t),
+    from,
+  );
+  await new Promise((r) => setTimeout(r, SETTLE_MS));
+  const summary = await page.evaluate((mark) => {
+    const to = window.__perf.mark("pane-open-end");
+    return { ...window.__perf.window(mark, to), cardRenders: globalThis.__cardRenders ?? null };
+  }, from);
+  return { direction: "open", appearMs, paintedMs, ...summary };
+}
+
+/** Close the pane once, timed from the close control's own click to the pane
+ *  leaving the DOM. The close control is clicked as an element too: the
+ *  compact header's is a 36px button whose centre is its glyph. */
+async function paneCloseOnce(page) {
+  const from = await page.evaluate(
+    (sel, paneSel) => {
+      const el = document.querySelector(sel);
+      if (el === null) return null;
+      globalThis.__cardRenders = 0;
+      const mark = window.__perf.mark("pane-close");
+      window.__perf.paneReady = window.__perf.watchSelector(paneSel, "absent");
+      el.click();
+      return mark;
+    },
+    PANE_CLOSE_SEL,
+    PANE_SEL,
+  );
+  if (from === null) {
+    console.error("paneCloseOnce: no close button");
+    return null;
+  }
+  await page.evaluate(() => window.__perf.paneReady);
+  const goneMs = await page.evaluate(
+    (mark) => Math.round(window.__perf.watchedAt - window.__perf.events[mark].t),
+    from,
+  );
+  await new Promise((r) => setTimeout(r, SETTLE_MS));
+  const summary = await page.evaluate((mark) => {
+    const to = window.__perf.mark("pane-close-end");
+    return { ...window.__perf.window(mark, to), cardRenders: globalThis.__cardRenders ?? null };
+  }, from);
+  return { direction: "close", appearMs: goneMs, paintedMs: goneMs, ...summary };
+}
+
+/** Median and spread of one direction's cycles. */
+function summarizeCycles(samples) {
+  if (samples.length === 0) return null;
+  const median = (values) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0
+      ? Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+      : sorted[mid];
+  };
+  const appears = samples.map((s) => s.appearMs);
+  return {
+    samples: samples.length,
+    appearMs: median(appears),
+    appearMinMs: Math.min(...appears),
+    appearMaxMs: Math.max(...appears),
+    paintedMs: median(samples.map((s) => s.paintedMs)),
+    wallMs: median(samples.map((s) => s.wallMs)),
+    commits: median(samples.map((s) => s.commits)),
+    cardRenders: median(samples.filter((s) => s.cardRenders !== null).map((s) => s.cardRenders)),
+    longTaskCount: median(samples.map((s) => s.longTaskCount)),
+    longTaskMs: median(samples.map((s) => s.longTaskMs)),
+    longestTaskMs: median(samples.map((s) => s.longestTaskMs)),
+    dropped: median(samples.map((s) => s.dropped)),
+  };
+}
+
 const boards = [
   { name: "columns-demo", query: "?demo=1", kind: "columns" },
   { name: "columns-base", query: "", kind: "columns" },
   { name: "parent-lanes-demo", query: "?groupBy=parent&demo=1", kind: "parent" },
 ];
+
+// PROBE_BOARDS=columns-demo narrows the run to the named boards (comma
+// separated), for a quick attribution pass instead of the full sweep.
+if (process.env.PROBE_BOARDS) {
+  const wanted = new Set(process.env.PROBE_BOARDS.split(","));
+  boards.splice(0, boards.length, ...boards.filter((b) => wanted.has(b.name)));
+}
 
 // PROBE_SCALE=N appends that query to every board, so the same probe sweeps a
 // board of realistic size (`?scale=300`) instead of the ~50-thread fixture.
@@ -451,8 +693,58 @@ for (const board of boards) {
     }
   });
 
+  // ── Open and close the thread pane, repeated, to a median ──
+  // The pane is conditionally mounted, so both directions are a full mount and
+  // a full unmount. The interaction above left a pane open; that first close
+  // is not measured.
+  if (PANE_CYCLES > 0) {
+    if ((await page.$(PANE_SEL)) !== null) await paneCloseOnce(page);
+    const opens = [];
+    const closes = [];
+    for (let i = 0; i < PANE_CYCLES; i += 1) {
+      const opened = await paneOpenOnce(page, boardSel, i);
+      if (opened === null) break;
+      opens.push(opened);
+      await new Promise((r) => setTimeout(r, 150));
+      const closed = await paneCloseOnce(page);
+      if (closed === null) break;
+      closes.push(closed);
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    entry.paneCycles = { open: summarizeCycles(opens), close: summarizeCycles(closes) };
+    entry.paneCycleSamples = { open: opens, close: closes };
+  }
+
+  // ── Attribution: CPU profile and Chrome trace per pane phase ──
+  // Off by default (a profile plus two traces per board is a slow run); the
+  // one-off attribution pass turns them on.
+  if (PANE_PROFILE) {
+    if ((await page.$(PANE_SEL)) !== null) await paneCloseOnce(page);
+    entry.paneProfiles = {
+      open: await cpuProfile(page, `${board.name}-pane-open`, async () => {
+        await paneOpenOnce(page, boardSel, 0);
+      }),
+      close: await cpuProfile(page, `${board.name}-pane-close`, async () => {
+        await paneCloseOnce(page);
+      }),
+    };
+  }
+  if (TRACE) {
+    if ((await page.$(PANE_SEL)) !== null) await paneCloseOnce(page);
+    entry.traces = {
+      ...(entry.traces ?? {}),
+      paneOpen: await traceBreakdown(page, `${board.name}-pane-open`, async () => {
+        await paneOpenOnce(page, boardSel, 0);
+      }),
+      paneClose: await traceBreakdown(page, `${board.name}-pane-close`, async () => {
+        await paneCloseOnce(page);
+      }),
+    };
+  }
+
   if (TRACE) {
     entry.traces = {
+      ...(entry.traces ?? {}),
       pan: await traceBreakdown(page, `${board.name}-pan`, async () => {
         await page.evaluate(() => {
           const b = document.querySelector("[data-parent-board], [data-columns-board]");
