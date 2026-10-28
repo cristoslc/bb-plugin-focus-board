@@ -23,9 +23,15 @@
 // PROBE_SETTLE_MS (default 500, the tail after the pane appears or goes),
 // PROBE_VIEWPORT=desktop (1440x900, the non-mobile control), PROBE_BOARDS
 // (comma-separated board names, for one board's worth of attribution work),
-// and PROBE_CPU=<n> (CDP Emulation.setCPUThrottlingRate — a mid-range phone
-// sits several times slower than the dev machine's M3 Pro, so the default runs
-// at 4x). The 390x844 viewport is the release harness's phone size.
+// PROBE_PANEL_WIDTH=<px> (pin the plugin panel's own width, the squeezed-panel
+// case whose pane covers the board as a panel-scoped sheet rather than a
+// window-wide one), and PROBE_CPU=<n> (CDP Emulation.setCPUThrottlingRate — a
+// mid-range phone sits several times slower than the dev machine's M3 Pro, so
+// the default runs at 4x). The 390x844 viewport is the release harness's phone
+// size. Each board's entry also carries `paneSheet`: the open pane's box, the
+// board's box, whether the pane covers it, and how many cards wear the
+// spotlight's focus marker, which is how a run says what the recede would
+// have cost.
 //
 // Attribution switches, for pricing one mechanism rather than the whole pane:
 // PROBE_EXTRA_CSS=<file> attaches a candidate stylesheet after load,
@@ -60,6 +66,12 @@ const PANE_CYCLES = Number(process.env.PROBE_PANE_CYCLES ?? "5");
 // commits and dropped frames are counted over the whole open+tail span so two
 // runs at different speeds are compared over the same amount of work.
 const SETTLE_MS = Number(process.env.PROBE_SETTLE_MS ?? "500");
+// PROBE_PANEL_WIDTH pins the plugin panel's own width, the way a squeezed bb
+// panel narrows on a wide window. It is how the panel-scoped sheet (the pane's
+// `absolute inset-0` path below PANE_SHEET_MAX_PANEL_WIDTH) gets priced: on a
+// desktop viewport the compact media query never fires, so without this switch
+// that sheet cannot be reached at all.
+const PANEL_WIDTH = process.env.PROBE_PANEL_WIDTH ? Number(process.env.PROBE_PANEL_WIDTH) : null;
 const PANE_SEL = 'aside[aria-label^="Thread:"]';
 const PANE_CLOSE_SEL = '[aria-label="Close thread pane"]';
 
@@ -390,6 +402,25 @@ async function openBoard(query) {
     page.on("console", (m) => console.error("PAGE:", m.type(), m.text()));
   }
   await page.evaluateOnNewDocument(installInstrument);
+  if (PANEL_WIDTH !== null) {
+    // A stylesheet, not inline styles: the pane remounts the panel, which
+    // wipes inline overrides. Registered before any app code so the squeeze is
+    // in place for the board's first layout; a squeeze applied after load
+    // would leave the first open measuring a wide panel.
+    await page.evaluateOnNewDocument((width) => {
+      const inject = () => {
+        const tag = document.createElement("style");
+        tag.id = "probe-panel-width";
+        tag.textContent = `[data-bb-plugin="focus-board"] { width: ${width}px !important; min-width: ${width}px !important; max-width: ${width}px !important; }`;
+        document.head.append(tag);
+      };
+      if (document.head === null) {
+        document.addEventListener("DOMContentLoaded", inject, { once: true });
+        return;
+      }
+      inject();
+    }, PANEL_WIDTH);
+  }
   await page.setViewport({
     ...VIEWPORT,
     deviceScaleFactor: 2,
@@ -546,8 +577,47 @@ async function paneCloseOnce(page) {
   return { direction: "close", appearMs: goneMs, paintedMs: goneMs, ...summary };
 }
 
-/** Median and spread of one direction's cycles. */
-function summarizeCycles(samples) {
+/** Which box the open pane occupies, and whether that box covers the board.
+ *  The geometric half of "could an operator see a recede behind this pane at
+ *  all": a `coversBoard` true with an opaque background means every card the
+ *  spotlight dims is hidden while the pane is up. */
+async function paneSheetCoverage(page, boardSel) {
+  return page.evaluate(
+    (paneSel, boardSel) => {
+      const pane = document.querySelector(paneSel);
+      const board = document.querySelector(boardSel);
+      if (pane === null || board === null) return null;
+      const p = pane.getBoundingClientRect();
+      const b = board.getBoundingClientRect();
+      const style = getComputedStyle(pane);
+      return {
+        // The placement tokens decide which of the pane's three shapes this is:
+        // the compact window sheet, the panel-scoped sheet, or side by side.
+        panePlacement: pane.className.match(/\b(fixed|absolute|relative)\b/)?.[0] ?? null,
+        pane: { x: Math.round(p.x), y: Math.round(p.y), w: Math.round(p.width), h: Math.round(p.height) },
+        board: { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) },
+        paneBackground: style.backgroundColor,
+        paneOpacity: style.opacity,
+        coversBoard:
+          p.x <= b.x &&
+          p.y <= b.y &&
+          p.x + p.width >= b.x + b.width &&
+          p.y + p.height >= b.y + b.height,
+        // The marker the focus recede arms on: 1 while the pane holds a card,
+        // which is the board-wide restyle under test.
+        focusSolidCards: document.querySelectorAll("[data-focus-solid]").length,
+        // The pointer arm's own condition. A click leaves the pointer over the
+        // card it hit, so a latched `:hover` can arm the recede through the
+        // other arm and mask what the focus marker contributed.
+        hoveredCards: document.querySelectorAll("div[data-thread-card]:hover").length,
+      };
+    },
+    PANE_SEL,
+    boardSel,
+  );
+}
+
+/** Median and spread of one direction's cycles. */function summarizeCycles(samples) {
   if (samples.length === 0) return null;
   const median = (values) => {
     const sorted = [...values].sort((a, b) => a - b);
@@ -705,6 +775,10 @@ for (const board of boards) {
       const opened = await paneOpenOnce(page, boardSel, i);
       if (opened === null) break;
       opens.push(opened);
+      // Read once, from the first open: the pane's box and the board's, so the
+      // run itself says which sheet shape it measured and whether any of the
+      // board could be seen behind it.
+      if (i === 0) entry.paneSheet = await paneSheetCoverage(page, boardSel);
       await new Promise((r) => setTimeout(r, 150));
       const closed = await paneCloseOnce(page);
       if (closed === null) break;
