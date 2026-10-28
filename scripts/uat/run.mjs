@@ -689,6 +689,93 @@ const pageRightGutter = ({ card, minInset }) => {
 };
 
 /**
+ * Issue #104's chip placement contract, measured in the real card: the issues
+ * region stays inside the midpoint + gutter cap (or claims the whole row when
+ * it holds a single ticket name), the PRs region ends at the row's right edge
+ * and is bumped to the next row only when the issues claim the room, and the
+ * tag block is right-anchored at no more than 75% of the row, under the PR
+ * when there is one. Also asserts the id text never breaks mid-token, that a
+ * lone long id scaled instead of breaking, and that a tag keeps its text size
+ * and only breaks at its hyphens.
+ */
+const pageChipPlacement = ({ card, cap, prBumped, tagsUnderPr, tagsSameRow, shrinks }) => {
+  const cardEl = document.querySelector(`[data-thread-card="${card}"]`);
+  if (!cardEl) return { ok: false, failures: [`no such card (${card})`] };
+  const area = cardEl.querySelector("[data-ticket-chip-area]");
+  if (!area) return { ok: false, failures: ["the card has no chip area"] };
+  const areaRect = area.getBoundingClientRect();
+  const style = getComputedStyle(area);
+  const left = areaRect.left + Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.borderLeftWidth);
+  const right = areaRect.right - Number.parseFloat(style.paddingRight) - Number.parseFloat(style.borderRightWidth);
+  const width = right - left;
+  const midpoint = left + width / 2;
+  const region = (name) => cardEl.querySelector(`[data-ticket-chip-region="${name}"]`);
+  const rect = (el) => (el === null ? null : el.getBoundingClientRect());
+  const issues = rect(region("issues"));
+  const pulls = rect(region("pulls"));
+  const tags = rect(region("tags"));
+  const failures = [];
+
+  const ids = Array.from(cardEl.querySelectorAll("[data-ticket-id]")).filter(
+    (el) => el.closest("[data-ticket-tag]") === null,
+  );
+  for (const id of ids) {
+    const box = id.getBoundingClientRect();
+    if (box.height > 18) failures.push(`id ${id.textContent} wraps across lines (${Math.round(box.height)}px tall)`);
+    if (!(getComputedStyle(id).whiteSpace ?? "").includes("nowrap")) {
+      failures.push(`id ${id.textContent} may break mid-token`);
+    }
+  }
+
+  if (cap === "midpoint") {
+    if (issues === null) failures.push("no issues region");
+    else if (issues.right > midpoint + 1) {
+      failures.push(`issues region crosses the midpoint (right ${Math.round(issues.right)} > ${Math.round(midpoint)})`);
+    }
+  } else if (issues !== null && issues.right > right + 1) {
+    failures.push("issues region overruns the row");
+  }
+
+  if (issues !== null && pulls !== null && prBumped !== undefined) {
+    const bumped = pulls.top > issues.top + 2;
+    if (bumped !== prBumped) failures.push(`PR ${bumped ? "was" : "was not"} bumped to the next row`);
+  }
+  if (pulls !== null && pulls.right < right - 2) {
+    failures.push(`pulls region is not right-anchored (${Math.round(pulls.right)} < ${Math.round(right)})`);
+  }
+
+  const tagIds = Array.from(cardEl.querySelectorAll("[data-ticket-tag] [data-ticket-id]"));
+  for (const tag of tagIds) {
+    if (Number.parseFloat(getComputedStyle(tag).fontSize) < 9.9) {
+      failures.push(`tag ${tag.textContent} shrank its text`);
+    }
+    if (!(tag.textContent ?? "").includes("-") && tag.getClientRects().length > 1) {
+      failures.push(`tag ${tag.textContent} broke with no hyphen to break at`);
+    }
+  }
+  if (tags !== null) {
+    if (tags.right < right - 2) failures.push("tag block is not right-anchored");
+    if (tags.width > width * 0.75 + 1) failures.push(`tag block claims ${Math.round((tags.width / width) * 100)}% of the row`);
+    if (tagsUnderPr === true && pulls !== null && tags.top < pulls.bottom - 1) {
+      failures.push("tag block is not below the PR block");
+    }
+    if (tagsSameRow === true && issues !== null && Math.abs(tags.top - issues.top) > 2) {
+      failures.push("tag block did not ride the first row");
+    }
+  } else if (tagsUnderPr === true || tagsSameRow === true) {
+    failures.push("no tags region");
+  }
+
+  if (shrinks === true) {
+    const flow = cardEl.querySelector("[data-ticket-ids]");
+    const size = flow === null ? 10 : Number.parseFloat(getComputedStyle(flow).fontSize);
+    if (!(size < 9.9)) failures.push(`the long id did not scale (${size}px)`);
+  }
+
+  return { ok: failures.length === 0, failures, width: Math.round(width) };
+};
+
+/**
  * A drop whose payload carries no card id — the shape of the failure where the
  * board cannot attribute the gesture to a card. The rank type is still set, so
  * the drop is accepted, but the id is empty.
@@ -2588,6 +2675,10 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
     if (rule.glyph_glue !== undefined) {
       const got = await page.evaluate(pageGlyphGlue);
       expect("open glyph glued to the code text", got.ok === true, got.reason);
+    }
+    if (rule.chip_placement !== undefined) {
+      const got = await page.evaluate(pageChipPlacement, rule.chip_placement);
+      expect("chip placement contract (issue #104)", got.ok === true, (got.failures ?? []).join("; "));
     }
     if (rule.live_region !== undefined) {
       const text = await page.evaluate(pageLiveRegion);

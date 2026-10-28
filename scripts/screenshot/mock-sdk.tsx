@@ -324,6 +324,34 @@ let simArchived: readonly SimThread[] = [];
 /** Ticket-chip store links (the app's link_list): the chip probe's card of
  * long external labels in demo mode — the overflow case that a wide label
  * ("cove 0dac60e") poses; empty runs keep the UAT fixtures pinned. */
+const github = (issue: number, kind: "issue" | "pull") => ({
+  tracker: "github" as const,
+  repo: "cristoslc/bb-plugin-focus-board",
+  issue,
+  kind,
+  href: `https://github.com/cristoslc/bb-plugin-focus-board/${kind === "pull" ? "pull" : "issues"}/${issue}`,
+  createdAt: "2026-10-20T00:00:00.000Z",
+  source: "agent" as const,
+});
+/** An external tracker ITEM: an item URL plus a WORD-123 display label. */
+const externalItem = (label: string, number: number) => ({
+  tracker: "external" as const,
+  url: `https://forge.example/org/app/issues/${number}`,
+  hostname: "forge.example",
+  label,
+  createdAt: "2026-10-20T00:00:00.000Z",
+  source: "agent" as const,
+});
+/** A free-text label chip: no item number, no tracker key shape. */
+const externalTag = (label: string) => ({
+  tracker: "external" as const,
+  url: `https://linear.app/t/${label}`,
+  hostname: "linear.app",
+  label,
+  createdAt: "2026-10-20T00:00:00.000Z",
+  source: "operator" as const,
+});
+
 const simLinks: Record<string, unknown> = DEMO_MODE
   ? {
       thr_chips_cove: [
@@ -360,6 +388,27 @@ const simLinks: Record<string, unknown> = DEMO_MODE
           source: "operator",
         },
       ],
+      // Issue #104's placement fixtures — see SIM_DEMO_THREADS.
+      thr_chip_typical: [github(142, "issue"), github(87, "pull"), externalTag("focus-board")],
+      thr_chip_cluster: [github(142, "issue"), github(102, "issue"), github(87, "pull")],
+      thr_chip_wrap: [
+        github(1420, "issue"),
+        github(23841, "issue"),
+        github(8675309, "issue"),
+        github(4418, "issue"),
+        github(87, "pull"),
+      ],
+      thr_chip_long: [externalItem("MOBDEVLONGPLATFORM-100323", 100323), github(87, "pull")],
+      thr_chip_shrink: [
+        externalItem("MOBDEVSERVICENOTIFICATIONSPREFERENCES-100323", 100323),
+      ],
+      thr_chip_tags: [
+        github(142, "issue"),
+        github(87, "pull"),
+        externalTag("mobile-notifications-badging-rollout-v12-alpha"),
+        externalTag("triage"),
+      ],
+      thr_chip_tag_row: [github(142, "issue"), externalTag("badging")],
     }
   : {};
 

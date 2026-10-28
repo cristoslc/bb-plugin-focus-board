@@ -11,6 +11,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 #### Cards and chips
 
+- **The card's ticket chips now land in a fixed shape: issues on the first row's left, PRs on its right, tags in the bottom-right corner.** Several issue ids stay inside the left half and spill onto fresh lines instead of sliding under the PR chip. A long ticket name holds one line by shrinking its text, and a tag wraps only at its hyphens.
+
 - **A family's fold and its idle-children filter now follow you to every bb window and machine.** They used to save only in browser localStorage, so a second machine opened every family expanded; the choice now saves to the board's server state, and a fold in one window lands live in the others.
 
 ### Fixed

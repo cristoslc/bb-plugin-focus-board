@@ -9,6 +9,7 @@ import {
   ticketChipIconHref,
   ticketChipIdText,
   ticketStatusRepo,
+  ticketRefNamesItem,
 } from "../lib/ticket-chips";
 import type { TicketRef } from "../lib/tickets";
 
@@ -241,5 +242,67 @@ describe("ticketChipRows — fail loud on data bugs", () => {
     expect(() =>
       ticketChipRows([{ raw: "PROJ-1", tracker: "external" } as TicketRef]),
     ).toThrow(/PROJ-1/);
+  });
+});
+
+describe("ticketChipRows — free-text labels become tags, not items (issue #104)", () => {
+  const tagRef = (overrides: Partial<TicketRef> = {}): TicketRef => ({
+    raw: "triage",
+    tracker: "external",
+    hostname: "linear.app",
+    href: "https://linear.app/t/board",
+    ...overrides,
+  });
+
+  it("a label with no item number lands in the row's tags, never its issues chip", () => {
+    const rows = ticketChipRows([tagRef()]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].issues).toBeUndefined();
+    expect(rows[0].pulls).toBeUndefined();
+    expect(rows[0].tags?.map((ref) => ref.raw)).toEqual(["triage"]);
+  });
+
+  it("an item URL stays an item chip beside the same provider's tag", () => {
+    const rows = ticketChipRows([
+      forgejoRef({ raw: "#7" }),
+      tagRef({ raw: "triage", hostname: "forge.example", href: "https://forge.example/org/app/labels/triage" }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].issues?.refs.map((ref) => ref.raw)).toEqual(["#7"]);
+    expect(rows[0].tags?.map((ref) => ref.raw)).toEqual(["triage"]);
+  });
+
+  it("a numbered external ref is an item even when its label reads like a key", () => {
+    const rows = ticketChipRows([
+      forgejoRef({ raw: "MOBDEVLONG-100323", href: "https://forge.example/org/app/issues/100323" }),
+    ]);
+    expect(rows[0].tags).toBeUndefined();
+    expect(rows[0].issues?.refs.map((ref) => ref.raw)).toEqual(["MOBDEVLONG-100323"]);
+  });
+
+  it("a WORD-123 label with no number is still a ticket, not a tag", () => {
+    const rows = ticketChipRows([
+      tagRef({ raw: "PROJ-142", href: "https://linear.app/t/PROJ-142" }),
+    ]);
+    expect(rows[0].tags).toBeUndefined();
+    expect(rows[0].issues?.refs.map((ref) => ref.raw)).toEqual(["PROJ-142"]);
+  });
+
+  it("a hyphenated slug label is a tag even though it carries a hyphen", () => {
+    const rows = ticketChipRows([
+      tagRef({ raw: "mobile-notifications-badging-rollout-v12-alpha" }),
+    ]);
+    expect(rows[0].issues).toBeUndefined();
+    expect(rows[0].tags?.map((ref) => ref.raw)).toEqual([
+      "mobile-notifications-badging-rollout-v12-alpha",
+    ]);
+  });
+
+  it("ticketRefNamesItem agrees with the grouping", () => {
+    expect(ticketRefNamesItem(tagRef())).toBe(false);
+    expect(ticketRefNamesItem(forgejoRef())).toBe(true);
+    expect(ticketRefNamesItem(githubRef())).toBe(true);
+    expect(ticketRefNamesItem(forgejoRef({ raw: "MOBDEVLONG-100323", number: 100323 }))).toBe(true);
+    expect(ticketRefNamesItem(tagRef({ raw: "PROJ-142" }))).toBe(true);
   });
 });
