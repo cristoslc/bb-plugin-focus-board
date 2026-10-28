@@ -22,6 +22,7 @@ import { cardTicketRefs, type ThreadLink } from "../lib/link-metadata";
 import { describeWakeAt } from "../lib/snooze";
 import { usePortalScopeProps } from "../lib/portal-scope";
 import { deriveCardStatus } from "./card-status";
+import { usePaneCoversBoard } from "./pane-sheet-coverage";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
 import { useTicketChipFit } from "./use-ticket-chip-fit";
 import { useWallpaperActive } from "./wallpaper-contrast";
@@ -1245,6 +1246,14 @@ export function ThreadCardImpl({
   // the content without ever making the surface transparent, so it is not
   // a transparency rule and focus never has to beat it.
   const wallpaperActive = useWallpaperActive();
+  // While the compact pane covers the board as an opaque full-window sheet,
+  // nothing behind it shows, so the marker below is withheld: arming it
+  // restyles and repaints every card for a recede no one can see (issue #310).
+  // It is withheld, never set and cleared: a marker that flashes inside the
+  // sheet's lifetime is the same bug with extra steps. A squeezed panel's
+  // panel-scoped sheet is deliberately not covered here; the numbers behind
+  // that call are in components/pane-sheet-coverage.tsx.
+  const paneCoversBoard = usePaneCoversBoard();
   // The focus spotlight (see components/card-spotlight.ts): the thread pane holds
   // ONE thread open (`activeThreadId`) — the click-into surface, the same
   // "focused on one thread" state the hover surface serves for the pointer.
@@ -1256,12 +1265,18 @@ export function ThreadCardImpl({
   // surface, sweep-highlight keeps its amber read, and a transport ghost
   // never claims either — two copies of one thread would both light up
   // during a dissolve.
+  // The marker is withheld entirely while the compact pane covers the board as
+  // an opaque sheet (`paneCoversBoard` above): the recede it arms is invisible
+  // behind the sheet, and arming it restyles every card on the board. The
+  // solid surface below is untouched, so nothing about the held card itself
+  // changes.
   const focusHeld =
     activeThreadId !== undefined &&
     activeThreadId !== null &&
     (thread.id === activeThreadId ||
       children.some((child) => child.id === activeThreadId));
-  const focusSolid = !isTransportGhost && (focusHeld || familySolid === true);
+  const focusSolid =
+    !isTransportGhost && !paneCoversBoard && (focusHeld || familySolid === true);
 
   // The card statuses in one object (components/card-status.ts); the fade
   // systems consume `status.faded` and `status.spotlightImmune` (the marker
