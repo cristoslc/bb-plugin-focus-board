@@ -49,7 +49,10 @@ export const CARD_SPOTLIGHT_RULE = `/* The card spotlight (issue #123): while ON
    no pointer in play; the marker also feeds data-spotlight-immune, and the
    marker is excluded here too, so the focused family never recedes. No
    debounce: a click cannot sweep, so the recede rides the card's own 150ms
-   base transition in both directions. */
+   base transition in both directions. Nothing here is scoped down for a pane
+   that covers the board: the marker itself is withheld instead (issue #310,
+   components/pane-sheet-coverage.tsx), because this arm's cost is paid by
+   every card's opacity changing, whoever selects them. */
 [data-columns-board]:has(div[data-focus-solid]) div[data-thread-card]:not(:hover):not([data-focus-solid]):not([data-spotlight-immune]),
 [data-parent-board]:has(div[data-focus-solid]) div[data-thread-card]:not(:hover):not([data-focus-solid]):not([data-spotlight-immune]) {
   opacity: 0.7;

@@ -197,6 +197,7 @@ import {
 } from "./lib/family-state";
 import { usePrefersDarkScheme } from "./components/ui/hooks/use-media-query";
 import { WallpaperActiveProvider } from "./components/wallpaper-contrast";
+import { PaneSheetCoverageProvider } from "./components/pane-sheet-coverage";
 import { WallpaperPaintLayer } from "./components/wallpaper-paint";
 import { EmptyState } from "./components/empty-state";
 import { SettingsModal, type SettingsTab } from "./components/settings-modal";
@@ -3311,6 +3312,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   const activeWallpaper = wallpaperLayerOf(wallpaper);
   return (
     <WallpaperActiveProvider active={activeWallpaper !== null}>
+    {/* Publishes whether the compact pane covers the board, so the board can
+        skip the card spotlight's whole-board recede while it cannot be seen
+        (issue #310). */}
+    <PaneSheetCoverageProvider>
     <div
       // Always relative: the panel-scoped pane sheet (a narrow panel on a
       // desktop window) anchors to this root, and so do the wallpaper
@@ -3816,6 +3821,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         );
       })()}
     </div>
+    </PaneSheetCoverageProvider>
     </WallpaperActiveProvider>
   );
 }
