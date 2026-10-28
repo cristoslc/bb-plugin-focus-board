@@ -12,7 +12,7 @@ supersedes: docs/plans/2026-10-15-interaction-surface-decision-layer-thr_3a4twse
 
 The design note that [issue #159](https://github.com/cristoslc/bb-plugin-focus-board/issues/159) asks for before implementation. It covers the surface's states for desktop and phone and the mechanics that could serve each one. It states options and a recommendation per state, and it leaves the final shape to the operator. No component changes ride with it.
 
-This note is bluework. It carries the thinking from a draft on an unmerged branch (`bb/fix-focusboard-ux-thr_3a4twsefrp`, commit `690b4a8`) forward to `dev` at `77e8f57`, corrects what the two weeks since then changed, and supersedes it. The branch also holds `PURPOSE.md` (commit `6e10611`), the attention philosophy the issue cites; that file does not exist on `dev`, so this note quotes the philosophy it depends on rather than linking a file that is not there.
+This note is bluework. It carries the thinking from a draft on an unmerged branch (`bb/fix-focusboard-ux-thr_3a4twsefrp`, commit `690b4a8`) forward to `dev` at `77e8f57`, corrects what the two weeks since then changed, and supersedes it. The branch also holds `PURPOSE.md` (commit `6e10611`), the attention philosophy the issue cites, which now lives on `dev` at [PURPOSE.md](../../PURPOSE.md); this note quotes the philosophy it depends on and links it.
 
 ## Governing rule
 

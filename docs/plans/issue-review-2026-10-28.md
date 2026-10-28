@@ -60,7 +60,7 @@ What is true now, cited:
 - `components/pending-interaction-card.tsx` is 1086 lines; `components/decided-questions-card.tsx` is 232.
 - Both wear the same generic casing: `rounded-lg border border-border bg-card shadow-sm` at `components/pending-interaction-card.tsx:1010` and `components/decided-questions-card.tsx:160`. No amber anywhere in either file. A repo-wide grep for `amber` hits `board.tsx`, `sweep-banners.tsx`, `group-boxes.ts`, `card-transport.ts` and the strip's own halo, never the two cards. So #97's amber split never landed, and #97 was closed on 2026-10-15 as superseded by #159 (four seconds before #159 was filed) rather than as done.
 - `docs/plans/` holds fifteen notes and none concerns this surface.
-- The correction to the triage note: branch `bb/fix-focusboard-ux-thr_3a4twsefrp` carries two commits that never landed, `6e10611` (adds `PURPOSE.md`, the attention philosophy the issue cites) and `690b4a8` (adds a 112-line draft design note, `docs/plans/2026-10-15-interaction-surface-decision-layer-thr_3a4twsefrp.md`). Neither is an ancestor of `dev`, so `PURPOSE.md` does not exist on `dev` at all. The issue asks for a design note that exists, unmerged and unseen, on a two-week-old branch.
+- The correction to the triage note: branch `bb/fix-focusboard-ux-thr_3a4twsefrp` carries two commits that never landed, `6e10611` (adds `PURPOSE.md`, the attention philosophy the issue cites) and `690b4a8` (adds a 112-line draft design note, `docs/plans/2026-10-15-interaction-surface-decision-layer-thr_3a4twsefrp.md`). Neither was an ancestor of `dev` at review time, so `PURPOSE.md` was not on `dev` then; it has since landed as [PURPOSE.md](../PURPOSE.md), and the draft note stays superseded. The issue asks for a design note that exists, unmerged and unseen, on a two-week-old branch.
 
 That changes the shape of the work: #159 is a recovery, not a start. The design note in this PR carries the stale note's thinking forward at current line numbers instead of duplicating it blind.
 
@@ -145,6 +145,6 @@ Implement D, gated by the mock. It is a small change on a skeleton that already 
 - No issue closed, no comment posted, no label applied. Those are your calls, and each one needs the word in the table above.
 - No changelog bullet: docs earn none, per `CONTRIBUTING.md:91`.
 - No coverage-matrix row: no workflow path changed, per `CONTRIBUTING.md:72`.
-- The stale `bb/fix-focusboard-ux-thr_3a4twsefrp` branch is untouched. Nothing was rebased, cherry-picked, or deleted, so its `PURPOSE.md` still exists only there and the choice about landing it stays yours.
+- The stale `bb/fix-focusboard-ux-thr_3a4twsefrp` branch is untouched. Nothing was rebased, cherry-picked, or deleted, so its `PURPOSE.md` stayed there at review time and the choice about landing it was yours; it has since landed on `dev` as [PURPOSE.md](../PURPOSE.md).
 
 > AGENT GENERATED CONTENT
