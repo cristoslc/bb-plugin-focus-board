@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **The plugin's long description is rewritten around its value.** The overview trades its nested feature lists and semicolon-heavy lines for a single value sentence and a few bold-led capability bullets, matching the shape the top community listings use.
+
 ### Fixed
 
 ## [1.7.1] - 2026-10-28
