@@ -225,9 +225,7 @@ merging into `dev`, releasing, changelog writing, or tagging.
   another tree's gate run, or by a stray harness from an earlier session,
   fails the run loudly instead of producing wrong-tree evidence (issue
   #116).
-- On any gate failure, keep the artifacts (`docs/uat/` and
-  `docs/release-safety/`) for the follow-up, leave the tree clean, and
-  notify per the release notification contract naming the gate.
+- On any gate failure, keep the artifacts (`docs/uat/` and `docs/release-safety/`) for the follow-up, leave the tree clean, and notify: the gate publishes one message naming the failed gate and its verdict to the operator's ntfy topic, so the failure reaches the operator even when a thread's own report arrives truncated. The channel is the contract in `~/.agents/agents-md-detail/ntfy.md`; config lives in the gitignored `~/.config/focus-board/ntfy.env` (`NTFY_TOPIC` required, `NTFY_TOKEN` and `NTFY_SERVER` optional, `NTFY_ENV_FILE` relocates it). `scripts/release-safety.mjs` runs the chain stage by stage and names the failed stage (`release-safety:build`, `release-safety:uat`, and so on), `npm run gates`, `npm run uat`, and `npm run release-shots` notify on their own when run directly, and a nested gate stays quiet so a `release-safety` run sends exactly one message. No `NTFY_TOPIC` is a silent no-op, so an offline checkout and CI without secrets are unaffected; a publish failure is logged and never changes the gate's exit code.
 
 ## 3. Finalize commit (on the dev lineage)
 

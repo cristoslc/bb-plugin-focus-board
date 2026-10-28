@@ -29,6 +29,7 @@ import {
   partitionSuites,
   withLoadQuery,
 } from "./load-conditions.mjs";
+import { notifyGateFailure } from "../release-notify.mjs";
 
 const CHROME =
   process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
@@ -3332,4 +3333,10 @@ if (skippedManual.length > 0) {
   for (const file of skippedManual) console.log(`  ${file}`);
 }
 console.log(`reports:\n${outFiles.map((f) => `  ${f}`).join("\n")}`);
+if (failed > 0) {
+  // The release notification contract (release.md §2b): a failing UAT sweep
+  // names its gate on the operator's channel. Best effort; the exit code
+  // below is the gate's own.
+  await notifyGateFailure({ gate: "uat", detail: `${failed} step(s) failed` });
+}
 process.exit(failed === 0 ? 0 : 1);

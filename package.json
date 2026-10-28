@@ -11,7 +11,7 @@
     "preuat": "node scripts/check-node-modules.mjs",
     "uat": "node scripts/uat/run.mjs",
     "release-shots": "node scripts/uat/release-shots.mjs",
-    "release-safety": "node scripts/check-node-modules.mjs && npm run build && npm run uat && npm run release-shots",
+    "release-safety": "node scripts/release-safety.mjs",
     "typecheck": "tsc --noEmit",
     "gates": "node scripts/security-gates.mjs"
   },
