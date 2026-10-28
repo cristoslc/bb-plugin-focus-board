@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { HOST_PANEL_ATTR } from "./host-link-glue";
+import { useIsCompactViewport } from "./ui/hooks/use-compact-viewport";
 import {
   clampedWallpaperFocus,
   clampedWallpaperZoom,
@@ -285,6 +286,39 @@ const VIEWPORT_MAX_HEIGHT = 180;
  *  space) without colliding with neighboring picker content. */
 const VIEWPORT_RIM = 24;
 
+/**
+ * The preview box's own size. The image is capped at VIEWPORT_MAX_HEIGHT
+ * tall, and the rim around it leaves the crop window room to overhang.
+ *
+ * Desktop keeps the shipped content-box formula untouched: the padding adds
+ * to the declared width, so the preview is always 96px wider than the image
+ * cap it names. That overhang is harmless in the desktop dialog's wide panel
+ * and changing it would shift a shipped surface's pixels.
+ *
+ * A compact viewport cannot afford it — the rim alone pushed the preview
+ * past a phone-width picker (measured: 254px of preview inside a 176px
+ * picker) — so the box takes `border-box` and its declared width carries the
+ * rim inside the container's width, keeping the image under the same 180px
+ * height cap.
+ */
+export function wallpaperPreviewStyle(
+  imageAspect: number,
+  compact: boolean,
+): CSSProperties {
+  const imageCap = (VIEWPORT_MAX_HEIGHT * imageAspect).toFixed(2);
+  if (compact) {
+    return {
+      boxSizing: "border-box",
+      width: `min(100%, ${(VIEWPORT_MAX_HEIGHT * imageAspect + VIEWPORT_RIM * 2).toFixed(2)}px)`,
+      padding: VIEWPORT_RIM,
+    };
+  }
+  return {
+    width: `calc(min(100%, ${imageCap}px) + ${VIEWPORT_RIM * 2}px)`,
+    padding: VIEWPORT_RIM,
+  };
+}
+
 interface ViewportProps {
   /** The painted layer (null = no wallpaper: an empty outline). */
   layer: WallpaperLayer | null;
@@ -327,6 +361,7 @@ export function WallpaperViewport({
   const imageBoxRef = useRef<HTMLDivElement | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinchStart = useRef<{ distance: number; zoom: number } | null>(null);
+  const isCompactViewport = useIsCompactViewport();
   const boardAspect = geometry?.windowAspect ?? window.innerWidth / window.innerHeight;
   const resolvedUrl = layer === null ? "" : resolvedWallpaperUrl(layer, dark);
   const measured = useWallpaperImageRatio(resolvedUrl);
@@ -402,10 +437,7 @@ export function WallpaperViewport({
       data-wallpaper-viewport=""
       aria-label="Wallpaper viewport preview"
       className="relative mx-auto select-none"
-      style={{
-        width: `calc(min(100%, ${(VIEWPORT_MAX_HEIGHT * imageAspectValue).toFixed(2)}px) + ${VIEWPORT_RIM * 2}px)`,
-        padding: VIEWPORT_RIM,
-      }}
+      style={wallpaperPreviewStyle(imageAspectValue, isCompactViewport)}
     >
       {layer === null ? (
         <div className="flex h-32 items-center justify-center rounded-md border border-dashed border-border text-xs text-muted-foreground">

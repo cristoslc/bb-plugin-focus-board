@@ -30,6 +30,7 @@ import {
   type SweepUnitKey,
 } from "@/components/preferences";
 import { cn } from "@/lib/utils";
+import { useIsCompactViewport } from "@/components/ui/hooks/use-compact-viewport";
 
 /**
  * Focus Board's settings: one modal with a left tab rail (Behavior,
@@ -38,6 +39,12 @@ import { cn } from "@/lib/utils";
  * it on the tab the icon asked for: a pulsing gift deep-links to What's new,
  * a plain gear opens on Behavior. State lives in the app shell; this
  * component renders the selection it is given and reports switches back.
+ *
+ * Below 768px the dialog already renders a bottom sheet (components/ui/
+ * dialog.tsx), so the inner layout stacks to match: the rail turns into a
+ * horizontally scrolling strip above the panel, the body drops the desktop's
+ * pinned 440px and lets the sheet carry the height, and the panel stops
+ * being its own nested scroller so the sheet is the one scroll surface.
  */
 export type SettingsTab = "behavior" | "appearance" | "whats-new" | "about";
 
@@ -153,6 +160,7 @@ export function SettingsModal({
   onSetLaneDirection: (value: "vertical" | "horizontal") => void;
   onWallpaperChange: (next: WallpaperSettings) => void;
 }) {
+  const isCompactViewport = useIsCompactViewport();
   if (!open) return null;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,13 +170,26 @@ export function SettingsModal({
         </DialogHeader>
         <div
           data-settings-body
-          style={{ height: "440px" }}
-          className="flex min-w-0 gap-4 overflow-hidden"
+          // The desktop dialog frames a fixed-height body so switching tabs
+          // never resizes the modal. A phone sheet has no such frame to
+          // defend: a pinned 440px inside it was shorter than the content and
+          // taller than the sheet's own content, so compact lets the sheet
+          // size itself. The inline pin is omitted, not set to "auto", so the
+          // compact body carries no phantom height.
+          style={isCompactViewport ? undefined : { height: "440px" }}
+          className={cn(
+            "flex min-w-0 gap-4",
+            isCompactViewport ? "flex-col" : "overflow-hidden",
+          )}
         >
           <div
             role="tablist"
             aria-label="Focus Board settings sections"
-            className="flex w-40 shrink-0 flex-col items-stretch gap-1 self-start"
+            className={cn(
+              isCompactViewport
+                ? "flex min-w-0 shrink-0 flex-row items-stretch gap-1 overflow-x-auto pb-1"
+                : "flex w-40 shrink-0 flex-col items-stretch gap-1 self-start",
+            )}
           >
             {TABS.map((entry) => (
               <button
@@ -179,17 +200,33 @@ export function SettingsModal({
                 aria-current={tab === entry.id ? "page" : undefined}
                 onClick={() => onTabChange(entry.id)}
                 className={cn(
-                  "w-full rounded-r-md border-l-2 py-2 pl-3 pr-2 text-left text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  isCompactViewport
+                    ? // A strip: the desktop's left accent bar rotates under
+                      // the label, and each tab keeps its own width so four
+                      // short labels stay on one row and scroll sideways
+                      // instead of wrapping.
+                      "shrink-0 whitespace-nowrap rounded-md border-b-2 px-3 py-2"
+                    : "w-full rounded-r-md border-l-2 py-2 pl-3 pr-2 text-left",
                   tab === entry.id
                     ? "border-primary bg-accent/60 text-foreground"
-                    : "border-transparent pl-3.5 text-muted-foreground hover:bg-accent/40 hover:text-foreground",
+                    : cn(
+                        "border-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground",
+                        isCompactViewport ? "" : "pl-3.5",
+                      ),
                 )}
               >
                 {entry.label}
               </button>
             ))}
           </div>
-          <div role="tabpanel" className="min-w-0 flex-1 overflow-y-auto pr-1">
+          <div
+            role="tabpanel"
+            className={cn(
+              "min-w-0 flex-1 pr-1",
+              isCompactViewport ? "overflow-visible" : "overflow-y-auto",
+            )}
+          >
             {tab === "behavior" && (
               <div className="space-y-5">
                 <EscStopsRunningRow
