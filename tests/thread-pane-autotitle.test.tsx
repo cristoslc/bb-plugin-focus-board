@@ -197,6 +197,9 @@ describe("auto-rename fallback modal", () => {
     failingRender();
     fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
     await screen.findByRole("dialog");
+    // The dialog mounts in its loading phase, before the menu rows do, so a
+    // null row here would pass vacuously. Wait for the loaded menu first.
+    await screen.findByRole("button", { name: /active model/i });
     expect(screen.queryByRole("button", { name: /^OpenRouter$/ })).toBeNull();
   });
 
@@ -204,7 +207,7 @@ describe("auto-rename fallback modal", () => {
     failingRender();
     fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
     await screen.findByRole("dialog");
-    const row = screen.getByRole("button", { name: /active model/i });
+    const row = await screen.findByRole("button", { name: /active model/i });
     expect(row.disabled).toBe(true);
     expect(screen.getByText(/no resolved model/i)).toBeTruthy();
   });
