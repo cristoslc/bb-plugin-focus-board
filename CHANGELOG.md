@@ -11,6 +11,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+#### Settings
+
+- **The settings sheet stacks its tabs above the panel on a phone.** A 160px side rail left the Appearance tab about 180px wide and the wallpaper picker's Zoom slider with no width at all; the rail is now a horizontal strip above a full-width panel, the body drops its 440px pin, and the crop preview fits the picker. The desktop dialog is unchanged.
+
 ## [1.7.1] - 2026-10-28
 
 ### Added

@@ -78,29 +78,36 @@
          their width/color here until this was layered, e.g. the reset's
          `border: 0 solid` overrode `border-2` whatever the specificity). */
       @layer base {
-        :where(#root) *,
-        :where(#root) *::before,
-        :where(#root) *::after {
+        /* The reset reaches the app's PORTALED surfaces too: dialogs,
+           drawers, popovers, and menus mount on document.body, outside
+           `#root`. Scoping it to `#root` alone left every portaled sheet
+           without `box-sizing: border-box`, so a bordered input in a
+           settings sheet measured 26px wider than its container — a
+           harness-only artifact the bb host app's global preflight never
+           produces. */
+        :where(#root, body) *,
+        :where(#root, body) *::before,
+        :where(#root, body) *::after {
           box-sizing: border-box;
           border: 0 solid;
         }
-        :where(#root) a {
+        :where(#root, body) a {
           color: inherit;
           text-decoration: inherit;
         }
-        :where(#root) ul,
-        :where(#root) ol {
+        :where(#root, body) ul,
+        :where(#root, body) ol {
           list-style: none;
           margin: 0;
           padding: 0;
         }
-        :where(#root) h1,
-        :where(#root) h2,
-        :where(#root) h3,
-        :where(#root) p {
+        :where(#root, body) h1,
+        :where(#root, body) h2,
+        :where(#root, body) h3,
+        :where(#root, body) p {
           margin: 0;
         }
-        :where(#root) button {
+        :where(#root, body) button {
           background: none;
           font: inherit;
           color: inherit;

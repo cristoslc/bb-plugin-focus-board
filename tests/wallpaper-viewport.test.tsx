@@ -10,8 +10,9 @@
 // the host chrome spread, the dim scrim, and the lane/card silhouettes.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { WallpaperViewport, averageEdgeColor, cropWindowOf, focusForCropWindowCenter } from "../components/wallpaper-viewport";
+import { WallpaperViewport, averageEdgeColor, cropWindowOf, focusForCropWindowCenter, wallpaperPreviewStyle } from "../components/wallpaper-viewport";
 import type { BoardGeometry } from "../components/wallpaper-viewport";
+import { CompactViewportOverrideProvider } from "../components/ui/hooks/use-compact-viewport";
 
 function rect(left: number, top: number, width: number, height: number): DOMRect {
   return {
@@ -348,5 +349,49 @@ describe("wallpaper viewport", () => {
     const [lastX, lastY] = onFocusChange.mock.calls.at(-1) ?? [NaN, NaN];
     expect(Math.round(lastX)).toBe(30);
     expect(Math.round(lastY)).toBe(70);
+  });
+
+  it("sizes the preview to its container on a compact viewport (no rim overflow)", () => {
+    // A phone-width picker cannot afford the desktop formula
+    // `calc(min(100%, Xpx) + 48px)`: content-box plus 24px of padding each
+    // side meant the preview painted 96px wider than the picker (the phone
+    // report measured 254px of preview inside a 176px box). Compact sizes the
+    // whole box with border-box, capped so the image itself stays under
+    // VIEWPORT_MAX_HEIGHT (180px).
+    expect(wallpaperPreviewStyle(2, true)).toEqual({
+      boxSizing: "border-box",
+      width: "min(100%, 408.00px)",
+      padding: 24,
+    });
+    // The rim is inside the box, so the image keeps its 180px height cap:
+    // 180px × aspect 2 = 360px of image plus 24px of rim on each side.
+    expect(wallpaperPreviewStyle(2, true).width).toContain("408.00px");
+  });
+
+  it("keeps the desktop preview formula untouched (inverse)", () => {
+    expect(wallpaperPreviewStyle(2, false)).toEqual({
+      width: "calc(min(100%, 360.00px) + 48px)",
+      padding: 24,
+    });
+  });
+
+  it("renders the computed preview style on the root", () => {
+    render(
+      <CompactViewportOverrideProvider isCompactViewport>
+        <WallpaperViewport
+          layer={{ url: "https://a/w.png", dim: 0 }}
+          dark={false}
+          geometry={null}
+          imageAspect={2}
+          onFocusChange={vi.fn()}
+          onZoomChange={vi.fn()}
+        />
+      </CompactViewportOverrideProvider>,
+    );
+    const root = document.querySelector("[data-wallpaper-viewport]") as HTMLElement;
+    // jsdom's CSS parser cannot round-trip the calc()/min() expression, so
+    // the contract is the shared style helper above plus the padding it
+    // applies; the raw width string is proven in the pure test.
+    expect(root.style.padding).toBe("24px");
   });
 });

@@ -13,6 +13,7 @@ import {
 } from "../lib/whats-new";
 import type { WallpaperSettings } from "../components/preferences";
 import { SettingsModal, type SettingsTab } from "../components/settings-modal";
+import { CompactViewportOverrideProvider } from "../components/ui/hooks/use-compact-viewport";
 
 afterEach(cleanup);
 
@@ -65,6 +66,7 @@ function renderModal(
     onWallpaperChange: (next: WallpaperSettings) => void;
     onOpenChange: (open: boolean) => void;
   }> = {},
+  options: { compact?: boolean } = {},
 ): RenderHandlers {
   const handlers = {
     onSetEscStopsRunningThread: vi.fn(),
@@ -77,7 +79,7 @@ function renderModal(
     onWallpaperChange: vi.fn(),
     onOpenChange: vi.fn(),
   };
-  render(
+  const modal = (
     <SettingsModal
       open={true}
       tab="behavior"
@@ -100,7 +102,16 @@ function renderModal(
       onWallpaperChange={handlers.onWallpaperChange}
       onOpenChange={handlers.onOpenChange}
       {...overrides}
-    />,
+    />
+  );
+  render(
+    options.compact === true ? (
+      <CompactViewportOverrideProvider isCompactViewport>
+        {modal}
+      </CompactViewportOverrideProvider>
+    ) : (
+      modal
+    ),
   );
   return handlers;
 }
@@ -648,5 +659,56 @@ describe("settings modal: shell", () => {
     // The old max-h-[55vh] cap made each tab size itself; the fixed body
     // carries the scroll now.
     expect(feed?.className).not.toContain("max-h-");
+  });
+});
+
+describe("settings modal: compact viewport", () => {
+  // The dialog already switches to a bottom sheet below 768px
+  // (components/ui/dialog.tsx), so the inner layout has to stack with it:
+  // a 160px side rail beside a 180px panel left the Appearance tab a sliver
+  // at a 390px phone width, with the wallpaper picker overflowing its box.
+  it("stacks the tabs over the panel: a horizontal strip, not a 160px side rail", async () => {
+    renderModal({ tab: "appearance" }, { compact: true });
+    // The drawer realizes its content a couple of frames after opening.
+    const rail = await screen.findByRole("tablist");
+    expect(rail.className).toContain("flex-row");
+    expect(rail.className).not.toContain("w-40");
+    // A strip wider than the sheet scrolls sideways rather than wrapping the
+    // four tabs into rows.
+    expect(rail.className).toContain("overflow-x-auto");
+    for (const tab of railTabs()) {
+      expect(tab.className).toContain("shrink-0");
+      expect(tab.className).toContain("whitespace-nowrap");
+      // The accent-bar idiom survives, rotated under the label.
+      expect(tab.className).toContain("border-b-2");
+      expect(tab.className).not.toContain("border-l-2");
+    }
+  });
+
+  it("drops the 440px body pin so the sheet, not a 440px box, holds the content", async () => {
+    renderModal({ tab: "appearance" }, { compact: true });
+    await screen.findByRole("tablist");
+    const body = document.querySelector<HTMLElement>("[data-settings-body]");
+    if (body === null) throw new Error("modal body not found");
+    expect(body.style.height).toBe("");
+    expect(body.className).toContain("flex-col");
+    // One scroll surface, not a fixed box clipping a nested scroller.
+    const panel = document.querySelector<HTMLElement>('[role="tabpanel"]');
+    expect(panel?.className).toContain("overflow-visible");
+    expect(panel?.className).not.toContain("overflow-y-auto");
+  });
+
+  it("keeps the desktop rail and body pin (inverse: a wide viewport is untouched)", async () => {
+    renderModal({ tab: "appearance" }, { compact: false });
+    const rail = await screen.findByRole("tablist");
+    expect(rail.className).toContain("w-40");
+    expect(rail.className).toContain("flex-col");
+    expect(rail.className).not.toContain("overflow-x-auto");
+    const body = document.querySelector<HTMLElement>("[data-settings-body]");
+    expect(body?.style.height).toBe("440px");
+    expect(body?.className).not.toContain("flex-col");
+    expect(document.querySelector<HTMLElement>('[role="tabpanel"]')?.className).toContain(
+      "overflow-y-auto",
+    );
   });
 });

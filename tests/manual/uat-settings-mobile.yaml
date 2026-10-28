@@ -1,0 +1,56 @@
+# Operator-assisted E2E: the settings sheet on a phone.
+#
+# Below 768px the settings dialog renders as a bottom sheet (components/ui/
+# dialog.tsx). The sheet used to wrap a desktop-only inner layout — a fixed
+# 160px side rail beside the tab panel and a body pinned to 440px — which left
+# the Appearance tab a ~180px sliver at 390x844, squeezed the wallpaper
+# picker's controls, and gave the Zoom slider a zero-width box. This suite
+# drives the real app at the phone baseline: the gear opens the sheet, the
+# Appearance tab lists the wallpaper controls, and tapping a preset writes the
+# wallpaper and reveals the crop preview (the picker's own controls, all of
+# them reachable afterwards).
+#
+# The compact layout's shape (a horizontal tab strip, the body's height pin
+# dropped, the panel no longer a nested scroller) is pinned in jsdom by
+# tests/settings-modal.test.tsx through CompactViewportOverrideProvider, and
+# measured in real Chrome by scripts/screenshot/repro-settings-mobile.mjs.
+#
+# Run: npm run uat -- tests/manual/uat-settings-mobile.yaml
+suite: settings-mobile
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5199
+defaults:
+  groupBy: status
+  theme: dark
+  viewport: { width: 390, height: 844 }
+
+steps:
+  - id: phone-gear-opens-the-settings-sheet
+    title: At 390x844 the settings icon opens settings as a bottom sheet
+    goto: "?groupBy=status&lastSeenUnreleased=current"
+    gestures:
+      - click_aria: "Focus Board settings"
+    assert:
+      - text_visible: "Focus Board settings"
+      - aria_present: "Focus Board settings sections"
+
+  - id: appearance-tab-lists-the-wallpaper-controls
+    title: The Appearance tab renders the wallpaper picker's controls
+    gestures:
+      - click_aria: "Appearance"
+    assert:
+      - text_visible: "Wallpaper"
+      - text_visible: "Dim"
+      - aria_present: "Wallpaper image url"
+      - aria_present: "Wallpaper dim"
+      - aria_present: "Wallpaper zoom"
+
+  - id: a-preset-tap-lands-from-the-phone-sheet
+    title: Tapping a wallpaper preset writes it and reveals the crop preview
+    gestures:
+      - click_aria: "Wallpaper preset: Acadia"
+    assert:
+      - text_visible: "Remove wallpaper"
+      - aria_present: "Wallpaper viewport preview"
+      - aria_present: "Wallpaper fit: letterbox"
