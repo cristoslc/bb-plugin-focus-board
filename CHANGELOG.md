@@ -11,12 +11,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+## [1.7.2] - 2026-10-29
+
+### Added
+
+### Changed
+
+### Fixed
+
 #### Board layout
 
 - **A phone stops repainting the whole board when the thread pane opens.** The pane's full-screen sheet already hides the board, so the spotlight's dim of the other cards is skipped there. On a 474-card board the pane's first frame lands in half the time, and closing it no longer blocks the tap.
   - A desktop window keeps the dim exactly as it was, because the board is visible beside the pane there.
-
-#### Settings
 
 - **The settings sheet stacks its tabs above the panel on a phone.** A 160px side rail left the Appearance tab about 180px wide and the wallpaper picker's Zoom slider with no width at all; the rail is now a horizontal strip above a full-width panel, the body drops its 440px pin, and the crop preview fits the picker. The desktop dialog is unchanged.
 
