@@ -10,6 +10,6 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
   {
     "text": "**The settings sheet stacks its tabs above the panel on a phone.** A 160px side rail left the Appearance tab about 180px wide and the wallpaper picker's Zoom slider with no width at all; the rail is now a horizontal strip above a full-width panel, the body drops its 440px pin, and the crop preview fits the picker. The desktop dialog is unchanged.",
     "children": [],
-    "group": "Settings"
+    "group": "Board layout"
   }
 ];
