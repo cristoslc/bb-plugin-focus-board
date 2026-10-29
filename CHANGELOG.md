@@ -11,6 +11,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+## [1.7.2] - 2026-10-29
+
+### Added
+
+### Changed
+
+### Fixed
+
 #### Board layout
 
 - **A phone stops repainting the whole board when the thread pane opens.** The pane's full-screen sheet already hides the board, so the spotlight's dim of the other cards is skipped there. On a 474-card board the pane's first frame lands in half the time, and closing it no longer blocks the tap.
