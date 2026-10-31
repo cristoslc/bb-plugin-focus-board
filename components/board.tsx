@@ -2355,12 +2355,11 @@ export function Board({
         data-lane-direction={laneDirection}
         className={cn(
           "min-h-0 flex-1 px-3 pb-3 pt-2",
-          // A touch on the board is a PAN and nothing else: `manipulation`
-          // keeps both pan axes and pinch, and drops the double-tap-zoom
-          // guess that reads as a dead scroll (issue #328). It never
-          // narrows a gesture the surface needs — the lanes below keep
-          // their own axis — so the finger reaches whichever scroller owns
-          // the direction.
+          // A touch on the board is a PAN, and the surface names it: `manipulation`
+          // keeps both pan axes and pinch, and drops the double-tap-zoom guess
+          // that reads as a dead scroll (issue #328). Nothing here narrows a
+          // gesture the surface needs, so the finger reaches whichever scroller
+          // owns the direction, the lane's own list or the board.
           "touch-manipulation",
           // The scroll follows the lane direction: vertical lanes sit in one
           // horizontally scrolling row (today's board); horizontal lanes
