@@ -1,0 +1,98 @@
+{
+  "steps": [
+    {
+      "at": "armed",
+      "reading": {
+        "ghost": {
+          "left": 13,
+          "top": 88,
+          "width": 254,
+          "height": 80,
+          "opacity": "0.98",
+          "transform": "matrix(1.04, 0, 0, 1.04, 0, 0)",
+          "shadow": "rgba(255, 255, 255, 0.16) 0px 0px 0px 1p"
+        },
+        "ghostParent": "div",
+        "ghostAriaHidden": "true",
+        "armedCard": {
+          "left": 18,
+          "top": 89,
+          "width": 244,
+          "height": 77,
+          "opacity": "0.35",
+          "transform": "none",
+          "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0"
+        },
+        "armedId": "thr_ship_release",
+        "menuOpen": false,
+        "trigger": {
+          "label": "Actions for Ship 0.1.1: column ordering fix + release notes",
+          "box": {
+            "left": 226,
+            "top": 89,
+            "width": 36,
+            "height": 36,
+            "opacity": "1",
+            "transform": "none",
+            "shadow": "none"
+          }
+        }
+      }
+    },
+    {
+      "at": "mid-drag",
+      "finger": {
+        "x": 280,
+        "y": 233
+      },
+      "reading": {
+        "ghost": {
+          "left": 153,
+          "top": 208,
+          "width": 254,
+          "height": 80,
+          "opacity": "0.98",
+          "transform": "matrix(1.04, 0, 0, 1.04, 140, 120)",
+          "shadow": "rgba(255, 255, 255, 0.16) 0px 0px 0px 1p"
+        },
+        "ghostParent": "div",
+        "ghostAriaHidden": "true",
+        "armedCard": {
+          "left": 18,
+          "top": 89,
+          "width": 244,
+          "height": 77,
+          "opacity": "0.35",
+          "transform": "none",
+          "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0"
+        },
+        "armedId": "thr_ship_release",
+        "menuOpen": false,
+        "trigger": {
+          "label": "Actions for Ship 0.1.1: column ordering fix + release notes",
+          "box": {
+            "left": 226,
+            "top": 89,
+            "width": 36,
+            "height": 36,
+            "opacity": "1",
+            "transform": "none",
+            "shadow": "none"
+          }
+        }
+      }
+    },
+    {
+      "at": "released",
+      "reading": {
+        "ghost": null,
+        "ghostParent": null,
+        "ghostAriaHidden": null,
+        "armedCard": null,
+        "armedId": null,
+        "menuOpen": false,
+        "trigger": null
+      }
+    }
+  ]
+}

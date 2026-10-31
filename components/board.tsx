@@ -43,7 +43,7 @@ import type { BrowserRevealNotice } from "@/lib/browser-reveal";
 import { Icon } from "@/components/ui/icon";
 import { usePrefersReducedMotion } from "@/components/ui/hooks/use-media-query";
 import { usePointerCoarse } from "@/components/ui/hooks/use-pointer-coarse";
-import { useTouchHoldDrag } from "@/components/touch-hold-drag";
+import { touchDragArmed, useTouchHoldDrag } from "@/components/touch-hold-drag";
 import { cn } from "@/lib/utils";
 import {
   childRankKey,
@@ -4256,7 +4256,14 @@ export function Board({
                         onContextMenu={(event) => {
                           // The group menu covers the folded card exactly as
                           // it covers the expanded box's surface; an unwired
-                          // board opens nothing.
+                          // board opens nothing. A touch pickup owns the
+                          // gesture outright (issue #336): the platform's long
+                          // press lands after the arm, so a frame being dragged
+                          // must never grow a menu.
+                          if (touchDragArmed()) {
+                            event.preventDefault();
+                            return;
+                          }
                           if (!collapsedGroupMenuWired) return;
                           event.preventDefault();
                           setGroupMenuUngroupArmed(false);
@@ -4515,7 +4522,12 @@ export function Board({
                           // card wrapper stops this event's propagation
                           // first), and a card's menu must never also open
                           // this box's. With no group capability wired the
-                          // surface opens nothing.
+                          // surface opens nothing. A touch pickup owns the
+                          // gesture outright (issue #336): no menu over a drag.
+                          if (touchDragArmed()) {
+                            event.preventDefault();
+                            return;
+                          }
                           if (
                             onNewThreadInGroup === undefined &&
                             onZoomToGroup === undefined &&

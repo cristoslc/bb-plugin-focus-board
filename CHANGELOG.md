@@ -18,6 +18,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 #### Touch input
 
+- **A picked-up card now rides the finger, and a long press no longer opens a menu over the drag.** The hold lifts a floating snapshot of the card that follows the thumb one to one, over a dimmed slot that holds its place. The menu moved behind the card's new ⋯ button: tap opens the thread, hold drags it.
+
 - **A phone's board pans under a finger instead of lifting a card.** Cards, child rows, strip dots, and group boxes are no longer native drag sources, so the platform's touch-drag recognizer cannot take the pan. Card text stays unselectable on touch, where a long press used to start a selection instead of a scroll.
 - **A slide that starts on the toolbar or a lane's title strip pans the board, never the page behind it.** Neither sits inside a scroller, so the gesture used to leave the board entirely. Every slide across the board's surface now lands on the board or on the lane the finger started in.
 - **A lane with nothing to its right stops trapping the slide.** A lane's card list was quietly becoming a horizontal scroller with no range, which rubber-bands a finger on iOS instead of handing the pan outward. Each lane now clips the axis it cannot scroll.

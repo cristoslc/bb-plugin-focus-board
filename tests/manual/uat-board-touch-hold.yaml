@@ -1,5 +1,5 @@
 # Operator-assisted E2E: tap-hold-slide picks a card up and drags it
-# (issue #330).
+# (issues #330, #336).
 #
 # The operator's contract:
 #
@@ -7,12 +7,29 @@
 #    card. Hold duration should be very short but still long enough to
 #    distinguish touch-to-pan-board from touch-to-drag-card"
 #
+# and, after using it on a phone, the two follow-ups this suite also pins:
+#
+#   "touch and hold needs a lot more delay between 'card picked up' and the
+#    context menu opening"
+#   "the card isn't visible moving after being picked up, even though other
+#    families/groups do show amber highlight when thumb moves over them post
+#    pick up"
+#
 # PR #329 answered a stolen pan by disarming every native drag source on a
 # coarse pointer, which also removed touch reordering. That trade is rejected:
 # the pickup is now the board's own gesture (components/touch-hold-drag), armed
 # by a short hold and fed into the SAME drag pipeline a mouse drag drives — so
 # these steps assert exactly what the cursor suites assert, a real `rank_move`
 # and the lane's new order, from a real CDP finger.
+#
+# Issue #336 adds the two halves the pickup was missing. The LIFT is a floating
+# snapshot of the card that hangs off the board's clipping containers and
+# follows the finger one-to-one (`touch_ghost`, sampled after the arm and after
+# every move). The MENU is out of the drag entirely: the arm fires at 180ms and
+# the platform's own long press at ~500ms, so a resting finger used to get a
+# context menu over the card it was dragging (`touch_menu`); on touch the menu
+# now opens from the card's own ⋯ trigger (`card_menu` + `menu_open`), and the
+# touch story is tap = pane, hold = drag, ⋯ = menu.
 #
 # The viewport is a wide touch device (1024x768) on purpose: the column read
 # only fits two whole lanes and a sliver of a third at phone width, and a
@@ -69,6 +86,72 @@ steps:
       # shared with the mouse path and covered by its suites.
       - column: pinned
         ordered: [thr_roadmap]
+      - no_visible_error: true
+
+  # ── The lift is visible, and nothing opens over the drag (issue #336) ───
+  - id: the-picked-up-card-follows-the-finger
+    title: The hold lifts a floating snapshot that tracks the finger 1:1 and no menu opens over the drag
+    goto: "?groupBy=status"
+    touch_drag:
+      from: { card: thr_ship_release }
+      to: { card: thr_rpc_auth, edge: before }
+      hold_ms: 420
+      steps: 8
+    assert:
+      - touch_hold: { armed: true, card: thr_ship_release }
+      # The snapshot exists from the arm to the release, is the card's own
+      # size, hangs off the board's clipping containers, follows every move
+      # one-to-one, and leaves when the finger does.
+      - touch_ghost: { card: thr_ship_release }
+      # The platform's long press lands ~300ms into this drag. Nothing opens:
+      # not the card's menu, not a group frame's.
+      - touch_menu: { open: false, after: false }
+      # The lift changed nothing about the write: still the mouse drag's own.
+      - rpc_called:
+          columnKey: "status:unread"
+          threadId: thr_ship_release
+          beforeId: thr_rpc_auth
+          toEnd: false
+      - no_visible_error: true
+
+  - id: a-hold-slide-on-the-rows-read-lifts-the-same-snapshot
+    title: On the rows read the snapshot tracks a vertical slide the same way
+    goto: "?groupBy=status&laneDirection=horizontal"
+    touch_drag:
+      from: { card: thr_ship_release }
+      to: { card: thr_rpc_auth, edge: before }
+      hold_ms: 420
+      steps: 6
+    assert:
+      - touch_ghost: { card: thr_ship_release }
+      - touch_menu: { open: false, after: false }
+      - rpc_called:
+          columnKey: "status:unread"
+          threadId: thr_ship_release
+          beforeId: thr_rpc_auth
+          toEnd: false
+      - no_visible_error: true
+
+  # ── The menu's touch home is the card's own affordance (issue #336) ─────
+  - id: the-card-menu-opens-from-its-touch-affordance
+    title: On touch the card's menu opens from its ⋯ trigger, naming the thread it acts on
+    goto: "?groupBy=status"
+    gestures:
+      - { card_menu: { card: thr_ship_release } }
+    assert:
+      - menu_open:
+          open: true
+          label: "Thread actions"
+          header: "Ship 0.1.1: column ordering fix + release notes"
+          card: thr_ship_release
+      - no_visible_error: true
+
+  - id: the-triggered-menu-dismisses-without-acting
+    title: A tap outside the open menu closes it and leaves the board as it was
+    gestures:
+      - menu_dismiss: {}
+    assert:
+      - menu_open: { open: false }
       - no_visible_error: true
 
   # ── The rows read: the same pickup, a vertical slide ────────────────────
