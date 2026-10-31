@@ -292,8 +292,9 @@ interface BoardProps {
   /**
    * Thread id → its feature-group family box ({ groupId, name }) — the
    * dashed outline wrapper for sibling threads sharing a named group.
-   * Holds ONLY threads that render inside a box (pinned and done members
-   * are absent — a group of one KEEPS its box, its lone member included);
+   * Holds ONLY threads that render inside a box (a done member is absent; a
+   * group of one KEEPS its box, its lone member included, and a pinned
+   * member boxes in the Pinned lane like any other lane's slice);
    * undefined/empty when the caller has no group data and every card
    * renders standalone. The box is decoration and the group's drop target:
    * no dot, no pill, no color — the name is secondary text.
