@@ -1036,7 +1036,7 @@ export function BoardToolbar({
   );
   if (collapsedHeader) {
     return (
-      <div ref={headerRef} className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/50 px-3 py-2">
+      <div ref={headerRef} data-board-toolbar="" className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/50 px-3 py-2">
         {newThreadButton}
         {searchBox}
         {viewOnRow ? viewMenu : null}
@@ -1086,7 +1086,7 @@ export function BoardToolbar({
   // both light and dark schemes. The ref stays attached across both
   // layouts, so the narrow-band observer survives the borrow either way.
   return (
-    <div ref={headerRef} className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/50 px-3 py-2">
+    <div ref={headerRef} data-board-toolbar="" className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/50 px-3 py-2">
       {newThreadButton}
       <div className="flex items-center gap-2">
         {searchBox}

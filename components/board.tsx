@@ -43,6 +43,7 @@ import type { BrowserRevealNotice } from "@/lib/browser-reveal";
 import { Icon } from "@/components/ui/icon";
 import { usePrefersReducedMotion } from "@/components/ui/hooks/use-media-query";
 import { usePointerCoarse } from "@/components/ui/hooks/use-pointer-coarse";
+import { useTouchHoldDrag } from "@/components/touch-hold-drag";
 import { cn } from "@/lib/utils";
 import {
   childRankKey,
@@ -1712,6 +1713,26 @@ export function Board({
     }
   };
 
+  // ── Touch pickup (issue #330) ───────────────────────────────────────────
+  // A finger that rests on a card for a moment picks it up and drags it
+  // through the SAME drag pipeline a mouse uses (components/touch-hold-drag
+  // feeds it the events the board already handles): the insertion line, the
+  // nest ring, the family join, and the drop writes are one implementation,
+  // so a touch reorder cannot drift from a cursor reorder. Sliding without
+  // that pause stays the browser's pan, which is the contract the operator
+  // asked for: "sliding a finger anywhere pans the board. Tap-hold-slide on
+  // card drags the card."
+  useTouchHoldDrag(scrollRef, {
+    // Only a coarse pointer needs the custom pickup: a fine pointer keeps the
+    // native HTML5 drag, and a board without ranking (no rank store wired) has
+    // nowhere to write an order.
+    enabled: coarsePointer && ranking,
+    onArm: (threadId) => rankDragLifecycle(threadId),
+    onEnd: () => rankDragLifecycle(null),
+    onCancelledPickup: () =>
+      setAnnouncement("Card released without moving. Nothing changed."),
+  });
+
   // ── The drag-out-of-DOM safety ──────────────────────────────────────────
   // A drag whose source element stops existing mid-flight owns no event to
   // clean up after itself: a card that relocates while it is dragged (a live
@@ -1730,10 +1751,14 @@ export function Board({
     const safe = id.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
     // A top-level card wraps its draggable anchor; a nested row carries
     // data-thread-card on the anchor itself. Either form proves the drag's
-    // source still on the board.
+    // source still on the board. On a coarse pointer no element is
+    // `draggable` at all (the touch pickup in components/touch-hold-drag
+    // owns the gesture), so the plain marker is the proof there — the element
+    // existing is what keeps the drop's relocation honest.
     const alive =
       document.querySelector(`[data-thread-card="${safe}"] a[draggable]`) ??
-      document.querySelector(`a[data-thread-card="${safe}"]`);
+      document.querySelector(`a[data-thread-card="${safe}"]`) ??
+      document.querySelector(`[data-thread-card="${safe}"]`);
     if (alive !== null) return;
     rankDragLifecycle(null);
   });
@@ -2361,6 +2386,12 @@ export function Board({
           // gesture the surface needs, so the finger reaches whichever scroller
           // owns the direction, the lane's own list or the board.
           "touch-manipulation",
+          // A pan that reaches the end of the board's range stops there: it
+          // never chains on to the page behind the panel (issue #330, "a
+          // slide from the header must reach the board's scroller, never the
+          // page"). The lanes' own lists keep chaining INTO the board, which
+          // is the chain the contract asks for.
+          "overscroll-contain",
           // The scroll follows the lane direction: vertical lanes sit in one
           // horizontally scrolling row (today's board); horizontal lanes
           // stack as rows the board scrolls vertically.
@@ -2763,6 +2794,10 @@ export function Board({
               key={column.id}
               data-column-id={column.id}
               data-column-ordered={isOrdered}
+              // The lane's rank key, read by the touch pickup
+              // (components/touch-hold-drag) to stamp the same drag type the
+              // mouse's dragstart writes: one key, both gestures.
+              data-rank-key={rankKey}
               aria-label={`${column.label}, ${column.threads.length} threads`}
               onDragOver={(event) => {
                 // A dot drag (issue #249) authorises nowhere but its home
@@ -3084,7 +3119,21 @@ export function Board({
                   "touch-manipulation",
                   // The list scrolls along the lane flow: a vertical lane's
                   // stack scrolls its own Y, a horizontal lane's row its X.
-                  horizontalLanes ? "overflow-x-auto" : "overflow-y-auto",
+                  //
+                  // The OTHER axis is `clip`, never left to compute: an
+                  // `overflow-y: auto` box makes `overflow-x: visible`
+                  // compute to `auto` (CSS overflow coupling), which turned
+                  // every vertical lane into a horizontal scroll container
+                  // with nothing to scroll. On iOS that container
+                  // rubber-banded the finger instead of chaining the pan out
+                  // to the board — "sliding a finger in a lane scrolls the
+                  // lane horizontally even though there's nothing to the
+                  // right of the cards" (issue #330). `clip` is not a scroll
+                  // container at all, so the pan chains to the board's own
+                  // scroller the way the contract says it must.
+                  horizontalLanes
+                    ? "overflow-x-auto overflow-y-clip"
+                    : "overflow-y-auto overflow-x-clip",
                 )}
               >
                 {column.threads.length === 0 && dragOverColumn !== column.id ? (
@@ -4171,6 +4220,10 @@ export function Board({
                         // background click's highlight clearing honest.
                         data-group-box={box.groupId}
                         data-collapsed-group={box.groupId}
+                        // The unit's lead member, so a touch pickup can name
+                        // the same id the mouse's label drag carries without
+                        // hunting for a member card the fold does not render.
+                        data-group-box-lead={box.members[0]?.id}
                         data-transport-arrival={
                           boxArrivalFor(box.groupId) ? "wiping-in" : undefined
                         }
@@ -4424,6 +4477,7 @@ export function Board({
                         // so the group id alone is the slot key.
                         key={`group:${runItem.box.groupId}`}
                         data-group-box={runItem.box.groupId}
+                        data-group-box-lead={runItem.box.members[0]?.id}
                         data-transport-arrival={
                           boxArrivalFor(runItem.box.groupId) ? "wiping-in" : undefined
                         }

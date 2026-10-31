@@ -1,0 +1,1142 @@
+[
+  {
+    "layout": "vertical",
+    "axis": "x",
+    "origin": "card",
+    "point": {
+      "x": 140,
+      "y": 113
+    },
+    "under": "div",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 2054,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "hidden",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 0,
+        "overflowX": "clip",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 311,
+        "y": 0
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "vertical",
+    "axis": "x",
+    "origin": "lane-gap",
+    "point": {
+      "x": 140,
+      "y": 198
+    },
+    "under": "div",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 2054,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "hidden",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 0,
+        "overflowX": "clip",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 308,
+        "y": 0
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "vertical",
+    "axis": "x",
+    "origin": "lane-head",
+    "point": {
+      "x": 140,
+      "y": 78
+    },
+    "under": "header",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 2054,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "hidden",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 0,
+        "overflowX": "clip",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 313,
+        "y": 0
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "vertical",
+    "axis": "x",
+    "origin": "toolbar",
+    "point": {
+      "x": 195,
+      "y": 29
+    },
+    "under": "input",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 2054,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "hidden",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 0,
+        "overflowX": "clip",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 200,
+        "y": 0
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "vertical",
+    "axis": "x",
+    "origin": "board",
+    "point": {
+      "x": 8,
+      "y": 836
+    },
+    "under": "div",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 2054,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "hidden",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 0,
+        "overflowX": "clip",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 318,
+        "y": 0
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "vertical",
+    "axis": "y",
+    "origin": "card",
+    "point": {
+      "x": 140,
+      "y": 113
+    },
+    "under": "div",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 2054,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "hidden",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 0,
+        "overflowX": "clip",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 0
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "vertical",
+    "axis": "y",
+    "origin": "lane-gap",
+    "point": {
+      "x": 140,
+      "y": 198
+    },
+    "under": "div",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 2054,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "hidden",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 0,
+        "overflowX": "clip",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 0
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "vertical",
+    "axis": "y",
+    "origin": "lane-head",
+    "point": {
+      "x": 140,
+      "y": 78
+    },
+    "under": "header",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 2054,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "hidden",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 0,
+        "overflowX": "clip",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 0
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "vertical",
+    "axis": "y",
+    "origin": "toolbar",
+    "point": {
+      "x": 195,
+      "y": 29
+    },
+    "under": "input",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 2054,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "hidden",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 0,
+        "overflowX": "clip",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 0
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "vertical",
+    "axis": "y",
+    "origin": "board",
+    "point": {
+      "x": 8,
+      "y": 836
+    },
+    "under": "div",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 2054,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "hidden",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 0,
+        "overflowX": "clip",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 0
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "horizontal",
+    "axis": "x",
+    "origin": "card",
+    "point": {
+      "x": 298,
+      "y": 87
+    },
+    "under": "div",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 1941,
+        "overflowX": "hidden",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 286,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "clip",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 0
+      },
+      "lane": {
+        "x": 286,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "horizontal",
+    "axis": "x",
+    "origin": "lane-gap",
+    "point": {
+      "x": 372,
+      "y": 209
+    },
+    "under": "div",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 1941,
+        "overflowX": "hidden",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 286,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "clip",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 0
+      },
+      "lane": {
+        "x": 286,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "horizontal",
+    "axis": "x",
+    "origin": "lane-head",
+    "point": {
+      "x": 92,
+      "y": 209
+    },
+    "under": "header",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 1941,
+        "overflowX": "hidden",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 286,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "clip",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 0
+      },
+      "lane": {
+        "x": 200,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "horizontal",
+    "axis": "x",
+    "origin": "toolbar",
+    "point": {
+      "x": 195,
+      "y": 29
+    },
+    "under": "input",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 1941,
+        "overflowX": "hidden",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 286,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "clip",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 0
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "horizontal",
+    "axis": "x",
+    "origin": "board",
+    "point": {
+      "x": 8,
+      "y": 836
+    },
+    "under": "div",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 1941,
+        "overflowX": "hidden",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 286,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "clip",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 0
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "horizontal",
+    "axis": "y",
+    "origin": "card",
+    "point": {
+      "x": 298,
+      "y": 87
+    },
+    "under": "div",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 1941,
+        "overflowX": "hidden",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 286,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "clip",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 314
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "horizontal",
+    "axis": "y",
+    "origin": "lane-gap",
+    "point": {
+      "x": 372,
+      "y": 209
+    },
+    "under": "div",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 1941,
+        "overflowX": "hidden",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 286,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "clip",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 318
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "horizontal",
+    "axis": "y",
+    "origin": "lane-head",
+    "point": {
+      "x": 92,
+      "y": 209
+    },
+    "under": "header",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 1941,
+        "overflowX": "hidden",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 286,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "clip",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 301
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "horizontal",
+    "axis": "y",
+    "origin": "toolbar",
+    "point": {
+      "x": 195,
+      "y": 29
+    },
+    "under": "input",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 1941,
+        "overflowX": "hidden",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 286,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "clip",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 200
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "layout": "horizontal",
+    "axis": "y",
+    "origin": "board",
+    "point": {
+      "x": 8,
+      "y": 836
+    },
+    "under": "div",
+    "before": {
+      "board": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 1941,
+        "overflowX": "hidden",
+        "overflowY": "auto",
+        "touchAction": "manipulation"
+      },
+      "lane": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 286,
+        "maxY": 0,
+        "overflowX": "auto",
+        "overflowY": "clip",
+        "touchAction": "manipulation"
+      },
+      "page": {
+        "scrollLeft": 0,
+        "scrollTop": 0,
+        "maxX": 0,
+        "maxY": 844,
+        "overflowX": "auto",
+        "overflowY": "auto",
+        "touchAction": "auto"
+      },
+      "window": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "delta": {
+      "board": {
+        "x": 0,
+        "y": 306
+      },
+      "lane": {
+        "x": 0,
+        "y": 0
+      },
+      "page": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  }
+]

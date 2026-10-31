@@ -997,6 +997,22 @@ const pageTouchPanOrigin = (from) => {
     const board = document.querySelector("[data-columns-board]");
     const box = rect(board);
     point = { x: box.left + 10, y: box.bottom - 10 };
+  } else if (from.toolbar === true) {
+    // The band above the board's scroller: the operator's "header", and the
+    // origin no intermediate scroller can catch (issue #330).
+    const toolbar = document.querySelector("[data-board-toolbar]");
+    if (toolbar === null) throw new Error("touch_pan: no [data-board-toolbar]");
+    point = { x: rect(toolbar).left + 8, y: rect(toolbar).top + 3 };
+  } else if (from.laneHeader !== undefined) {
+    const header = document.querySelector(`section[data-column-id="${from.laneHeader}"] > header`);
+    if (header === null) throw new Error(`touch_pan: no lane header ${from.laneHeader}`);
+    const box = rect(header);
+    point = { x: box.left + Math.min(box.width / 2, 12), y: box.top + box.height / 2 };
+  } else if (from.box !== undefined) {
+    const frame = document.querySelector(`[data-group-box="${from.box}"]`);
+    if (frame === null) throw new Error(`touch_pan: no group box ${from.box}`);
+    const box = rect(frame);
+    point = { x: box.left + box.width / 2, y: box.top + Math.min(box.height / 2, 16) };
   }
   if (point === null) throw new Error(`touch_pan: unreadable origin ${JSON.stringify(from)}`);
   point = { x: Math.round(point.x), y: Math.round(point.y) };
@@ -1012,6 +1028,37 @@ const pageTouchPanOrigin = (from) => {
           lane: hit.closest("[data-lane-id]")?.getAttribute("data-lane-id") ?? null,
         },
   };
+};
+
+/**
+ * Install the page-scroll fixture (issue #330): the harness page is exactly one
+ * screen tall with no overflow, so "the gesture escaped to the page" has
+ * nowhere to show up. This wraps the plugin root in a scroll shell with one
+ * extra viewport of spacer below it — the shape a host pane has — so a pan the
+ * board fails to own scrolls the shell and the reading can prove it did. The
+ * app's own layout is untouched: the shell, and the root inside it, are both
+ * the viewport's height until the spacer is revealed.
+ */
+const pagePageOverflow = (on) => {
+  let shell = document.getElementById("uat-scroll-shell");
+  if (shell === null) {
+    const root = document.getElementById("root");
+    if (root === null) return false;
+    shell = document.createElement("div");
+    shell.id = "uat-scroll-shell";
+    shell.style.cssText = "height:100%;overflow:auto;";
+    root.replaceWith(shell);
+    shell.append(root);
+    const spacer = document.createElement("div");
+    spacer.id = "uat-page-overflow";
+    spacer.style.cssText = "height:100vh;";
+    shell.append(spacer);
+  }
+  const spacer = document.getElementById("uat-page-overflow");
+  if (spacer !== null) spacer.style.height = on ? "100vh" : "0px";
+  shell.scrollTop = 0;
+  shell.scrollLeft = 0;
+  return true;
 };
 
 /**
@@ -1043,19 +1090,33 @@ const pageTouchPanPrepare = ({ point, under }) => {
   }
   const board = document.querySelector("[data-columns-board]");
   const start = document.elementFromPoint(point.x, point.y);
-  const laneList = start?.closest("[data-card-list]") ?? null;
+  // The origin lane, read from the lane the finger landed in — the lane's card
+  // list when the finger is in it, the sibling list when it is on the lane's
+  // own header strip (issue #330: a lane owns its header's slide too).
+  const laneSection = start?.closest("[data-column-id]") ?? null;
+  const laneList =
+    laneSection?.querySelector("[data-card-list]") ?? start?.closest("[data-card-list]") ?? null;
+  // The page's own offset: the scroll shell when the overflow fixture is on,
+  // the document otherwise. Read inline (not through a helper) because this
+  // function is serialized into the page, where module helpers do not exist.
+  const shell = document.getElementById("uat-scroll-shell");
   globalThis.__uatTouch = {
     point,
     under,
     layout: board.getAttribute("data-lane-direction") ?? "vertical",
-    laneColumn: laneList?.closest("[data-column-id]")?.getAttribute("data-column-id") ?? null,
+    laneColumn: laneSection?.getAttribute("data-column-id") ?? null,
     before: {
       boardX: Math.round(board.scrollLeft),
       boardY: Math.round(board.scrollTop),
       laneX: Math.round(laneList?.scrollLeft ?? 0),
       laneY: Math.round(laneList?.scrollTop ?? 0),
+      pageX: Math.round((shell?.scrollLeft ?? 0) + window.scrollX),
+      pageY: Math.round((shell?.scrollTop ?? 0) + window.scrollY),
     },
     dragStarts: [],
+    // Filled mid-gesture by the hold gestures: what was picked up, if
+    // anything, and whether the board marked it lifted.
+    armed: null,
   };
   return true;
 };
@@ -1071,11 +1132,14 @@ const pageTouchPanRead = () => {
       : document.querySelector(
           `section[data-column-id="${reading.laneColumn}"] [data-card-list]`,
         );
+  const shell = document.getElementById("uat-scroll-shell");
   const after = {
     boardX: Math.round(board.scrollLeft),
     boardY: Math.round(board.scrollTop),
     laneX: Math.round(laneList?.scrollLeft ?? 0),
     laneY: Math.round(laneList?.scrollTop ?? 0),
+    pageX: Math.round((shell?.scrollLeft ?? 0) + window.scrollX),
+    pageY: Math.round((shell?.scrollTop ?? 0) + window.scrollY),
   };
   const readingOut = {
     ...reading,
@@ -1083,10 +1147,65 @@ const pageTouchPanRead = () => {
     delta: {
       board: { x: after.boardX - reading.before.boardX, y: after.boardY - reading.before.boardY },
       lane: { x: after.laneX - reading.before.laneX, y: after.laneY - reading.before.laneY },
+      page: { x: after.pageX - reading.before.pageX, y: after.pageY - reading.before.pageY },
     },
   };
   globalThis.__uatTouch = readingOut;
   return readingOut;
+};
+
+/** The pickup the board currently wears, if any (the armed-state reading). */
+const pageTouchArmed = () => {
+  const el = document.querySelector("[data-touch-drag-armed]");
+  if (el === null) return null;
+  return {
+    card: el.getAttribute("data-thread-card"),
+    box: el.closest("[data-group-box]")?.getAttribute("data-group-box") ?? null,
+    tag: el.tagName.toLowerCase(),
+  };
+};
+
+/**
+ * Where a `touch_drag` releases: a card's own edge (the same thirds a mouse
+ * drag aims with) or a lane's empty space. Both coordinates are read live, so
+ * a suite names the target the way an operator points at it.
+ */
+const pageTouchDragTarget = ({ card, column, edge }) => {
+  const horizontal =
+    document.querySelector("[data-columns-board]")?.getAttribute("data-lane-direction") ===
+    "horizontal";
+  const el =
+    card !== undefined
+      ? document.querySelector(`[data-thread-card="${card}"]`)
+      : column !== undefined
+        ? document.querySelector(`section[data-column-id="${column}"] [data-card-list]`)
+        : null;
+  if (el === null) throw new Error(`touch_drag: no target ${JSON.stringify({ card, column })}`);
+  const box = el.getBoundingClientRect();
+  if (card !== undefined) {
+    const along = edge === "before" ? 0.2 : edge === "onto" ? 0.5 : 0.8;
+    // A card's flow axis is the layout's: top/bottom in a column, left/right
+    // in a row. `.getBoundingClientRect()` of a row card is its slot, and the
+    // slot's own box is the surface the drop zones split.
+    return {
+      x: Math.round(horizontal ? box.left + box.width * along : box.left + box.width / 2),
+      y: Math.round(horizontal ? box.top + box.height / 2 : box.top + box.height * along),
+    };
+  }
+  // A lane floor: its empty space past the last card, the append target.
+  const cards = [...el.querySelectorAll("[data-thread-card]")].map((c) => c.getBoundingClientRect());
+  if (horizontal) {
+    const right = cards.reduce((far, b) => Math.max(far, b.right), box.left);
+    return {
+      x: Math.round(right + 24 <= box.right - 4 ? right + 24 : box.right - 6),
+      y: Math.round(box.top + box.height / 2),
+    };
+  }
+  const bottom = cards.reduce((low, b) => Math.max(low, b.bottom), box.top);
+  return {
+    x: Math.round(box.left + box.width / 2),
+    y: Math.round(bottom + 24 <= box.bottom - 4 ? bottom + 24 : box.bottom - 6),
+  };
 };
 
 /**
@@ -1127,6 +1246,13 @@ const pageTouchDragArmor = (payload) => {
     anchorBox: box(anchor),
     boardTouchAction: touchAction(board),
     laneTouchAction: touchAction(list),
+    // The cross-axis overflow each scroller computes (issue #330): a lane
+    // that leaves its off-axis `visible` makes it compute to `auto`, so the
+    // pan stops there instead of chaining out to the board.
+    boardOverflowX: board === null ? "" : getComputedStyle(board).overflowX,
+    boardOverflowY: board === null ? "" : getComputedStyle(board).overflowY,
+    laneOverflowX: list === null ? "" : getComputedStyle(list).overflowX,
+    laneOverflowY: list === null ? "" : getComputedStyle(list).overflowY,
     sources: sources.length,
     sourceSample: sources
       .slice(0, 4)
@@ -2429,6 +2555,7 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
     if (
       rule.touch_origin !== undefined ||
       rule.touch_scroll !== undefined ||
+      rule.touch_hold !== undefined ||
       rule.no_native_drag !== undefined
     ) {
       const reading = await page.evaluate(() => globalThis.__uatTouch ?? null);
@@ -2452,20 +2579,56 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
           );
         }
         if (rule.touch_scroll !== undefined) {
-          const want = rule.touch_scroll; // { target, axis, min?, direction? }
+          const want = rule.touch_scroll; // { target, axis, min?, max?, equals?, direction? }
           const axis = want.axis === "y" ? "y" : "x";
-          const moved = reading.delta[want.target === "lane" ? "lane" : "board"][axis];
+          const target = want.target === "lane" ? "lane" : want.target === "page" ? "page" : "board";
+          const moved = reading.delta[target][axis];
           const min = Number(want.min ?? 1);
           const direction = want.direction ?? "any";
           const sign = Math.sign(moved);
           const directionOk =
             direction === "positive" ? sign > 0 : direction === "negative" ? sign < 0 : true;
+          if (want.equals !== undefined) {
+            // An exact landing: the "nothing may move" side of the contract
+            // (a no-range lane, or the page behind the board).
+            const equals = Number(want.equals);
+            expect(
+              `the ${target} ${axis} scrolled exactly ${equals}px`,
+              Math.abs(moved - equals) <= 1,
+              `${target} ${axis} moved ${moved}px ` +
+                `(board ${reading.before.boardX},${reading.before.boardY} → ${reading.after.boardX},${reading.after.boardY}; ` +
+                `lane ${reading.before.laneX},${reading.before.laneY} → ${reading.after.laneX},${reading.after.laneY}; ` +
+                `page ${reading.before.pageX},${reading.before.pageY} → ${reading.after.pageX},${reading.after.pageY})`,
+            );
+          } else {
+            expect(
+              `the ${target} ${axis} scrolled ${direction === "any" ? "at least" : direction} ${min}px`,
+              Math.abs(moved) >= min && directionOk,
+              `${target} ${axis} moved ${moved}px ` +
+                `(board ${reading.before.boardX},${reading.before.boardY} → ${reading.after.boardX},${reading.after.boardY}; ` +
+                `lane ${reading.before.laneX},${reading.before.laneY} → ${reading.after.laneX},${reading.after.laneY}; ` +
+                `page ${reading.before.pageX},${reading.before.pageY} → ${reading.after.pageX},${reading.after.pageY})`,
+            );
+          }
+        }
+        if (rule.touch_hold !== undefined) {
+          // The pickup half of tap-hold-slide: after the hold, before any
+          // movement, the board must wear the armed marker — and the marker
+          // must name the card (or the group frame) the finger landed on.
+          const want = rule.touch_hold ?? {};
+          const armed = reading.armed ?? null;
+          const wantArmed = want.armed !== false;
+          const named = want.card === undefined && want.box === undefined
+            ? true
+            : armed !== null &&
+              (want.card === undefined || armed.card === want.card) &&
+              (want.box === undefined || armed.box === want.box);
           expect(
-            `the ${want.target ?? "board"} ${axis} scrolled ${direction === "any" ? "at least" : direction} ${min}px`,
-            Math.abs(moved) >= min && directionOk,
-            `${want.target ?? "board"} ${axis} moved ${moved}px ` +
-              `(board ${reading.before.boardX},${reading.before.boardY} → ${reading.after.boardX},${reading.after.boardY}; ` +
-              `lane ${reading.before.laneX},${reading.before.laneY} → ${reading.after.laneX},${reading.after.laneY})`,
+            wantArmed
+              ? `the hold picked up ${JSON.stringify(want)}`
+              : "the hold picked nothing up",
+            (armed !== null) === wantArmed && named,
+            armed === null ? "nothing was armed" : `armed ${JSON.stringify(armed)}`,
           );
         }
         if (rule.no_native_drag !== undefined) {
@@ -2585,6 +2748,30 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
             value === "manipulation",
             `touch-action=${JSON.stringify(value)}`,
           );
+        }
+      }
+    }
+    if (rule.touch_overflow !== undefined) {
+      // The pan-routing contract's live-DOM half (issue #330): the lane owns
+      // exactly its own flow axis and clips the other, and the board keeps its
+      // own axis. A `visible` off-axis computes to `auto`, which is how a lane
+      // became a zero-range scroll container that trapped a pan.
+      const want = rule.touch_overflow;
+      const got = await page.evaluate(pageTouchDragArmor, { card: want.card });
+      if (!got.ok) {
+        expect("the lane's overflow contract", false, got.reason);
+      } else {
+        for (const who of ["board", "lane"]) {
+          for (const axis of ["x", "y"]) {
+            const expected = want[who]?.[axis];
+            if (expected === undefined) continue;
+            const actual = got[`${who}Overflow${axis.toUpperCase()}`];
+            expect(
+              `the ${who}'s ${axis} overflow is ${expected}`,
+              actual === expected,
+              `${who} overflow-${axis}=${JSON.stringify(actual)}, wanted ${JSON.stringify(expected)}`,
+            );
+          }
         }
       }
     }
@@ -3336,6 +3523,12 @@ async function runSuite(file, { port, browser, cell = null }) {
       await page.emulateMediaFeatures([
         { name: "prefers-color-scheme", value: effectiveTheme },
       ]);
+      // The page-scroll fixture (issue #330), opt-in per suite: wrap the app in
+      // a host-shaped scroll shell so a pan that escapes the board has a page
+      // to scroll, which is the only way "never the page" can be asserted.
+      if (suite.defaults?.pageOverflow === true) {
+        await page.evaluate(pagePageOverflow, true);
+      }
       await page.evaluate(() => globalThis.__uat.resetCalls());
       await sleep(300);
       navigated = true;
@@ -3381,7 +3574,7 @@ async function runSuite(file, { port, browser, cell = null }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "drag_child_to_header", "drag_dot_to_dot", "drag_dot_to_floor", "drag_card_to_strip", "hover_header", "hover", "hover_card", "mouse_to", "key", "back", "click", "click_aria", "click_row_sweep", "type", "menu", "scroll", "wheel_pan", "touch_pan", "resize", "resize_pane", "sleep", "blur", "press_escape", "push_url", "push_update"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "drag_child_to_header", "drag_dot_to_dot", "drag_dot_to_floor", "drag_card_to_strip", "hover_header", "hover", "hover_card", "mouse_to", "key", "back", "click", "click_aria", "click_row_sweep", "type", "menu", "scroll", "wheel_pan", "touch_pan", "touch_drag", "resize", "resize_pane", "sleep", "blur", "press_escape", "push_url", "push_update"];
       let gestureFailed = false;
       // A gesture that cannot even run (its own element is absent — a
       // regression deleted what the step targets) records the step and
@@ -3603,7 +3796,15 @@ async function runSuite(file, { port, browser, cell = null }) {
             const stepDelay = Math.max(0, Number(payload.step_ms ?? 16));
             const touch = page.touchscreen;
             await touch.touchStart(origin.point.x, origin.point.y);
-            if (payload.hold_ms !== undefined) await sleep(Math.max(0, Number(payload.hold_ms)));
+            if (payload.hold_ms !== undefined) {
+              await sleep(Math.max(0, Number(payload.hold_ms)));
+              // A hold long enough to arm is a pickup, and the step may want
+              // to prove it: snapshot the armed card before any movement.
+              const picked = await page.evaluate(pageTouchArmed);
+              await page.evaluate((armed) => {
+                globalThis.__uatTouch.armed = armed;
+              }, picked);
+            }
             for (let i = 1; i <= steps; i += 1) {
               await touch.touchMove(
                 origin.point.x + (dx * i) / steps,
@@ -3615,6 +3816,36 @@ async function runSuite(file, { port, browser, cell = null }) {
             // The browser's momentum and settle run after the finger lifts;
             // the reading is taken once the surface is quiet again.
             await sleep(Math.max(0, Number(payload.settle_ms ?? 700)));
+            await page.evaluate(pageTouchPanRead);
+          } else if (gesture === "touch_drag") {
+            // Tap-hold-slide (issue #330), end to end: a real finger rests on a
+            // card long enough to arm the board's pickup, travels to a named
+            // target, and lifts there. The armed snapshot is read mid-gesture
+            // (after the hold, before the first move) so `touch_hold` can
+            // prove the card really lifted, and the rank write is asserted the
+            // way the mouse drag suites assert it.
+            const holdMs = Math.max(0, Number(payload.hold_ms ?? 420));
+            const origin = await page.evaluate(pageTouchPanOrigin, payload.from ?? { board: true });
+            const target = await page.evaluate(pageTouchDragTarget, payload.to ?? {});
+            await page.evaluate(pageTouchPanPrepare, origin);
+            const touch = page.touchscreen;
+            await touch.touchStart(origin.point.x, origin.point.y);
+            await sleep(holdMs);
+            const armed = await page.evaluate(pageTouchArmed);
+            await page.evaluate((picked) => {
+              globalThis.__uatTouch.armed = picked;
+            }, armed);
+            const steps = Math.max(2, Number(payload.steps ?? 10));
+            const stepDelay = Math.max(0, Number(payload.step_ms ?? 16));
+            for (let i = 1; i <= steps; i += 1) {
+              await touch.touchMove(
+                origin.point.x + ((target.x - origin.point.x) * i) / steps,
+                origin.point.y + ((target.y - origin.point.y) * i) / steps,
+              );
+              if (stepDelay > 0) await sleep(stepDelay);
+            }
+            await touch.touchEnd();
+            await sleep(Math.max(0, Number(payload.settle_ms ?? 800)));
             await page.evaluate(pageTouchPanRead);
           } else if (gesture === "resize") {
             // A viewport change while the lock is held re-runs the layout; let

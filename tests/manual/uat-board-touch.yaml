@@ -1,30 +1,43 @@
-# Operator-assisted E2E: the board surface on a touch phone (issue #328).
+# Operator-assisted E2E: the board surface on a touch phone (issues #328, #330).
 #
-# The report: on mobile the columns drag around horizontally and the board
-# never scrolls. A finger's pan is up against two platform gesturizers, and
-# both are DOM state this suite reads in the live document:
+# The operator's contract, verbatim:
 #
-#   1. Every card is an HTML5 drag source (`draggable`). Chrome Android and
-#      iOS Safari lift a `draggable` element after a long press, and every
-#      move after the lift pans the CARD, never the board.
-#   2. Card text is selectable. A long press on a title starts a selection or
-#      an iOS callout instead of a scroll.
+#   "sliding a finger anywhere pans the board. Tap-hold-slide on card drags the
+#    card. Hold duration should be very short but still long enough to
+#    distinguish touch-to-pan-board from touch-to-drag-card"
 #
-# So the surface contract is: on a coarse pointer no element of the board is a
-# native drag source, card text is not selectable, and the scroll surfaces
-# declare a `touch-action` that allows BOTH pan axes (`manipulation` — pan,
-# keep pinch, drop the double-tap-zoom guess). The pans themselves are driven
-# by the runner's `touch_pan` gesture: real CDP touch input against a
-# `hasTouch` + `isMobile` viewport, so the browser's own recognizer decides
-# what happens, not the suite.
+# and the two failures it names:
 #
-# What the harness cannot drive is the lift itself: a synthetic touch never
-# starts a platform drag (Chrome begins touch DnD inside its browser-side
-# gesture pipeline, which Input.dispatchTouchEvent does not enter), so a pan
-# over a card scrolls on the PRE-fix tree too. That is why the drag-source half
-# is asserted as the live-DOM contract above (it fails on the pre-fix tree),
-# and the pan half is asserted as behavior (it fails on any tree that forbids
-# the pan, `touch-action: none` included).
+#   "sliding a finger in the header scrolls the page"
+#   "sliding a finger in a lane scrolls the lane horizontally even though
+#    there's nothing to the right of the cards"
+#
+# So this suite pins three things about the surface, in the live document:
+#
+#   1. No element of the board is a native drag source on a coarse pointer and
+#      card text is not selectable (issue #328): Chrome Android and iOS Safari
+#      lift a `draggable` element after a long press, and a selection/callout
+#      kills the pan.
+#   2. Each scroller owns exactly the axis it has range on and CLIPS the other
+#      (`overflow-x: clip`), because an off-axis `visible` computes to `auto`
+#      and turns a lane into a zero-range scroll container that traps the pan.
+#   3. A slide is a pan everywhere on the surface — toolbar, lane header, lane,
+#      board padding — and it never scrolls the page. The page is given real
+#      overflow for this (`pageOverflow` mounts a host-shaped scroll shell
+#      around the app), so "the page did not move" is a measurement rather than
+#      a tautology.
+#
+# The pans themselves are driven by the runner's `touch_pan` gesture: real CDP
+# touch input against a `hasTouch` + `isMobile` viewport, so the browser's own
+# recognizer decides what happens, not the suite.
+#
+# The hold-drag half lives in `uat-board-touch-hold.yaml`, at a wide touch
+# viewport where two drop-accepting lanes fit in one gesture.
+#
+# What the harness cannot drive is the platform lift itself (Chrome begins
+# touch DnD inside its browser-side gesture pipeline, which
+# Input.dispatchTouchEvent does not enter), which is why the drag-source half is
+# asserted as the live-DOM contract above and the pan half as behavior.
 #
 # Run: npm run uat -- tests/manual/uat-board-touch.yaml
 suite: board-touch
@@ -38,6 +51,9 @@ defaults:
   # harness reports a fine pointer, none of the touch utilities apply, and
   # every step here would pass for the wrong reason.
   viewport: { width: 390, height: 844, hasTouch: true, isMobile: true }
+  # A page with one viewport of overflow behind the board: the operator's
+  # report is that a slide reached it, so the suite has to be able to tell.
+  pageOverflow: true
 shots: true
 
 steps:
@@ -51,6 +67,12 @@ steps:
       - drag_source: { card: thr_ship_release, armed: false }
       - drag_source: { card: thr_rpc_auth, armed: false }
 
+  - id: the-vertical-lanes-clip-the-axis-they-cannot-scroll
+    title: A column lane scrolls its own stack and clips the horizontal axis instead of becoming a second scroll container
+    goto: "?groupBy=status"
+    assert:
+      - touch_overflow: { card: thr_ship_release, board: { x: "auto", y: "hidden" }, lane: { x: "clip", y: "auto" } }
+
   - id: the-horizontal-board-arms-no-drag-source-on-touch
     title: The rows board carries the same touch contract
     goto: "?groupBy=status&laneDirection=horizontal"
@@ -58,6 +80,12 @@ steps:
       - lane_direction: horizontal
       - touch_drag_armor: { card: thr_ship_release }
       - drag_source: { card: thr_ship_release, armed: false }
+
+  - id: the-horizontal-lanes-clip-the-cross-axis
+    title: A row scrolls along its own flow and clips the vertical axis, so a vertical slide reaches the board
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert:
+      - touch_overflow: { card: thr_ship_release, board: { x: "hidden", y: "auto" }, lane: { x: "auto", y: "clip" } }
 
   # ── The operator's case: a finger on a card pans the board ───────────────
   - id: a-finger-on-a-card-pans-the-column-board
@@ -67,6 +95,9 @@ steps:
     assert:
       - touch_origin: { card: thr_ship_release, column: pinned }
       - touch_scroll: { target: board, axis: x, min: 40, direction: positive }
+      # The lane has no horizontal range, so it must not have taken the slide.
+      - touch_scroll: { target: lane, axis: x, equals: 0 }
+      - touch_scroll: { target: page, axis: x, equals: 0 }
       - no_native_drag: true
       - rpc_not_called: rank_move
       - column: pinned
@@ -81,6 +112,7 @@ steps:
       # either card.
       - touch_origin: { card: null, column: pinned }
       - touch_scroll: { target: board, axis: x, min: 40, direction: positive }
+      - touch_scroll: { target: lane, axis: x, equals: 0 }
       - no_native_drag: true
       - rpc_not_called: rank_move
       - column: pinned
@@ -104,14 +136,78 @@ steps:
       - touch_scroll: { target: board, axis: x, min: 40, direction: positive }
       - no_native_drag: true
 
-  - id: a-held-finger-on-a-card-still-pans
-    title: A long-press hold before the pan does not hand the gesture to a selection or a drag
-    # The long press is the moment both platform gesturizers arm: a roll of
-    # card text starts a selection, a drag source lifts. Neither may happen.
+  # ── The pickup: a hold is a drag, never a pan (issue #330) ───────────────
+  - id: a-held-finger-on-a-card-picks-it-up-instead-of-panning
+    title: A hold arms the card, and the slide that follows drags it instead of panning the board
     goto: "?groupBy=status"
-    touch_pan: { from: { card: thr_ship_release }, dx: -200, dy: 0, hold_ms: 550 }
+    # The slide stays over the card it started on, so the release resolves to
+    # its own slot: the point is the gesture's owner, not the write.
+    touch_pan: { from: { card: thr_ship_release }, dx: -40, dy: 0, hold_ms: 400 }
+    assert:
+      - touch_hold: { armed: true, card: thr_ship_release }
+      - touch_scroll: { target: board, axis: x, equals: 0 }
+      - no_native_drag: true
+      - rpc_not_called: rank_move
+      - column: pinned
+        ordered: [thr_ship_release, thr_roadmap]
+
+  - id: a-brief-touch-still-pans
+    title: A hold shorter than the pickup threshold leaves the gesture a pan
+    goto: "?groupBy=status"
+    touch_pan: { from: { card: thr_ship_release }, dx: -200, dy: 0, hold_ms: 60 }
+    assert:
+      - touch_hold: { armed: false }
+      - touch_scroll: { target: board, axis: x, min: 40, direction: positive }
+      - no_native_drag: true
+      - rpc_not_called: rank_move
+
+  - id: a-pickup-released-in-place-changes-nothing
+    title: A pickup lifted and released without moving puts the card back and writes nothing
+    goto: "?groupBy=status"
+    touch_pan: { from: { card: thr_ship_release }, dx: 0, dy: 0, hold_ms: 400 }
+    assert:
+      - touch_hold: { armed: true, card: thr_ship_release }
+      - rpc_not_called: rank_move
+      - column: pinned
+        ordered: [thr_ship_release, thr_roadmap]
+
+  # ── The header: a slide there pans the board, never the page ─────────────
+  - id: a-finger-on-the-toolbar-pans-the-board
+    title: A horizontal slide on the toolbar above the board scrolls the board, not the page
+    goto: "?groupBy=status"
+    touch_pan: { from: { toolbar: true }, dx: -200, dy: 0 }
     assert:
       - touch_scroll: { target: board, axis: x, min: 40, direction: positive }
+      - touch_scroll: { target: page, axis: x, equals: 0 }
+      - no_native_drag: true
+      - rpc_not_called: rank_move
+
+  - id: a-vertical-slide-on-the-toolbar-never-scrolls-the-page
+    title: A vertical slide on the toolbar scrolls nothing on the columns read and leaves the page where it was
+    goto: "?groupBy=status"
+    touch_pan: { from: { toolbar: true }, dx: 0, dy: -200 }
+    assert:
+      # The columns read has no vertical range inside the board, so the right
+      # answer is "nothing moves": the page must not inherit the gesture.
+      - touch_scroll: { target: page, axis: y, equals: 0 }
+      - rpc_not_called: rank_move
+
+  - id: a-finger-on-a-lane-header-scrolls-the-board
+    title: A horizontal slide on a lane's header strip scrolls the board past the lane
+    goto: "?groupBy=status"
+    touch_pan: { from: { laneHeader: pinned }, dx: -200, dy: 0 }
+    assert:
+      - touch_scroll: { target: board, axis: x, min: 40, direction: positive }
+      - touch_scroll: { target: page, axis: x, equals: 0 }
+      - rpc_not_called: rank_move
+
+  - id: a-vertical-slide-inside-the-column-board-never-reaches-the-page
+    title: A vertical slide anywhere in the columns board leaves the page still
+    goto: "?groupBy=status"
+    touch_pan: { from: { card: thr_ship_release }, dx: 0, dy: -200 }
+    assert:
+      - touch_scroll: { target: page, axis: y, equals: 0 }
+      - touch_scroll: { target: board, axis: y, equals: 0 }
       - no_native_drag: true
       - rpc_not_called: rank_move
 
@@ -123,6 +219,9 @@ steps:
     assert:
       - touch_origin: { card: thr_ship_release, column: pinned }
       - touch_scroll: { target: board, axis: y, min: 40, direction: positive }
+      # The row has no vertical range: the board took the slide, not the row.
+      - touch_scroll: { target: lane, axis: y, equals: 0 }
+      - touch_scroll: { target: page, axis: y, equals: 0 }
       - no_native_drag: true
       - rpc_not_called: rank_move
       - column: pinned
@@ -137,4 +236,31 @@ steps:
       # horizontal range on this read), and it moves the way the finger did.
       - touch_scroll: { target: lane, axis: x, min: 30, direction: positive }
       - no_native_drag: true
+      - rpc_not_called: rank_move
+
+  - id: a-vertical-slide-on-the-rows-toolbar-scrolls-the-rows
+    title: A vertical slide on the toolbar scrolls the rows board rather than the page
+    goto: "?groupBy=status&laneDirection=horizontal"
+    touch_pan: { from: { toolbar: true }, dx: 0, dy: -200 }
+    assert:
+      - touch_scroll: { target: board, axis: y, min: 40, direction: positive }
+      - touch_scroll: { target: page, axis: y, equals: 0 }
+      - rpc_not_called: rank_move
+
+  - id: a-horizontal-slide-across-a-row-header-scrolls-that-row
+    title: A horizontal slide on a row's header strip scrolls the row it names
+    goto: "?groupBy=status&laneDirection=horizontal"
+    touch_pan: { from: { laneHeader: pinned }, dx: -180, dy: 0 }
+    assert:
+      - touch_scroll: { target: lane, axis: x, min: 30, direction: positive }
+      - touch_scroll: { target: page, axis: x, equals: 0 }
+      - rpc_not_called: rank_move
+
+  - id: a-horizontal-slide-on-the-rows-toolbar-never-reaches-the-page
+    title: A horizontal slide on the rows toolbar has nothing to scroll, so nothing moves and the page stays
+    goto: "?groupBy=status&laneDirection=horizontal"
+    touch_pan: { from: { toolbar: true }, dx: -180, dy: 0 }
+    assert:
+      - touch_scroll: { target: page, axis: x, equals: 0 }
+      - touch_scroll: { target: board, axis: x, equals: 0 }
       - rpc_not_called: rank_move

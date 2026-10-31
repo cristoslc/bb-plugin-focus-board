@@ -7,13 +7,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+#### Touch input
+
+- **Holding a card on touch picks it up to drag it.** A 180ms hold arms the card, the slide that follows shows the same insertion line and nest ring a cursor drag does, and the release writes the same reorder. A finger that moves before the hold finishes just pans the board, and a pickup released where it was lifted puts the card back and writes nothing.
+  - The folded feature-group card drags its whole unit the same way, and a nested child row reorders inside its own family.
+
 ### Changed
 
 ### Fixed
 
-#### Board layout
+#### Touch input
 
-- **A phone's board scrolls again: a finger pans the lanes and never drags a card.** Cards, child rows, strip dots, and group boxes were native drag sources, so the platform's touch-drag recognizer lifted one out of a finger's gesture and the board stayed where it was. Those drag sources now arm for a mouse only, and card text stops being selectable on touch, where a long press turned into a selection.
+- **A phone's board pans under a finger instead of lifting a card.** Cards, child rows, strip dots, and group boxes are no longer native drag sources, so the platform's touch-drag recognizer cannot take the pan. Card text stays unselectable on touch, where a long press used to start a selection instead of a scroll.
+- **A slide that starts on the toolbar or a lane's title strip pans the board, never the page behind it.** Neither sits inside a scroller, so the gesture used to leave the board entirely. Every slide across the board's surface now lands on the board or on the lane the finger started in.
+- **A lane with nothing to its right stops trapping the slide.** A lane's card list was quietly becoming a horizontal scroller with no range, which rubber-bands a finger on iOS instead of handing the pan outward. Each lane now clips the axis it cannot scroll.
 
 ## [1.7.3] - 2026-10-31
 

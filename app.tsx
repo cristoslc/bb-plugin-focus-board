@@ -25,6 +25,7 @@ import { FocusBoardAppIcon } from "./components/ui/icon";
 import type { rpcContract } from "./server";
 import { Board } from "./components/board";
 import { BoardToolbar } from "./components/board-toolbar";
+import { useBoardPanRouter } from "./components/board-pan";
 import { ThreadPane } from "./components/thread-pane";
 import type { ThreadPaneThread } from "./components/thread-pane";
 import { useSearchFocusOnSlash } from "./hooks/use-search-focus";
@@ -997,6 +998,13 @@ function BoardPage({ subPath }: { subPath: string }) {
   // useWallpaperPaintFrame (components/wallpaper-paint.tsx) to place the
   // wallpaper relative to the window, not to the panel.
   const panelRef = useRef<HTMLDivElement | null>(null);
+  // The board region: the toolbar plus the board's own scroller, the surface
+  // a finger's pan must stay inside (issue #330). The router listens on this
+  // wrapper because the toolbar sits ABOVE the board's scroller — a slide
+  // that starts there has no intermediate scroller to catch it, so it used
+  // to reach the page instead of panning the board.
+  const boardRegionRef = useRef<HTMLDivElement | null>(null);
+  useBoardPanRouter(boardRegionRef);
   // Appearance tab: the card-transport read and the motion override, backed
   // by the same tolerant localStorage stores every other board preference
   // uses. Defaults keep today's board untouched (the dissolve plays; the
@@ -3358,6 +3366,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         />
       )}
       <div
+        ref={boardRegionRef}
         className={
           (activeWallpaper === null ? "" : "relative z-10 ") +
           "flex h-full min-h-0 min-w-0 flex-1 flex-col"
