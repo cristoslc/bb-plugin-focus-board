@@ -271,9 +271,22 @@ else should ride in it.
   The notes file is the release's changelog section verbatim — retitle its
   heading to `## Focus Board X.Y.Z (date)` — closed by a
   `**Full changelog**: .../compare/v<PREVIOUS>...vX.Y.Z` compare link
-  against the previous tag (v0.5.21's release is the pattern). No binary
-  assets: the tag itself is the package, since bb installs it by semver
+  against the previous tag (v0.5.21's release is the pattern). No package
+  binaries: the tag itself is the package, since bb installs it by semver
   range. Confirm with `gh release view vX.Y.Z`.
+- **A demo gif per demonstrable feature.** The notes are not done when the
+  section is pasted: every Added/Changed bullet (and any Fixed one an
+  operator can see moving) carries a short gif of that feature, embedded
+  directly under the bullet, with the body otherwise verbatim. Bullets with
+  no gif are named with a one-line reason in the release's PR. Skip gifs are
+  never silent. A feature the harness cannot stage yet is the signal to add
+  the seed fixture or gesture driver **as part of this release**, not a
+  follow-up: the storyboards are the tooling the next release reuses.
+  Capture against the tag's own tree (throwaway worktree + `npm ci` +
+  `npm run build`), because a gif is evidence of what shipped. Gifs are
+  release assets, never repo files. Full rule, storyboard shape, runner
+  commands, and the 15–45s / few-MB budget:
+  `docs/releases/demo-gif-convention.md`.
 - Remove the temp worktree.
 
 ## 4a. Marketplace entry check

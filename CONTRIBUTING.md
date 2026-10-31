@@ -93,7 +93,7 @@ A pull request that changes what a user sees adds bullets to the `[Unreleased]` 
 - Write it Slack-punchy: a bold lead that names the feature surface and reads on its own, plus at most two short sentences. Fold same-behavior bullets into one with sub-bullets.
 - Never edit a published `[X.Y.Z]` section. If a rebase leaves your bullets inside one, move them back into `[Unreleased]`.
 
-The full rules, including the What's-new modal grouping, live in [.agents/agents-md-detail/release.md](.agents/agents-md-detail/release.md).
+The full rules, including the What's-new modal grouping, live in [.agents/agents-md-detail/release.md](.agents/agents-md-detail/release.md). Release pages carry a demo gif under every demonstrable bullet; that rule and its capture tooling are in [docs/releases/demo-gif-convention.md](docs/releases/demo-gif-convention.md).
 
 ## Opening the pull request
 
