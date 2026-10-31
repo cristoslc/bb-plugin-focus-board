@@ -124,6 +124,87 @@ describe("group_rename", () => {
   });
 });
 
+describe("group names are unique across the registry", () => {
+  it("refuses a rename onto a name another group already holds", async () => {
+    const { callRpc, kv, harness } = await setup();
+    const alpha = (await callRpc("group_create", { name: "Alpha" })) as {
+      group: { id: string };
+    };
+    const beta = (await callRpc("group_create", { name: "Beta" })) as {
+      group: { id: string };
+    };
+    const before = harness.inspection.realtimeSignals.length;
+
+    const failure = (await callRpc("group_rename", {
+      groupId: alpha.group.id,
+      name: "Beta",
+    }).then(
+      () => null,
+      (error: unknown) => error as { code?: string; message?: string },
+    )) as { code?: string; message?: string } | null;
+
+    // The refusal names the conflicting group and carries its own code, so a
+    // CLI or an agent can branch on it without parsing the sentence. The RPC
+    // bridge flattens any handler failure to its own `handler_error` code, so
+    // the message is what survives to this surface; the CLI suite pins the
+    // message's stderr rendering, and `group_name_taken` is the code the
+    // PluginCliError itself carries.
+    expect(failure?.code).toBe("handler_error");
+    expect(failure?.message).toContain("is already taken by group");
+    expect(failure?.message).toContain(beta.group.id);
+    // The registry is untouched: the refused write never landed, and it never
+    // signalled the board.
+    const store = parseGroupsStore(kv.get(GROUPS_KV_KEY));
+    expect(store[alpha.group.id].name).toBe("Alpha");
+    expect(store[beta.group.id].name).toBe("Beta");
+    expect(harness.inspection.realtimeSignals).toHaveLength(before);
+  });
+
+  it("renaming a group onto its OWN name succeeds without a write or a signal", async () => {
+    const { callRpc, harness } = await setup();
+    const alpha = (await callRpc("group_create", { name: "Alpha" })) as {
+      group: { id: string; name: string };
+    };
+    const before = harness.inspection.realtimeSignals.length;
+    const renamed = (await callRpc("group_rename", {
+      groupId: alpha.group.id,
+      name: "Alpha",
+    })) as { group: { id: string; name: string } };
+    expect(renamed.group).toEqual(
+      expect.objectContaining({ id: alpha.group.id, name: "Alpha" }),
+    );
+    expect(harness.inspection.realtimeSignals).toHaveLength(before);
+  });
+
+  it("keeps case-variant names distinct, the same rule create's idempotency uses", async () => {
+    const { callRpc, kv } = await setup();
+    const upper = (await callRpc("group_create", { name: "Alpha" })) as {
+      group: { id: string };
+    };
+    const lower = (await callRpc("group_create", { name: "alpha" })) as {
+      group: { id: string };
+    };
+    // Exact-match uniqueness: two spellings, two groups.
+    expect(lower.group.id).not.toBe(upper.group.id);
+    expect(Object.keys(parseGroupsStore(kv.get(GROUPS_KV_KEY)))).toHaveLength(2);
+    // And the exact-match rule cuts both ways: renaming one onto the other's
+    // exact spelling is still refused, because that name is held.
+    await expect(
+      callRpc("group_rename", { groupId: lower.group.id, name: "Alpha" }),
+    ).rejects.toThrow(/already taken/);
+  });
+
+  it("two concurrent creates of one name land on a single record", async () => {
+    const { callRpc, kv } = await setup();
+    const [first, second] = (await Promise.all([
+      callRpc("group_create", { name: "Race" }),
+      callRpc("group_create", { name: "Race" }),
+    ])) as { group: { id: string } }[];
+    expect(second.group.id).toBe(first.group.id);
+    expect(Object.keys(parseGroupsStore(kv.get(GROUPS_KV_KEY)))).toHaveLength(1);
+  });
+});
+
 describe("group_set over thread plugin metadata", () => {
   it("assigns threads and reports memberships in groups_list", async () => {
     const { callRpc } = await setup({ threads: ["thr_a", "thr_b", "thr_c"] });

@@ -16,9 +16,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-### Fixed
+- **Two groups can no longer share a name.** A rename onto a name another group already holds is refused, and the picker's editor stays open with the reason inline instead of closing on a write that never landed. Creating a group with an existing name still settles onto that group, as it already did.
 
-#### Feature groups
+### Fixed
 
 - **A pinned member keeps its group's dashed frame in the Pinned lane.** A group whose only member was pinned rendered no frame anywhere, because the box plan dropped pinned members entirely. The Pinned lane now frames its slice like every other lane, so the group stays visible, labeled, and joinable there.
 

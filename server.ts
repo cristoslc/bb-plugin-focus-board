@@ -1144,9 +1144,12 @@ export default async function plugin(bb: BbPluginApi) {
 
   /**
    * Resolve a group reference coming from operator or agent input: an exact
-   * registry id wins, then a unique exact-name match. Duplicate names are
-   * legal state (group_create does not enforce uniqueness), so an ambiguous
-   * name fails loud naming the ids instead of silently picking one.
+   * registry id wins, then a unique exact-name match. Names are unique by
+   * construction now (create resolves an exact name to its record, rename
+   * refuses a name another group holds), but a registry written before that
+   * guard, or by a manual KV edit, can still carry two rows spelled alike, so
+   * an ambiguous name fails loud naming the ids instead of silently picking
+   * one.
    */
   async function resolveGroupRef(
     ref: string,
@@ -1215,13 +1218,25 @@ export default async function plugin(bb: BbPluginApi) {
     });
   }
 
+  /**
+   * Rename in place, unique by name: a name another group already holds is
+   * refused rather than written, so the registry keeps one row per name and
+   * no surface has to tell two same-named groups apart. Uniqueness is
+   * exact-match on the settled name, mirroring create's idempotency rule:
+   * "Alpha" and "alpha" stay two different groups (names are labels, not
+   * case-folded keys). Renaming a group onto its OWN current name is a
+   * no-op that writes nothing and signals nothing, like every other
+   * idempotent write here.
+   *
+   * The registry is one KV row rewritten whole: the check, the read-merge
+   * write, and the concurrent create or rename this must not erase all run
+   * under the KV write lock.
+   */
   async function renameGroupById(groupId: string, name: string): Promise<GroupRecord> {
-    // The registry is one KV row rewritten whole: the read-merge write runs
-    // under the KV write lock so another writer's concurrent create or
-    // rename is not erased by this write's stale snapshot.
     return withKvWriteLock(async () => {
       const store = await readGroupsStore();
-      if (store[groupId] === undefined) throw unknownGroupError(groupId);
+      const existing = store[groupId];
+      if (existing === undefined) throw unknownGroupError(groupId);
       const settled = normalizeGroupName(name);
       if (settled === null) {
         throw new PluginCliError(
@@ -1229,7 +1244,20 @@ export default async function plugin(bb: BbPluginApi) {
           { code: "invalid_value" },
         );
       }
-      const record = { ...store[groupId], name: settled };
+      if (existing.name === settled) return existing;
+      const taken = Object.entries(store).find(
+        ([id, record]) => id !== groupId && record.name === settled,
+      );
+      if (taken !== undefined) {
+        throw new PluginCliError(
+          `group name ${JSON.stringify(settled)} is already taken by group ${taken[0]}`,
+          {
+            code: "group_name_taken",
+            hint: "Names are unique across the registry: rename that group first, or pick another name.",
+          },
+        );
+      }
+      const record = { ...existing, name: settled };
       await writeGroupsStore({ ...store, [groupId]: record });
       bb.realtime.publish(GROUP_CHANGED, { threadId: null });
       return record;
