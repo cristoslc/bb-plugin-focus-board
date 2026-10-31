@@ -2456,7 +2456,7 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
           const axis = want.axis === "y" ? "y" : "x";
           const moved = reading.delta[want.target === "lane" ? "lane" : "board"][axis];
           const min = Number(want.min ?? 1);
-          const direction = want.direction ?? (min > 0 ? "any" : "any");
+          const direction = want.direction ?? "any";
           const sign = Math.sign(moved);
           const directionOk =
             direction === "positive" ? sign > 0 : direction === "negative" ? sign < 0 : true;
