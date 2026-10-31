@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type MouseEvent,
+  type ReactNode,
 } from "react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { BoardColumn, GroupBy, LaneHideOutcome } from "./grouping";
@@ -23,8 +24,15 @@ import { SweepButton, SweepCancelButton } from "./sweep-button";
 import { SweepNoticeBanner, SweepRefusalBanner } from "./sweep-banners";
 import { ThreadCard } from "./thread-card";
 import { useCardSpotlightStyles } from "./card-spotlight";
-import { attentionPulseRef, useAttentionPulseGate } from "./attention-pulse-gate";
-import { DOT_PULSE_ATTR, dotPulseStyle, useDotPulseStyles } from "./dot-pulse";
+import { useAttentionPulseGate } from "./attention-pulse-gate";
+import {
+  DotGlyph,
+  DOT_CLASS,
+  DOT_GENERATION_CLASS,
+  DOT_GENERATION_NAMES,
+  type DotGeneration,
+} from "./dot-grid";
+import { useDotPulseStyles } from "./dot-pulse";
 import { pulsePeriodMs } from "../lib/pulse-rate";
 import { MenuPopover } from "./menu-popover";
 import type { ThreadLink } from "../lib/link-metadata";
@@ -600,12 +608,8 @@ interface BoardProps {
   onSweepCancel?: () => void;
 }
 
-const DOT_CLASS: Record<string, string> = {
-  working: "bg-blue-500",
-  attention: "bg-amber-500",
-  unread: "bg-emerald-500",
-  idle: "bg-muted-foreground/30",
-};
+// The state dot palette rides the shared dot-grid vocabulary
+// (components/dot-grid), the same one the collapsed strips paint.
 
 function StateDot({
   thread,
@@ -4013,14 +4017,16 @@ export function Board({
                    * dashed ring keeps the box's own vocabulary — the visual
                    * that distinguishes it from a real thread card or a parent
                    * thread card. It carries the group name, the member count,
-                   * and one status dot per member (the same strip the family
-                   * fold uses); the cards it stands for are hidden. The box's
-                   * gestures ride it: it drags the whole unit (the lead
-                   * member's payload, the label drag's own), it accepts
-                   * drop-to-join over its whole surface, it carries the same
-                   * amber highlight frames the expanded box draws, and a
-                   * right-click opens the group's menu (its "Expand group"
-                   * entry unwinds the fold).
+                   * and a status dot grid: one leading dot per member, that
+                   * member's children one size down, and their children at
+                   * the smallest tier (issue #321), so a folded group's live
+                   * subtree stays readable. The cards it stands for are
+                   * hidden. The box's gestures ride it: it drags the whole
+                   * unit (the lead member's payload, the label drag's own), it
+                   * accepts drop-to-join over its whole surface, it carries
+                   * the same amber highlight frames the expanded box draws,
+                   * and a right-click opens the group's menu (its "Expand
+                   * group" entry unwinds the fold).
                    */
                   const renderCollapsedBoxRun = (box: {
                     groupId: string;
@@ -4033,6 +4039,107 @@ export function Board({
                       onRenameGroup !== undefined ||
                       onDeleteGroup !== undefined ||
                       onGroupCollapsedChange !== undefined;
+                    /**
+                     * The dot grid's hierarchy, read from the board's own
+                     * display map (`nestedChildrenByParent` is the map this
+                     * board hands ThreadCard as `grandchildThreadsByParent`),
+                     * so the strip and the family rows can never disagree and
+                     * no second hierarchy module exists. Two steps reach a
+                     * member's children and its grandchildren; buildFamilyIndex
+                     * caps every display chain at two row tiers and re-attaches
+                     * deeper members to the family root, so the walk ends there
+                     * by construction (see DOT_GENERATION_CLASS's clip rule).
+                     *
+                     * The map carries only the CURRENT space's rows: a live
+                     * member's done children ride the Done lane's own card, and
+                     * a Done member never reaches a box at all (the plan's
+                     * candidates are live threads), so no done thread can
+                     * arrive here to be dimmed. Idle descendants paint like
+                     * idle members always have, quiet through the idle colour:
+                     * the folded box carries no idle filter, and a control-less
+                     * hide (issue #172's filter is a parent CARD control) would
+                     * drop a thread the chip's own nested figure still counts.
+                     */
+                    const descendantRowsOf = (
+                      memberId: string,
+                    ): readonly PluginSidebarThread[] =>
+                      nestedChildrenByParent.get(memberId) ?? [];
+                    const nestedCountOf = (memberId: string): number =>
+                      descendantRowsOf(memberId).reduce(
+                        (count, child) => count + 1 + descendantRowsOf(child.id).length,
+                        0,
+                      );
+                    const nestedCount = box.members.reduce(
+                      (count, member) => count + nestedCountOf(member.id),
+                      0,
+                    );
+                    /**
+                     * One dot in the folded card's grid: a real button (a
+                     * button may not nest dots, so the strip is a div), sized
+                     * like the parent strip's dot button so the two grids
+                     * click the same. A click never expands the group: it
+                     * opens the dot's thread and leaves the box folded. Without
+                     * pane wiring the click falls back to the expand gesture,
+                     * the parent strip's own fallback.
+                     */
+                    const boxDot = (
+                      member: PluginSidebarThread,
+                      generation: DotGeneration,
+                    ): ReactNode => {
+                      const state = threadState(member, errorAckIds);
+                      // The rate pulse (issue #279): a working dot breathes at
+                      // its measured burn, the base period when unmeasured.
+                      // Attention dots keep their own animation; both ride the
+                      // visible-only gate.
+                      const pulsePeriod =
+                        state === "working"
+                          ? pulsePeriodMs(pulseRateFor?.(member.id) ?? null)
+                          : null;
+                      return (
+                        <button
+                          key={member.id}
+                          type="button"
+                          data-collapsed-group-dot-button={member.id}
+                          aria-label={`${
+                            generation === 0
+                              ? "Open member thread"
+                              : generation === 1
+                                ? "Open child thread"
+                                : "Open grandchild thread"
+                          }: ${member.displayTitle}`}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            if (onOpenThread === undefined) {
+                              onGroupCollapsedChange?.(box.groupId, false);
+                              return;
+                            }
+                            onOpenThread(member.id);
+                          }}
+                          className={cn(
+                            // p-0 and shrink-0 keep the glyph at its
+                            // generation size: a button's own padding (the
+                            // host's reset zeroes it, a bare harness does not)
+                            // would otherwise squeeze a size-1.5 dot to 4px.
+                            "flex size-4 shrink-0 items-center justify-center rounded-full p-0",
+                            "hover:bg-amber-500/20 focus-visible:bg-amber-500/20",
+                            "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          )}
+                        >
+                          <DotGlyph
+                            state={state}
+                            size={DOT_GENERATION_CLASS[generation]}
+                            pulsePeriod={pulsePeriod}
+                            className="shrink-0"
+                            title={`${member.displayTitle} · ${THREAD_STATE_LABELS[state] ?? state}`}
+                            markers={{
+                              "data-collapsed-group-dot": member.id,
+                              "data-collapsed-group-dot-tier": DOT_GENERATION_NAMES[generation],
+                            }}
+                          />
+                        </button>
+                      );
+                    };
                     return (
                       <li
                         key={`group:${box.groupId}`}
@@ -4200,54 +4307,72 @@ export function Board({
                           >
                             <Icon name="ChevronRight" className="size-3 shrink-0 text-muted-foreground" aria-hidden />
                             <span className="truncate font-medium">{box.name}</span>
-                            <span className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] tabular-nums text-muted-foreground">
+                            {/* The chip counts the leading dots (the
+                                members), and the strip's own tail below counts
+                                the deeper ones (issue #282's agreement rule in
+                                its stated form: each figure sits beside the
+                                dots it counts and the two sum to every dot
+                                painted). The member figure keeps its noun and
+                                its width, so a group name still fits the row. */}
+                            <span
+                              data-collapsed-group-count={box.groupId}
+                              className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] tabular-nums text-muted-foreground"
+                            >
                               {box.members.length} {box.members.length === 1 ? "thread" : "threads"}
                             </span>
                           </button>
-                          <button
-                            type="button"
+                          {/* The grid itself: a DIV, not a button, because the
+                              dots are real buttons and a button may not nest
+                              its own. It keeps the parent strip's contract
+                              (components/thread-card.tsx): the background is
+                              the pointer's expand surface, while the labeled
+                              expand control above stays the keyboard path.
+                              Inside it, each member opens its own nowrap
+                              cluster, its children sit one step in, and their
+                              children are the leaves. */}
+                          <div
                             data-collapsed-group-dots={box.groupId}
-                            aria-label={`Expand group ${box.name}`}
                             title="Show the group's member cards"
                             onClick={(event) => {
                               event.stopPropagation();
                               onGroupCollapsedChange?.(box.groupId, false);
                             }}
                             className={cn(
-                              "mt-1 flex max-w-full flex-wrap items-center gap-1 rounded-sm py-0.5",
-                              "transition-colors hover:bg-accent/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                              "mt-1 flex max-w-full flex-wrap items-center gap-2.5 rounded-sm py-0.5",
+                              "transition-colors hover:bg-accent/60",
                             )}
                           >
-                            {box.members.map((member) => {
-                              const state = threadState(member);
-                              // The rate pulse (issue #279): a working member's
-                              // dot breathes at its measured burn, base period
-                              // when unmeasured. Attention dots keep their own
-                              // animation; both ride the visible-only gate.
-                              const pulsePeriod =
-                                state === "working"
-                                  ? pulsePeriodMs(pulseRateFor?.(member.id) ?? null)
-                                  : null;
-                              const animated = state === "attention" || pulsePeriod !== null;
-                              return (
-                                <span
-                                  key={member.id}
-                                  ref={animated ? attentionPulseRef : undefined}
-                                  data-collapsed-group-dot=""
-                                  data-dot-pulse={
-                                    pulsePeriod === null ? undefined : String(pulsePeriod)
-                                  }
-                                  style={pulsePeriod === null ? undefined : dotPulseStyle(pulsePeriod)}
-                                  title={`${member.displayTitle} · ${THREAD_STATE_LABELS[state] ?? state}`}
-                                  className={cn(
-                                    "size-1.5 rounded-full",
-                                    DOT_CLASS[state] ?? "bg-muted-foreground/30",
-                                    state === "attention" && "motion-safe:animate-pulse",
-                                  )}
-                                />
-                              );
-                            })}
-                          </button>
+                            {box.members.map((member) => (
+                              <span
+                                key={member.id}
+                                data-collapsed-group-dot-group={member.id}
+                                className="flex flex-nowrap items-center gap-1"
+                              >
+                                {boxDot(member, 0)}
+                                {descendantRowsOf(member.id).map((child) => (
+                                  <span
+                                    key={child.id}
+                                    data-collapsed-group-dot-cluster={child.id}
+                                    className="flex flex-nowrap items-center gap-0.5"
+                                  >
+                                    {boxDot(child, 1)}
+                                    {descendantRowsOf(child.id).map((sub) => boxDot(sub, 2))}
+                                  </span>
+                                ))}
+                              </span>
+                            ))}
+                            {nestedCount === 0 ? null : (
+                              // The deeper dots' count, beside the dots it
+                              // counts: the members' chip above names the
+                              // leading tier, this names everything below it.
+                              <span
+                                data-collapsed-group-nested-count={box.groupId}
+                                className="shrink-0 text-[10px] tabular-nums text-muted-foreground"
+                              >
+                                {nestedCount} nested
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {/* The arrival's glint layer rides the slot li —
                             a sibling of the fading dashed card, so the amber

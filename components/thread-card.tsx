@@ -2,7 +2,7 @@ import { isValidElement, memo, type DragEvent, type ReactNode, useState } from "
 import { createPortal } from "react-dom";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { attentionPulseRef } from "./attention-pulse-gate";
-import { DOT_PULSE_ATTR, dotPulseStyle } from "./dot-pulse";
+import { DotGlyph, DOT_GENERATION_CLASS, DOT_CLASS } from "./dot-grid";
 import { pulsePeriodMs } from "@/lib/pulse-rate";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
@@ -75,12 +75,9 @@ const ACCENT_CLASS: Record<string, string> = {
   idle: "bg-transparent",
 };
 
-const DOT_CLASS: Record<string, string> = {
-  working: "bg-blue-500",
-  attention: "bg-amber-500",
-  unread: "bg-emerald-500",
-  idle: "bg-muted-foreground/30",
-};
+// The dot colours and generation sizes ride the shared grid vocabulary
+// (components/dot-grid), so a child strip's dot and a folded group card's dot
+// are the same object at the same depth.
 
 export interface ThreadCardProps {
   thread: PluginSidebarThread;
@@ -1485,20 +1482,13 @@ export function ThreadCardImpl({
             "after:absolute after:inset-y-0 after:-right-0.5 after:w-0.5 after:rounded-full after:bg-ring",
         )}
       >
-        <span
-          ref={state === "attention" || pulsePeriod !== null ? attentionPulseRef : undefined}
-          aria-hidden
-          data-child-dot-glyph=""
-          data-dot-pulse={pulsePeriod === null ? undefined : String(pulsePeriod)}
-          style={pulsePeriod === null ? undefined : dotPulseStyle(pulsePeriod)}
-          className={cn(
-            // The generation cue: a sub-dot draws one size step down
-            // from its parent's dot (the musing's size rule).
-            isSub ? "size-1" : "size-1.5",
-            "rounded-full",
-            DOT_CLASS[state] ?? "bg-muted-foreground/30",
-            state === "attention" && "motion-safe:animate-pulse",
-          )}
+        <DotGlyph
+          // The generation cue: a sub-dot draws one size step down from
+          // its parent's dot (DOT_GENERATION_CLASS's middle rung).
+          size={isSub ? DOT_GENERATION_CLASS[1] : DOT_GENERATION_CLASS[0]}
+          state={state}
+          pulsePeriod={pulsePeriod}
+          markers={{ "data-child-dot-glyph": "" }}
         />
       </button>
     );

@@ -10,6 +10,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 #### Feature groups
 
 - **A child in a different feature group than its parent now shows twice: its row under the parent card and its own card inside the group's box.** Pin a parent whose child sits in another group and the child keeps its row in the Pinned lane while its card lands in whichever lane its own state picks.
+- **A folded feature-group card now shows every descendant's status dot, not just its members'.** Each member's dot leads its children's smaller dots, and their children's tiniest tier, so a folded group's whole live subtree reads at a glance.
+  - Clicking a dot opens that thread and leaves the group folded; the labeled control above the grid still expands it.
+  - The member chip counts the leading dots and an "N nested" label beside the grid counts the rest, so the figures always add up to the dots painted.
 
 ### Changed
 
