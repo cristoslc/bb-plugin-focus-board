@@ -41,6 +41,15 @@ const CHIP_FULL_ROW = "max-w-full";
 const CHIP_TAG_MAX_WIDTH = "max-w-[75%]";
 
 /**
+ * The room a card (or a nested row) keeps clear for the touch menu trigger
+ * (issue #336). On a coarse pointer `ThreadCardMenu` overlays a 36px ⋯ button
+ * on the surface's top-right corner; reserving exactly that much on the
+ * content row means the button never sits on the relative time, the family
+ * size badge, or a chip.
+ */
+const MENU_TRIGGER_GUTTER_CLASS = "pr-9";
+
+/**
  * An id long enough to need the fit path. Short ids (`#43`) never overflow at
  * any lane width, so only chips carrying a long external key arm the measuring
  * observer — the board's many short-id cards pay nothing.
@@ -961,6 +970,10 @@ function ChildRow({
         // dragging it off a family card and releasing over a column floor
         // un-nests it.
         "relative block rounded-md border border-border/50 bg-muted/40 px-2 py-1.5 text-left",
+        // The touch menu trigger's corner (issue #336): the row's own menu
+        // moves behind a ⋯ button on a coarse pointer, and the button needs its
+        // 36px clear of the row's time and title.
+        coarsePointer && MENU_TRIGGER_GUTTER_CLASS,
         "transition-colors hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         "opacity-70 hover:opacity-100",
         child.isArchived && "saturate-50",
@@ -1043,6 +1056,7 @@ function ChildRow({
       href={child.href}
       onOpen={() => onOpenThread(child.id)}
       title={child.displayTitle}
+      coarse={coarsePointer}
       onOpenChange={(open) =>
         open ? onAttentionEnter?.(child.id) : onAttentionLeave?.(child.id)
       }
@@ -1701,7 +1715,7 @@ export function ThreadCardImpl({
           className="pointer-events-none absolute inset-0 z-10 rounded-md bg-amber-500/10"
         />
       ) : null}
-      <div className="flex items-stretch">
+      <div className={cn("flex items-stretch", coarsePointer && MENU_TRIGGER_GUTTER_CLASS)}>
         {/* The chip rows live OUTSIDE the card's anchor: the chips carry
             anchors of their own (the mark's list page, each id's item), and
             HTML forbids an <a> inside an <a> (issue #171). The column keeps
@@ -2207,6 +2221,7 @@ export function ThreadCardImpl({
       href={thread.href}
       onOpen={onOpen}
       title={thread.displayTitle}
+      coarse={coarsePointer}
       onOpenChange={(open) =>
         open ? onAttentionEnter?.(thread.id) : onAttentionLeave?.(thread.id)
       }

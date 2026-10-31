@@ -1117,6 +1117,9 @@ const pageTouchPanPrepare = ({ point, under }) => {
     // Filled mid-gesture by the hold gestures: what was picked up, if
     // anything, and whether the board marked it lifted.
     armed: null,
+    // The pickup's floating snapshot, sampled after the arm and after every
+    // move (issue #336): the ghost's box and the finger it should be following.
+    ghostSamples: [],
   };
   return true;
 };
@@ -1144,6 +1147,11 @@ const pageTouchPanRead = () => {
   const readingOut = {
     ...reading,
     after,
+    // Did the floating snapshot outlive its gesture? It fades and leaves
+    // (issue #336), so a ghost still in the document after the settle is a
+    // leaked lift.
+    ghostAfter: document.querySelector("[data-touch-drag-ghost]") !== null,
+    menuAfter: document.querySelector('[role="menu"]') !== null,
     delta: {
       board: { x: after.boardX - reading.before.boardX, y: after.boardY - reading.before.boardY },
       lane: { x: after.laneX - reading.before.laneX, y: after.laneY - reading.before.laneY },
@@ -1163,6 +1171,38 @@ const pageTouchArmed = () => {
     box: el.closest("[data-group-box]")?.getAttribute("data-group-box") ?? null,
     tag: el.tagName.toLowerCase(),
   };
+};
+
+/**
+ * One mid-gesture sample of the pickup's floating snapshot (issue #336): the
+ * ghost's own viewport box beside the finger it is supposed to be following,
+ * plus whatever menu is open at that instant. The runner calls this after the
+ * arm and after every move, so the samples can be compared pairwise — a 1:1
+ * pick-up means the ghost's travel equals the finger's, sample for sample.
+ */
+const pageTouchGhostSample = ({ x, y }) => {
+  const reading = globalThis.__uatTouch;
+  const ghost = document.querySelector("[data-touch-drag-ghost]");
+  const rect = ghost === null ? null : ghost.getBoundingClientRect();
+  const menu = document.querySelector('[role="menu"]');
+  const sample = {
+    finger: { x: Math.round(x), y: Math.round(y) },
+    ghost: rect === null
+      ? null
+      : {
+          x: Math.round(rect.left + rect.width / 2),
+          y: Math.round(rect.top + rect.height / 2),
+          w: Math.round(rect.width),
+          h: Math.round(rect.height),
+        },
+    menuOpen: menu !== null,
+    menuTitle: menu?.textContent?.trim().slice(0, 60) ?? null,
+    armed: document.querySelector("[data-touch-drag-armed]")?.getAttribute("data-thread-card") ?? null,
+    tag: ghost?.tagName.toLowerCase() ?? null,
+    inBoard: ghost === null ? null : ghost.closest("[data-columns-board]") !== null,
+  };
+  if (reading !== null && reading !== undefined) reading.ghostSamples.push(sample);
+  return sample;
 };
 
 /**
@@ -1476,6 +1516,40 @@ function mulberry32(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+/**
+ * Open a card's menu through its touch affordance (issue #336): the ⋯ trigger
+ * the card renders on a coarse pointer. This is the touch path's only way into
+ * the menu — a long press belongs to the drag, so the platform's own press
+ * must not be the route, and the suite proves the replacement exists and works.
+ */
+const pageCardMenu = ({ card }) => {
+  const host = document.querySelector(`[data-thread-card="${CSS.escape(card)}"]`);
+  if (host === null) throw new Error(`card_menu: no card ${card}`);
+  // The trigger is the menu wrapper's overlay: a sibling of the card, so it is
+  // never inside the anchor and never cloned into the drag's snapshot.
+  const button = host.parentElement?.querySelector("[data-card-menu-trigger]");
+  if (button === null || button === undefined) {
+    throw new Error(`card_menu: ${card} renders no touch menu trigger`);
+  }
+  button.click();
+  return {
+    ok: true,
+    label: button.getAttribute("aria-label"),
+    menuOpen: document.querySelector('[role="menu"]') !== null,
+  };
+};
+
+/** Close the open menu the way a tap outside it does (the backdrop). */
+const pageMenuDismiss = () => {
+  const menu = document.querySelector('[role="menu"]');
+  if (menu === null) return { ok: false, reason: "no menu open to dismiss" };
+  // The shell renders a full-viewport click-away backdrop as a sibling.
+  const backdrop = menu.previousElementSibling;
+  if (backdrop === null) return { ok: false, reason: "no menu backdrop" };
+  backdrop.click();
+  return { ok: true, menuOpen: document.querySelector('[role="menu"]') !== null };
+};
 
 const pageMenu = async ({ card, box, item }) => {
   // `box` right-clicks a feature-group box's own surface — its label — whose
@@ -2556,6 +2630,8 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
       rule.touch_origin !== undefined ||
       rule.touch_scroll !== undefined ||
       rule.touch_hold !== undefined ||
+      rule.touch_ghost !== undefined ||
+      rule.touch_menu !== undefined ||
       rule.no_native_drag !== undefined
     ) {
       const reading = await page.evaluate(() => globalThis.__uatTouch ?? null);
@@ -2641,6 +2717,146 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
               : `${reading.dragStarts.length} dragstart(s): ${JSON.stringify(reading.dragStarts)}`,
           );
         }
+        if (rule.touch_ghost !== undefined) {
+          // The visible lift (issue #336): a floating snapshot of the card
+          // exists at the arm and follows the finger one-to-one. The claim is
+          // the SAMPLE-TO-SAMPLE travel, not an absolute position — the grab
+          // point inside the card is the operator's, so only the delta is ours
+          // to promise.
+          const want = rule.touch_ghost === true ? {} : rule.touch_ghost;
+          const samples = reading.ghostSamples ?? [];
+          const travelled = samples.map((sample) => sample.ghost);
+          expect(
+            "the pickup lifted a floating snapshot of the card",
+            samples.length >= 2 && travelled.every((ghost) => ghost !== null),
+            `${samples.length} sample(s): ${JSON.stringify(travelled)}`,
+          );
+          expect(
+            "the snapshot is the card's own size, not a collapsed box",
+            travelled.every((ghost) => (ghost?.w ?? 0) > 40 && (ghost?.h ?? 0) > 16),
+            JSON.stringify(travelled.map((ghost) => ghost && `${ghost.w}x${ghost.h}`)),
+          );
+          expect(
+            "the snapshot floats free of the board's clipping containers",
+            samples.every((sample) => sample.inBoard === false),
+            JSON.stringify(samples.map((sample) => sample.inBoard)),
+          );
+          if (want.card !== undefined) {
+            expect(
+              `the pickup stayed ${want.card}'s for the whole drag`,
+              samples.every((sample) => sample.armed === want.card),
+              JSON.stringify(samples.map((sample) => sample.armed)),
+            );
+          }
+          expect(
+            `the snapshot followed the finger one-to-one (${samples.length - 1} move(s))`,
+            samples.slice(1).every((sample, index) => {
+              const previous = samples[index];
+              if (previous.ghost === null || sample.ghost === null) return false;
+              // ±2px: both readings are rounded to whole pixels, so a
+              // sub-pixel-per-step drag can drift that far over ten steps.
+              return (
+                Math.abs((sample.ghost.x - previous.ghost.x) - (sample.finger.x - previous.finger.x)) <= 2 &&
+                Math.abs((sample.ghost.y - previous.ghost.y) - (sample.finger.y - previous.finger.y)) <= 2
+              );
+            }),
+            JSON.stringify(
+              samples.map((sample) => ({
+                finger: sample.finger,
+                ghost: sample.ghost === null ? null : { x: sample.ghost.x, y: sample.ghost.y },
+              })),
+            ),
+          );
+          expect(
+            "the snapshot left with the gesture",
+            reading.ghostAfter === false,
+            reading.ghostAfter ? "a ghost is still in the document" : "the ghost is gone",
+          );
+        }
+        if (rule.touch_menu !== undefined) {
+          // Nothing opens mid-drag (issue #336): the platform's long press
+          // lands ~300ms after the arm, so every sample taken while the card
+          // was lifted must show no menu at all.
+          const want = rule.touch_menu ?? {};
+          const samples = reading.ghostSamples ?? [];
+          const openDuring = samples.filter((sample) => sample.menuOpen);
+          const wantOpen = want.open === true;
+          expect(
+            wantOpen ? "a menu was open during the gesture" : "no menu opened during the drag",
+            (openDuring.length > 0) === wantOpen,
+            samples.length === 0
+              ? "no mid-gesture samples — this step ran no touch_drag"
+              : `${openDuring.length}/${samples.length} sample(s) had a menu: ` +
+                JSON.stringify(openDuring.map((s) => s.menuTitle)),
+          );
+          if (want.after === false) {
+            expect(
+              "no menu outlived the gesture",
+              reading.menuAfter === false,
+              reading.menuAfter ? "a menu is still open" : "the board is clear",
+            );
+          }
+        }
+      }
+    }
+    if (rule.menu_open !== undefined) {
+      // The menu's own state, read live (issue #336). `open: true` proves the
+      // touch affordance really opened the card's menu — the route a long press
+      // used to provide and no longer may; `open: false` proves a gesture left
+      // nothing open behind it.
+      const want = rule.menu_open === true ? {} : rule.menu_open;
+      const got = await page.evaluate((card) => {
+        const menu = document.querySelector('[role="menu"]');
+        const host = card === undefined
+          ? null
+          : document.querySelector(`[data-thread-card="${CSS.escape(card)}"]`);
+        const trigger = host === null
+          ? null
+          : host.parentElement?.querySelector("[data-card-menu-trigger]");
+        return {
+          open: menu !== null,
+          label: menu?.getAttribute("aria-label") ?? null,
+          header: menu?.querySelector("[aria-hidden]")?.textContent?.trim() ?? null,
+          items: menu === null
+            ? 0
+            : [...menu.querySelectorAll('[role="menuitem"]')].map((item) => item.textContent?.trim()),
+          hasTrigger: trigger !== null && trigger !== undefined,
+          triggerLabel: trigger?.getAttribute("aria-label") ?? null,
+        };
+      }, want.card);
+      const wanted = want.open === true;
+      expect(
+        wanted ? "the card's menu is open" : "no menu is open",
+        got.open === wanted,
+        got.open ? `open: ${got.label} / ${got.header} (${got.items.join(", ")})` : "no [role=menu] on the page",
+      );
+      if (wanted) {
+        if (want.label !== undefined) {
+          expect(
+            `the open menu is labelled ${want.label}`,
+            got.label === want.label,
+            `aria-label=${JSON.stringify(got.label)}`,
+          );
+        }
+        if (want.header !== undefined) {
+          expect(
+            `the open menu names ${want.header}`,
+            got.header === want.header,
+            `header=${JSON.stringify(got.header)}`,
+          );
+        }
+        expect(
+          "the open menu offers entries",
+          (got.items?.length ?? 0) > 0,
+          `${got.items?.length ?? 0} item(s)`,
+        );
+      }
+      if (want.card !== undefined) {
+        expect(
+          `card ${want.card} renders the touch menu trigger`,
+          got.hasTrigger,
+          got.hasTrigger ? got.triggerLabel : "no [data-card-menu-trigger] by the card",
+        );
       }
     }
     if (rule.drag_source !== undefined) {
@@ -3574,7 +3790,7 @@ async function runSuite(file, { port, browser, cell = null }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "drag_child_to_header", "drag_dot_to_dot", "drag_dot_to_floor", "drag_card_to_strip", "hover_header", "hover", "hover_card", "mouse_to", "key", "back", "click", "click_aria", "click_row_sweep", "type", "menu", "scroll", "wheel_pan", "touch_pan", "touch_drag", "resize", "resize_pane", "sleep", "blur", "press_escape", "push_url", "push_update"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "drag_child_to_header", "drag_dot_to_dot", "drag_dot_to_floor", "drag_card_to_strip", "hover_header", "hover", "hover_card", "mouse_to", "key", "back", "click", "click_aria", "click_row_sweep", "type", "menu", "card_menu", "menu_dismiss", "scroll", "wheel_pan", "touch_pan", "touch_drag", "resize", "resize_pane", "sleep", "blur", "press_escape", "push_url", "push_update"];
       let gestureFailed = false;
       // A gesture that cannot even run (its own element is absent — a
       // regression deleted what the step targets) records the step and
@@ -3835,18 +4051,39 @@ async function runSuite(file, { port, browser, cell = null }) {
             await page.evaluate((picked) => {
               globalThis.__uatTouch.armed = picked;
             }, armed);
+            // The lift's first sample: the arm, before the finger has moved, so
+            // `touch_ghost` can prove a snapshot exists at the pickup point.
+            await page.evaluate(pageTouchGhostSample, {
+              x: Math.round(origin.point.x),
+              y: Math.round(origin.point.y),
+            });
             const steps = Math.max(2, Number(payload.steps ?? 10));
             const stepDelay = Math.max(0, Number(payload.step_ms ?? 16));
             for (let i = 1; i <= steps; i += 1) {
-              await touch.touchMove(
-                origin.point.x + ((target.x - origin.point.x) * i) / steps,
-                origin.point.y + ((target.y - origin.point.y) * i) / steps,
-              );
+              const stepX = origin.point.x + ((target.x - origin.point.x) * i) / steps;
+              const stepY = origin.point.y + ((target.y - origin.point.y) * i) / steps;
+              await touch.touchMove(stepX, stepY);
               if (stepDelay > 0) await sleep(stepDelay);
+              // A sample per move: the ghost's box beside the finger's, so the
+              // pairwise travel proves the one-to-one tracking.
+              await page.evaluate(pageTouchGhostSample, {
+                x: Math.round(stepX),
+                y: Math.round(stepY),
+              });
             }
             await touch.touchEnd();
             await sleep(Math.max(0, Number(payload.settle_ms ?? 800)));
             await page.evaluate(pageTouchPanRead);
+          } else if (gesture === "card_menu") {
+            // The touch menu's home (issue #336): the card's own ⋯ trigger.
+            // A long press must never be the route there — it belongs to the
+            // drag — so this gesture taps the affordance that replaced it.
+            await page.evaluate(pageCardMenu, payload);
+            await sleep(300);
+          } else if (gesture === "menu_dismiss") {
+            // A tap outside the open menu, exactly as an operator closes it.
+            await page.evaluate(pageMenuDismiss);
+            await sleep(250);
           } else if (gesture === "resize") {
             // A viewport change while the lock is held re-runs the layout; let
             // the resize observer commit before assertions sample the DOM.

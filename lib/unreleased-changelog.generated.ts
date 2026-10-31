@@ -8,6 +8,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "Touch input"
   },
   {
+    "text": "**A picked-up card now rides the finger, and a long press no longer opens a menu over the drag.** The hold lifts a floating snapshot of the card that follows the thumb one to one, over a dimmed slot that holds its place. The menu moved behind the card's new ⋯ button: tap opens the thread, hold drags it.",
+    "children": [],
+    "group": "Touch input"
+  },
+  {
     "text": "**A phone's board pans under a finger instead of lifting a card.** Cards, child rows, strip dots, and group boxes are no longer native drag sources, so the platform's touch-drag recognizer cannot take the pan. Card text stays unselectable on touch, where a long press used to start a selection instead of a scroll.",
     "children": [],
     "group": "Touch input"
