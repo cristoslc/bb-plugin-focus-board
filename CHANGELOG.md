@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+#### Feature groups
+
+- **A child in a different feature group than its parent now shows twice: its row under the parent card and its own card inside the group's box.** Pin a parent whose child sits in another group and the child keeps its row in the Pinned lane while its card lands in whichever lane its own state picks.
+
 ### Changed
 
 ### Fixed

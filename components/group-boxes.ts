@@ -51,6 +51,16 @@ import type { MoveTarget } from "../lib/rank";
  */
 const NO_BOX_GROUPINGS: ReadonlySet<GroupBy> = new Set(["parent"]);
 
+/**
+ * Does this grouping render feature-group boxes? The plan and the nesting
+ * placement's group copy-out read this one answer (`childPlacement` in
+ * components/nesting), so a view can never frame boxes the assembly does not
+ * feed, or copy a child out to a frame the plan never draws.
+ */
+export function groupBoxesApply(groupBy: GroupBy): boolean {
+  return !NO_BOX_GROUPINGS.has(groupBy);
+}
+
 export interface GroupBox {
   /** The registry id; the name rides along for label rendering. */
   groupId: string;
@@ -94,7 +104,7 @@ export function planGroupBoxes(
   now: number = Date.now(),
 ): GroupBoxPlan {
   const groupBoxOf = new Map<string, GroupBox>();
-  if (NO_BOX_GROUPINGS.has(groupBy)) {
+  if (!groupBoxesApply(groupBy)) {
     return { groupBoxOf, active: false };
   }
   // Candidates: live members only — done members keep the Done lane's
