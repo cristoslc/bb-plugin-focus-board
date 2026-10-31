@@ -70,6 +70,3 @@ export const overviewGif = {
     { hold: 1500 },
   ],
 };
-
-/** A fixed empty point, exported so stills and the storyboard agree. */
-export const EMPTY_POINT = fixed(900, 820);

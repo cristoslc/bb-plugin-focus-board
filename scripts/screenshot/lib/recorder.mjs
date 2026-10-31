@@ -19,7 +19,7 @@
  * a still cannot drift from the GIF it illustrates.
  */
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { promisify } from "node:util";
 import os from "node:os";
 import path from "node:path";
@@ -410,11 +410,6 @@ export async function makeFramesDir(tag = "gif") {
 
 export async function removeDir(dir) {
   await rm(dir, { recursive: true, force: true });
-}
-
-export async function writeFrameList(dir, frames) {
-  await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, "frames.txt"), `${frames.join("\n")}\n`);
 }
 
 /* ── Storyboard engine ───────────────────────────────────────────────── */
