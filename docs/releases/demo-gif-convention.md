@@ -59,7 +59,7 @@ Capture each release's gifs against **that release's tree**, in a throwaway work
 
 ## Budget
 
-- 15 to 45 seconds. Shorter than 15 loses the gesture's cause and effect; longer than 45 is a video nobody finishes.
+- Target 15 seconds, hard ceiling 45. A single-gesture demo (one menu pick, one toggle) may run 8 to 15 seconds, because padding a one-click story to 15 seconds is dead air the reader scrolls past; anything past 45 is a video nobody finishes.
 - A few MB per gif. Keep the source viewport honest and let the palette-optimized ffmpeg pass (`palettegen` 192 colors at 12 fps) keep the file small; a demo that needs more is doing too much in one gif, so split it by feature.
 - Real app, real gestures, synthetic cursor: the harness renders the shipped components, the driver moves a real pointer (or dispatches the drag events the app itself listens for), and an overlay arrow makes the pointer visible because headless screenshots carry no OS cursor.
 - One feature per gif. If a bullet's story needs two scenes, it is two bullets or two gifs.
