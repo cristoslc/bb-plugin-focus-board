@@ -184,6 +184,21 @@ host app involved.
   (plus one clip per cell). Run the vite harness first (same as above); honors
   `CHROME_PATH` and `HARNESS_URL`.
 
+- `capture-release-demos.mjs` — the release-note recorder. Reads a release's
+  storyboard from `release-demos/<version>.mjs` (a list of demos: a clip
+  target, a harness URL, and a few gesture calls) and writes one gif per demo
+  to `docs/screenshots/release-demos/` (gitignored: the gifs are release
+  assets). `release-demos/runner.mjs` owns what the storyboards share — the
+  synthetic cursor, real pointer moves and clicks, context menus, drags along a
+  pointer path with one `DataTransfer`, settings tabs and radio groups, scroll
+  and reload steps, per-frame durations, and the palette-optimized ffmpeg
+  assembly. Run the vite harness first, then
+  `node scripts/screenshot/capture-release-demos.mjs v1.5.0`; `--only <id>`
+  records one demo, and `HARNESS_URL`, `CHROME_PATH`, `DEMO_OUT_DIR`,
+  `DEMO_FRAMES_DIR`, `DEMO_GIF_WIDTH`, and `DEMO_FPS` override the defaults.
+  The rule that governs the storyboards is
+  [docs/releases/demo-gif-convention.md](../../docs/releases/demo-gif-convention.md).
+
 Regenerate the screenshots:
 
 ```sh
