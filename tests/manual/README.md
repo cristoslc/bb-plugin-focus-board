@@ -68,7 +68,9 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   the entry is added but the count lags); `whats_new` (`{ icon, unseen,
   modal }`) reads the gift button and modal (the pulse is the compiled
   `motion-safe:animate-pulse` class); `text_visible` checks a substring of
-  the page's text.
+  the page's text, and `text_count` (`{ text, count }`) counts exact
+  occurrences over the rendered text — how a suite proves ONE label or row
+  exists where a duplicate would render a second.
 - `hover_card` rests the real pointer on a top-level card's center
   (`{ card: thr_x }`), so the CSS `:hover` and the spotlight's `:has()` rule
   both arm the way an operator's idle pointer does; `mouse_to` parks it at
@@ -77,6 +79,10 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   samples the settled computed styles: the hovered surface must be opaque, the
   dark theme's surface may darken and the light theme's must NEVER darken
   (#195), and a sibling must recede while a card is under the pointer.
+- `type` (`{ into: <aria-label>, text }`) focuses a labelled field and types
+  through the browser's real input pipeline; add `clear: true` when the field
+  opens prefilled (the picker's rename editor opens holding the group's
+  name), so the keystrokes replace the value instead of appending to it.
 - A step's `theme` (`light` or `dark`) overrides the suite default and flips
   BOTH theme switches: the `dark` class for the token set and Tailwind's
   media-based `dark:` utilities (`prefers-color-scheme` emulation) — the
@@ -190,6 +196,13 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   blur hides only the button, the clear x resets the board and the refocused
   empty field carries no button, a no-match query empties the board while the
   button still rides the field, and the id path reaches the same card.
+
+- `uat-group-unique.yaml` — group names are unique, walked through the card
+  menu's picker in real Chrome: creating "Alpha" from a second card settles
+  onto the one existing Alpha group (one dashed box holds both cards), a
+  rename onto the fixture's existing "chat-imagegent" is refused with the
+  reason inline and the editor still open, and a rename to a free name
+  commits and re-labels the box.
 
 - `uat-family-state.yaml` — the family fold and idle-hide state lives on the
   server, not in browser localStorage: folding a family and clicking the

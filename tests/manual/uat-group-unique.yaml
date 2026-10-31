@@ -1,0 +1,76 @@
+# Operator-assisted E2E: group names are unique, and the picker says why.
+#
+# The harness mounts the actual app.tsx against the mocked SDK
+# (scripts/screenshot), whose group RPCs mirror server.ts: `group_create`
+# resolves an exact existing name to that record (idempotent), and
+# `group_rename` refuses a name another group already holds. The suite walks
+# both halves of the uniqueness rule through the surfaces an operator
+# touches: the card menu's Group… picker, its name field, its per-row rename
+# editor, and the inline error the refusal lands in.
+#
+# Scratch names ("Alpha", then "Beta") keep the counts honest: the board's
+# dashed box label is the only place the name renders once the picker closes,
+# so a duplicate group would show up as a second box and a second label.
+# "chat-imagegent" is the fixture registry's existing group
+# (`data-group-box-label="grp_chat_imagegent"`), the name the rename collides
+# with.
+#
+# Run: npm run uat -- tests/manual/uat-group-unique.yaml
+suite: group-unique
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5201
+defaults:
+  groupBy: status
+  theme: dark
+  viewport: { width: 1280, height: 800 }
+
+steps:
+  - id: create-alpha-on-the-first-card
+    title: A fresh name in the picker creates the group and boxes the card
+    goto: "?groupBy=status"
+    gestures:
+      - menu: { card: thr_rpc_auth, item: "Group…" }
+      - type: { into: "New group name", text: "Alpha" }
+      - click_aria: "Create & assign"
+    assert:
+      - text_visible: "Alpha"
+      - aria_absent: "New group name"
+
+  - id: the-second-card-with-the-same-name-joins-that-group
+    title: Typing the same name again settles onto the existing group, so the board carries ONE Alpha box
+    gestures:
+      - menu: { card: thr_review_pr, item: "Group…" }
+      - type: { into: "New group name", text: "Alpha" }
+      - click_aria: "Create & assign"
+    assert:
+      - aria_absent: "New group name"
+      - rpc_last: { method: "group_create", args: { name: "Alpha" } }
+      - text_count: { text: "Alpha", count: 1 }
+      - text_visible: "Research: bb plugin RPC auth tokens"
+      - text_visible: "Review PR #14"
+
+  - id: renaming-onto-an-existing-name-is-refused-inline
+    title: The rename editor refuses another group's name, stays open, and shows the reason
+    gestures:
+      - menu: { card: thr_rpc_auth, item: "Change group…" }
+      - click_aria: "Rename group Alpha"
+      - type: { into: "Rename group, was Alpha", text: "chat-imagegent", clear: true }
+      - click_aria: "Save"
+    assert:
+      - text_visible: "already taken by group grp_chat_imagegent"
+      - text_visible: "Rename failed:"
+      - aria_present: "Rename group, was Alpha"
+      - rpc_last: { method: "group_rename", args: { name: "chat-imagegent" } }
+      - text_count: { text: "Alpha", count: 1 }
+
+  - id: renaming-to-a-free-name-still-works
+    title: A free name commits, closes the editor, and re-labels the box everywhere
+    gestures:
+      - type: { into: "Rename group, was Alpha", text: "Beta", clear: true }
+      - click_aria: "Save"
+    assert:
+      - aria_absent: "Rename group, was Alpha"
+      - text_visible: "Beta"
+      - text_hidden: "Alpha"
+      - text_hidden: "Rename failed:"

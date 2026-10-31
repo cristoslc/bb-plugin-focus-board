@@ -905,11 +905,14 @@ const pageClickAria = (payload) => {
 
 /** Focus a labelled form control, the setup half of a `type` gesture (the
  * keystrokes themselves travel through Puppeteer's input pipeline from Node,
- * so controlled React inputs see real input events, not a value assignment). */
-const pageFocusLabelled = ({ label }) => {
+ * so controlled React inputs see real input events, not a value assignment).
+ * `select: true` selects the field's current text first, so the typed keys
+ * replace it — the rename editor opens prefilled with the group's name. */
+const pageFocusLabelled = ({ label, select }) => {
   const el = document.querySelector(`[aria-label="${CSS.escape(label)}"]`);
   if (!el) throw new Error(`type: nothing labelled ${label}`);
   el.focus();
+  if (select === true && typeof el.select === "function") el.select();
   return { ok: true, tag: el.tagName };
 };
 
@@ -2226,6 +2229,21 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
         !got ? "absent" : "found in page text",
       );
     }
+    if (rule.text_count !== undefined) {
+      // An exact occurrence count over the page's rendered text — the way a
+      // suite proves ONE row/label exists where a duplicate would render a
+      // second (a group box per group, a picker row per registry record).
+      const want = rule.text_count; // { text, count }
+      const got = await page.evaluate((text) => {
+        const body = document.body.innerText ?? "";
+        return body.split(text).length - 1;
+      }, want.text);
+      expect(
+        `text ${JSON.stringify(want.text)} appears exactly ${want.count} time(s)`,
+        got === want.count,
+        `appeared ${got} time(s)`,
+      );
+    }
     if (rule.locked_lane !== undefined) {
       const got = await page.evaluate(pageLockedLane);
       const want = rule.locked_lane;
@@ -3153,8 +3171,12 @@ async function runSuite(file, { port, browser, cell = null }) {
             // Focus the labelled field, then type through the real input
             // pipeline (per-keystroke input events, not a value assignment) —
             // the same path an operator's keyboard uses, which controlled
-            // React inputs require. `{ into: <aria-label>, text: "…" }`.
-            await page.evaluate(pageFocusLabelled, { label: payload.into });
+            // React inputs require. `{ into: <aria-label>, text: "…" }`, plus
+            // `clear: true` when the field opens prefilled.
+            await page.evaluate(pageFocusLabelled, {
+              label: payload.into,
+              select: payload.clear === true,
+            });
             await page.keyboard.type(payload.text, { delay: 15 });
             await sleep(300);
           } else if (gesture === "menu") {
