@@ -21,8 +21,10 @@ host app involved.
   sidebar to the base fixture plus the demo families; suites never set it.
 - `main.tsx` — seeds localStorage from the query string (`?groupBy=…`,
   `?collapsed=` folds family cards by seeding the persisted
-  collapsed-families list) and mounts the registered panel component through
-  the mock router.
+  collapsed-families list, `?collapsedGroups=` folds feature-group boxes,
+  `?laneDirection=horizontal`, `?wallpaper=<preset>` for a bundled
+  wallpaper) and mounts the registered panel component through the mock
+  router.
 - `index.html` — defines bb's built-in theme tokens (extracted from the bb
   app bundle): the dark set on `html.dark`, a light set on `html:not(.dark)`,
   plus a minimal preflight (the plugin's compiled CSS ships without one
@@ -79,6 +81,27 @@ host app involved.
   vite harness first (same as above), then
   `node scripts/screenshot/capture-family-zoom-gif.mjs`; honors `CHROME_PATH`,
   `HARNESS_URL`, `OUT_DIR`, `FRAMES_DIR`, and `GIF_WIDTH`.
+
+- `capture-overview-gif.mjs` and `capture-overview-stills.mjs`: the README's
+  overview media. `lib/recorder.mjs` is the shared recorder: it steps a
+  storyboard's pointer, menus and synthetic HTML5 drags at a fixed frame rate
+  (one screenshot per frame, so 24 fps is real), overlays the synthetic
+  cursor, and assembles the palette GIF. `storyboards/overview.mjs` is the
+  hero GIF's storyboard; `capture-overview-stills.mjs` reuses the same
+  gestures for the twelve stills. Both read the purpose-built
+  `?overview=1` board (`data.ts` `SIM_OVERVIEW_THREADS` and
+  `SIM_OVERVIEW_GROUPS`: six lanes, four groups in several states, two
+  collapsed parents, a done projection, a snoozed card, and a ten-child
+  family for the Parent view). `?wallpaper=<preset>` seeds a bundled
+  wallpaper for the horizontal-lanes still. Build first (the harness loads
+  `dist/app.css`), run the vite harness, then
+  `node scripts/screenshot/capture-overview-gif.mjs` and
+  `node scripts/screenshot/capture-overview-stills.mjs`. Honors
+  `CHROME_PATH`, `HARNESS_URL`, `OUT_DIR`, `FRAMES_DIR`, `GIF_FPS`, and
+  `GIF_WIDTH`. `docs/screenshots/overview-coverage.md` is the feature
+  outline and storyboard source of truth. The older
+  `capture-family-zoom-gif.mjs` stays reproducible and its GIF remains in
+  the repository, but the README's hero is now `overview.gif`.
 
 - `repro-right-gutter.mjs` — one-shot headless repro for the family card's
   right gutter (#192): measures a demo family card with a ticket chip and

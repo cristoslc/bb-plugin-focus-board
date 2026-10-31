@@ -46,7 +46,18 @@ export const SIM_PROVIDERS: readonly { id: string; displayName: string }[] = [
 ];
 
 /** Thread ids marked Done on the simulated board. */
-export const SIM_DONE_IDS: readonly string[] = ["thr_pane_padding", "thr_license", "thr_proj_done"];
+export const SIM_DONE_IDS: readonly string[] = [
+  "thr_pane_padding",
+  "thr_license",
+  "thr_proj_done",
+  // The overview fixture's Done lane: three standalone cards plus the
+  // projection's done child (SIM_OVERVIEW_THREADS). Ids that are not on a
+  // given board are harmless: doneIds is a set read by id.
+  "thr_ov_done_padding",
+  "thr_ov_done_license",
+  "thr_ov_done_stale",
+  "thr_ov_release_c_done",
+];
 
 /**
  * Done records for the Done fixtures, stamped past the default 7-day sweep
@@ -59,6 +70,13 @@ export const SIM_DONE_RECORDS: Record<string, { doneAt: string }> = {
   // Stamped past the 7-day sweep threshold like the other Done fixtures, so
   // the projection card's row reads as a settled, sweepable done thread.
   thr_proj_done: { doneAt: new Date(SIM_NOW - 13 * DAY).toISOString() },
+  // The overview board's Done lane (9–13 days, past the harness's 2-day
+  // sweep threshold, so its broom shows an eligible count and an armed
+  // sweep paints the cards).
+  thr_ov_done_padding: { doneAt: new Date(SIM_NOW - 9 * DAY).toISOString() },
+  thr_ov_done_license: { doneAt: new Date(SIM_NOW - 10 * DAY).toISOString() },
+  thr_ov_done_stale: { doneAt: new Date(SIM_NOW - 13 * DAY).toISOString() },
+  thr_ov_release_c_done: { doneAt: new Date(SIM_NOW - 8 * DAY).toISOString() },
 };
 
 /**
@@ -744,6 +762,382 @@ export const SIM_DEMO_THREADS: readonly SimThread[] = [
     href: `/projects/web/threads/${"thr_demo_unread_c1"}`,
   }),
 ];
+
+/**
+ * The README overview fixture (`?overview=1`): one purpose-built board that
+ * packs the Focus view's feature surface into a handful of lanes so the
+ * storyboard GIF and the still set can demonstrate it. It deliberately does
+ * not extend the base fixture — the base board's nine lanes and its old UAT
+ * families would push the Done lane off-screen and scatter the states the
+ * story needs to sit side by side.
+ *
+ * The board is six lanes wide at 1600px:
+ *
+ * - Pinned: two cards (one working, one unread) so the lane's own state dots
+ *   and its sweep pill read without a gesture.
+ * - Needs you: a collapsed family parent (its dot strip shows working,
+ *   unread and idle children) plus a pulsing error card.
+ * - Unread: the "Triage" group of one (an expanded frame, the join target)
+ *   and two loose unread cards, one of them a member of the "Release 1.0"
+ *   group — so that group paints a frame in two lanes at once.
+ * - Working: "Release 1.0" expanded around a parent family card (three live
+ *   children and one done child, the Done projection) plus a second member;
+ *   "Chat pipeline" next to it, collapsed by the capture's URL.
+ * - Idle · Recent: the drag source for the nest, and the chip and snooze
+ *   demonstration cards.
+ * - Done: three standalone settled cards plus the projection.
+ *
+ * The group registry and assignments live in SIM_OVERVIEW_GROUPS; the mock
+ * SDK registers them without any group_* write, the way it does for the
+ * workpulse and descendant fixtures.
+ */
+export const SIM_OVERVIEW_GROUPS: readonly {
+  id: string;
+  name: string;
+  memberIds: readonly string[];
+}[] = [
+  { id: "grp_release", name: "Release 1.0", memberIds: ["thr_ov_release_parent", "thr_ov_work_member", "thr_ov_release_watch"] },
+  { id: "grp_chat", name: "Chat pipeline", memberIds: ["thr_ov_chat_sort", "thr_ov_chat_e2e"] },
+  { id: "grp_triage", name: "Triage", memberIds: ["thr_ov_triage"] },
+  { id: "grp_docs", name: "Docs sweep", memberIds: ["thr_ov_docs_readme", "thr_ov_docs_harness"] },
+];
+
+export const SIM_OVERVIEW_THREADS: readonly SimThread[] = [
+  // Pinned: a working release card and an unread brief, so both state dots
+  // and the lane's sweep read.
+  thread({
+    id: "thr_ov_pin_ship",
+    displayTitle: "Ship 1.0.0: release notes and marketplace listing #331",
+    isPinned: true,
+    pinnedAt: SIM_NOW - 1 * HOUR,
+    pinSortKey: 1,
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 2 * MINUTE,
+    lastReadAt: SIM_NOW - 2 * MINUTE,
+    environment: boardEnv("release/1.0.0"),
+  }),
+  thread({
+    id: "thr_ov_pin_brief",
+    displayTitle: "Morning brief: marketplace copy",
+    isPinned: true,
+    pinnedAt: SIM_NOW - 3 * HOUR,
+    pinSortKey: 2,
+    isUnread: true,
+    lastReadAt: SIM_NOW - 3 * HOUR,
+    updatedAt: SIM_NOW - 2 * HOUR,
+  }),
+
+  // Needs you: the collapsed parent. Its three children carry one state each
+  // (working, unread, idle), so the collapsed card's dot strip shows the
+  // full colour vocabulary at a glance.
+  thread({
+    id: "thr_ov_ledger_parent",
+    displayTitle: "Migrate the household ledger schema",
+    hasPendingInteraction: true,
+    indicatorLabel: "Thread needs user input",
+    latestAttentionAt: SIM_NOW - 9 * MINUTE,
+    updatedAt: SIM_NOW - 9 * MINUTE,
+    lastReadAt: SIM_NOW - 25 * MINUTE,
+  }),
+  thread({
+    id: "thr_ov_ledger_c0",
+    displayTitle: "Backfill the ledger rows in batches",
+    parentThreadId: "thr_ov_ledger_parent",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 4 * MINUTE,
+    environment: boardEnv("feat/ledger-migrate"),
+  }),
+  thread({
+    id: "thr_ov_ledger_c1",
+    displayTitle: "Audit the legacy ledger rows",
+    parentThreadId: "thr_ov_ledger_parent",
+    isUnread: true,
+    lastReadAt: SIM_NOW - 40 * MINUTE,
+    updatedAt: SIM_NOW - 20 * MINUTE,
+  }),
+  thread({
+    id: "thr_ov_ledger_c2",
+    displayTitle: "Tag the schema version",
+    parentThreadId: "thr_ov_ledger_parent",
+    updatedAt: SIM_NOW - 35 * MINUTE,
+    lastReadAt: SIM_NOW - 35 * MINUTE,
+  }),
+  // A pulsing attention card with an error, on another project and provider
+  // so the lane's breadcrumbs also differ.
+  thread({
+    id: "thr_ov_attention_deploy",
+    displayTitle: "Deploy failed: missing DATABASE_URL secret",
+    indicator: "unread-error",
+    indicatorLabel: "Unread error",
+    latestAttentionAt: SIM_NOW - 35 * MINUTE,
+    updatedAt: SIM_NOW - 35 * MINUTE,
+    lastReadAt: SIM_NOW - 2 * HOUR,
+    projectId: "proj_api",
+    providerId: "claude-code",
+    environment: apiEnv("main"),
+    href: "/projects/api/threads/thr_ov_attention_deploy",
+  }),
+
+  // Unread: the group of one (a solo frame, the join target) leads the lane.
+  thread({
+    id: "thr_ov_triage",
+    displayTitle: "Triage the marketplace listing copy",
+    isUnread: true,
+    lastReadAt: SIM_NOW - 50 * MINUTE,
+    updatedAt: SIM_NOW - 20 * MINUTE,
+  }),
+  // The same group as the release parent, in another lane: the frame paints
+  // here too, which is what the group label's click highlights.
+  thread({
+    id: "thr_ov_release_watch",
+    displayTitle: "Watch the release canary for regressions",
+    isUnread: true,
+    lastReadAt: SIM_NOW - 55 * MINUTE,
+    updatedAt: SIM_NOW - 28 * MINUTE,
+    environment: boardEnv("release/1.0.0"),
+  }),
+  thread({
+    id: "thr_ov_review",
+    displayTitle: "Review PR #14 — extract thread-pane subcomponents",
+    isUnread: true,
+    lastReadAt: SIM_NOW - 5 * HOUR,
+    updatedAt: SIM_NOW - 40 * MINUTE,
+    projectId: "proj_web",
+    providerId: "codex",
+    environment: { ...apiEnv("refactor/pane"), name: "Web App", path: "~/code/web-app" },
+    href: "/projects/web/threads/thr_ov_review",
+  }),
+  // The join drag's source: an unread card in the Triage frame's own lane,
+  // so the drop grows that frame in place instead of opening a second one.
+  thread({
+    id: "thr_ov_join_unread",
+    displayTitle: "Relink the board chip fixtures #16",
+    isUnread: true,
+    lastReadAt: SIM_NOW - 70 * MINUTE,
+    updatedAt: SIM_NOW - 55 * MINUTE,
+  }),
+  // The zoom family: a collapsed ten-child parent. Its own card is the
+  // story's last stop — Zoom to family opens a Parent view with every lane
+  // arm populated — and its folded strip is a second collapsed parent on
+  // the Focus board. No attention or pinned child: those copy out of a
+  // folded family, and the fold is the point.
+  thread({
+    id: "thr_ov_bridge_parent",
+    displayTitle: "Research the realtime sidebar bridge",
+    isUnread: true,
+    lastReadAt: SIM_NOW - 2 * HOUR,
+    updatedAt: SIM_NOW - 2 * HOUR,
+    projectId: "proj_web",
+    providerId: "codex",
+    href: "/projects/web/threads/thr_ov_bridge_parent",
+  }),
+  ...(
+    [
+      { id: "c0", title: "Benchmark the archived-changed bridge", unread: true, updated: 25 * MINUTE },
+      { id: "c1", title: "Sketch the subscribe fan-out", unread: true, updated: 45 * MINUTE },
+      { id: "c2", title: "Cut the event batch size", active: true, updated: 3 * MINUTE },
+      { id: "c3", title: "Reconnect after a dropped socket", active: true, updated: 8 * MINUTE },
+      // All six idle children sit inside the Recent bucket on purpose: the
+      // zoomed Parent view lays a state row's children out side by side, so
+      // one populated row reads as a family, while six rows of one card
+      // would read as an empty matrix.
+      { id: "c4", title: "Cap the replay ring buffer", updated: 10 * MINUTE },
+      { id: "c5", title: "Name the subscription channels", updated: 15 * MINUTE },
+      { id: "c6", title: "Trace the fan-out hop", updated: 20 * MINUTE },
+      { id: "c7", title: "Document the reconnect budget", updated: 25 * MINUTE },
+      { id: "c8", title: "Sweep the stale listeners", updated: 30 * MINUTE },
+      { id: "c9", title: "Backfill the bridge metrics", updated: 35 * MINUTE },
+    ] as const
+  ).map((child) =>
+    thread({
+      id: `thr_ov_bridge_${child.id}`,
+      displayTitle: child.title,
+      parentThreadId: "thr_ov_bridge_parent",
+      ...(child.unread === true
+        ? { isUnread: true, lastReadAt: SIM_NOW - child.updated - 30 * MINUTE }
+        : child.active === true
+          ? { status: "active" as const, runtimeStatus: "active" as const }
+          : { lastReadAt: SIM_NOW - child.updated }),
+      updatedAt: SIM_NOW - child.updated,
+      projectId: "proj_web",
+      providerId: "codex",
+      href: `/projects/web/threads/thr_ov_bridge_${child.id}`,
+    }),
+  ),
+
+  // Working: the expanded group around a parent family. Three live children
+  // (two working, one idle) and one done child; the done child is the Done
+  // projection's row.
+  thread({
+    id: "thr_ov_release_parent",
+    displayTitle: "Fix the release-blocking pane overlap #273",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 2 * MINUTE,
+    lastReadAt: SIM_NOW - 2 * MINUTE,
+    environment: boardEnv("release/1.0.0"),
+  }),
+  thread({
+    id: "thr_ov_release_c0",
+    displayTitle: "Reproduce the overlap at 1280 wide",
+    parentThreadId: "thr_ov_release_parent",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 4 * MINUTE,
+    environment: boardEnv("release/1.0.0"),
+  }),
+  thread({
+    id: "thr_ov_release_c1",
+    displayTitle: "Clamp the pane margin to the lane floor",
+    parentThreadId: "thr_ov_release_parent",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 6 * MINUTE,
+    environment: boardEnv("release/1.0.0"),
+  }),
+  thread({
+    id: "thr_ov_release_c2",
+    displayTitle: "Pin the wide-pane regression in UAT",
+    parentThreadId: "thr_ov_release_parent",
+    updatedAt: SIM_NOW - 10 * MINUTE,
+    lastReadAt: SIM_NOW - 10 * MINUTE,
+    environment: boardEnv("release/1.0.0"),
+  }),
+  thread({
+    id: "thr_ov_release_c_done",
+    displayTitle: "Re-run the release-safety shots",
+    parentThreadId: "thr_ov_release_parent",
+    updatedAt: SIM_NOW - 14 * MINUTE,
+    lastReadAt: SIM_NOW - 14 * MINUTE,
+    environment: boardEnv("release/1.0.0"),
+  }),
+  thread({
+    id: "thr_ov_work_member",
+    displayTitle: "Smoke the marketplace install range",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 3 * MINUTE,
+    environment: boardEnv("release/1.0.0"),
+  }),
+  // "Chat pipeline", the second group: collapsed by the capture URL so the
+  // board carries an expanded and a folded box at the same time.
+  thread({
+    id: "thr_ov_chat_sort",
+    displayTitle: "Refactor grouping.ts column sort keys",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 5 * MINUTE,
+    environment: boardEnv("fix/column-order"),
+  }),
+  thread({
+    id: "thr_ov_chat_e2e",
+    displayTitle: "Write E2E test for drag-to-done",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 7 * MINUTE,
+    projectId: "proj_web",
+    environment: boardEnv("feat/drag-done"),
+  }),
+
+  // Idle · Recent: the nest drag's source (idle, so the reparent renders as
+  // a nested row instead of un-nesting onto its own card), the chip card,
+  // and the snoozed card.
+  thread({
+    id: "thr_ov_drag_card",
+    displayTitle: "Add keyboard shortcuts for column focus",
+    updatedAt: SIM_NOW - 15 * MINUTE,
+    lastReadAt: SIM_NOW - 15 * MINUTE,
+  }),
+  thread({
+    id: "thr_ov_chip_card",
+    displayTitle: "Card teleport effect on rank",
+    updatedAt: SIM_NOW - 24 * MINUTE,
+    lastReadAt: SIM_NOW - 24 * MINUTE,
+    environment: boardEnv("fix/card-teleport"),
+  }),
+  thread({
+    id: "thr_ov_snooze_card",
+    displayTitle: "Draft the marketplace FAQ",
+    updatedAt: SIM_NOW - 32 * MINUTE,
+    lastReadAt: SIM_NOW - 32 * MINUTE,
+  }),
+  thread({
+    id: "thr_ov_glyph_card",
+    displayTitle: "Wrap check: long path with the open glyph",
+    updatedAt: SIM_NOW - 44 * MINUTE,
+    lastReadAt: SIM_NOW - 44 * MINUTE,
+    environment: boardEnv("dev"),
+  }),
+  // "Docs sweep", folded by the capture URL: the board carries a collapsed
+  // group card at rest while "Chat pipeline" is still expanded, so the
+  // storyboard can fold Chat and leave two folded boxes beside the expanded
+  // ones.
+  thread({
+    id: "thr_ov_docs_readme",
+    displayTitle: "Draft the README quickstart",
+    updatedAt: SIM_NOW - 50 * MINUTE,
+    lastReadAt: SIM_NOW - 50 * MINUTE,
+    projectId: "proj_web",
+    providerId: "claude-code",
+  }),
+  thread({
+    id: "thr_ov_docs_harness",
+    displayTitle: "Tidy the screenshot harness README",
+    updatedAt: SIM_NOW - 58 * MINUTE,
+    lastReadAt: SIM_NOW - 58 * MINUTE,
+  }),
+
+  // Done: settled standalone cards, old enough for the lane's broom to have
+  // an eligible count.
+  thread({
+    id: "thr_ov_done_padding",
+    displayTitle: "Fix pane safe-area padding on mobile",
+    updatedAt: SIM_NOW - 9 * DAY,
+    lastReadAt: SIM_NOW - 9 * DAY,
+  }),
+  thread({
+    id: "thr_ov_done_license",
+    displayTitle: "Add MIT license",
+    updatedAt: SIM_NOW - 10 * DAY,
+    lastReadAt: SIM_NOW - 10 * DAY,
+  }),
+  thread({
+    id: "thr_ov_done_stale",
+    displayTitle: "Sweep the stale done fixtures",
+    updatedAt: SIM_NOW - 13 * DAY,
+    lastReadAt: SIM_NOW - 13 * DAY,
+  }),
+];
+
+/**
+ * The overview board's ticket-chip links: the chip card carries a two-issue
+ * row and a merged PR, and the release parent's title refs resolve to their
+ * own statuses in the mock's `tracker_status` answer.
+ */
+export const SIM_OVERVIEW_LINKS: Record<string, unknown> = {
+  thr_ov_chip_card: [
+    {
+      tracker: "github",
+      repo: "cristoslc/bb-plugin-focus-board",
+      issue: 142,
+      kind: "issue",
+      href: "https://github.com/cristoslc/bb-plugin-focus-board/issues/142",
+      createdAt: "2026-10-20T00:00:00.000Z",
+      source: "agent",
+    },
+    {
+      tracker: "github",
+      repo: "cristoslc/bb-plugin-focus-board",
+      issue: 87,
+      kind: "pull",
+      href: "https://github.com/cristoslc/bb-plugin-focus-board/pull/87",
+      createdAt: "2026-10-20T00:00:00.000Z",
+      source: "agent",
+    },
+  ],
+};
 
 /**
  * A synthetic bulk population for performance probes: `?scale=N` appends N

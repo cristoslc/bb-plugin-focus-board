@@ -10,6 +10,8 @@ import {
   seedSimSettings,
 } from "./mock-sdk";
 import { CURRENT_UNRELEASED_FINGERPRINT } from "../../lib/whats-new";
+import { WALLPAPER_KEY, wallpaperStoredValue } from "../../components/preferences";
+import { WALLPAPER_PRESETS } from "../../components/wallpaper-presets";
 
 // Seed before the app's useState initializers read localStorage (they run at
 // render time below, after these writes).
@@ -65,6 +67,34 @@ window.localStorage.setItem(
   "focus-board:laneDirection",
   params.get("laneDirection") ?? "vertical",
 );
+
+// Seed a bundled wallpaper for the media stills: `?wallpaper=pine` writes the
+// same stored document the Appearance picker writes (cover fit, the preset's
+// dim), so the board paints it behind the lanes. Absent → no wallpaper, so a
+// stale image from an earlier page load never leaks into a run.
+const wallpaperPreset = params.get("wallpaper");
+if (wallpaperPreset !== null) {
+  const preset = WALLPAPER_PRESETS.find((candidate) => candidate.id === wallpaperPreset);
+  if (preset === undefined) {
+    throw new Error(
+      `harness: unknown wallpaper preset ${JSON.stringify(wallpaperPreset)} (have ${WALLPAPER_PRESETS.map((p) => p.id).join(", ")})`,
+    );
+  }
+  window.localStorage.setItem(
+    WALLPAPER_KEY,
+    wallpaperStoredValue({
+      version: 1,
+      global: {
+        url: preset.url,
+        darkUrl: preset.darkUrl,
+        dim: preset.dim,
+        fit: "cover",
+      },
+    }),
+  );
+} else {
+  window.localStorage.setItem(WALLPAPER_KEY, JSON.stringify({ version: 1, global: null }));
+}
 
 // Seed the persisted collapsed-family store: `?collapsed=id1,id2` folds those
 // family cards in the shot (the COLLAPSED_FAMILIES_KEY list the app's fold
