@@ -11,6 +11,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+#### Board layout
+
+- **A phone's board scrolls again: a finger pans the lanes and never drags a card.** Cards, child rows, strip dots, and group boxes were native drag sources, so the platform's touch-drag recognizer lifted one out of a finger's gesture and the board stayed where it was. Those drag sources now arm for a mouse only, and card text stops being selectable on touch, where a long press turned into a selection.
+
 ## [1.7.3] - 2026-10-31
 
 ### Added

@@ -42,6 +42,7 @@ import type { CardMenuAction } from "./thread-card-menu";
 import type { BrowserRevealNotice } from "@/lib/browser-reveal";
 import { Icon } from "@/components/ui/icon";
 import { usePrefersReducedMotion } from "@/components/ui/hooks/use-media-query";
+import { usePointerCoarse } from "@/components/ui/hooks/use-pointer-coarse";
 import { cn } from "@/lib/utils";
 import {
   childRankKey,
@@ -715,6 +716,17 @@ export function Board({
   // dimension the transport's ghost collapse and arrival grow measure.
   const flowAxis: TransportAxis = laneDirection;
   const horizontalLanes = flowAxis === "horizontal";
+  // Touch owns a pan, never a drag (issue #328). On a coarse pointer the
+  // platform's touch-drag recognizer lifts any `draggable` element out of a
+  // finger's gesture after a long press — Chrome Android and iOS Safari both
+  // do it — so a board full of cards turned every attempted scroll into a
+  // card dragged across the lanes. The board therefore arms no native drag
+  // source on touch: cards, rows, dots, and feature-group boxes are drag
+  // sources on a fine pointer only, and the finger's pan reaches the
+  // scroller. Reordering stays a mouse gesture; the keyboard path
+  // (Alt+Arrow) is unchanged.
+  const coarsePointer = usePointerCoarse();
+  const dragSourceArmed = !coarsePointer;
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   // The column floor an UNNEST hover lights up (amber). Kept separate from
   // dragOverColumn so the two affordances cannot argue over ring color: the
@@ -2343,6 +2355,13 @@ export function Board({
         data-lane-direction={laneDirection}
         className={cn(
           "min-h-0 flex-1 px-3 pb-3 pt-2",
+          // A touch on the board is a PAN and nothing else: `manipulation`
+          // keeps both pan axes and pinch, and drops the double-tap-zoom
+          // guess that reads as a dead scroll (issue #328). It never
+          // narrows a gesture the surface needs — the lanes below keep
+          // their own axis — so the finger reaches whichever scroller owns
+          // the direction.
+          "touch-manipulation",
           // The scroll follows the lane direction: vertical lanes sit in one
           // horizontally scrolling row (today's board); horizontal lanes
           // stack as rows the board scrolls vertically.
@@ -3059,6 +3078,11 @@ export function Board({
                 data-card-list
                 className={cn(
                   "min-h-0 flex-1 rounded-lg bg-muted/30 p-1.5",
+                  // A touch inside a lane is a pan too (see the board's own
+                  // `touch-manipulation` note): the lane keeps both axes, so
+                  // a finger that lands on a card still reaches the lane's
+                  // stack or the board's flow.
+                  "touch-manipulation",
                   // The list scrolls along the lane flow: a vertical lane's
                   // stack scrolls its own Y, a horizontal lane's row its X.
                   horizontalLanes ? "overflow-x-auto" : "overflow-y-auto",
@@ -4170,7 +4194,11 @@ export function Board({
                           "relative",
                           horizontalLanes ? "ml-1.5 shrink-0" : "mt-1.5",
                         )}
-                        draggable={box.members.length > 0}
+                        // A folded box is the group's frame, and its unit drag
+                        // is a fine-pointer gesture like the cards' (issue
+                        // #328): on a coarse pointer the finger's pan wins and
+                        // no box lifts.
+                        draggable={box.members.length > 0 && dragSourceArmed}
                         onDragStart={(event) => beginBoxLabelDrag(event, box)}
                         onDragEnd={() => rankDragLifecycle(null)}
                         onContextMenu={(event) => {
@@ -4685,7 +4713,7 @@ export function Board({
                                     type="button"
                                     data-group-box-label={runItem.box.groupId}
                                     title={`Feature group “${runItem.box.name}” — click to rename; drag this label or any member to move the whole box; drop a card on this box to join the group`}
-                                    draggable
+                                    draggable={dragSourceArmed}
                                     onDragStart={(event) => beginBoxLabelDrag(event, runItem.box)}
                                     onDragEnd={() => rankDragLifecycle(null)}
                                     onClick={() => startLabelRename(runItem.box.groupId)}
@@ -4705,7 +4733,7 @@ export function Board({
                                   <span
                                     data-group-box-label={runItem.box.groupId}
                                     title={`Feature group “${runItem.box.name}” — drag this label or any member to move the whole box; drop a card on this box to join the group`}
-                                    draggable
+                                    draggable={dragSourceArmed}
                                     onDragStart={(event) => beginBoxLabelDrag(event, runItem.box)}
                                     onDragEnd={() => rankDragLifecycle(null)}
                                     className={cn(

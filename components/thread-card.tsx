@@ -26,6 +26,7 @@ import { usePaneCoversBoard } from "./pane-sheet-coverage";
 import { ThreadCardMenu, type CardMenuAction } from "./thread-card-menu";
 import { useTicketChipFit } from "./use-ticket-chip-fit";
 import { useWallpaperActive } from "./wallpaper-contrast";
+import { usePointerCoarse } from "@/components/ui/hooks/use-pointer-coarse";
 
 /**
  * The chip placement contract (issue #104): the issues block is held to the
@@ -891,6 +892,9 @@ function ChildRow({
   const now = Date.now();
   const childSnoozeWakeAt = snoozeFor?.(child.id) ?? null;
   const childSnoozed = childSnoozeWakeAt !== null;
+  // The row's drag source follows the card's touch rule (issue #328): a
+  // coarse pointer pans, so no row lifts out of a finger's gesture.
+  const coarsePointer = usePointerCoarse();
   // This row's insertion line (the same-family reorder promise): "before"
   // draws above the row, "after" below — the same affordance card slots get.
   const rowLine =
@@ -900,7 +904,7 @@ function ChildRow({
       href={child.href}
       data-thread-card={child.id}
       data-snoozed={childSnoozeWakeAt !== null ? "" : undefined}
-      draggable={!childSnoozed}
+      draggable={!childSnoozed && !coarsePointer}
       onMouseEnter={onAttentionEnter === undefined ? undefined : () => onAttentionEnter(child.id)}
       onMouseOut={
         onAttentionLeave === undefined
@@ -1094,6 +1098,16 @@ export function ThreadCardImpl({
   onAttentionLeave,
 }: ThreadCardProps) {
   const now = Date.now();
+  // A touch surface owns the pan, not a drag (issue #328). Every drag source
+  // this card renders — the card's anchor, a nested child row, a dot in the
+  // collapsed strip — is `draggable` on a fine pointer only: the platform's
+  // touch-drag recognizer lifts a `draggable` element out of a finger's
+  // gesture after a long press (Chrome Android, iOS Safari), which turned a
+  // phone's attempted board scroll into a card dragged across the lanes.
+  // `select-none` rides the card root below for the other half: selectable
+  // card text turns that same long press into a selection or an iOS callout
+  // instead of a pan.
+  const coarsePointer = usePointerCoarse();
   // Controlled when `isCollapsed` is supplied (the app persists the set);
   // otherwise local state preserves the pre-persistence toggle behavior.
   const [localCollapsed, setLocalCollapsed] = useState(false);
@@ -1382,7 +1396,7 @@ export function ThreadCardImpl({
         data-child-dot-active={isMemberActive ? "" : undefined}
         aria-label={`${isSub ? "Open sub-thread" : "Open child thread"}: ${member.displayTitle}`}
         aria-current={isMemberActive ? "true" : undefined}
-        draggable={dotDragWired && !memberSnoozed}
+        draggable={dotDragWired && !memberSnoozed && !coarsePointer}
         onDragStart={(event) => {
           if (memberSnoozed) {
             event.preventDefault();
@@ -1589,6 +1603,12 @@ export function ThreadCardImpl({
       }
       className={cn(
         "group relative overflow-hidden rounded-md bg-card",
+        // On a touch surface the card's own text is not selectable (issue
+        // #328): a long press on a title otherwise starts a text selection
+        // or an iOS callout, and the pan dies with the selection. Scoped to
+        // `hover: none` so a desktop pointer keeps selecting card text, and
+        // inherited, so titles, rows, chips, and dots inside the card follow.
+        "[@media(hover:none)]:select-none",
         // Colors AND opacity both ease: the spotlight rule
         // (components/card-spotlight.ts) dims and un-dims sibling cards from a
         // board-root rule, so the
@@ -1691,7 +1711,7 @@ export function ThreadCardImpl({
           <a
             href={thread.href}
             aria-current={isActive && !isTransportGhost ? "true" : undefined}
-            draggable={!snoozed}
+            draggable={!snoozed && !coarsePointer}
             onDragStart={(event) => {
               // A snoozed card refuses drag (`draggable={!snoozed}` above);
               // this guard keeps the refusal true even where the attribute
