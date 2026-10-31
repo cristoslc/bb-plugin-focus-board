@@ -684,45 +684,59 @@ function BoardPage({ subPath }: { subPath: string }) {
     },
     [rpc, refetchGroups],
   );
-  /** Create a named group and assign the thread to it — one gesture. */
+  /**
+   * Create a named group and assign the thread to it — one gesture. An exact
+   * existing name resolves to that group's record (create is idempotent), so
+   * the pick settles onto it instead of minting a twin. A rejection is
+   * rethrown after the refetch settles the surface, so the picker can keep
+   * the typed name and say why.
+   */
   const createAndAssignGroup = useCallback(
-    (threadId: string, name: string) => {
-      rpc
-        .call("group_create", { name })
-        .then((created: unknown) => {
-          const group = (created as { group: { id: string; name: string; createdAt: string } })
-            .group;
-          // The registry record lands from the response, not from the echo:
-          // realtime is ephemeral (a signal can fail to deliver — the SDK
-          // documents the reconcile path), and the board drops an assignment
-          // whose group id the registry doesn't know yet, so betting on the
-          // group-changed refetch left the card unboxed and the picker's
-          // list without the new group. Same optimistic pattern the
-          // rename/delete writers use; the echo's refetch still settles.
-          setGroupRegistry((current) =>
-            current[group.id] !== undefined
-              ? current
-              : { ...current, [group.id]: { name: group.name, createdAt: group.createdAt } },
-          );
-          setThreadGroup(threadId, group.id);
-        })
-        .catch(() => refetchGroups());
+    async (threadId: string, name: string) => {
+      try {
+        const created: unknown = await rpc.call("group_create", { name });
+        const group = (created as { group: { id: string; name: string; createdAt: string } })
+          .group;
+        // The registry record lands from the response, not from the echo:
+        // realtime is ephemeral (a signal can fail to deliver — the SDK
+        // documents the reconcile path), and the board drops an assignment
+        // whose group id the registry doesn't know yet, so betting on the
+        // group-changed refetch left the card unboxed and the picker's
+        // list without the new group. Same optimistic pattern the
+        // rename/delete writers use; the echo's refetch still settles.
+        setGroupRegistry((current) =>
+          current[group.id] !== undefined
+            ? current
+            : { ...current, [group.id]: { name: group.name, createdAt: group.createdAt } },
+        );
+        setThreadGroup(threadId, group.id);
+      } catch (error) {
+        refetchGroups();
+        throw error;
+      }
     },
     [rpc, refetchGroups, setGroupRegistry, setThreadGroup],
   );
   /**
    * Rename a registry group in place. Optimistic (the shared record means
    * one write re-labels every member card); the group-changed refetch
-   * settles the truth.
+   * settles the truth. A refusal (the name belongs to another group) rolls
+   * the optimistic label back through that refetch and rethrows, so the
+   * picker's editor stays open carrying the server's reason.
    */
   const renameGroup = useCallback(
-    (groupId: string, name: string) => {
+    async (groupId: string, name: string) => {
       setGroupRegistry((current) =>
         current[groupId] === undefined
           ? current
           : { ...current, [groupId]: { ...current[groupId], name } },
       );
-      rpc.call("group_rename", { groupId, name }).catch(() => refetchGroups());
+      try {
+        await rpc.call("group_rename", { groupId, name });
+      } catch (error) {
+        refetchGroups();
+        throw error;
+      }
     },
     [rpc, refetchGroups],
   );
@@ -3806,8 +3820,10 @@ function BoardPage({ subPath }: { subPath: string }) {
               setThreadGroup(dialogThread.id, groupId);
               setGroupDialogFor(null);
             }}
-            onCreate={(name) => {
-              createAndAssignGroup(dialogThread.id, name);
+            onCreate={async (name) => {
+              // Close only once the write settles: a rejection keeps the
+              // picker open with the typed name and the reason inline.
+              await createAndAssignGroup(dialogThread.id, name);
               setGroupDialogFor(null);
             }}
             onRemove={() => {

@@ -814,12 +814,30 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   }
   if (method === "group_create") {
     const { name } = args as { name: string };
+    // Server semantics, abbreviated: an exact existing name resolves to that
+    // record (create is idempotent), so a second "Create & assign" with the
+    // same name joins the group instead of minting a twin.
+    const existing = Object.entries(simGroupRegistry).find(([, record]) => record.name === name);
+    if (existing !== undefined) {
+      const [id, record] = existing;
+      return { group: { id, ...record } };
+    }
     const id = `grp_${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
     simGroupRegistry[id] = { name, createdAt: new Date().toISOString() };
     return { group: { id, name, createdAt: simGroupRegistry[id].createdAt } };
   }
   if (method === "group_rename") {
     const { groupId, name } = args as { groupId: string; name: string };
+    // Names are unique across the registry (server.ts owns that rule): a
+    // rename onto another group's exact name refuses with the same message
+    // the real RPC raises, so the picker's inline error path is what the
+    // suite exercises.
+    const taken = Object.entries(simGroupRegistry).find(
+      ([id, record]) => id !== groupId && record.name === name,
+    );
+    if (taken !== undefined) {
+      throw new Error(`group name ${JSON.stringify(name)} is already taken by group ${taken[0]}`);
+    }
     simGroupRegistry[groupId] = { ...simGroupRegistry[groupId], name };
     mockRender();
     return { group: { id: groupId, ...simGroupRegistry[groupId] } };

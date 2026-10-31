@@ -14,6 +14,21 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "Feature groups"
   },
   {
+    "text": "**The group picker gains a filter field and a scrolling list.** The rows sit in a capped pane, so a registry many pages long no longer pushes the new-group field and the footer out of the dialog. The filter narrows the list to a name substring, and Clear brings every row back.",
+    "children": [],
+    "group": "Feature groups"
+  },
+  {
+    "text": "**The group picker lists groups alphabetically instead of in creation order.** The registry keeps its own order, so the toolbar's Group menu and the filter menu read exactly as before.",
+    "children": [],
+    "group": "Feature groups"
+  },
+  {
+    "text": "**Two groups can no longer share a name.** A rename onto a name another group already holds is refused, and the picker's editor stays open with the reason inline instead of closing on a write that never landed. Creating a group with an existing name still settles onto that group, as it already did.",
+    "children": [],
+    "group": "Feature groups"
+  },
+  {
     "text": "**A pinned member keeps its group's dashed frame in the Pinned lane.** A group whose only member was pinned rendered no frame anywhere, because the box plan dropped pinned members entirely. The Pinned lane now frames its slice like every other lane, so the group stays visible, labeled, and joinable there.",
     "children": [],
     "group": "Feature groups"

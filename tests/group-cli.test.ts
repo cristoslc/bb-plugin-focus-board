@@ -183,6 +183,32 @@ describe("bb focus-board group CLI (create/rename/delete/add/remove/move)", () =
       const tooLong = await run(["group", "rename", "Old name", "x".repeat(81)]);
       expect(tooLong.exitCode).toBe(1);
     });
+
+    it("refuses a name another group holds, naming it, and keeps both records", async () => {
+      await load();
+      const alpha = await createGroup("Alpha");
+      const beta = await createGroup("Beta");
+      const result = await run(["group", "rename", "Alpha", "Beta"]);
+      expect(result.exitCode).toBe(1);
+      // The refusal is quotable and names the holder, so an operator or an
+      // agent can go straight to the group that owns the name.
+      expect(result.stderr).toMatch(/already taken by group/);
+      expect(result.stderr).toContain(beta);
+      expect(await registry()).toEqual({
+        [alpha]: expect.objectContaining({ name: "Alpha" }),
+        [beta]: expect.objectContaining({ name: "Beta" }),
+      });
+    });
+
+    it("renaming a group onto its own name is a no-op success", async () => {
+      await load();
+      const id = await createGroup("Alpha");
+      const before = groupSignals().length;
+      const result = await run(["group", "rename", "Alpha", "Alpha"]);
+      expect(result.exitCode).toBe(0);
+      expect((await registry())[id].name).toBe("Alpha");
+      expect(groupSignals().length).toBe(before);
+    });
   });
 
   describe("group delete", () => {
