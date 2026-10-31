@@ -1,0 +1,133 @@
+# Operator-assisted E2E: tap-hold-slide picks a card up and drags it
+# (issue #330).
+#
+# The operator's contract:
+#
+#   "sliding a finger anywhere pans the board. Tap-hold-slide on card drags the
+#    card. Hold duration should be very short but still long enough to
+#    distinguish touch-to-pan-board from touch-to-drag-card"
+#
+# PR #329 answered a stolen pan by disarming every native drag source on a
+# coarse pointer, which also removed touch reordering. That trade is rejected:
+# the pickup is now the board's own gesture (components/touch-hold-drag), armed
+# by a short hold and fed into the SAME drag pipeline a mouse drag drives — so
+# these steps assert exactly what the cursor suites assert, a real `rank_move`
+# and the lane's new order, from a real CDP finger.
+#
+# The viewport is a wide touch device (1024x768) on purpose: the column read
+# only fits two whole lanes and a sliver of a third at phone width, and a
+# cross-lane drop needs its target lane inside the gesture. The phone-width
+# pan contract, including the hold's own arm-and-cancel behaviour, is
+# `uat-board-touch.yaml`.
+#
+# Run: npm run uat -- tests/manual/uat-board-touch-hold.yaml
+suite: board-touch-hold
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5198
+defaults:
+  groupBy: status
+  theme: dark
+  viewport: { width: 1024, height: 768, hasTouch: true, isMobile: true }
+shots: true
+
+steps:
+  # ── The pickup replaces the native drag source, it does not re-arm it ────
+  - id: the-wide-touch-board-arms-no-native-drag-source
+    title: On the touch board no card is a native drag source, and the pickup is the only drag path
+    goto: "?groupBy=status"
+    assert:
+      - lane_direction: vertical
+      - drag_source: { card: thr_ship_release, armed: false }
+      - touch_drag_armor: { card: thr_ship_release }
+
+  # ── The columns read: a hold-slide across lanes writes the move ─────────
+  - id: a-hold-slide-carries-a-card-to-another-lane
+    title: A hold picks a Pinned card up and the slide drops it, ranked, into Unread
+    goto: "?groupBy=status"
+    touch_drag:
+      from: { card: thr_ship_release }
+      to: { card: thr_rpc_auth, edge: before }
+      hold_ms: 420
+    assert:
+      # The arm is read mid-gesture, before the finger moves: the card itself
+      # lifted, and the board named it.
+      - touch_hold: { armed: true, card: thr_ship_release }
+      # The drag owns the gesture: no pan happened under it.
+      - touch_scroll: { target: board, axis: x, equals: 0 }
+      - no_native_drag: true
+      # The write is the mouse drag's own, positioned at the edge it aimed at.
+      - rpc_called:
+          columnKey: "status:unread"
+          threadId: thr_ship_release
+          beforeId: thr_rpc_auth
+          toEnd: false
+      # The drop is a state change AND a ranked placement: the card left
+      # Pinned, and the write it produced names the lane it was aimed at and
+      # the slot it promised. Where the unpinned card then renders is the
+      # app's own lane membership (a pinned, active thread lands in Working),
+      # shared with the mouse path and covered by its suites.
+      - column: pinned
+        ordered: [thr_roadmap]
+      - no_visible_error: true
+
+  # ── The rows read: the same pickup, a vertical slide ────────────────────
+  - id: a-hold-slide-carries-a-card-down-a-row-layout
+    title: On the rows read a hold-slide carries the same card down into Unread
+    goto: "?groupBy=status&laneDirection=horizontal"
+    touch_drag:
+      from: { card: thr_ship_release }
+      to: { card: thr_rpc_auth, edge: before }
+      hold_ms: 420
+    assert:
+      - touch_hold: { armed: true, card: thr_ship_release }
+      # The board scrolls vertically on this read; the drag must not have
+      # scrolled it.
+      - touch_scroll: { target: board, axis: y, equals: 0 }
+      - no_native_drag: true
+      - rpc_called:
+          columnKey: "status:unread"
+          threadId: thr_ship_release
+          beforeId: thr_rpc_auth
+          toEnd: false
+      - column: pinned
+        ordered: [thr_roadmap]
+      - no_visible_error: true
+
+  # ── A folded box is one unit, and a hold picks the whole unit up ─────────
+  - id: a-hold-on-a-folded-box-drags-the-whole-unit
+    title: Holding a folded feature-group card picks the unit up and drops it ranked
+    goto: "?groupBy=status&collapsedGroups=grp_chat_imagegent"
+    touch_drag:
+      from: { box: grp_chat_imagegent }
+      to: { card: thr_sweep_parent, edge: after }
+      hold_ms: 420
+    assert:
+      # The frame itself lifted, not one member's card.
+      - touch_hold: { armed: true, box: grp_chat_imagegent }
+      # The whole unit moved as one write, led by the box's first member and
+      # appended below the lane's other card.
+      - rpc_called:
+          columnKey: "status:working"
+          threadId: thr_column_sort
+          toEnd: true
+      - no_visible_error: true
+
+  # ── A nested row reorders inside its own family ─────────────────────────
+  - id: a-hold-on-a-nested-row-reorders-the-family
+    title: Holding a nested child row and sliding it onto its sibling writes the family's own order
+    goto: "?groupBy=status"
+    touch_drag:
+      from: { card: thr_sweep_w0 }
+      to: { card: thr_sweep_w1, edge: after }
+      hold_ms: 420
+    assert:
+      - touch_hold: { armed: true, card: thr_sweep_w0 }
+      # The row order is the family's, never the lane's: the parent card is
+      # the only member of the column order.
+      - rpc_called:
+          columnKey: "child:thr_sweep_parent"
+          threadId: thr_sweep_w0
+          beforeId: thr_sweep_w2
+          toEnd: false
+      - no_visible_error: true
