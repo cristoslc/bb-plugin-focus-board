@@ -1,0 +1,140 @@
+# Operator-assisted E2E: the board surface on a touch phone (issue #328).
+#
+# The report: on mobile the columns drag around horizontally and the board
+# never scrolls. A finger's pan is up against two platform gesturizers, and
+# both are DOM state this suite reads in the live document:
+#
+#   1. Every card is an HTML5 drag source (`draggable`). Chrome Android and
+#      iOS Safari lift a `draggable` element after a long press, and every
+#      move after the lift pans the CARD, never the board.
+#   2. Card text is selectable. A long press on a title starts a selection or
+#      an iOS callout instead of a scroll.
+#
+# So the surface contract is: on a coarse pointer no element of the board is a
+# native drag source, card text is not selectable, and the scroll surfaces
+# declare a `touch-action` that allows BOTH pan axes (`manipulation` — pan,
+# keep pinch, drop the double-tap-zoom guess). The pans themselves are driven
+# by the runner's `touch_pan` gesture: real CDP touch input against a
+# `hasTouch` + `isMobile` viewport, so the browser's own recognizer decides
+# what happens, not the suite.
+#
+# What the harness cannot drive is the lift itself: a synthetic touch never
+# starts a platform drag (Chrome begins touch DnD inside its browser-side
+# gesture pipeline, which Input.dispatchTouchEvent does not enter), so a pan
+# over a card scrolls on the PRE-fix tree too. That is why the drag-source half
+# is asserted as the live-DOM contract above (it fails on the pre-fix tree),
+# and the pan half is asserted as behavior (it fails on any tree that forbids
+# the pan, `touch-action: none` included).
+#
+# Run: npm run uat -- tests/manual/uat-board-touch.yaml
+suite: board-touch
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5196
+defaults:
+  groupBy: status
+  theme: dark
+  # The repo's phone baseline plus real touch emulation. Without `hasTouch` the
+  # harness reports a fine pointer, none of the touch utilities apply, and
+  # every step here would pass for the wrong reason.
+  viewport: { width: 390, height: 844, hasTouch: true, isMobile: true }
+shots: true
+
+steps:
+  # ── The contract: nothing in the lanes may capture a touch ───────────────
+  - id: the-vertical-board-arms-no-drag-source-on-touch
+    title: On a phone no card of the column board is a native drag source and no card text is selectable
+    goto: "?groupBy=status"
+    assert:
+      - lane_direction: vertical
+      - touch_drag_armor: { card: thr_ship_release }
+      - drag_source: { card: thr_ship_release, armed: false }
+      - drag_source: { card: thr_rpc_auth, armed: false }
+
+  - id: the-horizontal-board-arms-no-drag-source-on-touch
+    title: The rows board carries the same touch contract
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert:
+      - lane_direction: horizontal
+      - touch_drag_armor: { card: thr_ship_release }
+      - drag_source: { card: thr_ship_release, armed: false }
+
+  # ── The operator's case: a finger on a card pans the board ───────────────
+  - id: a-finger-on-a-card-pans-the-column-board
+    title: A horizontal pan starting ON a card scrolls the board and moves no card
+    goto: "?groupBy=status"
+    touch_pan: { from: { card: thr_ship_release }, dx: -200, dy: 0 }
+    assert:
+      - touch_origin: { card: thr_ship_release, column: pinned }
+      - touch_scroll: { target: board, axis: x, min: 40, direction: positive }
+      - no_native_drag: true
+      - rpc_not_called: rank_move
+      - column: pinned
+        ordered: [thr_ship_release, thr_roadmap]
+
+  - id: a-finger-between-two-cards-pans-the-board
+    title: A pan that starts in the gap between two cards scrolls the board, never drags one
+    goto: "?groupBy=status"
+    touch_pan: { from: { between: [thr_ship_release, thr_roadmap] }, dx: -200, dy: 0 }
+    assert:
+      # The gap itself: the finger landed on the lane's own surface, not on
+      # either card.
+      - touch_origin: { card: null, column: pinned }
+      - touch_scroll: { target: board, axis: x, min: 40, direction: positive }
+      - no_native_drag: true
+      - rpc_not_called: rank_move
+      - column: pinned
+        ordered: [thr_ship_release, thr_roadmap]
+
+  - id: a-finger-on-empty-lane-space-pans-the-board
+    title: A pan on the lane's empty space below its last card scrolls the board
+    goto: "?groupBy=status"
+    touch_pan: { from: { column: pinned }, dx: -200, dy: 0 }
+    assert:
+      - touch_origin: { column: pinned }
+      - touch_scroll: { target: board, axis: x, min: 40, direction: positive }
+      - no_native_drag: true
+      - rpc_not_called: rank_move
+
+  - id: a-finger-on-the-board-padding-pans-the-board
+    title: A pan on the board's own padding still scrolls it
+    goto: "?groupBy=status"
+    touch_pan: { from: { board: true }, dx: -200, dy: 0 }
+    assert:
+      - touch_scroll: { target: board, axis: x, min: 40, direction: positive }
+      - no_native_drag: true
+
+  - id: a-held-finger-on-a-card-still-pans
+    title: A long-press hold before the pan does not hand the gesture to a selection or a drag
+    # The long press is the moment both platform gesturizers arm: a roll of
+    # card text starts a selection, a drag source lifts. Neither may happen.
+    goto: "?groupBy=status"
+    touch_pan: { from: { card: thr_ship_release }, dx: -200, dy: 0, hold_ms: 550 }
+    assert:
+      - touch_scroll: { target: board, axis: x, min: 40, direction: positive }
+      - no_native_drag: true
+      - rpc_not_called: rank_move
+
+  # ── The rows board: it scrolls vertically, its rows scroll horizontally ──
+  - id: a-finger-on-a-card-scrolls-the-rows-board-vertically
+    title: On the horizontal read a vertical pan on a card scrolls the board's rows
+    goto: "?groupBy=status&laneDirection=horizontal"
+    touch_pan: { from: { card: thr_ship_release }, dx: 0, dy: -200 }
+    assert:
+      - touch_origin: { card: thr_ship_release, column: pinned }
+      - touch_scroll: { target: board, axis: y, min: 40, direction: positive }
+      - no_native_drag: true
+      - rpc_not_called: rank_move
+      - column: pinned
+        ordered: [thr_ship_release, thr_roadmap]
+
+  - id: a-finger-across-a-row-scrolls-the-row
+    title: A horizontal pan on a row's card scrolls that row along its flow
+    goto: "?groupBy=status&laneDirection=horizontal"
+    touch_pan: { from: { card: thr_ship_release }, dx: -180, dy: 0 }
+    assert:
+      # The row's own list takes the horizontal gesture (the board has no
+      # horizontal range on this read), and it moves the way the finger did.
+      - touch_scroll: { target: lane, axis: x, min: 30, direction: positive }
+      - no_native_drag: true
+      - rpc_not_called: rank_move

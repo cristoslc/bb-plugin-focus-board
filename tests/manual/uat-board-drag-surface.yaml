@@ -1,0 +1,122 @@
+# Operator-assisted E2E: the board's drag surface against the operator's
+# POINTER, in both lane layouts (issue #328).
+#
+# The report was a phone. The suite's other half (`uat-board-touch.yaml`)
+# drives a real finger at a 390x844 coarse-pointer viewport. This half drives
+# the cursor at the desktop viewport and answers the second question in the
+# report — "not sure if there are horizontal scrolling issues on desktop as
+# well" — by pinning the three things a desktop pointer can do to a lane:
+#
+#   1. A cursor drag on a card still reorders, in the vertical column read and
+#      in the horizontal row read (the touch gate must be inert on a fine
+#      pointer: `drag_source: armed: true` is the inverse of the phone's
+#      assertion, and it fails if the gate over-reaches).
+#   2. A trackpad/wheel scroll delivered ON a card, or in the gap between two
+#      cards, pans the board. A drag layer that swallowed the wheel would be
+#      the desktop version of the phone's stolen pan.
+#   3. The horizontal read's row flow: a left-to-right drag with the insertion
+#      line on the hovered card's own sides, and the board's vertical wheel.
+#
+# Run: npm run uat -- tests/manual/uat-board-drag-surface.yaml
+suite: board-drag-surface
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5197
+defaults:
+  groupBy: status
+  theme: dark
+shots: true
+
+steps:
+  # ── The cursor drag, vertical columns ───────────────────────────────────
+  - id: a-cursor-drag-on-a-card-still-reorders
+    title: At a desktop pointer a card is still an armed drag source and drags between its neighbours
+    goto: "?groupBy=status"
+    drag: { from: thr_review_pr, to: thr_rpc_auth, edge: before }
+    assert:
+      - lane_direction: vertical
+      - drag_source: { card: thr_review_pr, armed: true }
+      - column: unread
+        ordered: [thr_review_pr, thr_rpc_auth, thr_uat_queue]
+      - rpc_called: { columnKey: "status:unread", threadId: thr_review_pr, beforeId: thr_rpc_auth, toEnd: false }
+      - no_visible_error: true
+
+  # ── The desktop analogue of the phone's stolen pan ──────────────────────
+  - id: a-wheel-on-a-card-pans-the-column-board
+    title: A horizontal wheel delivered on a card scrolls the board and drags nothing
+    goto: "?groupBy=status"
+    assert_before_drag:
+      - scroll_offset: { axis: x, equals: 0 }
+    gestures:
+      - wheel_pan: { dx: 600, target: columns, over: { card: thr_ship_release }, settle_ms: 400 }
+    assert:
+      - scroll_offset: { axis: x, min: 200 }
+      - rpc_not_called: rank_move
+      - column: pinned
+        ordered: [thr_ship_release, thr_roadmap]
+
+  - id: a-wheel-between-two-cards-pans-the-column-board
+    title: A horizontal wheel delivered in the gap between two cards scrolls the board
+    goto: "?groupBy=status"
+    assert_before_drag:
+      - scroll_offset: { axis: x, equals: 0 }
+    gestures:
+      - wheel_pan: { dx: 600, target: columns, over: { between: [thr_ship_release, thr_roadmap] }, settle_ms: 400 }
+    assert:
+      - scroll_offset: { axis: x, min: 200 }
+      - rpc_not_called: rank_move
+      - column: pinned
+        ordered: [thr_ship_release, thr_roadmap]
+
+  # ── The row read: left-to-right flow, cursor in the row ─────────────────
+  - id: a-cursor-drag-along-a-row-reorders
+    title: On the horizontal read a cursor drag ranks along the row's left-to-right flow
+    goto: "?groupBy=status&laneDirection=horizontal"
+    drag: { from: thr_review_pr, to: thr_rpc_auth, edge: before }
+    assert:
+      - lane_direction: horizontal
+      - drag_source: { card: thr_review_pr, armed: true }
+      - column: unread
+        ordered: [thr_review_pr, thr_rpc_auth, thr_uat_queue]
+      - rpc_called: { columnKey: "status:unread", threadId: thr_review_pr, beforeId: thr_rpc_auth, toEnd: false }
+      - no_visible_error: true
+
+  - id: the-row-insertion-line-splits-on-the-cards-sides
+    title: The insertion line draws on the hovered row card's left and right edges
+    goto: "?groupBy=status&laneDirection=horizontal"
+    hover: { from: thr_review_pr, to: thr_rpc_auth, edge: before }
+    assert:
+      - insertion_line: { from: thr_review_pr, to: thr_rpc_auth, edge: before }
+      - insertion_line: { from: thr_review_pr, to: thr_rpc_auth, edge: after }
+
+  - id: a-wheel-on-a-row-card-scrolls-the-rows-board
+    title: A vertical wheel on a row's card scrolls the rows board, not the row it sits in
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert_before_drag:
+      - scroll_offset: { axis: y, equals: 0 }
+    gestures:
+      - wheel_pan: { dx: 0, dy: 600, target: columns, over: { card: thr_ship_release }, settle_ms: 400 }
+    assert:
+      - scroll_offset: { axis: y, min: 200 }
+      - rpc_not_called: rank_move
+      - column: pinned
+        ordered: [thr_ship_release, thr_roadmap]
+
+  - id: a-horizontal-wheel-on-a-fitted-row-moves-nothing
+    title: A horizontal wheel over a row card that already fits scrolls nothing and drags nothing
+    # The honest negative control for the row read at a desktop width: the
+    # pinned row's two cards fit the row's whole width (measured max 0), so
+    # there is no horizontal range to take and the wheel must land nowhere —
+    # not on the board's vertical axis, not on a card. The phone-width suite
+    # (`uat-board-touch.yaml`) is where a row actually scrolls.
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert_before_drag:
+      - scroll_offset: { target: lane, column: pinned, axis: x, equals: 0 }
+    gestures:
+      - wheel_pan: { dx: 600, target: columns, over: { card: thr_ship_release }, settle_ms: 400 }
+    assert:
+      - scroll_offset: { target: lane, column: pinned, axis: x, equals: 0 }
+      - scroll_offset: { axis: y, equals: 0 }
+      - rpc_not_called: rank_move
+      - column: pinned
+        ordered: [thr_ship_release, thr_roadmap]
