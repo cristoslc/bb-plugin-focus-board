@@ -6,6 +6,14 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "Feature groups"
   },
   {
+    "text": "**A folded feature-group card now shows every descendant's status dot, not just its members'.** Each member's dot leads its children's smaller dots, and their children's tiniest tier, so a folded group's whole live subtree reads at a glance.",
+    "children": [
+      "Clicking a dot opens that thread and leaves the group folded; the labeled control above the grid still expands it.",
+      "The member chip counts the leading dots and an \"N nested\" label beside the grid counts the rest, so the figures always add up to the dots painted."
+    ],
+    "group": "Feature groups"
+  },
+  {
     "text": "**A pinned member keeps its group's dashed frame in the Pinned lane.** A group whose only member was pinned rendered no frame anywhere, because the box plan dropped pinned members entirely. The Pinned lane now frames its slice like every other lane, so the group stays visible, labeled, and joinable there.",
     "children": [],
     "group": "Feature groups"

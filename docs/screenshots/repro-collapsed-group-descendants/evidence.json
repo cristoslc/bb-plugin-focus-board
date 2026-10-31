@@ -1,0 +1,94 @@
+{
+  "query": "?descgroup=1&collapsedGroups=grp_desc",
+  "viewport": {
+    "width": 1400,
+    "height": 900,
+    "deviceScaleFactor": 3
+  },
+  "folded": {
+    "chip": "2 threads",
+    "nestedChip": "5 nested",
+    "order": [
+      "thr_desc_root",
+      "thr_desc_c1",
+      "thr_desc_c1_a",
+      "thr_desc_c1_b",
+      "thr_desc_c2",
+      "thr_desc_c2_a",
+      "thr_desc_solo"
+    ],
+    "sizes": {
+      "member": {
+        "count": 2,
+        "rect": {
+          "width": 6,
+          "height": 6
+        },
+        "colors": [
+          "oklch(0.623 0.214 259.815)",
+          "oklch(0.696 0.17 162.48)"
+        ],
+        "pulsing": 1,
+        "animating": 1,
+        "titles": [
+          "Root: owns the subtree · Working",
+          "Solo member: no descendants · Unread"
+        ]
+      },
+      "child": {
+        "count": 2,
+        "rect": {
+          "width": 4,
+          "height": 4
+        },
+        "colors": [
+          "oklch(0.623 0.214 259.815)",
+          "oklch(0.696 0.17 162.48)"
+        ],
+        "pulsing": 1,
+        "animating": 1,
+        "titles": [
+          "Child one: runs the build · Working",
+          "Child two: unread report · Unread"
+        ]
+      },
+      "grandchild": {
+        "count": 3,
+        "rect": {
+          "width": 2,
+          "height": 2
+        },
+        "colors": [
+          "oklab(0.78 0 0 / 0.3)",
+          "oklab(0.78 0 0 / 0.3)",
+          "oklch(0.623 0.214 259.815)"
+        ],
+        "pulsing": 1,
+        "animating": 1,
+        "titles": [
+          "Grandchild one: idle · Idle",
+          "Grandchild two: idle · Idle",
+          "Grandchild three: still running · Working"
+        ]
+      }
+    },
+    "stripWidth": 222,
+    "cardWidth": 244,
+    "cardHeight": 58,
+    "stripFitsCard": true,
+    "chipFigures": [
+      2,
+      5
+    ]
+  },
+  "afterDotClick": {
+    "pane": "Thread: Grandchild one: idle",
+    "folded": true
+  },
+  "expanded": {
+    "folded": false,
+    "members": 2
+  },
+  "problems": [],
+  "checkedAt": "2026-10-31T04:31:35.865Z"
+}
