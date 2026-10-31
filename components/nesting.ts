@@ -8,6 +8,7 @@ import type {
 } from "./grouping";
 import {
   STATUS_COLUMN_ORDER,
+  NO_GROUP_BUCKET,
   buildColumns,
   columnFor,
   derivedCompare,
@@ -17,6 +18,7 @@ import {
   threadPassesFilter,
   threadState,
 } from "./grouping";
+import { groupBoxesApply } from "./group-boxes";
 import {
   applySlotPins,
   pinRowOrder,
@@ -157,7 +159,10 @@ export function withSlotPins(
  * composition app.tsx wires. `nestedChildrenByParent` (from
  * `nestUnderParents`, NOT the raw index) is what renders as child rows, so a
  * promoted (live child of a Done parent) or cross-axis child never appears
- * both as a standalone card and as a nested row. `doneChildrenByParent` is
+ * both as a standalone card and as a nested row. The feature-group copy-out
+ * is the one deliberate exception: a child in a different feature group than
+ * its parent renders its row and its own card (dual membership, see
+ * `childPlacement` step 5). `doneChildrenByParent` is
  * what renders under a family's Done projection card. `childCountByParent`
  * counts each card's own space (see `BoardAssembly`).
  *
@@ -264,7 +269,10 @@ export function assembleBoard(
   // A live card's chip keeps the old semantics: ALL visible non-done children
   // count, standalone-rendering members included (a pinned or Needs-you child
   // hides behind the fold too... no — it stands alone; but the chip still
-  // names the family's size, as it always has). Done members walk nowhere:
+  // names the family's size, as it always has). A feature-group copy-out
+  // counts here too, which is what makes it dual membership rather than a
+  // departure: the child keeps its row and its number on the chip while its
+  // own card sits in its group's frame. Done members walk nowhere:
   // they and their done subtrees count on the Done side.
   const countRawFamily = (parentId: string): number => {
     let count = 0;
@@ -392,10 +400,12 @@ export function buildFamilyIndex(threads: readonly PluginSidebarThread[]): Famil
 /**
  * Where does a child render relative to its parent in this grouping? Returns
  * `"nest"` (rows under the parent's own card), `"done"` (rows under the
- * family's projection card in the Done column), or `"flat"` (the child keeps
- * its standalone column placement).
+ * family's projection card in the Done column), `"flat"` (the child keeps
+ * its standalone column placement and renders no row), or `"dual"` (the
+ * child keeps its row AND its standalone column placement — the
+ * feature-group copy-out of step 5).
  *
- * The one same-space rule, four steps in order:
+ * The one same-space rule, five steps in order:
  *
  * 1. Done is its own space: a done child paints in the Done space under the
  *    family's card there — the root's own card when the root is done, the
@@ -418,8 +428,68 @@ export function buildFamilyIndex(threads: readonly PluginSidebarThread[]): Famil
  *    assignment are data keys the child must match. A cross-key child stays
  *    flat in its own lane — nesting never rides a member into a group it
  *    does not belong to.
+ * 5. The feature-group copy-out (the operator's 2026-10-31 ruling): a child
+ *    carrying its OWN feature group, whose group id differs from its
+ *    parent's, renders BOTH ways — its row stays under the parent card and
+ *    its own card lands inside its group's dashed frame, in its own column
+ *    (the card's `buildColumns` assignment, which is `columnFor` unless a
+ *    pane freeze or the attention capture claims it). A child with NO group
+ *    is not "in a different group" (there is nothing to frame, and it would
+ *    strand the row in a family it belongs to), so it keeps the plain nest;
+ *    a same-group child is the family's own unit. Copy-out is dual
+ *    membership, never removal: the child stays counted on the parent's
+ *    chip and painted in its dot strip while it also holds its own card
+ *    (`groupCopiesOut`, and `familyDriveMembers` excludes it from the
+ *    family's lane drive — the child's own card carries that lane).
+ *
+ * The view matrix step 5 settles, stated once so the next reader does not
+ * re-derive it:
+ *
+ * | view                          | cross-space child    | own group ≠ parent's  |
+ * | Focus / Last activity / None  | — (one space key)    | dual: row + own card  |
+ * | Project / Provider / Machine  | own card only (flat) | dual: row + own card  |
+ * | Group                         | own card only (flat) | own card only (flat)  |
+ * | Parent                        | lanes, no boxes (never reaches here; `groupBoxesApply` says no) |
+ *
+ * Two reasons pin it that way. The cross-space rules of step 4 are unchanged
+ * and compose UNDER the group rule: a child in another project's, provider's,
+ * or machine's lane would ride its row into a lane it does not belong to, so
+ * only the group frame moves it there. The Group view keeps its full
+ * copy-out at a finer grain for the same reason: its columns ARE the group
+ * buckets, so a row would paint a Beta card inside Alpha's column.
  */
-type ChildPlacement = "nest" | "done" | "flat";
+type ChildPlacement = "nest" | "done" | "flat" | "dual";
+
+/**
+ * The feature-group copy-out: does `child` carry its own group, and is it a
+ * different one from its parent's? Such a child renders twice on purpose
+ * (see `childPlacement` step 5); the assembly's `nestUnderParents` turns the
+ * answer into a `"dual"` placement.
+ *
+ * - "No group" (`NO_GROUP_BUCKET`) is not "a different group": an ungrouped
+ *   child has no frame to appear in, so it keeps the plain nest.
+ * - The rule is per parent-child pair, on the DISPLAY parent (the family
+ *   index's depth-capped edges): a grandchild diffs against the child that
+ *   owns its row, never against the family root.
+ * - Boxes exist only in the box-enabled views (`groupBoxesApply`), so the
+ *   Parent view and a call with no grouping context answer no.
+ *
+ * One authoritative answer for the placement (`childPlacement`) and the
+ * family's lane drive (`familyDriveMembers`): a row member the drive set
+ * kept while placement copied it out would lift the family into a lane its
+ * own card already holds.
+ */
+export function groupCopiesOut(
+  child: PluginSidebarThread,
+  parent: PluginSidebarThread,
+  groupBy: GroupBy,
+  groupContext: GroupingContext | undefined,
+): boolean {
+  if (groupContext === undefined || !groupBoxesApply(groupBy)) return false;
+  const childBucket = groupBucketFor(child, groupContext.groupsByThread);
+  if (childBucket === NO_GROUP_BUCKET) return false;
+  return childBucket !== groupBucketFor(parent, groupContext.groupsByThread);
+}
 
 function childPlacement(
   child: PluginSidebarThread,
@@ -457,18 +527,19 @@ function childPlacement(
   if (groupBy === "project" || groupBy === "provider") {
     const key = groupBy === "project" ? child.projectId : child.providerId;
     const parentKey = groupBy === "project" ? parent.projectId : parent.providerId;
-    return key === parentKey ? "nest" : "flat";
-  }
-  if (groupBy === "machine") {
-    return (child.host?.id ?? "none") === (parent.host?.id ?? "none") ? "nest" : "flat";
-  }
-  if (groupBy === "group") {
+    if (key !== parentKey) return "flat";
+  } else if (groupBy === "machine") {
+    if ((child.host?.id ?? "none") !== (parent.host?.id ?? "none")) return "flat";
+  } else if (groupBy === "group") {
+    // The Group view's columns are the buckets themselves, so its copy-out is
+    // a space rule and stays whole (the matrix above): no row.
     return groupBucketFor(child, groupContext.groupsByThread) ===
       groupBucketFor(parent, groupContext.groupsByThread)
       ? "nest"
       : "flat";
   }
-  return "nest"; // status (R4: the family moves as one unit) / recency / none
+  // Step 5: the feature-group copy-out — the row stays, the card joins its frame.
+  return groupCopiesOut(child, parent, groupBy, groupContext) ? "dual" : "nest";
 }
 
 /**
@@ -492,6 +563,12 @@ function childPlacement(
  * The "group" view's assignment buckets are host data the board's own
  * groupBoxOf plan prunes (pinned/done members drop out of the plan), so
  * that one grouping cannot answer here: it reads as a visible nest.
+ *
+ * The feature-group copy-out (step 5) is deliberately NOT in this list: a
+ * group-different nest under a box-enabled view renders VISIBLY twice, the
+ * row under the parent card and the child's own card inside its group's
+ * frame, so the gesture's outcome shows and no notice is owed. Answering a
+ * reason there would accuse the board of hiding a write it paints.
  */
 export function flatNestReason(
   child: PluginSidebarThread,
@@ -545,7 +622,10 @@ function stateRank(state: ThreadState): number {
  * copied OUT to its own lane — a Needs-you child standing alone, a done
  * child in the Done projection, a pinned child in Pinned — keeps that
  * placement and does not drive (copy-out is dual membership, not removal).
- * Archived descendants render nowhere and never drive.
+ * The same holds for the feature-group copy-out (`childPlacement` step 5):
+ * a child whose own group differs from its parent's renders its row AND its
+ * own card, and the card already carries its lane, so the family must not
+ * chase it there. Archived descendants render nowhere and never drive.
  *
  * Walk order is root first, then descendants; both lane picks below break
  * ties toward the earlier entry, so an all-idle family keeps the root's own
@@ -557,24 +637,47 @@ export function familyDriveMembers(
   familyIndex: FamilyIndex,
   doneIds: ReadonlySet<string>,
   errorAcks: ReadonlySet<string> = new Set<string>(),
+  /**
+   * The view's group scope: when supplied, a descendant that copies out to
+   * its own group's frame is excluded from the drive (see
+   * `groupCopiesOut`). Absent → the pre-existing drive set, which is what
+   * callers with no grouping context want.
+   */
+  groupScope?: GroupDriveScope,
 ): PluginSidebarThread[] {
   const drive: PluginSidebarThread[] = [];
-  const stack = [rootId];
+  // The walk carries each member's display parent so the group copy-out can
+  // be answered per parent-child pair (`childPlacement` step 5).
+  const stack: { id: string; parent: PluginSidebarThread | undefined }[] = [
+    { id: rootId, parent: undefined },
+  ];
   const seen = new Set<string>();
   while (stack.length > 0) {
-    const id = stack.pop() as string;
+    const entry = stack.pop();
+    if (entry === undefined) break;
+    const { id, parent } = entry;
     if (seen.has(id)) continue;
     seen.add(id);
     const member = byId.get(id);
     if (member === undefined || member.isArchived) continue;
-    if (member.id === rootId || familyRowMember(member, doneIds, errorAcks)) {
+    const copiesOut =
+      parent !== undefined &&
+      groupScope !== undefined &&
+      groupCopiesOut(member, parent, groupScope.groupBy, groupScope.groupContext);
+    if (member.id === rootId || (familyRowMember(member, doneIds, errorAcks) && !copiesOut)) {
       drive.push(member);
     }
     for (const child of familyIndex.childrenByParent.get(id) ?? []) {
-      stack.push(child.id);
+      stack.push({ id: child.id, parent: member });
     }
   }
   return drive;
+}
+
+/** The grouping scope the family's lane drive reads (see `familyDriveMembers`). */
+export interface GroupDriveScope {
+  groupBy: GroupBy;
+  groupContext: GroupingContext;
 }
 
 /**
@@ -639,7 +742,15 @@ export function familyColumnOverrides(
   for (const rootId of familyIndex.rootIds) {
     const root = byId.get(rootId);
     if (root === undefined || root.isArchived || doneIds.has(rootId)) continue;
-    const best = bestFamilyDriver(rootId, byId, familyIndex, doneIds, groupBy, errorAcks);
+    const best = bestFamilyDriver(
+      rootId,
+      byId,
+      familyIndex,
+      doneIds,
+      groupBy,
+      errorAcks,
+      { groupBy, groupContext: context },
+    );
     if (best === undefined) continue;
     // Under the status grouping an all-idle drive set names no lane (idle
     // ranks below every state that can demand a column move): the family
@@ -660,9 +771,10 @@ function bestFamilyDriver(
   doneIds: ReadonlySet<string>,
   groupBy: GroupBy,
   errorAcks: ReadonlySet<string> = new Set<string>(),
+  groupScope?: GroupDriveScope,
 ): PluginSidebarThread | undefined {
   let best: PluginSidebarThread | undefined;
-  for (const member of familyDriveMembers(rootId, byId, familyIndex, doneIds, errorAcks)) {
+  for (const member of familyDriveMembers(rootId, byId, familyIndex, doneIds, errorAcks, groupScope)) {
     if (best === undefined || driveElevates(member, best, groupBy, errorAcks)) {
       best = member;
     }
@@ -687,6 +799,13 @@ function bestFamilyDriver(
  * - Axis match (project/provider/machine): a live child nests only when its
  *   axis key matches its parent's; otherwise it stays flat in its own column.
  *   Recency and None groupings always nest.
+ * - The feature-group copy-out (`childPlacement` step 5): in every
+ *   box-enabled view, a live child whose own feature group differs from its
+ *   parent's nests AND keeps its column slot, so its own card lands inside
+ *   its group's dashed frame in the lane its state picks. This is the one
+ *   placement that renders a thread twice outside the Done projection, and
+ *   it is dual membership on purpose: the row, the parent's chip, and the
+ *   dot strip keep the child, while the card carries its own lane.
  *
  * `childrenByParent` holds each parent's live nested children sorted
  * urgent-first, then in the same order the columns use (pinned-first,
@@ -729,12 +848,16 @@ export function nestUnderParents(
   // Decide, per child, where it renders: rows under the parent's own card,
   // rows under the family's Done projection card, or standalone. Flat
   // children keep their column placement; the other two leave the column
-  // lists entirely. The family index has already dropped archived members,
-  // so neither side of an edge is archived (the guards below are defense for
-  // a caller whose threads array disagrees with the index it passed).
+  // lists entirely. A dual child (the feature-group copy-out, `childPlacement`
+  // step 5) renders BOTH ways: it joins the nested rows and keeps its column
+  // slot, so `dualIds` exempts it from the column filter below. The family
+  // index has already dropped archived members, so neither side of an edge is
+  // archived (the guards below are defense for a caller whose threads array
+  // disagrees with the index it passed).
   const nested = new Map<string, PluginSidebarThread[]>();
   const doneNested = new Map<string, PluginSidebarThread[]>();
   const flatIds = new Set<string>();
+  const dualIds = new Set<string>();
   for (const [childId, parentId] of index.parentOf) {
     const child = threadById.get(childId);
     const parent = threadById.get(parentId);
@@ -748,7 +871,12 @@ export function nestUnderParents(
       flatIds.add(childId);
       continue;
     }
-    const target = placement === "nest" ? nested : doneNested;
+    if (placement === "dual") {
+      // Dual membership: the row below AND its own card in its group's frame.
+      dualIds.add(childId);
+      flatIds.add(childId);
+    }
+    const target = placement === "done" ? doneNested : nested;
     const siblings = target.get(parentId);
     if (siblings === undefined) target.set(parentId, [child]);
     else siblings.push(child);
@@ -815,8 +943,10 @@ export function nestUnderParents(
     .map((column) => {
       const kept = column.threads.filter(
         (thread) =>
-          !nestedKeyIds.has(thread.id) &&
-          !doneNestedKeyIds.has(thread.id) &&
+          // A dual child is a nested row AND a column card: `dualIds` is the
+          // one exemption from the drain (copy-out is dual membership).
+          (dualIds.has(thread.id) ||
+            (!nestedKeyIds.has(thread.id) && !doneNestedKeyIds.has(thread.id))) &&
           (flatIds.has(thread.id) || index.rootIds.has(thread.id)),
       );
       if (column.id === "pinned") {
