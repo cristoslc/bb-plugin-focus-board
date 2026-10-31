@@ -168,6 +168,22 @@ host app involved.
   tables, plus before/after shots). Run the vite harness first (same as above);
   honors the same `CHROME_PATH`, `HARNESS_URL`, and `OUT_DIR` overrides.
 
+- `probe-board-touch-scroll.mjs` — the touch-pan grid for issue #328 (the
+  phone report: the columns drag around and the board never scrolls). At
+  390×844 with `hasTouch` + `isMobile` it drives a real CDP touch pan in both
+  lane layouts from three origins — a card, the lane's empty space, and the
+  board's padding — and reports per cell: the board's scroll delta, the
+  `touch-action` the surface computes, the element the finger actually landed
+  on, whether a `dragstart` fired, and the selection length the gesture left.
+  It is the measurement behind the fix's honest limit: the pan already worked
+  and no synthetic touch lifts a card. The pre-fix table read
+  `touch-action: auto` on every surface with the same scroll deltas and no
+  `dragstart`, which is why the drag-source half of issue #328 is pinned as the
+  suites' live-DOM contract (`touch_drag_armor`) rather than as a gesture.
+  Evidence lands in `docs/screenshots/probe-board-touch-scroll/evidence.json`
+  (plus one clip per cell). Run the vite harness first (same as above); honors
+  `CHROME_PATH` and `HARNESS_URL`.
+
 Regenerate the screenshots:
 
 ```sh

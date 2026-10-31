@@ -936,6 +936,204 @@ const pageAriaProbe = (label) => {
  * away. Every check is computed-style or hit-test work in the live document,
  * so a class-presence change alone cannot satisfy it.
  */
+/**
+ * Where a `touch_pan` finger lands. `from` names the origin the way an
+ * operator's finger would find it:
+ *   { card: thr_x }                 — on a card's own body
+ *   { between: [thr_a, thr_b] }     — the gap between two cards of one lane
+ *                                     (the operator's case: the pan that must
+ *                                     scroll instead of dragging a card)
+ *   { column: unread, empty: true } — the lane's empty card-list space
+ *   { board: true }                 — the board's own padding, outside lanes
+ *   { point: { x, y } }             — literal viewport coordinates
+ * Returns the viewport point plus what sits under it, so a step can prove the
+ * finger started where it claims to.
+ */
+const pageTouchPanOrigin = (from) => {
+  const rect = (el) => {
+    const box = el.getBoundingClientRect();
+    return { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: box.width, height: box.height };
+  };
+  const card = (id) => {
+    const el = document.querySelector(`[data-thread-card="${id}"]`);
+    if (el === null) throw new Error(`touch_pan: no card ${id}`);
+    return el;
+  };
+  let point = null;
+  const horizontal =
+    document.querySelector("[data-columns-board]")?.getAttribute("data-lane-direction") ===
+    "horizontal";
+  if (from.point !== undefined) {
+    point = { x: Number(from.point.x), y: Number(from.point.y) };
+  } else if (from.card !== undefined) {
+    const box = rect(card(from.card));
+    point = { x: box.left + box.width / 2, y: box.top + Math.min(box.height / 2, 16) };
+  } else if (from.between !== undefined) {
+    // The real gap between two cards: vertically on a column board, across
+    // the row on a rows board.
+    const [first, second] = from.between.map(card);
+    const a = rect(first);
+    const b = rect(second);
+    point = horizontal
+      ? { x: (a.right + b.left) / 2, y: (a.top + a.bottom) / 2 }
+      : { x: (a.left + a.right) / 2, y: (a.bottom + b.top) / 2 };
+  } else if (from.column !== undefined) {
+    const list = document.querySelector(`section[data-column-id="${from.column}"] [data-card-list]`);
+    if (list === null) throw new Error(`touch_pan: no lane ${from.column}`);
+    const box = rect(list);
+    const cards = [...list.querySelectorAll("[data-thread-card]")].map(rect);
+    if (horizontal) {
+      const right = cards.reduce((far, b) => Math.max(far, b.right), box.left);
+      const x = right + 24 <= box.right - 4 ? right + 24 : box.right - 6;
+      point = { x, y: box.top + box.height / 2 };
+    } else {
+      const bottom = cards.reduce((low, b) => Math.max(low, b.bottom), box.top);
+      // The lane's empty space under its last card; a lane packed to the
+      // bottom edge pans from its padding row instead.
+      const y = bottom + 24 <= box.bottom - 4 ? bottom + 24 : box.bottom - 6;
+      point = { x: box.left + box.width / 2, y };
+    }
+  } else if (from.board === true) {
+    const board = document.querySelector("[data-columns-board]");
+    const box = rect(board);
+    point = { x: box.left + 10, y: box.bottom - 10 };
+  }
+  if (point === null) throw new Error(`touch_pan: unreadable origin ${JSON.stringify(from)}`);
+  point = { x: Math.round(point.x), y: Math.round(point.y) };
+  const hit = document.elementFromPoint(point.x, point.y);
+  return {
+    point,
+    under: hit === null
+      ? null
+      : {
+          tag: hit.tagName.toLowerCase(),
+          card: hit.closest("[data-thread-card]")?.getAttribute("data-thread-card") ?? null,
+          column: hit.closest("[data-column-id]")?.getAttribute("data-column-id") ?? null,
+          lane: hit.closest("[data-lane-id]")?.getAttribute("data-lane-id") ?? null,
+        },
+  };
+};
+
+/**
+ * Arms the touch reading: the scroll offsets every scroller sits at before the
+ * finger moves, the element under the finger, and the listeners that catch a
+ * gesture the browser turned into something other than a pan (a native drag,
+ * or a cancelled pointer). The listeners install once per document so repeated
+ * pan steps in one page cannot double-count.
+ */
+const pageTouchPanPrepare = ({ point, under }) => {
+  if (globalThis.__uatTouchHooked !== true) {
+    globalThis.__uatTouchHooked = true;
+    document.addEventListener(
+      "dragstart",
+      (event) => {
+        const reading = globalThis.__uatTouch;
+        if (reading === null || reading === undefined) return;
+        const target = event.target;
+        reading.dragStarts.push({
+          at: Math.round(performance.now()),
+          card: target instanceof Element
+            ? target.closest("[data-thread-card]")?.getAttribute("data-thread-card") ?? null
+            : null,
+          tag: target instanceof Element ? target.tagName.toLowerCase() : String(target),
+        });
+      },
+      { capture: true, passive: true },
+    );
+  }
+  const board = document.querySelector("[data-columns-board]");
+  const start = document.elementFromPoint(point.x, point.y);
+  const laneList = start?.closest("[data-card-list]") ?? null;
+  globalThis.__uatTouch = {
+    point,
+    under,
+    layout: board.getAttribute("data-lane-direction") ?? "vertical",
+    laneColumn: laneList?.closest("[data-column-id]")?.getAttribute("data-column-id") ?? null,
+    before: {
+      boardX: Math.round(board.scrollLeft),
+      boardY: Math.round(board.scrollTop),
+      laneX: Math.round(laneList?.scrollLeft ?? 0),
+      laneY: Math.round(laneList?.scrollTop ?? 0),
+    },
+    dragStarts: [],
+  };
+  return true;
+};
+
+/** Reads the gesture's aftermath into the same reading (called after settle). */
+const pageTouchPanRead = () => {
+  const reading = globalThis.__uatTouch;
+  if (reading === null || reading === undefined) return null;
+  const board = document.querySelector("[data-columns-board]");
+  const laneList =
+    reading.laneColumn === null
+      ? null
+      : document.querySelector(
+          `section[data-column-id="${reading.laneColumn}"] [data-card-list]`,
+        );
+  const after = {
+    boardX: Math.round(board.scrollLeft),
+    boardY: Math.round(board.scrollTop),
+    laneX: Math.round(laneList?.scrollLeft ?? 0),
+    laneY: Math.round(laneList?.scrollTop ?? 0),
+  };
+  const readingOut = {
+    ...reading,
+    after,
+    delta: {
+      board: { x: after.boardX - reading.before.boardX, y: after.boardY - reading.before.boardY },
+      lane: { x: after.laneX - reading.before.laneX, y: after.laneY - reading.before.laneY },
+    },
+  };
+  globalThis.__uatTouch = readingOut;
+  return readingOut;
+};
+
+/**
+ * The touch contract of the board surface. On a phone the only gesture the
+ * surface may hand the browser is a PAN: a native drag source in the lanes
+ * (every card anchor is `draggable` on a fine pointer) lets the platform's
+ * touch-drag recognizer lift a card out of a finger's pan, and selectable card
+ * text turns a long press into a selection/callout instead of a scroll
+ * (issue #328). This probe reads the live document, not the source: the armed
+ * drag sources in the board, the anchor's own `draggable` and computed
+ * `user-select`, and the `touch-action` the scroll surfaces declare.
+ */
+const pageTouchDragArmor = (payload) => {
+  const board = document.querySelector("[data-columns-board]");
+  if (board === null) return { ok: false, reason: "no [data-columns-board] on the page" };
+  const card =
+    payload?.card === undefined
+      ? board.querySelector("[data-thread-card]")
+      : document.querySelector(`[data-thread-card="${payload.card}"]`);
+  if (card === null) return { ok: false, reason: "no card rendered on the board" };
+  const anchor = card.querySelector("a");
+  const list = card.closest("[data-card-list]");
+  const sources = [...board.querySelectorAll('[draggable="true"]')];
+  const touchAction = (el) => (el === null ? "" : getComputedStyle(el).touchAction);
+  const box = (el) => {
+    if (el === null) return null;
+    const rect = el.getBoundingClientRect();
+    return `${Math.round(rect.width)}x${Math.round(rect.height)}`;
+  };
+  return {
+    ok: true,
+    layout: board.getAttribute("data-lane-direction") ?? "vertical",
+    coarse: matchMedia("(pointer: coarse)").matches,
+    hoverNone: matchMedia("(hover: none)").matches,
+    cardDrag: card.getAttribute("draggable"),
+    anchorDrag: anchor === null ? null : anchor.getAttribute("draggable"),
+    anchorUserSelect: anchor === null ? "" : getComputedStyle(anchor).userSelect,
+    anchorBox: box(anchor),
+    boardTouchAction: touchAction(board),
+    laneTouchAction: touchAction(list),
+    sources: sources.length,
+    sourceSample: sources
+      .slice(0, 4)
+      .map((el) => `${el.tagName.toLowerCase()}${el.getAttribute("data-thread-card") === null ? "" : `[${el.getAttribute("data-thread-card")}]`}`),
+  };
+};
+
 const pageQueuedSendReach = async (payload) => {
   const row = payload?.row ?? 1;
   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -1417,13 +1615,23 @@ const pageBoardNoiseRead = ({ holdMs }) =>
   });
 
 /** Real wheel input: 10 discrete wheel ticks through the input pipeline. */
-const wheelPan = async (page, { dx = 130, dy = 0, target = "lanes" }) => {
+const wheelPan = async (page, { dx = 130, dy = 0, target = "lanes", over = undefined }) => {
   const board = await page.$(
     target === "columns" ? "[data-columns-board]" : "[data-parent-board]",
   );
   if (!board) throw new Error("board_quiet wheel: no board element");
   const box = await board.boundingBox();
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  let point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  if (over !== undefined) {
+    // The same origin vocabulary the touch gesture uses (`card`, `between`,
+    // `column`, `board`): `over: { card }` parks the pointer on a card's own
+    // body so the wheel is delivered to the surface a drag source covers —
+    // the shape of a trackpad scroll that must pan and never start a drag
+    // (issue #328).
+    const origin = await page.evaluate(pageTouchPanOrigin, over);
+    point = origin.point;
+  }
+  await page.mouse.move(point.x, point.y);
   for (let i = 0; i < 10; i++) {
     await page.mouse.wheel({ deltaX: dx / 10, deltaY: dy / 10 });
   }
@@ -2212,6 +2420,173 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
         got.ok,
         got.ok ? "tapped the reveal, tapped Send, row gone" : got.reason,
       );
+    }
+    // ── Touch surface (issue #328) ───────────────────────────────────────
+    // The four rules below read the reading a `touch_pan` gesture leaves in
+    // the page (`__uatTouch`) plus the live DOM. A rule with no reading behind
+    // it FAILS rather than passing vacuously: a step that forgot its gesture
+    // proves nothing about touch.
+    if (
+      rule.touch_origin !== undefined ||
+      rule.touch_scroll !== undefined ||
+      rule.no_native_drag !== undefined
+    ) {
+      const reading = await page.evaluate(() => globalThis.__uatTouch ?? null);
+      if (reading === null) {
+        expect(
+          "a touch pan ran in this step",
+          false,
+          "no touch_pan reading on the page — the touch assertions would prove nothing",
+        );
+      } else {
+        if (rule.touch_origin !== undefined) {
+          const want = rule.touch_origin;
+          const got = reading.under ?? {};
+          const mismatched = Object.entries(want).filter(([key, value]) => got[key] !== value);
+          expect(
+            `the finger landed on ${JSON.stringify(want)}`,
+            mismatched.length === 0,
+            mismatched.length === 0
+              ? `landed on ${JSON.stringify(got)}`
+              : `landed on ${JSON.stringify(got)}, wanted ${JSON.stringify(want)}`,
+          );
+        }
+        if (rule.touch_scroll !== undefined) {
+          const want = rule.touch_scroll; // { target, axis, min?, direction? }
+          const axis = want.axis === "y" ? "y" : "x";
+          const moved = reading.delta[want.target === "lane" ? "lane" : "board"][axis];
+          const min = Number(want.min ?? 1);
+          const direction = want.direction ?? (min > 0 ? "any" : "any");
+          const sign = Math.sign(moved);
+          const directionOk =
+            direction === "positive" ? sign > 0 : direction === "negative" ? sign < 0 : true;
+          expect(
+            `the ${want.target ?? "board"} ${axis} scrolled ${direction === "any" ? "at least" : direction} ${min}px`,
+            Math.abs(moved) >= min && directionOk,
+            `${want.target ?? "board"} ${axis} moved ${moved}px ` +
+              `(board ${reading.before.boardX},${reading.before.boardY} → ${reading.after.boardX},${reading.after.boardY}; ` +
+              `lane ${reading.before.laneX},${reading.before.laneY} → ${reading.after.laneX},${reading.after.laneY})`,
+          );
+        }
+        if (rule.no_native_drag !== undefined) {
+          const wanted = rule.no_native_drag === true;
+          expect(
+            wanted ? "the browser started no native drag" : "the browser started a native drag",
+            (reading.dragStarts.length === 0) === wanted,
+            reading.dragStarts.length === 0
+              ? "no dragstart fired during the pan"
+              : `${reading.dragStarts.length} dragstart(s): ${JSON.stringify(reading.dragStarts)}`,
+          );
+        }
+      }
+    }
+    if (rule.drag_source !== undefined) {
+      // The per-card half of the touch contract, in both directions: on a
+      // fine pointer the card must stay an armed HTML5 drag source (the
+      // cursor reorder suites ride on this), and on a coarse one it must not
+      // (a finger must pan, issue #328).
+      const want = rule.drag_source;
+      const got = await page.evaluate((id) => {
+        const card = document.querySelector(`[data-thread-card="${id}"]`);
+        if (card === null) return null;
+        const anchor = card.querySelector("a");
+        return {
+          anchor: anchor?.getAttribute("draggable") ?? null,
+          coarse: matchMedia("(pointer: coarse)").matches,
+        };
+      }, want.card);
+      if (got === null) {
+        expect(`card ${want.card} drag source`, false, "no such card on the board");
+      } else {
+        expect(
+          `card ${want.card} is ${want.armed === false ? "not " : ""}a native drag source`,
+          got.anchor === String(want.armed !== false),
+          `draggable=${JSON.stringify(got.anchor)} on a ${got.coarse ? "coarse" : "fine"} pointer`,
+        );
+      }
+    }
+    if (rule.scroll_offset !== undefined) {
+      // A scroll offset of the board or of one lane's card list. Paired with
+      // an `assert_before_drag` of the same rule, it proves a scroll gesture
+      // moved that surface (and that a drag gesture did not).
+      const want = rule.scroll_offset; // { target?, column?, axis, min?, max?, equals? }
+      const target = want.target === "lane" ? "lane" : "board";
+      const got = await page.evaluate(
+        ({ target, column }) => {
+          const el =
+            target === "lane"
+              ? document.querySelector(`section[data-column-id="${column}"] [data-card-list]`)
+              : document.querySelector("[data-columns-board]");
+          if (el === null) return null;
+          return {
+            x: Math.round(el.scrollLeft),
+            y: Math.round(el.scrollTop),
+            maxX: el.scrollWidth - el.clientWidth,
+            maxY: el.scrollHeight - el.clientHeight,
+          };
+        },
+        { target, column: want.column },
+      );
+      const name = target === "lane" ? `lane ${want.column}` : "board";
+      if (got === null) {
+        expect(`${name} offset`, false, `no ${target} scroller on the page`);
+      } else {
+        const axis = want.axis === "y" ? "y" : "x";
+        const value = got[axis];
+        const ok =
+          (want.min === undefined || value >= Number(want.min)) &&
+          (want.max === undefined || value <= Number(want.max)) &&
+          (want.equals === undefined || value === Number(want.equals));
+        expect(
+          `${name} ${axis} offset ${want.equals === undefined ? `${want.min ?? ""}≤${value}≤${want.max ?? ""}` : `= ${want.equals}`}`,
+          ok,
+          `${name} ${axis}=${value} (max ${axis === "x" ? got.maxX : got.maxY})`,
+        );
+      }
+    }
+    if (rule.touch_drag_armor !== undefined) {
+      const payload = rule.touch_drag_armor === true ? {} : rule.touch_drag_armor;
+      const got = await page.evaluate(pageTouchDragArmor, payload);
+      if (!got.ok) {
+        expect("touch drag armor", false, got.reason);
+      } else {
+        // The premise first: a fine-pointer viewport (no `hasTouch`) hides the
+        // touch utilities by design, so every assertion below would pass for
+        // the wrong reason.
+        expect(
+          "the viewport presents a coarse pointer and no hover",
+          got.coarse && got.hoverNone,
+          `(pointer: coarse)=${got.coarse}, (hover: none)=${got.hoverNone} — set viewport { hasTouch: true, isMobile: true }`,
+        );
+        expect(
+          "no card is a native drag source, so a finger's pan cannot lift one",
+          got.sources === 0,
+          `${got.sources} armed drag source(s) inside the board: ${got.sourceSample.join(", ")}`,
+        );
+        expect(
+          "the card's anchor is not draggable",
+          got.anchorDrag === "false",
+          `draggable=${JSON.stringify(got.anchorDrag)} (box ${got.anchorBox})`,
+        );
+        expect(
+          "the card's text is not touch-selectable, so a long press pans",
+          got.anchorUserSelect === "none",
+          `user-select=${JSON.stringify(got.anchorUserSelect)}`,
+        );
+        // The pan must never be forbidden: these surfaces declare
+        // `manipulation` (pan both axes, keep pinch), not `none` or a single
+        // axis, which would eat one of the two scroll directions.
+        for (const [name, value] of [
+          ["board", got.boardTouchAction],
+          ["lane list", got.laneTouchAction],
+        ]) {
+          expect(
+            `the ${name} allows both pan axes`,
+            value === "manipulation",
+            `touch-action=${JSON.stringify(value)}`,
+          );
+        }
+      }
     }
     if (rule.text_visible !== undefined) {
       const got = await page.evaluate(pageTextVisible, rule.text_visible);
@@ -3006,7 +3381,7 @@ async function runSuite(file, { port, browser, cell = null }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "drag_child_to_header", "drag_dot_to_dot", "drag_dot_to_floor", "drag_card_to_strip", "hover_header", "hover", "hover_card", "mouse_to", "key", "back", "click", "click_aria", "click_row_sweep", "type", "menu", "scroll", "wheel_pan", "resize", "resize_pane", "sleep", "blur", "press_escape", "push_url", "push_update"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "drag_child_to_header", "drag_dot_to_dot", "drag_dot_to_floor", "drag_card_to_strip", "hover_header", "hover", "hover_card", "mouse_to", "key", "back", "click", "click_aria", "click_row_sweep", "type", "menu", "scroll", "wheel_pan", "touch_pan", "resize", "resize_pane", "sleep", "blur", "press_escape", "push_url", "push_update"];
       let gestureFailed = false;
       // A gesture that cannot even run (its own element is absent — a
       // regression deleted what the step targets) records the step and
@@ -3200,8 +3575,47 @@ async function runSuite(file, { port, browser, cell = null }) {
               dx: payload?.dx ?? 130,
               dy: payload?.dy ?? 0,
               target: payload?.target ?? "lanes",
+              over: payload?.over,
             });
             await sleep(Math.max(0, Number(payload?.settle_ms ?? 2500)));
+          } else if (gesture === "touch_pan") {
+            // A real finger (issue #328): page.touchscreen drives CDP
+            // Input.dispatchTouchEvent against the suite's touch viewport, so
+            // the browser's own gesture recognizer — and the surface's
+            // `touch-action` and drag sources — decide the outcome, not this
+            // runner. `from` names where the finger lands (`card`, `between`,
+            // `column`, `board`, `point`), and the reading it leaves behind
+            // (board and lane scroll deltas, plus any native drag the browser
+            // started) is what `touch_scroll` / `no_native_drag` /
+            // `touch_origin` assert.
+            //
+            // What the harness cannot do is documented in the README: a
+            // synthetic touch never lifts a platform drag (Chrome starts touch
+            // DnD from a long press in its input pipeline, which
+            // Input.dispatchTouchEvent does not enter), so the drag-source half
+            // of the bug is asserted as a live-DOM contract by
+            // `touch_drag_armor` and the pan half by this gesture.
+            const origin = await page.evaluate(pageTouchPanOrigin, payload.from ?? { board: true });
+            await page.evaluate(pageTouchPanPrepare, origin);
+            const dx = Number(payload.dx ?? 0);
+            const dy = Number(payload.dy ?? 0);
+            const steps = Math.max(2, Number(payload.steps ?? 8));
+            const stepDelay = Math.max(0, Number(payload.step_ms ?? 16));
+            const touch = page.touchscreen;
+            await touch.touchStart(origin.point.x, origin.point.y);
+            if (payload.hold_ms !== undefined) await sleep(Math.max(0, Number(payload.hold_ms)));
+            for (let i = 1; i <= steps; i += 1) {
+              await touch.touchMove(
+                origin.point.x + (dx * i) / steps,
+                origin.point.y + (dy * i) / steps,
+              );
+              if (stepDelay > 0) await sleep(stepDelay);
+            }
+            await touch.touchEnd();
+            // The browser's momentum and settle run after the finger lifts;
+            // the reading is taken once the surface is quiet again.
+            await sleep(Math.max(0, Number(payload.settle_ms ?? 700)));
+            await page.evaluate(pageTouchPanRead);
           } else if (gesture === "resize") {
             // A viewport change while the lock is held re-runs the layout; let
             // the resize observer commit before assertions sample the DOM.

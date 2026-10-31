@@ -120,6 +120,41 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   board (the default targets the parent-lane board's `[data-parent-board]`),
   for setups where the far end of the column board must sit offscreen before
   a gesture (e.g. pinning a card into the far-left Pinned lane).
+- `wheel_pan` also accepts `over` — the same origin vocabulary `touch_pan`
+  uses (`{ card }`, `{ between: [a, b] }`, `{ column, empty: true }`,
+  `{ board: true }`) — so a wheel can be delivered on a card's own body or in
+  the gap between two cards rather than the board's middle.
+- `touch_pan` drives a real finger: `page.touchscreen` sends CDP
+  `Input.dispatchTouchEvent` against the suite's touch viewport, so the
+  browser's own gesture recognizer, the surface's `touch-action`, and its drag
+  sources decide the outcome. The payload is `{ from, dx, dy }` plus optional
+  `steps`, `step_ms`, `hold_ms` (a long press before the pan) and `settle_ms`.
+  `from` is the origin vocabulary above. It leaves a reading in the page that
+  four assertions read, and each FAILS when no pan ran in the step, so a step
+  that forgot its gesture cannot pass vacuously:
+  - `touch_origin` (`{ card, column }`) — what the finger actually landed on.
+  - `touch_scroll` (`{ target: board|lane, axis: x|y, min, direction }`) — the
+    scroll that gesture produced, read as a delta so a previous step's offset
+    cannot satisfy it.
+  - `no_native_drag: true` — the browser started no `dragstart` during the pan.
+  - `touch_drag_armor` (`{ card }`) — the live-DOM touch contract: the viewport
+    reports `(pointer: coarse)` and `(hover: none)`, no element of the board
+    carries `draggable="true"`, the card's anchor is `draggable="false"` and
+    computes `user-select: none`, and the board and lane lists declare
+    `touch-action: manipulation` (both pan axes kept, never `none` and never a
+    single axis).
+- `drag_source` (`{ card, armed }`) — one card's `draggable` attribute, for both
+  directions of the pointer rule: armed for a mouse, not armed for a finger.
+- `scroll_offset` (`{ target: board|lane, column, axis, min?, max?, equals? }`)
+  — the board's own offset, or one lane's card list's, so a scroll gesture can
+  be proven against an `assert_before_drag` baseline.
+- A synthetic touch never starts a platform drag. Chrome begins touch
+  drag-and-drop from a long press inside its browser-side gesture pipeline,
+  which `Input.dispatchTouchEvent` does not enter, so `touch_pan` can prove a
+  pan happened and no drag started, but it cannot reproduce the lift that stole
+  the pan on a real phone. That half is pinned as the live-DOM contract
+  (`touch_drag_armor`, `drag_source`), which fails on a tree with armed drag
+  sources at a coarse viewport.
 
 ## Current suites
 
@@ -228,6 +263,22 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   flipping the open board live both ways. The runner's drag and line probes
   read the board's `data-lane-direction` and split on the flow axis, so a
   suite exercises whichever read the page mounts.
+- `uat-board-touch.yaml` — the board surface under a real finger at 390×844
+  with `hasTouch` + `isMobile` (issue #328, the phone report): the vertical and
+  horizontal boards arm no native drag source and no selectable card text, and
+  real CDP touch pans scroll the board whether the finger lands on a card, in
+  the gap between two cards, on an empty lane, on the board's own padding, or
+  after a 550ms long-press hold — with no `dragstart` and no rank write, in both
+  lane layouts. The rows board also scrolls vertically as a board and
+  horizontally per row.
+- `uat-board-drag-surface.yaml` — the same surface under a desktop pointer
+  (issue #328's second question, "horizontal scrolling issues on desktop
+  too?"): a cursor drag still reorders in both lane layouts (with the row's
+  left/right insertion edges), a horizontal wheel delivered on a card or in the
+  gap between two cards pans the column board, and a vertical wheel on a row
+  card pans the rows board. It also records the desktop truth the phone suite
+  hides: at a wide viewport the rows fit their slot, so a horizontal wheel over
+  a row card must move nothing.
 - `uat-host-push-races.yaml` — live host pushes raced against in-flight
   gestures: the mock's sidebar is now a real reactive store, so a push
   update (the `push_update` gesture) can promote, lift, or reseat a card

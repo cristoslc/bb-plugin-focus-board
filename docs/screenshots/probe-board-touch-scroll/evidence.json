@@ -1,0 +1,278 @@
+[
+  {
+    "layout": "vertical",
+    "origin": "card",
+    "point": {
+      "x": 140,
+      "y": 115
+    },
+    "target": {
+      "tag": "div",
+      "card": "thr_ship_release",
+      "draggable": true,
+      "touchAction": "auto",
+      "userSelect": "none",
+      "webkitUserDrag": "auto"
+    },
+    "before": {
+      "boardLeft": 0,
+      "boardTop": 0,
+      "boardMaxX": 2054,
+      "boardScrollX": "auto",
+      "boardTouchAction": "manipulation",
+      "selection": 0,
+      "dragging": false
+    },
+    "after": {
+      "boardLeft": 342,
+      "boardTop": 0,
+      "boardMaxX": 2054,
+      "boardScrollX": "auto",
+      "boardTouchAction": "manipulation",
+      "selection": 0,
+      "dragging": false
+    },
+    "scrolled": 342,
+    "eventKinds": [
+      "pointerdown",
+      "touchstart",
+      "pointermove",
+      "touchmove",
+      "touchend"
+    ],
+    "dragStarted": false,
+    "draggedTarget": null,
+    "touchTarget": "div",
+    "scrollEvents": 34
+  },
+  {
+    "layout": "vertical",
+    "origin": "gutter",
+    "point": {
+      "x": 140,
+      "y": 281
+    },
+    "target": {
+      "tag": "div",
+      "card": null,
+      "draggable": false,
+      "touchAction": "manipulation",
+      "userSelect": "auto",
+      "webkitUserDrag": "auto"
+    },
+    "before": {
+      "boardLeft": 0,
+      "boardTop": 0,
+      "boardMaxX": 2054,
+      "boardScrollX": "auto",
+      "boardTouchAction": "manipulation",
+      "selection": 0,
+      "dragging": false
+    },
+    "after": {
+      "boardLeft": 349,
+      "boardTop": 0,
+      "boardMaxX": 2054,
+      "boardScrollX": "auto",
+      "boardTouchAction": "manipulation",
+      "selection": 0,
+      "dragging": false
+    },
+    "scrolled": 349,
+    "eventKinds": [
+      "pointerdown",
+      "touchstart",
+      "pointermove",
+      "touchmove",
+      "touchend"
+    ],
+    "dragStarted": false,
+    "draggedTarget": null,
+    "touchTarget": "div",
+    "scrollEvents": 35
+  },
+  {
+    "layout": "vertical",
+    "origin": "board",
+    "point": {
+      "x": 12,
+      "y": 832
+    },
+    "target": {
+      "tag": "div",
+      "card": null,
+      "draggable": false,
+      "touchAction": "manipulation",
+      "userSelect": "auto",
+      "webkitUserDrag": "auto"
+    },
+    "before": {
+      "boardLeft": 0,
+      "boardTop": 0,
+      "boardMaxX": 2054,
+      "boardScrollX": "auto",
+      "boardTouchAction": "manipulation",
+      "selection": 0,
+      "dragging": false
+    },
+    "after": {
+      "boardLeft": 349,
+      "boardTop": 0,
+      "boardMaxX": 2054,
+      "boardScrollX": "auto",
+      "boardTouchAction": "manipulation",
+      "selection": 0,
+      "dragging": false
+    },
+    "scrolled": 349,
+    "eventKinds": [
+      "pointerdown",
+      "touchstart",
+      "pointermove",
+      "touchmove",
+      "touchend"
+    ],
+    "dragStarted": false,
+    "draggedTarget": null,
+    "touchTarget": "div",
+    "scrollEvents": 35
+  },
+  {
+    "layout": "horizontal",
+    "origin": "card",
+    "point": {
+      "x": 298,
+      "y": 89
+    },
+    "target": {
+      "tag": "div",
+      "card": "thr_ship_release",
+      "draggable": true,
+      "touchAction": "auto",
+      "userSelect": "none",
+      "webkitUserDrag": "auto"
+    },
+    "before": {
+      "boardLeft": 0,
+      "boardTop": 0,
+      "boardMaxX": 0,
+      "boardScrollX": "hidden",
+      "boardTouchAction": "manipulation",
+      "selection": 0,
+      "dragging": false
+    },
+    "after": {
+      "boardLeft": 0,
+      "boardTop": 366,
+      "boardMaxX": 0,
+      "boardScrollX": "hidden",
+      "boardTouchAction": "manipulation",
+      "selection": 0,
+      "dragging": false
+    },
+    "scrolled": 366,
+    "eventKinds": [
+      "pointerdown",
+      "touchstart",
+      "pointermove",
+      "touchmove",
+      "touchend"
+    ],
+    "dragStarted": false,
+    "draggedTarget": null,
+    "touchTarget": "div",
+    "scrollEvents": 36
+  },
+  {
+    "layout": "horizontal",
+    "origin": "gutter",
+    "point": {
+      "x": 275,
+      "y": 172
+    },
+    "target": {
+      "tag": "div",
+      "card": null,
+      "draggable": false,
+      "touchAction": "manipulation",
+      "userSelect": "auto",
+      "webkitUserDrag": "auto"
+    },
+    "before": {
+      "boardLeft": 0,
+      "boardTop": 0,
+      "boardMaxX": 0,
+      "boardScrollX": "hidden",
+      "boardTouchAction": "manipulation",
+      "selection": 0,
+      "dragging": false
+    },
+    "after": {
+      "boardLeft": 0,
+      "boardTop": 353,
+      "boardMaxX": 0,
+      "boardScrollX": "hidden",
+      "boardTouchAction": "manipulation",
+      "selection": 0,
+      "dragging": false
+    },
+    "scrolled": 353,
+    "eventKinds": [
+      "pointerdown",
+      "touchstart",
+      "pointermove",
+      "touchmove",
+      "touchend"
+    ],
+    "dragStarted": false,
+    "draggedTarget": null,
+    "touchTarget": "div",
+    "scrollEvents": 35
+  },
+  {
+    "layout": "horizontal",
+    "origin": "board",
+    "point": {
+      "x": 12,
+      "y": 832
+    },
+    "target": {
+      "tag": "header",
+      "card": null,
+      "draggable": false,
+      "touchAction": "auto",
+      "userSelect": "auto",
+      "webkitUserDrag": "auto"
+    },
+    "before": {
+      "boardLeft": 0,
+      "boardTop": 0,
+      "boardMaxX": 0,
+      "boardScrollX": "hidden",
+      "boardTouchAction": "manipulation",
+      "selection": 0,
+      "dragging": false
+    },
+    "after": {
+      "boardLeft": 0,
+      "boardTop": 362,
+      "boardMaxX": 0,
+      "boardScrollX": "hidden",
+      "boardTouchAction": "manipulation",
+      "selection": 0,
+      "dragging": false
+    },
+    "scrolled": 362,
+    "eventKinds": [
+      "pointerdown",
+      "touchstart",
+      "pointermove",
+      "touchmove",
+      "touchend"
+    ],
+    "dragStarted": false,
+    "draggedTarget": null,
+    "touchTarget": "header",
+    "scrollEvents": 36
+  }
+]
