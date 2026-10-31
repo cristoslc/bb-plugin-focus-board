@@ -69,10 +69,14 @@ describe("planGroupBoxes", () => {
     expect(box?.members.map((t) => t.id)).toEqual(["thr_a"]);
   });
 
-  it("boxed members stay out of the plan when done or pinned", () => {
+  it("done members stay out of the plan; pinned members box like every other lane", () => {
+    // The 2026-10-30 operator ruling: a pinned member keeps the group's
+    // frame in the Pinned lane. Done members still leave the box (a done
+    // card is out of the nest), and archived ones never reach the plan.
     const threads = [
       thread({ id: "thr_done", updatedAt: NOW - 1000 }),
       thread({ id: "thr_pinned", isPinned: true, updatedAt: NOW - 1000 }),
+      thread({ id: "thr_archived", isArchived: true, updatedAt: NOW - 1000 }),
       thread({ id: "thr_a", updatedAt: NOW - 1000 }),
       thread({ id: "thr_b", updatedAt: NOW - 2000 }),
     ];
@@ -81,6 +85,7 @@ describe("planGroupBoxes", () => {
       groupOf({
         thr_done: "grp_auth",
         thr_pinned: "grp_auth",
+        thr_archived: "grp_auth",
         thr_a: "grp_auth",
         thr_b: "grp_auth",
       }),
@@ -91,9 +96,105 @@ describe("planGroupBoxes", () => {
       NOW,
     );
     expect(plan.groupBoxOf.has("thr_done")).toBe(false);
-    expect(plan.groupBoxOf.has("thr_pinned")).toBe(false);
+    expect(plan.groupBoxOf.has("thr_archived")).toBe(false);
+    expect(plan.groupBoxOf.has("thr_pinned")).toBe(true);
     expect(plan.groupBoxOf.has("thr_a")).toBe(true);
-    expect(plan.groupBoxOf.get("thr_a")?.members.map((t) => t.id)).toEqual(["thr_a", "thr_b"]);
+    expect(plan.groupBoxOf.get("thr_a")?.members.map((t) => t.id)).toEqual([
+      "thr_pinned",
+      "thr_a",
+      "thr_b",
+    ]);
+  });
+
+  it("a group whose ONLY member is pinned keeps its frame in the Pinned lane", () => {
+    // The operator's repro (thread thr_dh96xx4b5f, group "HatTrick"): a
+    // group of one whose lone member is pinned rendered its box NOWHERE,
+    // because the candidate filter dropped pinned members outright. A group
+    // of one keeps its box in every other lane, so it keeps its box here.
+    const pinnedOnly = [thread({ id: "thr_pin", isPinned: true, updatedAt: NOW - 1000 })];
+    const plan = planGroupBoxes(
+      pinnedOnly,
+      groupOf({ thr_pin: "grp_auth" }),
+      NAMES,
+      "status",
+      context,
+      new Set(),
+      NOW,
+    );
+    expect(plan.active).toBe(true);
+    expect(plan.groupBoxOf.get("thr_pin")?.groupId).toBe("grp_auth");
+    expect(plan.groupBoxOf.get("thr_pin")?.name).toBe("Auth rework");
+    expect(plan.groupBoxOf.get("thr_pin")?.members.map((t) => t.id)).toEqual(["thr_pin"]);
+    // The Pinned lane carries it, framed like any other lane's slice.
+    const columns = buildColumns(pinnedOnly, "status", context, new Map(), new Set(), NOW);
+    const pinnedColumn = columns.find((column) => column.id === "pinned");
+    expect(pinnedColumn?.threads.map((entry) => entry.id)).toEqual(["thr_pin"]);
+    const runs = runsFromColumns([pinnedColumn as never], plan.groupBoxOf).get("pinned");
+    expect(runs).toHaveLength(1);
+    expect(runs![0]).toMatchObject({ kind: "box" });
+    expect((runs![0] as { box: { groupId: string; members: { id: string }[] } }).box.groupId).toBe(
+      "grp_auth",
+    );
+    expect(
+      (runs![0] as { box: { members: { id: string }[] } }).box.members.map((entry) => entry.id),
+    ).toEqual(["thr_pin"]);
+    // A lone slice drags as a plain card (role "solo"), the frame re-gathering
+    // around whatever the operator drops instead of dragging as a unit.
+    expect(columnRunInfo(pinnedColumn?.threads ?? [], plan.groupBoxOf).get("thr_pin")).toMatchObject(
+      { boxId: "grp_auth", role: "solo" },
+    );
+  });
+
+  it("a multi-member pinned slice gathers into ONE frame and re-gathers on reorder", () => {
+    // The one-frame-per-lane rule holds in the Pinned lane exactly as it
+    // does elsewhere: the lane's whole slice renders inside one dashed
+    // frame at the first member's slot, an interposed plain card rendering
+    // after it, and a reorder moves the frame rather than duplicating it.
+    const pinnedThreads = [
+      thread({ id: "thr_a", isPinned: true, updatedAt: NOW - 1000 }),
+      thread({ id: "thr_x", isPinned: true, updatedAt: NOW - 2000 }),
+      thread({ id: "thr_b", isPinned: true, updatedAt: NOW - 3000 }),
+    ];
+    const pinnedPlan = planGroupBoxes(
+      pinnedThreads,
+      groupOf({ thr_a: "grp_auth", thr_b: "grp_auth" }),
+      NAMES,
+      "status",
+      context,
+      new Set(),
+      NOW,
+    );
+    const frame = (ranks: Record<string, readonly string[]>) => {
+      const columns = buildColumns(
+        pinnedThreads,
+        "status",
+        context,
+        new Map(),
+        new Set(),
+        NOW,
+        ranks,
+      );
+      const pinnedColumn = columns.find((column) => column.id === "pinned");
+      const runs = runsFromColumns([pinnedColumn as never], pinnedPlan.groupBoxOf).get("pinned");
+      const frames = (runs ?? []).filter((item) => item.kind === "box");
+      expect(frames).toHaveLength(1);
+      return {
+        memberIds: (frames[0] as { box: { members: { id: string }[] } }).box.members.map(
+          (entry) => entry.id,
+        ),
+        flat: flattenRuns(runs as never).map((entry) => entry.id),
+      };
+    };
+    // Order [a, x, b]: one frame at a's slot, the interposed card after it.
+    expect(frame({ pinned: ["thr_a", "thr_x", "thr_b"] })).toEqual({
+      memberIds: ["thr_a", "thr_b"],
+      flat: ["thr_a", "thr_b", "thr_x"],
+    });
+    // Order [x, b, a]: the SAME one frame, re-gathered around the new order.
+    expect(frame({ pinned: ["thr_x", "thr_b", "thr_a"] })).toEqual({
+      memberIds: ["thr_b", "thr_a"],
+      flat: ["thr_x", "thr_b", "thr_a"],
+    });
   });
 
   it("the group splits across lanes: each member renders where its own state lands it", () => {

@@ -5,13 +5,16 @@
 // one source of truth:
 //
 // - A group exists on the board while AT LEAST ONE of its assigned threads
-//   is visible, live, not done, and not pinned. A group of one renders its
-//   dashed box too (one card inside) — the outline is the drag-into target,
-//   so the group stays visible and joinable until its last candidate leaves
-//   (the record itself only GCs when every assignment clears). A group whose
-//   members drift into Pinned or Done simply loses those members from the
-//   box — they keep their own lanes, the same way a family's done children
-//   leave the nest.
+//   is visible, live, and not done. A group of one renders its dashed box
+//   too (one card inside) — the outline is the drag-into target, so the
+//   group stays visible and joinable until its last candidate leaves (the
+//   record itself only GCs when every assignment clears). A PINNED member
+//   is a candidate like any other (the operator ruling 2026-10-30): the
+//   Pinned lane is one of the board's lanes, so the split default frames
+//   the group's slice there too, and a group whose only member is pinned
+//   keeps its frame in the Pinned lane instead of vanishing. A group member
+//   that drifts into Done loses its box, the same way a family's done
+//   children leave the nest.
 // - SPLIT DEFAULT (the 2026-10-12 behavior change, issue #86): a group does
 //   NOT gather into its most attention-deserving lane. Members keep their
 //   own lanes and the dashed frame wraps each lane's slice — the frame
@@ -65,8 +68,8 @@ export interface GroupBoxPlan {
   /**
    * Thread id → the box it renders in. Holds EXACTLY the threads inside
    * boxes; a thread absent from it renders standalone even when assigned
-   * (pinned/done member, the parent grouping — a group of one boxes its lone
-   * member these days).
+   * (a done member, the parent grouping — a group of one boxes its lone
+   * member these days, and a pinned member boxes in the Pinned lane).
    */
   groupBoxOf: ReadonlyMap<string, GroupBox>;
   /** True when `planGroupBoxes` found at least one box. */
@@ -95,13 +98,15 @@ export function planGroupBoxes(
     return { groupBoxOf, active: false };
   }
   // Candidates: live members only — done members keep the Done lane's
-  // placement, pinned members keep the Pinned lane's, archived never pass
-  // through here. A group below one candidate has no box: its members sit
-  // in their own lanes (the record survives — the group returns when a
-  // member comes back).
+  // placement, archived never pass through here. PINNED members stay
+  // candidates: the Pinned lane is a lane, so its slice of the group gets
+  // the same dashed frame every other lane's slice gets (and a group whose
+  // only member is pinned therefore keeps its frame there). A group below
+  // one candidate has no box: its members sit in their own lanes (the
+  // record survives — the group returns when a member comes back).
   const candidatesByGroup = new Map<string, PluginSidebarThread[]>();
   for (const thread of threads) {
-    if (thread.isArchived || doneIds.has(thread.id) || thread.isPinned) continue;
+    if (thread.isArchived || doneIds.has(thread.id)) continue;
     const groupId = groupIdByThread.get(thread.id);
     if (groupId === undefined || !groupNames.has(groupId)) continue;
     const members = candidatesByGroup.get(groupId);

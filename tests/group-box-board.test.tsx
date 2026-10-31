@@ -11,6 +11,7 @@ import { cleanup, createEvent, fireEvent, render } from "@testing-library/react"
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Board } from "../components/board";
 import { buildColumns } from "../components/grouping";
+import { planGroupBoxes } from "../components/group-boxes";
 import { thread } from "./thread-fixture";
 
 afterEach(cleanup);
@@ -811,5 +812,175 @@ describe("the amber group highlight (issue #86)", () => {
     for (const frame of document.querySelectorAll('[data-group-box="grp_1"]')) {
       expect(frame.querySelector("[data-group-box-label]")?.className).toContain("text-amber-600");
     }
+  });
+});
+
+describe("the Pinned lane frames its group slice (operator ruling 2026-10-30)", () => {
+  // The operator's repro: thread thr_dh96xx4b5f ("Hattrick Development",
+  // pinned) is the SOLE member of group "HatTrick", and its group's dashed
+  // frame rendered NOWHERE. The plan dropped pinned members from candidacy,
+  // so a group of one pinned member had no candidate and no box. The Pinned
+  // lane is a lane like any other: its slice of a group renders framed, the
+  // frame re-gathers on reorder, and it stays the drag-into target.
+  const NAMES = new Map([["grp_1", "HatTrick"]]);
+
+  const planFor = (members: readonly PluginSidebarThread[], assignments: Record<string, string>) =>
+    planGroupBoxes(
+      members,
+      new Map(Object.entries(assignments)),
+      NAMES,
+      "status",
+      context,
+      new Set<string>(),
+      NOW,
+    );
+
+  function renderPinnedBoard(
+    members: readonly PluginSidebarThread[],
+    assignments: Record<string, string>,
+    extra: Partial<BoardProps> = {},
+    ranks: Record<string, readonly string[]> = {},
+  ) {
+    const plan = planFor(members, assignments);
+    const props = {
+      groupBy: "status" as const,
+      columns: buildColumns(members, "status", context, new Map(), new Set<string>(), NOW, ranks),
+      activeThreadId: null,
+      doneIds: new Set<string>(),
+      nestedChildrenByParent: new Map(),
+      doneChildrenByParent: new Map(),
+      childCountByParent: new Map<number, never>(),
+      dimmedIds: new Set<string>(),
+      rankStore: ranks,
+      onRankMove: vi.fn(),
+      groupBoxOf: plan.groupBoxOf,
+      projectNameFor: () => "",
+      repoBaseFor: () => null,
+      onOpenThread: () => {},
+      onNewTask: () => {},
+      onDropDone: () => {},
+      onDropUnread: () => {},
+      onDropPinned: vi.fn(),
+      menuActionsFor: () => [],
+      ...extra,
+    } as unknown as BoardProps;
+    render(<Board {...props} />);
+    return props;
+  }
+
+  const pinnedLaneFrames = (groupId: string) =>
+    document.querySelectorAll(`[data-column-id="pinned"] [data-group-box="${groupId}"]`);
+
+  it("a group whose only member is pinned renders its frame in the Pinned lane", () => {
+    const pinnedOnly = thread({ id: "thr_pin", isPinned: true, updatedAt: NOW - 1000 });
+    renderPinnedBoard(
+      [pinnedOnly, thread({ id: "thr_free", status: "active", updatedAt: NOW - 2000 })],
+      { thr_pin: "grp_1" },
+    );
+    const frames = pinnedLaneFrames("grp_1");
+    expect(frames).toHaveLength(1);
+    // The frame is the group's: its name rides the label, its lone member
+    // sits inside as a real card slot.
+    expect(frames[0]!.querySelector('[data-group-box-label="grp_1"]')?.textContent).toBe(
+      "HatTrick",
+    );
+    expect(frames[0]!.querySelector('[data-thread-card="thr_pin"]')).not.toBeNull();
+    expect(frames[0]!.querySelectorAll('[data-group-box-member="grp_1"]')).toHaveLength(1);
+    // One frame on the whole board, and the unassigned card carries none.
+    expect(document.querySelectorAll('[data-group-box="grp_1"]')).toHaveLength(1);
+  });
+
+  it("a pinned slice gathers into ONE frame and re-gathers on reorder, never duplicating it", () => {
+    const pinnedThreads = [
+      thread({ id: "thr_a", isPinned: true, updatedAt: NOW - 1000 }),
+      thread({ id: "thr_x", isPinned: true, updatedAt: NOW - 2000 }),
+      thread({ id: "thr_b", isPinned: true, updatedAt: NOW - 3000 }),
+    ];
+    const assignments = { thr_a: "grp_1", thr_b: "grp_1" };
+    renderPinnedBoard(pinnedThreads, assignments, {}, {
+      pinned: ["thr_a", "thr_x", "thr_b"],
+    });
+    const memberIdsIn = (frame: Element) =>
+      [...frame.querySelectorAll("[data-thread-card]")].map((card) =>
+        card.getAttribute("data-thread-card"),
+      );
+    expect(pinnedLaneFrames("grp_1")).toHaveLength(1);
+    expect(memberIdsIn(pinnedLaneFrames("grp_1")[0]!)).toEqual(["thr_a", "thr_b"]);
+
+    cleanup();
+    renderPinnedBoard(pinnedThreads, assignments, {}, {
+      pinned: ["thr_x", "thr_b", "thr_a"],
+    });
+    // Still exactly one frame, now holding the reordered slice in the lane's
+    // own order — the frame moved, it did not fork.
+    expect(pinnedLaneFrames("grp_1")).toHaveLength(1);
+    expect(memberIdsIn(pinnedLaneFrames("grp_1")[0]!)).toEqual(["thr_b", "thr_a"]);
+  });
+
+  it("a multi-member pinned run drags as ONE unit under the pinned rank key", () => {
+    const pinnedThreads = [
+      thread({ id: "thr_a", isPinned: true, updatedAt: NOW - 1000 }),
+      thread({ id: "thr_x", isPinned: true, updatedAt: NOW - 2000 }),
+      thread({ id: "thr_b", isPinned: true, updatedAt: NOW - 3000 }),
+    ];
+    // The pinned reorder write is the generic rank_move ("pinned" key) and
+    // it carries unit ids like any lane's, so the run moves as a unit here.
+    const props = renderPinnedBoard(
+      pinnedThreads,
+      { thr_a: "grp_1", thr_b: "grp_1" },
+      {},
+      { pinned: ["thr_a", "thr_x", "thr_b"] },
+    );
+    const anchor = document.querySelector(
+      '[data-thread-card="thr_a"] a[draggable]',
+    ) as HTMLElement;
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(anchor, { dataTransfer: dt });
+    // The lane renders the frame's slice [a, b] first, the plain pinned card
+    // after it; the run's head lands below that card.
+    const slot = document.querySelector('[data-rank-slot="thr_x"]') as HTMLElement;
+    slot.getBoundingClientRect = () =>
+      ({ top: 0, left: 0, right: 100, bottom: 300, width: 100, height: 300 }) as DOMRect;
+    const over = createEvent.dragOver(slot, { dataTransfer: dt });
+    Object.defineProperty(over, "clientY", { value: 290 });
+    fireEvent(slot, over);
+    const drop = createEvent.drop(slot, { dataTransfer: dt });
+    Object.defineProperty(drop, "clientY", { value: 290 });
+    fireEvent(slot, drop);
+    expect(props.onRankMove).toHaveBeenCalledTimes(1);
+    expect(props.onRankMove).toHaveBeenCalledWith(
+      "pinned",
+      "thr_a",
+      null,
+      true,
+      ["thr_a", "thr_b", "thr_x"],
+      ["thr_a", "thr_b"],
+    );
+  });
+
+  it("dropping a free card on the pinned frame joins the group, not the pin", () => {
+    const onJoinGroup = vi.fn();
+    const props = renderPinnedBoard(
+      [
+        thread({ id: "thr_pin", isPinned: true, updatedAt: NOW - 1000 }),
+        thread({ id: "thr_free", status: "active", updatedAt: NOW - 2000 }),
+      ],
+      { thr_pin: "grp_1" },
+      { onJoinGroup },
+    );
+    const anchor = document.querySelector(
+      '[data-thread-card="thr_free"] a[draggable]',
+    ) as HTMLElement;
+    const frame = pinnedLaneFrames("grp_1")[0] as HTMLElement;
+    const dt = makeDataTransfer();
+    fireEvent.dragStart(anchor, { dataTransfer: dt });
+    const over = createEvent.dragOver(frame, { dataTransfer: dt });
+    fireEvent(frame, over);
+    expect(over.defaultPrevented).toBe(true);
+    const drop = createEvent.drop(frame, { dataTransfer: dt });
+    fireEvent(frame, drop);
+    // The join claims the drop, so the column's own pin write stays out of it.
+    expect(onJoinGroup).toHaveBeenCalledWith("thr_free", "grp_1");
+    expect(props.onDropPinned).not.toHaveBeenCalled();
   });
 });
