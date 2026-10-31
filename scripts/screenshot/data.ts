@@ -988,6 +988,92 @@ export function SIM_WORK_PULSE_GROUPS(
   return { threads, groups };
 }
 
+/**
+ * The folded feature-group card's descendant dots (issue #321): ONE feature
+ * group whose first member is a family root carrying two children and three
+ * grandchildren, the second member childless. `?descgroup=1` only, so the
+ * UAT fixture stays pinned. Both members are working, so they share the
+ * Working lane and the group frames one folded card there; the descendants
+ * mix working, unread and idle so one shot shows all three tiers' state
+ * colours together. An attention or pinned child is deliberately absent:
+ * `childPlacement` (components/nesting.ts) un-nests those onto their own
+ * cards, so they can never paint as a nested dot in the first place.
+ *
+ * Deterministic; group id `grp_desc`, members `thr_desc_root` and
+ * `thr_desc_solo`.
+ */
+export const SIM_DESC_GROUP = {
+  groupId: "grp_desc",
+  name: "Descendant dots",
+  memberIds: ["thr_desc_root", "thr_desc_solo"],
+} as const;
+
+export const SIM_DESC_GROUP_THREADS: readonly SimThread[] = [
+  thread({
+    id: "thr_desc_root",
+    displayTitle: "Root: owns the subtree",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 60 * 1000,
+    lastReadAt: SIM_NOW - 60 * 1000,
+    environment: boardEnv("main"),
+  }),
+  thread({
+    // Unread on purpose: R4 moves the root's family into the Unread lane (its
+    // unread child drives it there), and this member has to share that lane or
+    // the split default would frame two folded cards, one slice each.
+    id: "thr_desc_solo",
+    displayTitle: "Solo member: no descendants",
+    isUnread: true,
+    updatedAt: SIM_NOW - 2 * MINUTE,
+    environment: boardEnv("main"),
+  }),
+  thread({
+    id: "thr_desc_c1",
+    displayTitle: "Child one: runs the build",
+    parentThreadId: "thr_desc_root",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 3 * MINUTE,
+    lastReadAt: SIM_NOW - 3 * MINUTE,
+    environment: boardEnv("main"),
+  }),
+  thread({
+    id: "thr_desc_c2",
+    displayTitle: "Child two: unread report",
+    parentThreadId: "thr_desc_root",
+    isUnread: true,
+    updatedAt: SIM_NOW - 4 * MINUTE,
+    environment: boardEnv("main"),
+  }),
+  thread({
+    id: "thr_desc_c1_a",
+    displayTitle: "Grandchild one: idle",
+    parentThreadId: "thr_desc_c1",
+    updatedAt: SIM_NOW - 5 * MINUTE,
+    lastReadAt: SIM_NOW - 5 * MINUTE,
+    environment: boardEnv("main"),
+  }),
+  thread({
+    id: "thr_desc_c1_b",
+    displayTitle: "Grandchild two: idle",
+    parentThreadId: "thr_desc_c1",
+    updatedAt: SIM_NOW - 6 * MINUTE,
+    lastReadAt: SIM_NOW - 6 * MINUTE,
+    environment: boardEnv("main"),
+  }),
+  thread({
+    id: "thr_desc_c2_a",
+    displayTitle: "Grandchild three: still running",
+    parentThreadId: "thr_desc_c2",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 7 * MINUTE,
+    lastReadAt: SIM_NOW - 7 * MINUTE,
+    environment: boardEnv("main"),
+  }),
+];
+
 export function SIM_ATTENTION_THREADS(count: number, now: number = SIM_NOW): SimThread[] {
   const out: SimThread[] = [];
   const projects = ["proj_board", "proj_api", "proj_web"];

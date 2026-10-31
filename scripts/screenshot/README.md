@@ -116,6 +116,19 @@ host app involved.
   `expanded-folded.png`, `expanded-revealed.png`, `evidence.json`). Run the
   vite harness first; honors `CHROME_PATH`, `HARNESS_URL`, and `OUT_DIR`.
 
+- `repro-collapsed-group-descendants.mjs` — one-shot headless verification for
+  the folded feature-group card's descendant dots (issue #321): loads
+  `?descgroup=1&collapsedGroups=grp_desc` (data.ts `SIM_DESC_GROUP_THREADS`, a
+  group whose first member is a family root with two children and three
+  grandchildren), measures the three glyph tiers in real geometry (the member,
+  child and grandchild dots render 6, 4 and 2 px), checks the counts against
+  the dots they claim, then drives a grandchild dot's click (the pane opens,
+  the box stays folded) and the strip's background click (the box expands).
+  Exits non-zero on any violation. Artifacts land in
+  `docs/screenshots/repro-collapsed-group-descendants/` (`card-dark.png`,
+  `card-light.png`, `board.png`, `expanded.png`, `evidence.json`). Run the vite
+  harness first; honors `CHROME_PATH`, `HARNESS_URL`, and `OUT_DIR`.
+
 - `repro-ghost-gutter-strip.mjs` — one-shot headless repro/verification for
   the parent view's ghost duplicate card strip (#227): loads the parent board
   (`?groupBy=parent&demo=1`), opens a lane pane, hovers that lane's first

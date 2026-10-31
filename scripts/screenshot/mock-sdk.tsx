@@ -10,7 +10,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
-import { SIM_ATTENTION_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_ORCH_FAMILY_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimThread } from "./data";
+import { SIM_ATTENTION_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DESC_GROUP, SIM_DESC_GROUP_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_ORCH_FAMILY_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimThread } from "./data";
 import {
   applyRankMoveFractions,
   type FractionColumn,
@@ -257,6 +257,11 @@ const WORKPULSE_DATA =
   WORKPULSE > 0
     ? SIM_WORK_PULSE_GROUPS(WORKPULSE)
     : { threads: [] as SimThread[], groups: [] as { groupId: string; name: string; memberIds: string[] }[] };
+// `?descgroup=1` (issue #321, the folded group card's descendant dots): append
+// the SIM_DESC_GROUP fixture (data.ts), a feature group whose first member is a
+// family root with children and grandchildren, so passing
+// `?collapsedGroups=grp_desc` paints the three-tier dot grid on a real board.
+const DESCGROUP_MODE = new URLSearchParams(window.location.search).get("descgroup") === "1";
 // `?orchestrator=1` (the "grandchildren don't pop out" repro): append the
 // orchestrator fixture (data.ts SIM_ORCH_FAMILY_THREADS) — a root with nine
 // lieutenants and 77 grandchildren, the shape the operator screenshotted.
@@ -279,6 +284,7 @@ let simThreads: readonly SimThread[] = EMPTY_MODE
       ...(ATTENTION > 0 ? SIM_ATTENTION_THREADS(ATTENTION) : []),
       ...(ZOOM_FAMILY_MODE ? SIM_ZOOM_FAMILY_THREADS : []),
       ...WORKPULSE_DATA.threads,
+      ...(DESCGROUP_MODE ? SIM_DESC_GROUP_THREADS : []),
       ...(ORCH_MODE ? SIM_ORCH_FAMILY_THREADS : []),
     ];
 
@@ -664,6 +670,16 @@ for (const group of WORKPULSE_DATA.groups) {
   simGroupRegistry[group.groupId] = { name: group.name, createdAt: "2026-10-22T00:00:00.000Z" };
   for (const memberId of group.memberIds) simGroupAssignments[memberId] = group.groupId;
 }
+// The descendant-dots fixture (`?descgroup=1`) owns its group the same way.
+if (DESCGROUP_MODE) {
+  simGroupRegistry[SIM_DESC_GROUP.groupId] = {
+    name: SIM_DESC_GROUP.name,
+    createdAt: "2026-10-31T00:00:00.000Z",
+  };
+  for (const memberId of SIM_DESC_GROUP.memberIds) {
+    simGroupAssignments[memberId] = SIM_DESC_GROUP.groupId;
+  }
+}
 (globalThis as unknown as { __uat?: unknown }).__uat = {
   seedRanks: (orders: Record<string, string[]>) => {
     simRanks = Object.fromEntries(
@@ -744,6 +760,13 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
       group.memberIds.forEach((memberId, index) => {
         rates[memberId] = [0.5, 4, 40][index] ?? 4;
       });
+    }
+    // The descendant-dots fixture's working dots breathe at distinct rates, so
+    // a shot of the folded card shows measured periods at two depths.
+    if (DESCGROUP_MODE) {
+      rates.thr_desc_root = 0.5;
+      rates.thr_desc_c1 = 4;
+      rates.thr_desc_c2_a = 40;
     }
     return { rates, generatedAt: Date.now() };
   }
