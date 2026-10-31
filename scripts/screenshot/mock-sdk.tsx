@@ -10,7 +10,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
-import { SIM_ATTENTION_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DESC_GROUP, SIM_DESC_GROUP_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_ORCH_FAMILY_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimThread } from "./data";
+import { SIM_ATTENTION_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DESC_GROUP, SIM_DESC_GROUP_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_ORCH_FAMILY_THREADS, SIM_OVERVIEW_GROUPS, SIM_OVERVIEW_LINKS, SIM_OVERVIEW_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimThread } from "./data";
 import {
   applyRankMoveFractions,
   type FractionColumn,
@@ -228,6 +228,12 @@ export function experimental_useSidebarThreads(): unknown {
  *  empty-workspace board a first-run operator sees. */
 const EMPTY_MODE = new URLSearchParams(window.location.search).get("empty") === "1";
 const DEMO_MODE = new URLSearchParams(window.location.search).get("demo") === "1";
+// `?overview=1` (the README overview GIF and stills): the purpose-built
+// six-lane board in data.ts SIM_OVERVIEW_THREADS, with its three feature
+// groups registered below. It replaces the base fixture rather than adding
+// to it — the base board's nine lanes push Done off-screen and scatter the
+// states the storyboard needs adjacent. Never set by UAT.
+const OVERVIEW_MODE = new URLSearchParams(window.location.search).get("overview") === "1";
 // `?scale=N` (performance probes only): append N synthetic bulk threads
 // (data.ts SIM_BULK_THREADS) so a probe measures a board the size a
 // long-lived workspace reaches, where the ~50-thread fixture is too small to
@@ -279,7 +285,11 @@ const FAIL_AUTOTITLE_KINDS = new Set(
 let simThreads: readonly SimThread[] = EMPTY_MODE
   ? []
   : [
-      ...(DEMO_MODE ? [...SIM_THREADS, ...SIM_DEMO_THREADS] : SIM_THREADS),
+      ...(OVERVIEW_MODE
+        ? SIM_OVERVIEW_THREADS
+        : DEMO_MODE
+          ? [...SIM_THREADS, ...SIM_DEMO_THREADS]
+          : SIM_THREADS),
       ...(SCALE > 0 ? SIM_BULK_THREADS(SCALE) : []),
       ...(ATTENTION > 0 ? SIM_ATTENTION_THREADS(ATTENTION) : []),
       ...(ZOOM_FAMILY_MODE ? SIM_ZOOM_FAMILY_THREADS : []),
@@ -416,7 +426,9 @@ const simLinks: Record<string, unknown> = DEMO_MODE
       ],
       thr_chip_tag_row: [github(142, "issue"), externalTag("badging")],
     }
-  : {};
+  : OVERVIEW_MODE
+    ? structuredClone(SIM_OVERVIEW_LINKS)
+    : {};
 
 /** Realtime subscribers (the app subscribes with `{ event, callback }`). */
 type MockSubscribeArgs = { event: string; callback: (event: { entity: string; changes: string[] }) => void };
@@ -680,6 +692,24 @@ if (DESCGROUP_MODE) {
     simGroupAssignments[memberId] = SIM_DESC_GROUP.groupId;
   }
 }
+// The overview fixture (`?overview=1`) seeds three real groups — an expanded
+// one spanning two lanes, a collapsed one beside it, and a group of one — so
+// the storyboard can demonstrate every box state without a group_* write.
+if (OVERVIEW_MODE) {
+  // The overview board is a closed universe: drop the base fixture's
+  // "chat-imagegent" group (the two active threads it wraps are not on this
+  // board) so the picker lists only the four groups the board actually
+  // carries.
+  simGroupRegistry = {};
+  simGroupAssignments = {};
+  for (const group of SIM_OVERVIEW_GROUPS) {
+    simGroupRegistry[group.id] = {
+      name: group.name,
+      createdAt: "2026-10-31T00:00:00.000Z",
+    };
+    for (const memberId of group.memberIds) simGroupAssignments[memberId] = group.id;
+  }
+}
 (globalThis as unknown as { __uat?: unknown }).__uat = {
   seedRanks: (orders: Record<string, string[]>) => {
     simRanks = Object.fromEntries(
@@ -750,7 +780,14 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   if (method === "rank_list")
     return { orders: structuredClone(ordersFromFractionStore(simRanks)) };
   if (method === "pin_parks_list") return { parks: {} };
-  if (method === "snooze_list") return { snoozes: {} };
+  if (method === "snooze_list") {
+    // The overview board carries one sleeping card so the dimmed card and
+    // its "Snoozed · wakes …" chip render without a set gesture.
+    if (!OVERVIEW_MODE) return { snoozes: {} };
+    const setAt = new Date(Date.now()).toISOString();
+    const wakeAt = new Date(Date.now() + 18 * 60 * 60 * 1000).toISOString();
+    return { snoozes: { thr_ov_snooze_card: { wakeAt, setAt } } };
+  }
   // The working dots' rate pulse (issue #279). Three rates per group so every
   // folded box paints the slow, middle, and fast period together; the app
   // derives the periods through the real lib/pulse-rate mapping.
@@ -787,6 +824,11 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
         if (n >= 43 && n <= 59) statuses[String(n)] = { kind: "pull", state: "MERGED" };
         else if (n === 17 || n === 21) statuses[String(n)] = { kind: "issue", state: "OPEN" };
         else if (n === 30) statuses[String(n)] = { kind: "issue", state: "CLOSED" };
+        else if (OVERVIEW_MODE && n === 142) statuses[String(n)] = { kind: "issue", state: "OPEN" };
+        else if (OVERVIEW_MODE && n === 87) statuses[String(n)] = { kind: "pull", state: "MERGED" };
+        else if (OVERVIEW_MODE && n === 331) statuses[String(n)] = { kind: "pull", state: "MERGED" };
+        else if (OVERVIEW_MODE && n === 273) statuses[String(n)] = { kind: "issue", state: "OPEN" };
+        else if (OVERVIEW_MODE && n === 14) statuses[String(n)] = { kind: "pull", state: "OPEN" };
       }
     }
     return { statuses };
