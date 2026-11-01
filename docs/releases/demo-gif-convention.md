@@ -13,7 +13,7 @@ A release page must show what it changed. Every demonstrable feature in a releas
 
 | Piece | Path |
 |---|---|
-| Recorder (shared gestures, cursor, two-window capture, ffmpeg assembly) | `scripts/screenshot/release-demos/runner.mjs` |
+| Recorder (shared gestures, the arrow and finger overlays, two-window capture, ffmpeg assembly) | `scripts/screenshot/release-demos/runner.mjs` |
 | The orientation lead-in every demo inherits | `scripts/screenshot/lib/lead-in.mjs` |
 | The shared host row two windows write to (`?sharedHost=<token>`) | `scripts/screenshot/host-state.ts`, `scripts/screenshot/host-log.ts` |
 | CLI entry | `scripts/screenshot/capture-release-demos.mjs` |
@@ -63,8 +63,9 @@ Capture each release's gifs against **that release's tree**, in a throwaway work
 
 - Short is fine when the feature is quick. A gif's length is the story's length: a single-gesture demo (one menu pick, one toggle) may run under 15 seconds because padding a one-click story to a floor is dead air the reader scrolls past. Past 45 seconds is a video nobody finishes, so split the story by feature rather than let one clip run long.
 - **Every gif opens on the board at rest.** The recorder holds the staged board for about a second before the storyboard's first gesture (1s by default, `scripts/screenshot/lib/lead-in.mjs`), so a viewer arrives with the before-picture the gesture is about to change. It is applied once, for every demo, rather than hand-written into each storyboard; a demo that needs a longer beat sets `leadIn: 1.6`, and `leadIn: 0` opts out. Nothing else may remove it, and `tests/release-demo-storyboards.test.ts` fails when a storyboard's value is not a deliberate number of seconds.
-- A few MB per gif. Keep the source viewport honest and let the palette-optimized ffmpeg pass (`palettegen` 192 colors at 12 fps) keep the file small; a demo that needs more is doing too much in one gif, so split it by feature.
-- Real app, real gestures, synthetic cursor: the harness renders the shipped components, the driver moves a real pointer (or dispatches the drag events the app itself listens for), and an overlay arrow makes the pointer visible because headless screenshots carry no OS cursor.
+- A few MB per gif. Keep the source viewport honest and let the palette-optimized ffmpeg pass (`palettegen` 192 colors) keep the file small; a demo that needs more is doing too much in one gif, so split it by feature.
+- **Every gif plays at 15 fps or faster.** 15 is the floor, not the target: the recorder assembles at 24 fps by default (`DEFAULT_FPS` in `runner.mjs`) because a finger crossing the board reads smoother there, and `DEMO_FPS` may raise the rate. A rate under 15 throws rather than clamping, and motion frames are captured one per playback frame (`stage.frameSeconds`), so a pan shows the board at each step instead of two stills. The floor applies to footage captured from now on: assets already published on older release pages keep the slower rate they shipped at until something re-captures them, and re-capturing the whole back catalogue is a separate decision, not a cleanup.
+- Real app, real gestures, synthetic pointer: the harness renders the shipped components, the driver moves a real pointer (or dispatches the drag events, or lands a real CDP touch, the app itself listens for), and an overlay makes the pointer visible because headless screenshots carry no OS cursor. The overlay has two vocabularies and a clip carries only one: a mouse demo shows the arrow (`#demo-cursor`), a touch demo shows the fingertip ring with its contact dot (`#demo-touch`), hidden until the finger lands and moved to the exact coordinate of each touch event. The viewport picks it: `hasTouch` means a finger.
 - One feature per gif. If a bullet's story needs two scenes, it is two bullets or two gifs.
 
 ## Two windows in one gif
@@ -136,6 +137,6 @@ Still skipped, with the reason:
 
 1. Read the section being published and list every bullet with `demonstrable` or `skip: <reason>`.
 2. Write or extend `release-demos/<version>.mjs`; add harness fixtures where the board cannot stage a state, and `windows: 2` where the bullet is a cross-window write.
-3. Capture against the tag's build; check each gif's first and last frame show the before and after, and that the first second is the board at rest.
+3. Capture against the tag's build; check each gif's first and last frame show the before and after, that the first second is the board at rest, that a touch clip shows its finger on every frame the gesture moves, and that the gif plays at 15 fps or faster.
 4. Upload the assets, embed them under their bullets, keep the body otherwise verbatim, and verify with `gh release view <tag>`.
 5. Name every skip, with its reason, in the pull request that ships the release and in the Coverage table above.

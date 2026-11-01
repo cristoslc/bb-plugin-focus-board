@@ -14,7 +14,8 @@
  *
  * Env: HARNESS_URL, CHROME_PATH, DEMO_OUT_DIR (gif destination, default
  * docs/screenshots/release-demos/), DEMO_FRAMES_DIR, DEMO_GIF_WIDTH (1100),
- * DEMO_FPS (12). Every gif is written as `<version>-<id>.gif`.
+ * DEMO_FPS (24, and never under `MIN_FPS`). Every gif is written as
+ * `<version>-<id>.gif`.
  */
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
@@ -30,7 +31,37 @@ export const CHROME =
   process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 export const BASE = process.env.HARNESS_URL ?? "http://localhost:5173/";
 export const GIF_WIDTH = Number(process.env.DEMO_GIF_WIDTH ?? "1100");
-const FPS = Number(process.env.DEMO_FPS ?? "12");
+
+/**
+ * The playback floor, in frames per second. The operator's review of the
+ * 1.7.4 footage (2026-11-01) put a floor under every release gif: at the old
+ * 12 fps a pan read as a slideshow, and motion is the thing a demo gif is
+ * for. `docs/releases/demo-gif-convention.md` quotes this number.
+ */
+export const MIN_FPS = 15;
+
+/** The rate the 1.7.4 recapture landed on: 24 fps, because the four touch
+ *  pans carry a finger across the board and read smoother there, and the
+ *  duplicate frames on the settle holds cost little at 192 colors. */
+export const DEFAULT_FPS = 24;
+
+/**
+ * The playback rate for this run. `DEMO_FPS` may raise it, never lower it:
+ * a rate under `MIN_FPS` is the exact defect the floor exists for, so it
+ * throws instead of clamping.
+ */
+export function resolveFps(raw = process.env.DEMO_FPS) {
+  if (raw === undefined || raw === null) return DEFAULT_FPS;
+  const fps = Number(raw);
+  if (!Number.isFinite(fps) || fps < MIN_FPS) {
+    throw new Error(
+      `DEMO_FPS must be a finite number of at least ${MIN_FPS}; got ${JSON.stringify(raw)}`,
+    );
+  }
+  return fps;
+}
+
+export const FPS = resolveFps();
 
 /** Desktop board, big enough that one lane's cards and the pane both fit. */
 export const DESKTOP = { width: 1600, height: 1000, deviceScaleFactor: 2 };
@@ -39,14 +70,50 @@ export const PHONE = { width: 390, height: 844, deviceScaleFactor: 2 };
 /** A laptop window: the width where the toolbar starts folding. */
 export const LAPTOP = { width: 1280, height: 800, deviceScaleFactor: 2 };
 
+/** The mouse pointer overlay's element id and hot spot: the arrow's tip is
+ *  its own 0,0 corner, so a point parks exactly where the arrow points. */
+export const CURSOR_MARKER_ID = "demo-cursor";
+
+/** The touch overlay's element id. */
+export const TOUCH_MARKER_ID = "demo-touch";
+
+/** The touch overlay's box, and half of it: the ring is centred on the
+ *  contact point, so a point translates to `x - TOUCH_MARKER_ANCHOR`. */
+export const TOUCH_MARKER_SIZE = 44;
+export const TOUCH_MARKER_ANCHOR = TOUCH_MARKER_SIZE / 2;
+
 /** A synthetic pointer: headless screenshots carry no OS cursor, so the gif's
  *  pointer is an overlay arrow the driver moves with the mouse. */
 const CURSOR_SVG = `
-<svg id="demo-cursor" width="21" height="28" viewBox="0 0 21 28"
+<svg id="${CURSOR_MARKER_ID}" width="21" height="28" viewBox="0 0 21 28"
      style="position:fixed;left:0;top:0;z-index:2147483647;pointer-events:none;
             filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.55))" aria-hidden="true">
   <path d="M2.5 1.5 L2.5 20.5 L7.6 15.8 L10.7 23.4 L14.3 21.9 L11.2 14.4 L17.5 14.4 Z"
         fill="#fff" stroke="#1a1a1a" stroke-width="1.4" stroke-linejoin="round"/>
+</svg>`;
+
+/**
+ * The finger, for a touch clip. A touch gesture moves no mouse, so the arrow
+ * above stays parked and the board appears to move on its own; this second
+ * overlay is the touch vocabulary instead. It reads as a fingertip contact:
+ * a translucent contact area the size of a thumb print, with a solid dot at
+ * its centre so the exact point is unambiguous, drawn in the arrow's own
+ * white-fill/dark-stroke pairing so it holds up on both themes.
+ *
+ * The two vocabularies never share a clip: a mouse demo renders only the
+ * arrow, a touch demo only the finger (`Stage` decides once, in `prepare`).
+ * The finger is hidden until a touch lands, because a frame captured after
+ * `touchEnd` must show no finger at all.
+ */
+const TOUCH_SVG = `
+<svg id="${TOUCH_MARKER_ID}" width="${TOUCH_MARKER_SIZE}" height="${TOUCH_MARKER_SIZE}"
+     viewBox="0 0 ${TOUCH_MARKER_SIZE} ${TOUCH_MARKER_SIZE}"
+     style="position:fixed;left:0;top:0;z-index:2147483647;pointer-events:none;display:none;
+            filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))" aria-hidden="true">
+  <circle cx="${TOUCH_MARKER_ANCHOR}" cy="${TOUCH_MARKER_ANCHOR}" r="14"
+          fill="rgba(255,255,255,.5)" stroke="#1a1a1a" stroke-width="2"/>
+  <circle cx="${TOUCH_MARKER_ANCHOR}" cy="${TOUCH_MARKER_ANCHOR}" r="4.5"
+          fill="#1a1a1a" stroke="#fff" stroke-width="1.5"/>
 </svg>`;
 
 /**
@@ -62,16 +129,27 @@ const CURSOR_SVG = `
  * (`scripts/uat/run.mjs` drives the same pairing for its suites).
  */
 export class Stage {
-  constructor(page, framesDir, { theme, peer } = {}) {
+  constructor(page, framesDir, { theme, peer, touch = false, fps = FPS } = {}) {
     this.windows = { main: page, ...(peer === undefined ? {} : { peer }) };
     this.active = "main";
     this.framesDir = framesDir;
     this.frames = [];
     this.clip = null;
     this.theme = theme;
+    /** Whether this demo's board is driven by a finger rather than a mouse.
+     *  It picks the overlay vocabulary for the whole clip (see `prepare`). */
+    this.touch = touch;
+    /** The playback rate this demo assembles at. */
+    this.fps = fps;
     this.cursors = Object.fromEntries(
       Object.keys(this.windows).map((key) => [key, { x: 0, y: 0 }]),
     );
+  }
+
+  /** One playback frame, in seconds: a motion frame lasts exactly this long,
+   *  so captured motion plays at the assembled rate instead of a slideshow. */
+  get frameSeconds() {
+    return 1 / this.fps;
   }
 
   /** The window every gesture currently drives. */
@@ -98,7 +176,11 @@ export class Stage {
     return this;
   }
 
+  /** Insert the overlay this demo's vocabulary calls for: the arrow for a
+   *  mouse board, the finger for a touch board. One or the other, never both,
+   *  so no clip can suggest an input that did not happen. */
   async prepare() {
+    const overlay = this.touch ? TOUCH_SVG : CURSOR_SVG;
     for (const page of Object.values(this.windows)) {
       if (this.theme !== undefined) {
         await page.evaluate((theme) => {
@@ -107,12 +189,12 @@ export class Stage {
       }
       await page.evaluate((svg) => {
         document.body.insertAdjacentHTML("beforeend", svg);
-      }, CURSOR_SVG);
+      }, overlay);
     }
   }
 
   /** Sample an animation: N frames, each `hold` seconds apart in the gif. */
-  async burst(name, { frames = 24, hold = 0.12 } = {}) {
+  async burst(name, { frames = 24, hold = this.frameSeconds } = {}) {
     for (let i = 0; i < frames; i += 1) {
       await this.shot(`${name}-${String(i).padStart(3, "0")}`, { hold });
       await sleep(hold * 1000 - 40);
@@ -237,14 +319,67 @@ export class Stage {
 
   async syncCursor(x, y) {
     this.cursors[this.active] = { x, y };
-    await this.page.evaluate(({ x, y }) => {
-      const cursor = document.getElementById("demo-cursor");
+    // The ids and coordinates cross into the page as arguments: a
+    // `page.evaluate` callback is serialized, so module constants are not in
+    // scope inside it.
+    await this.page.evaluate(({ id, x, y }) => {
+      const cursor = document.getElementById(id);
       if (cursor) cursor.style.transform = `translate(${x}px, ${y}px)`;
-    }, { x, y });
+    }, { id: CURSOR_MARKER_ID, x, y });
   }
 
-  /** Move the pointer to a point, capturing `frames` frames along the way. */
-  async glide(to, { frames = 5, hold = 0.1, from } = {}) {
+  /**
+   * The finger, for a touch demo: puppeteer's CDP touch plus the overlay, kept
+   * in step so every captured frame shows exactly where the touch landed.
+   *
+   * The overlay takes the coordinate the touch was dispatched with, with no
+   * easing on the way: a real finger is at one point between two events, and a
+   * marker that lags or blends would put the hand somewhere the board's own
+   * scroll position contradicts.
+   */
+  async touchStart(x, y) {
+    await this.dispatchTouch("touchStart", x, y);
+    await this.syncTouch(x, y);
+  }
+
+  async touchMove(x, y) {
+    await this.dispatchTouch("touchMove", x, y);
+    await this.syncTouch(x, y);
+  }
+
+  async touchEnd() {
+    await this.dispatchTouch("touchEnd");
+    await this.liftTouch();
+  }
+
+  async dispatchTouch(method, x, y) {
+    if (this.touch !== true) {
+      throw new Error(
+        `this demo is mouse-driven (its viewport has no hasTouch); ${method} would land a finger no overlay marks`,
+      );
+    }
+    await this.page.touchscreen[method](...(x === undefined ? [] : [x, y]));
+  }
+
+  async syncTouch(x, y) {
+    await this.page.evaluate(({ id, x, y, anchor }) => {
+      const touch = document.getElementById(id);
+      if (touch === null) return;
+      touch.style.display = "block";
+      touch.style.transform = `translate(${x - anchor}px, ${y - anchor}px)`;
+    }, { id: TOUCH_MARKER_ID, x, y, anchor: TOUCH_MARKER_ANCHOR });
+  }
+
+  async liftTouch() {
+    await this.page.evaluate((id) => {
+      const touch = document.getElementById(id);
+      if (touch !== null) touch.style.display = "none";
+    }, TOUCH_MARKER_ID);
+  }
+
+  /** Move the pointer to a point, capturing `frames` frames along the way.
+   *  Each frame lasts one playback frame, so the glide plays at full rate. */
+  async glide(to, { frames = 5, hold = this.frameSeconds, from } = {}) {
     const start = from ?? this.cursorAt;
     for (let i = 1; i <= frames; i += 1) {
       const t = i / frames;
@@ -610,7 +745,7 @@ export class Stage {
     for (const list of lists) args.push("-f", "concat", "-safe", "0", "-i", list);
     if (keys.length === 1) {
       const vf = [
-        `fps=${FPS}`,
+        `fps=${this.fps}`,
         `scale=${width}:-2:flags=lanczos`,
         "split[a][b]",
         "[a]palettegen=max_colors=192[p]",
@@ -620,8 +755,8 @@ export class Stage {
     } else {
       const half = Math.floor(width / 2);
       const filter = [
-        `[0:v]fps=${FPS},scale=${half}:-2:flags=lanczos,setsar=1[a]`,
-        `[1:v]fps=${FPS},scale=${half}:-2:flags=lanczos,setsar=1[b]`,
+        `[0:v]fps=${this.fps},scale=${half}:-2:flags=lanczos,setsar=1[a]`,
+        `[1:v]fps=${this.fps},scale=${half}:-2:flags=lanczos,setsar=1[b]`,
         `[a][b]hstack=inputs=2,drawbox=x=${half - 1}:y=0:w=2:h=ih:color=0x52525b:t=fill,split[c][d]`,
         "[c]palettegen=max_colors=192[p]",
         "[d][p]paletteuse=dither=bayer:bayer_scale=4[out]",
@@ -646,7 +781,14 @@ export async function recordDemo(browser, demo, { release, baseParams = "", outD
   const page = await browser.newPage();
   const peer = windowCount === 2 ? await browser.newPage() : undefined;
   const framesDir = await mkdtemp(path.join(framesRoot, `${release}-${demo.id}-`));
-  const stage = new Stage(page, framesDir, { theme: demo.theme, peer });
+  // The viewport decides the input vocabulary: a `hasTouch` board is driven by
+  // a finger, so the clip carries the finger overlay and no mouse arrow.
+  const stage = new Stage(page, framesDir, {
+    theme: demo.theme,
+    peer,
+    touch: viewport.hasTouch === true,
+    fps: FPS,
+  });
   // Two windows are two documents over ONE mocked host: the `sharedHost`
   // token turns on the harness's cross-page host row (a fresh token per demo,
   // so no earlier capture's write can replay into this one), so a fold, a done

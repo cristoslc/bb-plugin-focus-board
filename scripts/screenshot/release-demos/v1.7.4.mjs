@@ -4,9 +4,12 @@
  * Six bullets, six gifs. The four touch clips stage the gesture the way the
  * touch UAT suites proved it: a wide touch device (1024x768, the column read
  * needs its drop target in frame) with `hasTouch`/`isMobile`, a real CDP
- * finger through `page.touchscreen`, and the 420ms hold the suites use (the
- * arm fires at 180ms). The pan clips move the finger BEFORE the arm deadline,
- * because a finger that moves first pans — that ordering IS the fix.
+ * finger through the recorder's `g.touchStart`/`touchMove`/`touchEnd` (which
+ * also moves the finger overlay, so the clip shows where the touch is), and
+ * the 420ms hold the suites use (the arm fires at 180ms). The pan clips move
+ * the finger BEFORE the arm deadline, because a finger that moves first pans —
+ * that ordering IS the fix. Every motion step captures its own frame at the
+ * recorder's playback rate, so a pan reads as a pan instead of two stills.
  *
  * The state-flip clip drives the harness's own `__uat.pushThreadUpdate`, the
  * same patch the attended-lane suite pushes, so the card re-lanes live while
@@ -15,7 +18,9 @@
  *   node scripts/screenshot/capture-release-demos.mjs v1.7.4
  */
 
-/** Viewport point for a card: its centre, or a third along its flow axis. */
+/** Viewport point for a card: its centre, or a third along its flow axis.
+ *  `xRatio` shifts the point across a vertical lane's card (a gesture that
+ *  needs room to slide left starts near the card's right edge). */
 const pageCardPoint = (spec) => {
   const el = document.querySelector(`[data-thread-card="${spec.card}"]`);
   if (el === null) throw new Error(`no card ${spec.card}`);
@@ -25,17 +30,22 @@ const pageCardPoint = (spec) => {
     "horizontal";
   const along = spec.edge === "before" ? 0.2 : spec.edge === "onto" ? 0.5 : 0.8;
   return {
-    x: Math.round(horizontal ? box.left + box.width * along : box.left + box.width / 2),
+    x: Math.round(
+      horizontal ? box.left + box.width * along : box.left + box.width * (spec.xRatio ?? 0.5),
+    ),
     y: Math.round(horizontal ? box.top + box.height / 2 : box.top + box.height * along),
   };
 };
 
-/** Viewport point on the board's toolbar band, the origin no scroller owns. */
+/** Viewport point on the board's toolbar band, the origin no scroller owns.
+ *  The point sits in the band's bottom padding, clear of every control, and
+ *  far enough from the left edge that the whole slide stays on camera (a
+ *  finger that starts in the corner slides out of frame). */
 const pageToolbarPoint = () => {
   const toolbar = document.querySelector("[data-board-toolbar]");
   if (toolbar === null) throw new Error("no [data-board-toolbar]");
   const box = toolbar.getBoundingClientRect();
-  return { x: Math.round(box.left + 8), y: Math.round(box.top + 3) };
+  return { x: Math.round(box.right - 90), y: Math.round(box.bottom - 6) };
 };
 
 /** Viewport point inside the rightmost lane's card list: nothing to its right. */
@@ -46,7 +56,9 @@ const pageLastLanePoint = () => {
   const list = last.querySelector("[data-card-list]");
   if (list === null) throw new Error("last lane has no card list");
   const box = list.getBoundingClientRect();
-  return { x: Math.round(box.left + box.width / 2), y: Math.round(box.top + box.height / 2) };
+  // Inside the list's left third: the slide runs right, back toward the
+  // board's start, and has to end on camera.
+  return { x: Math.round(box.left + 32), y: Math.round(box.top + box.height / 2) };
 };
 
 export const baseParams = "";
@@ -64,21 +76,22 @@ export const demos = [
     steps: async (g) => {
       const from = await g.page.evaluate(pageCardPoint, { card: "thr_ship_release" });
       const to = await g.page.evaluate(pageCardPoint, { card: "thr_rpc_auth", edge: "before" });
-      const touch = g.page.touchscreen;
-      await touch.touchStart(from.x, from.y);
+      await g.touchStart(from.x, from.y);
       await g.sleep(420);
       await g.shot("picked-up", { hold: 1.2 });
-      const steps = 8;
+      const steps = 14;
       for (let index = 1; index <= steps; index += 1) {
-        await touch.touchMove(
+        await g.touchMove(
           from.x + ((to.x - from.x) * index) / steps,
           from.y + ((to.y - from.y) * index) / steps,
         );
         await g.sleep(110);
-        if (index === 4) await g.shot("rides", { hold: 1.0 });
+        // One frame per step: the lifted card and the finger ride together,
+        // so the clip shows the drag moving rather than teleporting.
+        await g.shot(`rides-${index}`, { hold: g.frameSeconds });
       }
       await g.shot("insertion", { hold: 0.9 });
-      await touch.touchEnd();
+      await g.touchEnd();
       await g.sleep(900);
       await g.shot("dropped", { hold: 1.8 });
     },
@@ -162,16 +175,19 @@ export const demos = [
     viewport: { width: 390, height: 844, deviceScaleFactor: 2, hasTouch: true, isMobile: true },
     ready: '[data-thread-card="thr_ship_release"]',
     steps: async (g) => {
-      const from = await g.page.evaluate(pageCardPoint, { card: "thr_ship_release" });
-      const touch = g.page.touchscreen;
-      await touch.touchStart(from.x, from.y);
-      const steps = 10;
+      // The start sits near the card's right edge: 192px of slide keeps the
+      // finger (and its ring) on a 390px-wide phone for the whole pan.
+      const from = await g.page.evaluate(pageCardPoint, { card: "thr_ship_release", xRatio: 0.85 });
+      await g.touchStart(from.x, from.y);
+      const steps = 12;
       for (let index = 1; index <= steps; index += 1) {
-        await touch.touchMove(from.x - 24 * index, from.y);
+        await g.touchMove(from.x - 16 * index, from.y);
         await g.sleep(90);
-        if (index === 5) await g.shot("mid-pan", { hold: 1.0 });
+        // One frame per step, at the playback rate: the board's own scroll
+        // positions are the animation, and the finger marks each one.
+        await g.shot(`pan-${index}`, { hold: g.frameSeconds });
       }
-      await touch.touchEnd();
+      await g.touchEnd();
       await g.sleep(800);
       await g.shot("panned", { hold: 1.8 });
     },
@@ -187,15 +203,14 @@ export const demos = [
     ready: "[data-board-toolbar]",
     steps: async (g) => {
       const from = await g.page.evaluate(pageToolbarPoint);
-      const touch = g.page.touchscreen;
-      await touch.touchStart(from.x, from.y);
-      const steps = 10;
+      await g.touchStart(from.x, from.y);
+      const steps = 11;
       for (let index = 1; index <= steps; index += 1) {
-        await touch.touchMove(from.x - 20 * index, from.y);
+        await g.touchMove(from.x - 20 * index, from.y);
         await g.sleep(90);
-        if (index === 5) await g.shot("mid-pan", { hold: 1.0 });
+        await g.shot(`pan-${index}`, { hold: g.frameSeconds });
       }
-      await touch.touchEnd();
+      await g.touchEnd();
       await g.sleep(800);
       await g.shot("panned", { hold: 1.8 });
     },
@@ -223,15 +238,14 @@ export const demos = [
     },
     steps: async (g) => {
       const from = await g.page.evaluate(pageLastLanePoint);
-      const touch = g.page.touchscreen;
-      await touch.touchStart(from.x, from.y);
+      await g.touchStart(from.x, from.y);
       const steps = 10;
       for (let index = 1; index <= steps; index += 1) {
-        await touch.touchMove(from.x + 26 * index, from.y);
+        await g.touchMove(from.x + 18 * index, from.y);
         await g.sleep(90);
-        if (index === 5) await g.shot("mid-slide", { hold: 1.0 });
+        await g.shot(`slide-${index}`, { hold: g.frameSeconds });
       }
-      await touch.touchEnd();
+      await g.touchEnd();
       await g.sleep(800);
       await g.shot("handed-out", { hold: 1.8 });
     },
