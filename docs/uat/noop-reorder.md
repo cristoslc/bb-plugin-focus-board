@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-10-22T19:05:36.169Z by `npm run uat`._
+_Generated 2026-11-01T09:06:45.520Z by `npm run uat`._
 
 ## noop-reorder
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_kkw4rz3zwt-1/bb-plugin-focus-board/tests/manual/uat-noop-reorder.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-noop-reorder.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

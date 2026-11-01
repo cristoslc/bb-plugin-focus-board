@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-10-31T04:37:35.574Z by `npm run uat`._
+_Generated 2026-11-01T09:06:45.520Z by `npm run uat`._
 
 ## group-unique
 
-Source: `tests/manual/uat-group-unique.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-group-unique.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

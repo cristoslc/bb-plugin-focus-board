@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-10-27T21:57:22.737Z by `npm run uat`._
+_Generated 2026-11-01T09:06:45.520Z by `npm run uat`._
 
 ## family-state-server-persistence
 
-Source: `tests/manual/uat-family-state.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-family-state.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
