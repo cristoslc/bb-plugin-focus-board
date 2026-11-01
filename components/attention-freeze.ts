@@ -3,13 +3,22 @@
 //
 // "Attending to" means the pointer hovers the card, or the card is open in
 // the thread pane; "released" means the mouse moved away or the pane closed.
-// While attention holds, live data churn (state flips, age buckets, family
-// recency) re-sorts the board AROUND the attended placement instead of
-// moving it; the board's own placement rules run again
+// While attention holds, live data churn (age buckets, family recency,
+// sibling activity) re-sorts the board AROUND the attended placement instead
+// of moving it; the board's own placement rules run again
 // the moment attention releases. The codebase has been here before: the
 // retired sweep gather re-sorted cards mid-gesture and was removed precisely
 // because a moving card under a working pointer reads as a board that
 // shuffles itself — this module is the general version of that lesson.
+//
+// One churn is NOT held: under the status grouping a lane names the thread's
+// STATE (Needs you, Working, Unread), so a state flip re-lanes the attended
+// card at once and the capture re-anchors on the next build. A working thread
+// parked in Unread for as long as its pane stayed open is the board lying
+// about the one signal it exists to carry (issue #338). The capture still
+// records the lane it saw — the slot pin is keyed by lane plus thread — and
+// components/grouping.ts `frozenLaneHolds` is the single place that decides
+// whether that lane claim still holds.
 //
 // Two capture shapes, one module:
 //
@@ -45,8 +54,9 @@ export interface AttentionSlot {
 /**
  * One capture on the column board: every card the freeze pins while the
  * focus thread is attended — the focus card itself, its family root's card
- * (the family does not re-lane while its member is attended), and the
- * attended child's row slot. Feature-group members are NOT covered: under
+ * (the family's lane holds against churn while its member is attended; see
+ * `frozenLaneHolds`), and the attended child's row slot. Feature-group
+ * members are NOT covered: under
  * the split default the group renders across lanes on purpose, so only the
  * attended card's own placement pins (its group's other members re-place
  * freely, each in its own lane).
@@ -275,9 +285,9 @@ export interface ColumnAttentionInput {
  *
  * - the focus card itself (absent when the focus renders as a nested row —
  *   the caller pins its row slot instead),
- * - its family root's card — the family does not re-lane while its member is
- *   attended (the R4 override's "family wins" rule resumes when the attention
- *   releases).
+ * - its family root's card — the family's lane holds against churn while its
+ *   member is attended (components/grouping.ts `frozenLaneHolds`: a state
+ *   flip still re-lanes it, an age bucket still does not).
  *
  * Feature-group members are deliberately absent: under the split default
  * (issue #86) the group renders across lanes on purpose, so a half-frozen
@@ -302,9 +312,9 @@ export function captureColumnAttention(
     if (slot !== null) slots.push(slot);
   };
   pinThread(focusId);
-  // The family root's card: the family does not re-lane while its member is
-  // attended (the R4 override's "family wins" rule resumes when the attention
-  // releases).
+  // The family root's card: the family's lane holds against churn while its
+  // member is attended (components/grouping.ts `frozenLaneHolds` decides
+  // whether the captured lane still holds; a state flip re-lanes it).
   let rootId = focusId;
   while (input.parentOf.has(rootId)) rootId = input.parentOf.get(rootId) as string;
   if (rootId !== focusId) pinThread(rootId);

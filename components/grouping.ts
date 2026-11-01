@@ -558,6 +558,40 @@ function columnSortKey(groupBy: GroupBy, columnId: string): number {
   return index === -1 ? fixedOrder.length : index;
 }
 
+/**
+ * Does an attended card's captured lane still hold?
+ *
+ * The freeze exists so live churn re-sorts the board AROUND the card the
+ * operator is looking at instead of sliding it away. Under the status
+ * grouping a lane is not order, it is the thread's STATE — Needs you,
+ * Working, Unread — the one signal the board exists to carry. A card whose
+ * state flips while the operator attends it must re-lane at once, even with
+ * its pane open or the pointer on it: a running thread parked in Unread, or a
+ * card that just started needing the operator hidden in a quiet lane, is the
+ * board lying about exactly what the operator opened the card to learn
+ * (reported 2026-10-31, thr_cyyyqxsvix: a working orchestrator read Unread
+ * for as long as its pane stayed open).
+ *
+ * What the freeze keeps: the card's SLOT inside whatever lane its state picks
+ * (so sibling activity, a rank write from another surface, or a nested row's
+ * position never moves it), and the idle buckets, which age on the clock
+ * rather than flipping state — an attended card does not hop from Idle ·
+ * Today to Idle · Yesterday under the pointer.
+ *
+ * Every other grouping buckets by data or by time (project, provider,
+ * machine, group, recency, none), never by a live state, so a captured lane
+ * holds there as before.
+ */
+function frozenLaneHolds(
+  captured: { id: string },
+  natural: { id: string },
+  groupBy: GroupBy,
+): boolean {
+  if (groupBy !== "status") return true;
+  if (captured.id === natural.id) return true;
+  return captured.id.startsWith("idle-") && natural.id.startsWith("idle-");
+}
+
 export function buildColumns(
   threads: readonly PluginSidebarThread[],
   groupBy: GroupBy,
@@ -569,10 +603,11 @@ export function buildColumns(
   columnOverrides: ReadonlyMap<string, { id: string; label: string }> = new Map(),
   /**
    * The attention freeze's lane pins (components/attention-freeze): the
-   * rendered lane a card under attention held at capture time. These win
-   * over every claim — family R4 overrides and box overrides included —
-   * because an attended card MUST NOT move: the family resumes live
-   * re-laning the moment attention releases.
+   * rendered lane a card under attention held at capture time. A pin holds
+   * its lane against time and data churn — age buckets moving, ranks
+   * rewritten from another surface, siblings sorting around the attended
+   * card — but never against a STATE flip under the status grouping: see
+   * `frozenLaneHolds` for why a working thread may not stay parked in Unread.
    */
   attentionColumns: ReadonlyMap<string, { id: string; label: string }> = new Map(),
   /**
@@ -594,21 +629,24 @@ export function buildColumns(
   const pinned = active.filter((thread) => thread.isPinned);
 
   // A thread whose column was frozen at selection time (because it is open in
-  // the pane) keeps that column UNTIL a lane of its own says otherwise: R4
-  // family and group-box overrides are computed from live member states, and
-  // "Family wins, always" — the family's lane priority never depends on the
-  // pane. The pane freeze therefore only owns cards no family lane claims
-  // (a quiet family keeps the parent's own bucket — the all-idle family
-  // override is empty). The freeze remains meaningful there: state or age
-  // changes must not slide the card the user is looking at.
+  // the pane, the pointer rests on it, or its context menu is up) keeps that
+  // column while the freeze holds — see `frozenLaneHolds` for the one rule
+  // that outranks it. R4 family and group-overrides feed the live placement
+  // below, so the freeze only ever pins a card no family lane claims (a quiet
+  // family keeps the parent's own bucket — the all-idle family override is
+  // empty) or one whose family lane has not moved.
   const assignments = new Map<string, { id: string; label: string }>();
   for (const thread of unpinned) {
+    const natural =
+      columnOverrides.get(thread.id) ??
+      frozenColumns.get(thread.id) ??
+      columnFor(thread, groupBy, context, now, errorAcks);
+    const captured = attentionColumns.get(thread.id);
     assignments.set(
       thread.id,
-      attentionColumns.get(thread.id) ??
-        columnOverrides.get(thread.id) ??
-        frozenColumns.get(thread.id) ??
-        columnFor(thread, groupBy, context, now, errorAcks),
+      captured !== undefined && frozenLaneHolds(captured, natural, groupBy)
+        ? captured
+        : natural,
     );
   }
 

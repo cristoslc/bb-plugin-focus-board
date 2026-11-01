@@ -1,0 +1,77 @@
+# Operator-assisted E2E: a card the operator attends to follows its live STATE
+# (issue #338).
+#
+# Rendered and driven for real: the harness mounts the actual app.tsx against
+# the mocked SDK (scripts/screenshot), whose sidebar is a reactive store — a
+# `push_update` rewrites the row and re-renders the board the way bb's own
+# `status-changed` patch does. The `click` is a real pointer travel onto the
+# card's title anchor, so the pane opens through the shipped path and the
+# attention freeze captures the lane the card rendered in.
+#
+# The regression: the freeze pinned a card's LANE along with its slot, so a
+# card read in Unread kept that lane while its pane stayed open — a thread
+# that started running read Unread, and one that started needing the operator
+# stayed quiet (reported 2026-10-31 on thr_cyyyqxsvix, "chat-relay
+# orchestrator": Working in bb's own records, Unread on the board).
+#
+# Run: npm run uat -- tests/manual/uat-attended-lane.yaml
+# (npm run build first — the harness loads dist/app.css)
+suite: attended-lane
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5198
+defaults:
+  groupBy: status
+  theme: dark
+  invariants: true
+
+steps:
+  - id: a-running-attended-card-reads-working
+    title: A card open in the pane re-lanes to Working when its row turns active
+    # Unread: thr_rpc_auth (26m) · thr_uat_queue (2h) · thr_review_pr (3h).
+    # Working: thr_column_sort (40s) · thr_drag_done (12m).
+    goto: "?groupBy=status"
+    gestures:
+      - click: { card: thr_rpc_auth }
+      # The host's status-changed patch: the same patch bb's sidebar applies.
+      - push_update: { threadId: thr_rpc_auth, patch: { status: "active", runtimeStatus: "active" } }
+    assert:
+      - pane: { threadId: thr_rpc_auth }
+      - no_visible_error: true
+      # The card left Unread on the first push, with the pane still open.
+      - column: unread
+        ordered: [thr_uat_queue, thr_review_pr]
+      - column: working
+        ordered: [thr_column_sort, thr_drag_done, thr_rpc_auth, thr_sweep_parent]
+
+  - id: a-needs-you-attended-card-surfaces
+    title: A card open in the pane surfaces in Needs you when it starts waiting on the operator
+    goto: "?groupBy=status"
+    gestures:
+      - click: { card: thr_review_pr }
+      # An approval/question arrives on the attended card.
+      - push_update: { threadId: thr_review_pr, patch: { hasPendingInteraction: true } }
+    assert:
+      - pane: { threadId: thr_review_pr }
+      - no_visible_error: true
+      # Attention: thr_permissions (7m) · thr_deploy_fail (35m) · thr_review_pr (3h).
+      - column: attention
+        ordered: [thr_permissions, thr_deploy_fail, thr_review_pr]
+      - column: unread
+        ordered: [thr_rpc_auth, thr_uat_queue]
+
+  - id: closing-the-pane-still-agrees
+    title: Closing the pane leaves the card in the lane its state picks
+    goto: "?groupBy=status"
+    gestures:
+      - click: { card: thr_rpc_auth }
+      - push_update: { threadId: thr_rpc_auth, patch: { status: "active", runtimeStatus: "active" } }
+      # The pane's own close button, not Escape: Escape in the pane's chat
+      # stops a running thread, which this suite must never do.
+      - { click_aria: "Close thread pane" }
+    assert:
+      - no_visible_error: true
+      - column: working
+        ordered: [thr_column_sort, thr_drag_done, thr_rpc_auth, thr_sweep_parent]
+      - column: unread
+        ordered: [thr_uat_queue, thr_review_pr]
