@@ -195,4 +195,26 @@ export const demos = [
       await g.burst("pulse", { frames: 26, hold: 0.13 });
     },
   },
+
+  // Fixed — hiding idle children no longer buries a busy grandchild. The
+  // fixture (`?idlebusy=1`) is three tiers under an idle root: the idle leaf
+  // disappears with the filter on, while the idle child that hosts a running
+  // grandchild keeps its row (and the grandchild with it).
+  {
+    id: "idle-filter-keeps-the-busy-grandchild",
+    params: "&idlebusy=1",
+    viewport: { width: 1400, height: 900, deviceScaleFactor: 2 },
+    ready: '[data-thread-card="thr_idle_busy_root"]',
+    setup: async (g) => {
+      await g.alignTo('[data-thread-card="thr_idle_busy_root"]');
+      await g.clipUnion(['[data-thread-card="thr_idle_busy_root"]'], 28);
+    },
+    steps: async (g) => {
+      await g.shot("whole-family", { hold: 1.6 });
+      await g.domClick('[data-thread-card="thr_idle_busy_root"] [data-idle-children-toggle]', {
+        settle: 1.2,
+      });
+      await g.shot("filtered", { hold: 2.6 });
+    },
+  },
 ];

@@ -10,9 +10,8 @@
 import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
-import { SIM_ATTENTION_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DESC_GROUP, SIM_DESC_GROUP_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_ORCH_FAMILY_THREADS, SIM_OVERVIEW_GROUPS, SIM_OVERVIEW_LINKS, SIM_OVERVIEW_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimThread } from "./data";
+import { SIM_ATTENTION_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DESC_GROUP, SIM_DESC_GROUP_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_DUAL_GROUPS, SIM_DUAL_GROUP_THREADS, SIM_IDLE_BUSY_THREADS, SIM_ORCH_FAMILY_THREADS, SIM_OVERVIEW_GROUPS, SIM_OVERVIEW_LINKS, SIM_OVERVIEW_THREADS, SIM_PINNED_GROUP, SIM_PINNED_GROUP_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimThread } from "./data";
 import {
-  applyRankMoveFractions,
   type FractionColumn,
   mintLegacyColumn,
   ordersFromFractionStore,
@@ -20,6 +19,11 @@ import {
 // Pure constants only — lib/sweep would drag components/grouping into the
 // mock, whose SDK-app import this file itself stands in for (cycle).
 import { DAY_MS } from "../../lib/duration";
+// The host row's write semantics, shared with the second window
+// (`?sharedHost=<token>`) and with the unit tests, so a received write applies
+// the same function the writing window applied (scripts/screenshot/host-state.ts).
+import { applyHostOp, type HostOp, type HostSignal, type HostState } from "./host-state";
+import { createHostLog, hostLogPrefix } from "./host-log";
 
 export const registeredNavPanel: {
   path?: string;
@@ -272,6 +276,15 @@ const DESCGROUP_MODE = new URLSearchParams(window.location.search).get("descgrou
 // orchestrator fixture (data.ts SIM_ORCH_FAMILY_THREADS) — a root with nine
 // lieutenants and 77 grandchildren, the shape the operator screenshotted.
 const ORCH_MODE = new URLSearchParams(window.location.search).get("orchestrator") === "1";
+// The three release-demo fixtures the base demo board could not stage
+// (data.ts), each its own flag so no UAT suite or still picks them up by
+// accident:
+// - `?idlebusy=1`: a family whose idle child carries a running grandchild.
+// - `?dualgroups=1`: a pinned parent whose child sits in another group.
+// - `?pinnedgroup=1`: a feature group whose only member is pinned.
+const IDLE_BUSY_MODE = new URLSearchParams(window.location.search).get("idlebusy") === "1";
+const DUAL_GROUPS_MODE = new URLSearchParams(window.location.search).get("dualgroups") === "1";
+const PINNED_GROUP_MODE = new URLSearchParams(window.location.search).get("pinnedgroup") === "1";
 // `?failautotitle=` (comma list): autotitle call kinds that fail ONCE, then
 // succeed — the UAT suite walks a failure into the fallback modal and out
 // through an alternative. Kinds: "plain" (the bare ✨ call), "threadmodel"
@@ -296,6 +309,9 @@ let simThreads: readonly SimThread[] = EMPTY_MODE
       ...WORKPULSE_DATA.threads,
       ...(DESCGROUP_MODE ? SIM_DESC_GROUP_THREADS : []),
       ...(ORCH_MODE ? SIM_ORCH_FAMILY_THREADS : []),
+      ...(IDLE_BUSY_MODE ? SIM_IDLE_BUSY_THREADS : []),
+      ...(DUAL_GROUPS_MODE ? SIM_DUAL_GROUP_THREADS : []),
+      ...(PINNED_GROUP_MODE ? SIM_PINNED_GROUP_THREADS : []),
     ];
 
 /**
@@ -692,6 +708,26 @@ if (DESCGROUP_MODE) {
     simGroupAssignments[memberId] = SIM_DESC_GROUP.groupId;
   }
 }
+// The dual-group fixture (`?dualgroups=1`): two groups, one thread each — the
+// parent's and the child's — so the child renders under its parent AND inside
+// its own group's frame.
+if (DUAL_GROUPS_MODE) {
+  for (const group of SIM_DUAL_GROUPS) {
+    simGroupRegistry[group.id] = { name: group.name, createdAt: "2026-10-31T00:00:00.000Z" };
+    for (const memberId of group.memberIds) simGroupAssignments[memberId] = group.id;
+  }
+}
+// The pinned-only fixture (`?pinnedgroup=1`): a group of one, and that member
+// is pinned, so the Pinned lane frames a single card.
+if (PINNED_GROUP_MODE) {
+  simGroupRegistry[SIM_PINNED_GROUP.groupId] = {
+    name: SIM_PINNED_GROUP.name,
+    createdAt: "2026-10-31T00:00:00.000Z",
+  };
+  for (const memberId of SIM_PINNED_GROUP.memberIds) {
+    simGroupAssignments[memberId] = SIM_PINNED_GROUP.groupId;
+  }
+}
 // The overview fixture (`?overview=1`) seeds three real groups — an expanded
 // one spanning two lanes, a collapsed one beside it, and a group of one — so
 // the storyboard can demonstrate every box state without a group_* write.
@@ -710,6 +746,79 @@ if (OVERVIEW_MODE) {
     for (const memberId of group.memberIds) simGroupAssignments[memberId] = group.id;
   }
 }
+/* ── The shared host row (`?sharedHost=<token>`) ──────────────────────────
+ *
+ * Every module variable above is one window's copy of a row the REAL host
+ * owns once. With two pages open, each page needs the other's writes: bb's
+ * second window learns about a fold, a done mark, a rank move or a group
+ * write through a realtime signal and a refetch, never through page memory.
+ *
+ * The `sharedHost` token gives the pair that channel over localStorage (the
+ * store two same-origin documents already share) and the browser's `storage`
+ * event, which fires in every OTHER document when a key changes. The token is
+ * the pair's own log prefix, so an earlier capture's records cannot replay. Writes travel as `HostOp`
+ * records (host-log.ts) and both sides apply them through `applyHostOp`
+ * (host-state.ts), so the writing window and the receiving window run the same
+ * function — one copy of the semantics, never a look-alike.
+ *
+ * Off by default: the single-page demos and every UAT suite keep exactly the
+ * fixtures and the reset-per-goto behavior they had.
+ */
+const SHARED_HOST_TOKEN = new URLSearchParams(window.location.search).get("sharedHost");
+const hostLog =
+  SHARED_HOST_TOKEN === null || SHARED_HOST_TOKEN === "0"
+    ? null
+    : createHostLog({ storage: window.localStorage, prefix: hostLogPrefix(SHARED_HOST_TOKEN) });
+
+/** The row as the mock holds it right now, in the shared shape. */
+function readHostState(): HostState {
+  return {
+    ranks: simRanks,
+    doneIds: [...simDoneIds],
+    family: {
+      collapsedFamilies: [...simFamilyState.collapsedFamilies],
+      hideIdleChildren: [...simFamilyState.hideIdleChildren],
+    },
+    groups: {
+      registry: structuredClone(simGroupRegistry),
+      assignments: structuredClone(simGroupAssignments),
+    },
+  };
+}
+
+/** Write a row back into the module variables the mock's readers use. */
+function writeHostState(state: HostState): void {
+  simRanks = state.ranks;
+  simDoneIds.clear();
+  for (const id of state.doneIds) simDoneIds.add(id);
+  simFamilyState = state.family;
+  simGroupRegistry = state.groups.registry;
+  simGroupAssignments = state.groups.assignments;
+}
+
+/**
+ * A write THIS window made: apply it locally, publish it to the other windows,
+ * then fire the echo the real server publishes, so this window refetches
+ * through the same path the other one does.
+ */
+function commitHostOp(op: HostOp): { signal: HostSignal | null; order?: string[] } {
+  const { state, signal, order } = applyHostOp(readHostState(), op);
+  writeHostState(state);
+  // Published after the local row is written: a peer replaying the record at
+  // once must find the writer's row consistent with it.
+  hostLog?.publish(op);
+  if (signal !== null) simFireRealtime(signal.channel, signal.payload);
+  return { signal, order };
+}
+
+/** A write ANOTHER window made: same function, same echo, plus a repaint. */
+function adoptHostOp(op: HostOp): void {
+  const { state, signal } = applyHostOp(readHostState(), op);
+  writeHostState(state);
+  if (signal !== null) simFireRealtime(signal.channel, signal.payload);
+  mockRender();
+}
+
 (globalThis as unknown as { __uat?: unknown }).__uat = {
   seedRanks: (orders: Record<string, string[]>) => {
     simRanks = Object.fromEntries(
@@ -762,12 +871,12 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     return { doneIds: [...simDoneIds], records: structuredClone(SIM_DONE_RECORDS) };
   }
   if (method === "done_set") {
-    // The mark-done write mirrors the real server: the done set mutates and
-    // every open panel hears the echo through its realtime registration.
+    // The mark-done write mirrors the real server: the done set mutates,
+    // every open panel hears the echo through its realtime registration, and
+    // a second window writing its own mark appends to the same set rather
+    // than replacing it.
     const { threadId, done } = args as { threadId: string; done: boolean };
-    if (done) simDoneIds.add(threadId);
-    else simDoneIds.delete(threadId);
-    simFireRealtime("done-changed");
+    commitHostOp({ kind: "done_set", threadId, done });
     return { threadId, done };
   }
   if (method === "sweep_config_get") {
@@ -865,8 +974,9 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
       return { group: { id, ...record } };
     }
     const id = `grp_${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-    simGroupRegistry[id] = { name, createdAt: new Date().toISOString() };
-    return { group: { id, name, createdAt: simGroupRegistry[id].createdAt } };
+    const createdAt = new Date().toISOString();
+    commitHostOp({ kind: "group_create", group: { id, name, createdAt } });
+    return { group: { id, name, createdAt } };
   }
   if (method === "group_rename") {
     const { groupId, name } = args as { groupId: string; name: string };
@@ -880,14 +990,13 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     if (taken !== undefined) {
       throw new Error(`group name ${JSON.stringify(name)} is already taken by group ${taken[0]}`);
     }
-    simGroupRegistry[groupId] = { ...simGroupRegistry[groupId], name };
+    commitHostOp({ kind: "group_rename", groupId, name });
     mockRender();
     return { group: { id: groupId, ...simGroupRegistry[groupId] } };
   }
   if (method === "group_set") {
     const { threadId, groupId } = args as { threadId: string; groupId: string | null };
-    if (groupId !== null) simGroupAssignments[threadId] = groupId;
-    else delete simGroupAssignments[threadId];
+    commitHostOp({ kind: "group_set", threadId, groupId });
     mockRender();
     return { threadId, groupId };
   }
@@ -997,15 +1106,10 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
       visibleIds: string[];
       unitIds?: string[];
     };
-    const result = applyRankMoveFractions(simRanks, {
-      columnKey,
-      threadId,
-      beforeId,
-      toEnd,
-      visibleIds,
-      unitIds,
+    const result = commitHostOp({
+      kind: "rank_move",
+      args: { columnKey, threadId, beforeId, toEnd, visibleIds, unitIds },
     });
-    simRanks = result.next;
     return { columnKey, order: result.order };
   }
   if (method === "family_state_list") {
@@ -1020,20 +1124,12 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
       id: string;
       on: boolean;
     };
-    const set = new Set(simFamilyState[key]);
-    if (on) set.add(id);
-    else set.delete(id);
-    simFamilyState = { ...simFamilyState, [key]: [...set].sort() };
-    simFireRealtime("family-state-changed", { key, id, on });
+    commitHostOp({ kind: "family_state_set", key, id, on });
     return { key, id, on };
   }
   if (method === "family_state_merge") {
     const incoming = args as { collapsedFamilies: string[]; hideIdleChildren: string[] };
-    simFamilyState = {
-      collapsedFamilies: [...new Set([...simFamilyState.collapsedFamilies, ...incoming.collapsedFamilies])].sort(),
-      hideIdleChildren: [...new Set([...simFamilyState.hideIdleChildren, ...incoming.hideIdleChildren])].sort(),
-    };
-    simFireRealtime("family-state-changed", { key: null, id: null, on: null });
+    commitHostOp({ kind: "family_state_merge", ...incoming });
     return structuredClone(simFamilyState);
   }
   return {};
@@ -1317,4 +1413,31 @@ function MockChat({ threadId }: { threadId: string }): ReactNode {
 
 export function ThreadChat(props: { threadId: string; variant?: string; layout?: string }): ReactNode {
   return <MockChat threadId={props.threadId} />;
+}
+
+/*
+ * The shared host's join at module load: replay every write this page missed,
+ * then follow the browser's `storage` events for the ones that follow. This
+ * runs LAST in the module on purpose — the replay fires realtime signals, and
+ * the signal registry (`simRealtimeChannels`) plus the app's mount are only
+ * ready once the whole module has evaluated.
+ */
+if (hostLog !== null) {
+  const log = hostLog;
+  let seen: string | null = null;
+  // Records are drained in write order, from the newest key this page has
+  // applied: a page that opens after another window's write replays it, and a
+  // burst of events coalesces into one pass.
+  const drain = (): void => {
+    for (const record of log.records(seen)) adoptHostOp(record.op);
+    seen = log.lastKey();
+  };
+  drain();
+  window.addEventListener("storage", (event) => {
+    // A wholesale clear (another window calling localStorage.clear()) has no
+    // key to match; the row itself is the fixtures again, which is what the
+    // capture sequence wants at the start of the next demo.
+    if (event.key === null || !log.isHostRecord(event.key)) return;
+    drain();
+  });
 }
