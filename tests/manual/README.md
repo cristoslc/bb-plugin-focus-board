@@ -375,6 +375,42 @@ defaults:
   `scripts/uat/settle-clock.mjs` and is pinned by
   `tests/uat-settle-clock.test.ts`.
 
+## Two windows (`defaults.windows: 2`)
+
+bb's second window learns about a write through a realtime signal and a
+refetch. To assert that, a suite can open a SECOND live document over the same
+mocked host:
+
+```yaml
+defaults:
+  windows: 2
+
+steps:
+  - id: fold-in-window-a
+    goto: "?demo=1"
+    click_aria: { label: "3 child threads", within: thr_demo_needs }
+  - id: window-b-follows
+    page: peer
+    assert:
+      - dot_order: { family: thr_demo_needs, dots: [thr_demo_needs_c0] }
+```
+
+- Both pages load the same `?sharedHost=<token>` query. That token turns on the
+  harness's cross-window host row (`scripts/screenshot/host-log.ts` +
+  `host-state.ts`): every host write (done marks, family fold and hide-idle,
+  group registry and assignments, rank moves) is appended as one record to the
+  page pair's own log in localStorage, and the browser's `storage` event
+  delivers it to the other document, which applies the SAME function and fires
+  the realtime signal, so the second window refetches exactly as bb's does.
+- `page: peer` runs a step against the second window. Omit it (or write
+  `page: main`) for the first. A step that names the peer in a suite without
+  `windows: 2` fails the run rather than quietly driving the first window.
+- No reload between the write and the assertion: a step that forgot to stay
+  put would prove the replay, not the live signal. `tests/manual/uat-two-windows.yaml`
+  is the gate on the whole path.
+- The token is fresh per suite run, so records from an earlier run or another
+  suite can never replay into this one.
+
 A step may time its own gesture with a budget:
 
 ```yaml

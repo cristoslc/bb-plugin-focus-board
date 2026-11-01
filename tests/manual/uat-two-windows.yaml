@@ -1,0 +1,88 @@
+# Operator-assisted E2E: two bb windows over ONE host row.
+#
+# bb's second window learns about a write through a realtime signal and a
+# refetch, never through page memory. The harness drove one page against one
+# in-page mock, so a cross-window write could not be staged at all — five
+# release bullets carry no gif for exactly that reason.
+#
+# This is the gate on the capability. `defaults.windows: 2` opens a SECOND live
+# document over the same mocked host (`?sharedHost=<token>`, served by
+# scripts/screenshot/host-log.ts + host-state.ts), and each step's `page: peer`
+# names the window it drives, so one step writes and the next one asserts on
+# the other side. No reload between them: the write has to arrive as a signal,
+# the way bb's own second window sees it.
+#
+# Run: npm run uat -- tests/manual/uat-two-windows.yaml
+suite: two-window-host-row
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5211
+defaults:
+  groupBy: status
+  theme: dark
+  windows: 2
+
+steps:
+  - id: window-a-mounts-the-board
+    title: The first window mounts the demo board
+    goto: "?demo=1"
+    assert:
+      - column_contains: { column: working, id: thr_demo_work }
+
+  - id: window-b-mounts-the-same-board
+    title: The second window mounts an expanded board of its own
+    # The family starts EXPANDED here (its rows render under the card), so the
+    # fold below is the first one this pair ever writes.
+    page: peer
+    goto: "?demo=1"
+    assert:
+      - column_contains: { column: working, id: thr_demo_work }
+      - nested_row: { id: thr_demo_work_c0, shown: true }
+
+  - id: folding-in-window-a-paints-window-b
+    title: A fold written in one window folds the family in the other
+    # The fold label doubles as the control ("4 child threads"), scoped to the
+    # card so a neighbouring family's toggle is never the target.
+    click_aria: { label: "4 child threads", within: thr_demo_work }
+    assert:
+      - dot_order:
+          family: thr_demo_work
+          dots: [thr_demo_work_c0, thr_demo_work_c1, thr_demo_work_c2, thr_demo_work_c3]
+
+  - id: window-b-shows-the-fold-without-reloading
+    title: The second window folds live, with no navigation of its own
+    page: peer
+    assert:
+      - nested_row: { id: thr_demo_work_c0, shown: false }
+      - dot_order:
+          family: thr_demo_work
+          dots: [thr_demo_work_c0, thr_demo_work_c1, thr_demo_work_c2, thr_demo_work_c3]
+
+  - id: marking-done-in-window-a-reaches-window-b
+    title: A done mark in one window lands in the other window's Done lane
+    drag_to_column: { from: thr_rpc_auth, column: done }
+    assert:
+      - rpc_called_method: done_set
+
+  - id: window-b-shows-both-done-marks
+    title: The second window keeps its own done mark AND the new one
+    # The bug this pins: two boards writing the Done row erased each other, so
+    # whichever window wrote last owned the whole set.
+    page: peer
+    assert:
+      - column_contains: { column: done, id: thr_rpc_auth }
+
+  - id: a-rank-move-in-window-a-reorders-window-b
+    title: A drop in one window's Unread lane reorders the other window's lane
+    page: main
+    drag: { from: thr_review_pr, to: thr_uat_queue, edge: before }
+    assert:
+      - column: unread
+        ordered: [thr_review_pr, thr_uat_queue, thr_demo_unread]
+
+  - id: window-b-shows-the-new-order
+    title: The second window reads the same stored order
+    page: peer
+    assert:
+      - column: unread
+        ordered: [thr_review_pr, thr_uat_queue, thr_demo_unread]

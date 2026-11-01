@@ -1492,3 +1492,104 @@ export function SIM_ATTENTION_THREADS(count: number, now: number = SIM_NOW): Sim
   }
   return out;
 }
+
+/**
+ * The idle filter's busy grandchild (v1.7.0's "Hiding idle children no longer
+ * buries a busy grandchild"): `?idlebusy=1` only.
+ *
+ * Three tiers under one idle root. The middle child is idle, its grandchild is
+ * running, and a second child is idle AND leaf: hiding idle children must keep
+ * the busy grandchild's row (and its host row above it) while the idle leaf
+ * disappears, so the one gesture shows both outcomes side by side. The demo
+ * board carried no idle child with a busy grandchild, which is why this bullet
+ * shipped without a gif.
+ */
+export const SIM_IDLE_BUSY_THREADS: readonly SimThread[] = [
+  thread({
+    id: "thr_idle_busy_root",
+    displayTitle: "Quarterly housekeeping pass",
+    updatedAt: SIM_NOW - 40 * MINUTE,
+    lastReadAt: SIM_NOW - 40 * MINUTE,
+  }),
+  thread({
+    id: "thr_idle_busy_child",
+    displayTitle: "Sweep the stale worktrees",
+    parentThreadId: "thr_idle_busy_root",
+    updatedAt: SIM_NOW - 42 * MINUTE,
+    lastReadAt: SIM_NOW - 42 * MINUTE,
+  }),
+  thread({
+    id: "thr_idle_busy_grandchild",
+    displayTitle: "Re-run the migration the sweep unblocked",
+    parentThreadId: "thr_idle_busy_child",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 60 * 1000,
+    lastReadAt: SIM_NOW - 60 * 1000,
+  }),
+  thread({
+    id: "thr_idle_busy_leaf",
+    displayTitle: "Fold the leftover release notes",
+    parentThreadId: "thr_idle_busy_root",
+    updatedAt: SIM_NOW - 45 * MINUTE,
+    lastReadAt: SIM_NOW - 45 * MINUTE,
+  }),
+];
+
+/**
+ * The child that belongs to a different feature group than its parent
+ * (v1.7.3's "A child in a different group than its parent shows twice"):
+ * `?dualgroups=1` only.
+ *
+ * A pinned parent, so both homes render in the Pinned lane where one shot
+ * shows them: the child keeps its nested row under the parent AND gains its
+ * own card inside its own group's frame. The demo board had no pinned parent
+ * whose child sat elsewhere.
+ */
+export const SIM_DUAL_GROUPS = [
+  { id: "grp_dual_parent", name: "Release train", memberIds: ["thr_dual_parent"] },
+  { id: "grp_dual_child", name: "Follow-ups", memberIds: ["thr_dual_child"] },
+] as const;
+
+export const SIM_DUAL_GROUP_THREADS: readonly SimThread[] = [
+  thread({
+    id: "thr_dual_parent",
+    displayTitle: "Ship the 2.0 release train",
+    isPinned: true,
+    pinnedAt: SIM_NOW - 30 * MINUTE,
+    updatedAt: SIM_NOW - 30 * MINUTE,
+    lastReadAt: SIM_NOW - 30 * MINUTE,
+  }),
+  thread({
+    id: "thr_dual_child",
+    displayTitle: "Chase the 2.0 follow-up reports",
+    parentThreadId: "thr_dual_parent",
+    updatedAt: SIM_NOW - 25 * MINUTE,
+    lastReadAt: SIM_NOW - 25 * MINUTE,
+  }),
+];
+
+/**
+ * The feature group whose only member is pinned (v1.7.3's "A pinned member
+ * keeps its group's dashed frame"): `?pinnedgroup=1` only. One pinned, running
+ * thread in a group of one, so the Pinned lane paints the dashed frame around
+ * a single card — the shape the demo board could not stage.
+ */
+export const SIM_PINNED_GROUP = {
+  groupId: "grp_pinned_only",
+  name: "Pinned alone",
+  memberIds: ["thr_pinned_solo"],
+} as const;
+
+export const SIM_PINNED_GROUP_THREADS: readonly SimThread[] = [
+  thread({
+    id: "thr_pinned_solo",
+    displayTitle: "Keep the pinned frame on a group of one",
+    isPinned: true,
+    pinnedAt: SIM_NOW - 20 * MINUTE,
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 3 * MINUTE,
+    lastReadAt: SIM_NOW - 3 * MINUTE,
+  }),
+];

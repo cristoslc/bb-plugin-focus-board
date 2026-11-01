@@ -9,6 +9,12 @@
  */
 export const baseParams = "demo=1&collapsed=thr_demo_needs";
 
+/** Two windows side by side, each 900px of a real board, hstacked at 1500. */
+const TWO_WINDOWS = { width: 900, height: 760, deviceScaleFactor: 2 };
+const TWO_WINDOWS_GIF = 1500;
+
+const NEEDS = "thr_demo_needs";
+
 export const demos = [
   // Changed — the card's ticket chips land in a fixed shape: issues on the
   // first row's left, PRs on its right, tags in the bottom-right corner.
@@ -35,4 +41,23 @@ export const demos = [
     },
   },
 
+  // Fixed — a family's fold and idle filter follow you to every window. Both
+  // halves of the family-state row are one host write: window A unfolds the
+  // family and hides its idle children, and window B ends the gif showing the
+  // same rows, filtered the same way, without a gesture or a reload.
+  {
+    id: "two-windows-follow-the-family-state",
+    windows: 2,
+    viewport: TWO_WINDOWS,
+    gifWidth: TWO_WINDOWS_GIF,
+    ready: `[data-thread-card="${NEEDS}"]`,
+    steps: async (g) => {
+      await g.shot("both-windows", { hold: 1.0 });
+      await g.clickButtonIn(`[data-thread-card="${NEEDS}"]`, "3 child threads", { settle: 1.1 });
+      await g.domClick(`[data-thread-card="${NEEDS}"] [data-idle-children-toggle]`, { settle: 1.2 });
+      await g.shot("a-unfolded-and-filtered", { hold: 1.2 });
+      g.use("peer");
+      await g.shot("b-follows", { hold: 2.2 });
+    },
+  },
 ];

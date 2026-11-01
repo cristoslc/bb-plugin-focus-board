@@ -2269,6 +2269,23 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
         );
       }
     }
+    if (rule.column_contains !== undefined) {
+      // Membership without the order: the assertion a cross-window suite needs
+      // (a card written in one window landed in the other window's lane), where
+      // the lane's other members and their order are beside the point.
+      const want = rule.column_contains; // { column, id }
+      const state = await page.evaluate(pageOrder, want.column);
+      if (state === null) {
+        expect(`column ${want.column} exists`, false, "column not found on the board");
+        continue;
+      }
+      const present = state.ids.includes(want.id);
+      expect(
+        `${want.id} in ${want.column}`,
+        present === (want.shown ?? true),
+        `lane holds [${state.ids.join(",")}]`,
+      );
+    }
     if (rule.column_ordered !== undefined) {
       const got = await page.evaluate(
         (id) =>
@@ -3691,8 +3708,26 @@ async function runSuite(file, { port, browser, cell = null }) {
   // disable the throttle a perf suite depends on.
   const load = parseLoadConditions(suite.defaults ?? {});
   const { child, base } = await startHarness(port);
-  const page = await browser.newPage();
-  await page.setViewport(viewport);
+  // A two-window suite (`defaults: { windows: 2 }`) opens a SECOND live
+  // document over the same mocked host, which is the only way a cross-window
+  // write can be asserted: the harness's host row is a real shared store
+  // (`?sharedHost=<token>`, scripts/screenshot/host-log.ts), so a fold, a done
+  // mark, a rank move or a group write in one document reaches the other
+  // through the browser's own `storage` event.
+  const suiteName = (file.split("/").pop() ?? "suite").replace(/\.yaml$/u, "");
+  const windows = suite.defaults?.windows ?? 1;
+  if (windows !== 1 && windows !== 2) {
+    throw new Error(`${suiteName}: defaults.windows must be 1 or 2, got ${windows}`);
+  }
+  const hostToken =
+    windows === 2 ? `${suiteName}-${Math.random().toString(36).slice(2, 10)}` : null;
+  const mainPage = await browser.newPage();
+  const peerPage = windows === 2 ? await browser.newPage() : null;
+  // The page each step drives. `page` is reassigned per step (a step may name
+  // the second window), so every gesture helper below follows it.
+  let page = mainPage;
+  await mainPage.setViewport(viewport);
+  if (peerPage !== null) await peerPage.setViewport(viewport);
   const report = {
     suite: suite.suite,
     file,
@@ -3706,23 +3741,34 @@ async function runSuite(file, { port, browser, cell = null }) {
   // never leak to the next suite (each runSuite makes its own page). The
   // instrument is installed before any document script, alongside the drag
   // shim, so `gesture_budget` can arm it from the first goto on.
-  await page.evaluateOnNewDocument(installSettleInstrument);
-  const cdp = await page.createCDPSession();
-  if (load.cpuThrottle > 0) {
-    await cdp.send("Emulation.setCPUThrottlingRate", { rate: load.cpuThrottle });
-  }
-  if (load.network !== "none") {
-    await cdp.send("Network.enable");
-    await cdp.send("Network.emulateNetworkConditions", NETWORK_PRESETS[load.network]);
+  await mainPage.evaluateOnNewDocument(installSettleInstrument);
+  if (peerPage !== null) await peerPage.evaluateOnNewDocument(installSettleInstrument);
+  const cdp = await mainPage.createCDPSession();
+  const peerCdp = peerPage === null ? null : await peerPage.createCDPSession();
+  for (const session of [cdp, peerCdp]) {
+    if (session === null) continue;
+    if (load.cpuThrottle > 0) {
+      await session.send("Emulation.setCPUThrottlingRate", { rate: load.cpuThrottle });
+    }
+    if (load.network !== "none") {
+      await session.send("Network.enable");
+      await session.send("Network.emulateNetworkConditions", NETWORK_PRESETS[load.network]);
+    }
   }
 
   try {
     let navigated = false;
     const gotoBoard = async (url, themeOverride = undefined) => {
+      // The shared-host token rides EVERY navigation of the pair, including a
+      // `reload` step: both documents must keep talking over one log.
+      const target =
+        hostToken === null
+          ? url
+          : `${url}${url.includes("?") ? "&" : "?"}sharedHost=${encodeURIComponent(hostToken)}`;
       // Before any document script runs, so the app and the helpers share
       // one page.
       await page.evaluateOnNewDocument(installProtectedDrag);
-      await page.goto(`${base}${withLoadQuery(url, load)}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+      await page.goto(`${base}${withLoadQuery(target, load)}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
       // The board surface: a grouped board (sections) or an empty state.
       // The parent-thread view legitimately renders no sections when a
       // filter/search drops every family, so the wait must accept both.
@@ -3750,6 +3796,18 @@ async function runSuite(file, { port, browser, cell = null }) {
       navigated = true;
     };
     for (const step of suite.steps) {
+      // Which window this step drives. A two-window suite alternates by name:
+      // the write happens in one step, the other window's reaction in the next.
+      if (step.page === "peer") {
+        if (peerPage === null) {
+          throw new Error(
+            `${suiteName}/${step.id}: step names the peer window but the suite declares no defaults.windows: 2`,
+          );
+        }
+        page = peerPage;
+      } else {
+        page = mainPage;
+      }
       if (step.goto !== undefined) {
         // The theme rides BOTH switches (production parity): the `dark` class
         // drives the token set, and `prefers-color-scheme` emulation drives
@@ -4223,6 +4281,7 @@ async function runSuite(file, { port, browser, cell = null }) {
     if (suite.fuzz !== undefined) {
       // A fuzz-only suite declares no steps; the engine still needs the
       // mounted board, so drive one navigation from the suite defaults.
+      page = mainPage;
       if (!navigated) {
         await gotoBoard(`?groupBy=${groupBy}&laneDirection=vertical`);
       }
@@ -4230,6 +4289,7 @@ async function runSuite(file, { port, browser, cell = null }) {
     }
   } finally {
     await page.close();
+    if (peerPage !== null && peerPage !== page) await peerPage.close();
     child.kill();
   }
   return report;

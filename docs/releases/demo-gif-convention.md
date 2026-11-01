@@ -13,7 +13,9 @@ A release page must show what it changed. Every demonstrable feature in a releas
 
 | Piece | Path |
 |---|---|
-| Recorder (shared gestures, cursor, ffmpeg assembly) | `scripts/screenshot/release-demos/runner.mjs` |
+| Recorder (shared gestures, cursor, two-window capture, ffmpeg assembly) | `scripts/screenshot/release-demos/runner.mjs` |
+| The orientation lead-in every demo inherits | `scripts/screenshot/lib/lead-in.mjs` |
+| The shared host row two windows write to (`?sharedHost=<token>`) | `scripts/screenshot/host-state.ts`, `scripts/screenshot/host-log.ts` |
 | CLI entry | `scripts/screenshot/capture-release-demos.mjs` |
 | One storyboard file per release | `scripts/screenshot/release-demos/<version>.mjs` |
 | Harness fixtures and query params | `scripts/screenshot/data.ts`, `scripts/screenshot/main.tsx`, `scripts/screenshot/mock-sdk.tsx` |
@@ -59,15 +61,75 @@ Capture each release's gifs against **that release's tree**, in a throwaway work
 
 ## Budget
 
-- Target 15 seconds, hard ceiling 45. A single-gesture demo (one menu pick, one toggle) may run 8 to 15 seconds, because padding a one-click story to 15 seconds is dead air the reader scrolls past; anything past 45 is a video nobody finishes.
+- Short is fine when the feature is quick. A gif's length is the story's length: a single-gesture demo (one menu pick, one toggle) may run under 15 seconds because padding a one-click story to a floor is dead air the reader scrolls past. Past 45 seconds is a video nobody finishes, so split the story by feature rather than let one clip run long.
+- **Every gif opens on the board at rest.** The recorder holds the staged board for about a second before the storyboard's first gesture (1s by default, `scripts/screenshot/lib/lead-in.mjs`), so a viewer arrives with the before-picture the gesture is about to change. It is applied once, for every demo, rather than hand-written into each storyboard; a demo that needs a longer beat sets `leadIn: 1.6`, and `leadIn: 0` opts out. Nothing else may remove it, and `tests/release-demo-storyboards.test.ts` fails when a storyboard's value is not a deliberate number of seconds.
 - A few MB per gif. Keep the source viewport honest and let the palette-optimized ffmpeg pass (`palettegen` 192 colors at 12 fps) keep the file small; a demo that needs more is doing too much in one gif, so split it by feature.
 - Real app, real gestures, synthetic cursor: the harness renders the shipped components, the driver moves a real pointer (or dispatches the drag events the app itself listens for), and an overlay arrow makes the pointer visible because headless screenshots carry no OS cursor.
 - One feature per gif. If a bullet's story needs two scenes, it is two bullets or two gifs.
 
+## Two windows in one gif
+
+Some features are a write in one window landing in another. The recorder stages those for real: a demo with `windows: 2` opens a second live page against the same mocked host, every `shot` captures both, and the assembled gif stacks them side by side behind a hairline divider. `g.use("peer")` moves the pointer and the gestures to the second window without breaking the frame lockstep.
+
+The shared host is the part that makes the two pages honest: `?sharedHost=<token>` turns on a per-pair write log over localStorage (`scripts/screenshot/host-log.ts`), and both windows apply each received write through one function (`scripts/screenshot/host-state.ts`), firing the realtime signal the real server publishes, so the second window refetches exactly as bb's own second window does. `scripts/uat/run.mjs` drives the same pairing with `defaults.windows: 2` and `page: peer` steps, gated by `tests/manual/uat-two-windows.yaml`.
+
+Two fixed viewports of the same size are required: the halves are hstacked, so a height difference fails the assembly rather than cropping silently.
+
+## Seed fixtures beat forked boards
+
+When a bullet's shape does not exist on the demo board, add an opt-in fixture, never a second board: a query param in `scripts/screenshot/data.ts` behind `scripts/screenshot/mock-sdk.tsx`, the way `?idlebusy=1`, `?dualgroups=1` and `?pinnedgroup=1` seed the three shapes the demo board could not stage. The fixtures outlive their releases; the next bullet that needs the same shape starts from them.
+
+## Coverage
+
+The backfill's per-bullet decisions live here so the record survives the pull request that made them. `Demonstrated` means the release page carries a gif for that bullet today.
+
+| Release | Bullet | Status | Unlocked by |
+|---|---|---|---|
+| 1.6.0 | Two boards stop erasing each other's Done and sweep-keep marks | demonstrated | two-window driver (`windows: 2`) over the shared host row |
+| 1.6.0 | A family folded in one window stays folded when the other folds one | demonstrated | two-window driver |
+| 1.6.0 | A group created in one window survives a simultaneous change in another | demonstrated | two-window driver |
+| 1.6.0 | A rank drag in one window survives another window's drop | demonstrated | two-window driver |
+| 1.6.0 | A wallpaper chosen in one window survives the second window's dim change | demonstrated | two-window driver (the wallpaper document is already cross-window) |
+| 1.7.0 | Hiding idle children no longer buries a busy grandchild | demonstrated | `?idlebusy=1` |
+| 1.7.1 | A family's fold and idle filter follow you to every window and machine | demonstrated | two-window driver |
+| 1.7.3 | A child in a different group than its parent shows twice | demonstrated | `?dualgroups=1` |
+| 1.7.3 | A pinned member keeps its group's dashed frame | demonstrated | `?pinnedgroup=1` |
+| 1.7.3 | Two groups can no longer share a name | demonstrated | `?dualgroups=1` plus the picker's rename editor |
+
+Still skipped, with the reason:
+
+| Release | Bullet | Why no gif |
+|---|---|---|
+| 1.5.0 | Chip statuses refetch at the operator's moments | Timing of a network snapshot; the pixels are identical either way. |
+| 1.5.0 | The default board view is named Focus | A label rename; a gif would be a still of the View chip. |
+| 1.5.0 | The right-click menu uses the room the window gives it | Window-height geometry; no gesture shows it in one shot. |
+| 1.5.0 | The right-click menu reads as a menu, not a card | Static surface styling; other menus' gifs already show it. |
+| 1.5.0 | A family card's nested rows keep the card's right gutter | A 12px indent mirror; nothing moves. |
+| 1.5.0 | A hung chip-status call can no longer freeze the snapshot | Transport timing; the board never changes on screen. |
+| 1.5.0 | Ticket-chip dots stay truthful about the cache's age | Needs an aged cache row and an hour of wall clock. |
+| 1.5.0 | Hovering a card in the open pane's lane no longer ghosts a lane | Proves an absence; nothing appears on screen to film. |
+| 1.5.0 | Board alert banners paint a full-strength surface | A contrast fix; a still shows it and motion adds nothing. |
+| 1.6.0 | Hovering a card no longer re-renders the whole board | Render count; identical pixels frame to frame. |
+| 1.6.0 | The Parent view's row rail is narrower | A width change; a still. |
+| 1.6.0 | Chip dots age honestly instead of spawning gh | Internal process; no on-screen state. |
+| 1.6.0 | A board crowded with attention cards no longer crawls | Frame-rate fix; the gif would look identical. |
+| 1.7.0 | A wallpaper's letterbox bars take the image's edge color | Needs a CORS-permitted photo whose edge colour differs from the theme; a still. |
+| 1.7.0 | A burst of realtime signals refetches the board once | Refetch pacing; no on-screen state. |
+| 1.7.0 | A state change repaints only the changed cards | Render count; identical pixels. |
+| 1.7.0 | Opening a thread on a big board repaints one card | Render count; identical pixels. |
+| 1.7.0 | The wallpaper crop tunes over the image itself | Needs a seeded photo wallpaper; the harness has bundled gradients only. |
+| 1.7.0 | The wallpaper frames the window, not the board's viewport | Same photo seed. |
+| 1.7.0 | A phone's pane header sizes the done checkbox to its thumb | A target-size measurement; a still. |
+| 1.7.0 | The New Thread dialog's header controls no longer touch | 16px of spacing; a still. |
+| 1.7.0 | `bb focus-board done list` survives a deleted index entry | A CLI, not the board; the harness renders no terminal. |
+| 1.7.1 | The pane's queued-message Send button works on a phone | The mock chat cannot queue a message, so the row never renders. |
+| 1.7.2 | A phone stops repainting the whole board when the pane opens | Repaint count; identical pixels. |
+| 1.7.3 | The group picker lists groups alphabetically | Shown inside the group-picker gif rather than a second asset. |
+
 ## Checklist for a release producer
 
 1. Read the section being published and list every bullet with `demonstrable` or `skip: <reason>`.
-2. Write or extend `release-demos/<version>.mjs`; add harness fixtures where the board cannot stage a state.
-3. Capture against the tag's build; check each gif's first and last frame show the before and after.
+2. Write or extend `release-demos/<version>.mjs`; add harness fixtures where the board cannot stage a state, and `windows: 2` where the bullet is a cross-window write.
+3. Capture against the tag's build; check each gif's first and last frame show the before and after, and that the first second is the board at rest.
 4. Upload the assets, embed them under their bullets, keep the body otherwise verbatim, and verify with `gh release view <tag>`.
-5. Name every skip, with its reason, in the pull request that ships the release.
+5. Name every skip, with its reason, in the pull request that ships the release and in the Coverage table above.
