@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { LEAD_IN_RANGE, LEAD_IN_SECONDS, leadInFor } from "../scripts/screenshot/lib/lead-in.mjs";
 
 const STORYBOARDS = path.join(process.cwd(), "scripts/screenshot/release-demos");
 
@@ -59,5 +60,44 @@ describe("release demo storyboards", () => {
     );
     expect(spoke).toContain("docs/releases/demo-gif-convention.md");
     expect(spoke).toContain("demo gif per demonstrable feature");
+  });
+});
+
+/**
+ * The orientation beat. Every gif opens on the staged board at rest so a
+ * first-time viewer can place what the gesture changes; the timing lives in
+ * one module (the recorder applies it to every demo), so these tests pin that
+ * a storyboard cannot lose it by omission and a typo cannot zero it out.
+ */
+describe("demo gif lead-in", () => {
+  it("every demo inherits the shared beat, inside the operator's window", () => {
+    expect(leadInFor({})).toBe(LEAD_IN_SECONDS);
+    expect(LEAD_IN_SECONDS).toBeGreaterThanOrEqual(LEAD_IN_RANGE.min);
+    expect(LEAD_IN_SECONDS).toBeLessThanOrEqual(LEAD_IN_RANGE.max);
+  });
+
+  it("a storyboard may lengthen or opt out of the beat", () => {
+    expect(leadInFor({ leadIn: 1.6 })).toBe(1.6);
+    // A demo whose point IS the first gesture can drop the beat to nothing.
+    expect(leadInFor({ leadIn: 0 })).toBe(0);
+  });
+
+  it("a typo cannot silently remove the beat", () => {
+    for (const bad of [-1, Number.NaN, Number.POSITIVE_INFINITY, "1", null]) {
+      expect(() => leadInFor({ leadIn: bad }), `leadIn ${String(bad)}`).toThrow(/leadIn/u);
+    }
+  });
+
+  it("every storyboard's own lead-in stays a deliberate number of seconds", async () => {
+    const files = (await readdir(STORYBOARDS)).filter((file) =>
+      /^v\d+\.\d+\.\d+\.mjs$/u.test(file),
+    );
+    for (const file of files) {
+      const module = await import(path.join(STORYBOARDS, file));
+      for (const demo of module.demos) {
+        // Absent is the contract (inherit); a present value must parse.
+        expect(() => leadInFor(demo), `${file}/${demo.id} leadIn`).not.toThrow();
+      }
+    }
   });
 });

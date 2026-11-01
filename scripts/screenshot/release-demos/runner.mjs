@@ -22,6 +22,7 @@ import { promisify } from "node:util";
 import { setTimeout as sleep } from "node:timers/promises";
 import path from "node:path";
 import puppeteer from "puppeteer-core";
+import { LEAD_IN_SECONDS, leadInFor } from "../lib/lead-in.mjs";
 
 const execFileP = promisify(execFile);
 
@@ -52,26 +53,62 @@ const CURSOR_SVG = `
  * One demo's recording session. Every frame is a PNG with its own duration;
  * `shot` captures a frame, and the motion helpers capture while they move so
  * the pointer reads as moving in the finished gif.
+ *
+ * A demo may record TWO windows. `page` is the window the storyboard drives by
+ * default and `peer` is a second live page against the same mocked host, so a
+ * write in one lands in the other exactly as bb's second window sees it. Every
+ * `shot` captures both and the assembly stacks them side by side; `use("peer")`
+ * re-points the gestures at the second window without breaking the lockstep
+ * (`scripts/uat/run.mjs` drives the same pairing for its suites).
  */
 export class Stage {
-  constructor(page, framesDir, { theme } = {}) {
-    this.page = page;
+  constructor(page, framesDir, { theme, peer } = {}) {
+    this.windows = { main: page, ...(peer === undefined ? {} : { peer }) };
+    this.active = "main";
     this.framesDir = framesDir;
     this.frames = [];
     this.clip = null;
     this.theme = theme;
-    this.cursorAt = { x: 0, y: 0 };
+    this.cursors = Object.fromEntries(
+      Object.keys(this.windows).map((key) => [key, { x: 0, y: 0 }]),
+    );
+  }
+
+  /** The window every gesture currently drives. */
+  get page() {
+    return this.windows[this.active];
+  }
+
+  /** How many windows this demo records (1 unless a peer page was opened). */
+  get windowCount() {
+    return Object.keys(this.windows).length;
+  }
+
+  /** The active window's cursor position, for `glide`'s start point. */
+  get cursorAt() {
+    return this.cursors[this.active];
+  }
+
+  /** Re-point the gestures at a named window; the frames keep capturing both. */
+  use(name) {
+    if (this.windows[name] === undefined) {
+      throw new Error(`this demo has no ${name} window (have ${Object.keys(this.windows).join(", ")})`);
+    }
+    this.active = name;
+    return this;
   }
 
   async prepare() {
-    if (this.theme !== undefined) {
-      await this.page.evaluate((theme) => {
-        document.documentElement.classList.toggle("dark", theme === "dark");
-      }, this.theme);
+    for (const page of Object.values(this.windows)) {
+      if (this.theme !== undefined) {
+        await page.evaluate((theme) => {
+          document.documentElement.classList.toggle("dark", theme === "dark");
+        }, this.theme);
+      }
+      await page.evaluate((svg) => {
+        document.body.insertAdjacentHTML("beforeend", svg);
+      }, CURSOR_SVG);
     }
-    await this.page.evaluate((svg) => {
-      document.body.insertAdjacentHTML("beforeend", svg);
-    }, CURSOR_SVG);
   }
 
   /** Sample an animation: N frames, each `hold` seconds apart in the gif. */
@@ -88,12 +125,30 @@ export class Stage {
 
   /** Frame duration defaults: a settle hold, or a motion step. */
   async shot(name, { hold = 0.45 } = {}) {
-    const file = path.join(this.framesDir, `${name}.png`);
-    const options = { path: file, timeout: 30_000 };
-    if (this.clip !== null) options.clip = this.clip;
-    await this.page.screenshot(options);
-    this.frames.push({ name, hold });
-    return file;
+    const keys = Object.keys(this.windows);
+    const files = [];
+    for (const key of keys) {
+      const file = path.join(
+        this.framesDir,
+        keys.length === 1 ? `${name}.png` : `${name}__${key}.png`,
+      );
+      const options = { path: file, timeout: 30_000 };
+      if (this.clip !== null) options.clip = this.clip;
+      await this.windows[key].screenshot(options);
+      files.push(file);
+    }
+    this.frames.push({ name, hold, files });
+    return keys.length === 1 ? files[0] : files;
+  }
+
+  /**
+   * The opening beat: the staged board at rest, before the storyboard's first
+   * gesture. `recordDemo` calls this once per demo with the demo's own lead-in,
+   * so no storyboard has to remember it (see `lib/lead-in.mjs`).
+   */
+  async leadIn(seconds = LEAD_IN_SECONDS) {
+    if (seconds <= 0) return;
+    await this.shot("lead-in", { hold: seconds });
   }
 
   /** Pin the capture to one element (plus padding) for the whole demo. */
@@ -145,10 +200,10 @@ export class Stage {
     }, selector);
   }
 
-  async centerOf(selector) {
+  async centerOf(selector, { yRatio = 0.5, xRatio = 0.5 } = {}) {
     const r = await this.rectOf(selector);
     if (r === null) throw new Error(`no element for ${selector}`);
-    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    return { x: r.x + r.width * xRatio, y: r.y + r.height * yRatio };
   }
 
   /** The innermost element whose trimmed text is exactly `text`. */
@@ -181,7 +236,7 @@ export class Stage {
   }
 
   async syncCursor(x, y) {
-    this.cursorAt = { x, y };
+    this.cursors[this.active] = { x, y };
     await this.page.evaluate(({ x, y }) => {
       const cursor = document.getElementById("demo-cursor");
       if (cursor) cursor.style.transform = `translate(${x}px, ${y}px)`;
@@ -265,6 +320,31 @@ export class Stage {
     return point;
   }
 
+  /** Click the first button inside `scope` whose visible text starts with
+   *  `prefix`. The fold labels repeat across families ("3 child threads"), so
+   *  a gesture that must hit one family's control scopes it to that card. */
+  async clickButtonIn(scope, prefix, { settle = 1, frames = 4 } = {}) {
+    const point = await this.page.evaluate(
+      ({ scope, prefix }) => {
+        const root = document.querySelector(scope);
+        if (root === null) return null;
+        const button = [...root.querySelectorAll("button")].find((el) =>
+          (el.textContent ?? "").trim().startsWith(prefix),
+        );
+        if (!button) return null;
+        button.scrollIntoView({ block: "center", behavior: "instant" });
+        const r = button.getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      },
+      { scope, prefix },
+    );
+    if (point === null) throw new Error(`no button starting with "${prefix}" inside ${scope}`);
+    await this.glide(point, { frames });
+    await this.page.mouse.click(point.x, point.y);
+    await this.shot(`bi${String(this.frames.length).padStart(3, "0")}`, { hold: settle });
+    return point;
+  }
+
   /** Click the first control whose aria-label starts with `prefix`. */
   async clickAria(prefix, { settle = 0.9, frames = 4, root = "button" } = {}) {
     const point = await this.page.evaluate(
@@ -324,7 +404,9 @@ export class Stage {
   }
 
   async setViewport(width, height) {
-    await this.page.setViewport({ width, height, deviceScaleFactor: 2 });
+    for (const page of Object.values(this.windows)) {
+      await page.setViewport({ width, height, deviceScaleFactor: 2 });
+    }
   }
 
   async pressKey(key, { settle = 0.9 } = {}) {
@@ -503,28 +585,50 @@ export class Stage {
     await this.dragPath(fromSelector, [{ selector: toSelector, yRatio, frames }], { hold, settle });
   }
 
-  /** Assemble this demo's frames into one palette-optimized gif. */
+  /** Assemble this demo's frames into one palette-optimized gif. Two-window
+   *  demos are stacked side by side (window A left, window B right) behind a
+   *  hairline divider, so one gif shows what both windows see. */
   async assemble(gifPath, { width = GIF_WIDTH } = {}) {
     if (this.frames.length === 0) throw new Error("no frames captured");
-    const list = path.join(this.framesDir, "frames.txt");
-    const entries = this.frames.map(
-      ({ name, hold }) => `file '${name}.png'\nduration ${hold}`,
-    );
-    // The concat demuxer ignores the last entry's duration, so the final
-    // frame is listed twice; the repeat carries the settle hold.
-    entries.push(`file '${this.frames.at(-1).name}.png'\nduration 0.1`);
-    await writeFile(list, `${entries.join("\n")}\n`);
-    const vf = [
-      `fps=${FPS}`,
-      `scale=${width}:-2:flags=lanczos`,
-      "split[a][b]",
-      "[a]palettegen=max_colors=192[p]",
-      "[b][p]paletteuse=dither=bayer:bayer_scale=4",
-    ].join(",");
-    await execFileP("ffmpeg", [
-      "-y", "-f", "concat", "-safe", "0", "-i", list,
-      "-vf", vf, "-loop", "0", gifPath,
-    ]);
+    const keys = Object.keys(this.windows);
+    const lists = [];
+    for (let index = 0; index < keys.length; index += 1) {
+      const list = path.join(
+        this.framesDir,
+        keys.length === 1 ? "frames.txt" : `frames-${keys[index]}.txt`,
+      );
+      const entries = this.frames.map(
+        (frame) => `file '${path.basename(frame.files[index])}'\nduration ${frame.hold}`,
+      );
+      // The concat demuxer ignores the last entry's duration, so the final
+      // frame is listed twice; the repeat carries the settle hold.
+      entries.push(`file '${path.basename(this.frames.at(-1).files[index])}'\nduration 0.1`);
+      await writeFile(list, `${entries.join("\n")}\n`);
+      lists.push(list);
+    }
+    const args = ["-y"];
+    for (const list of lists) args.push("-f", "concat", "-safe", "0", "-i", list);
+    if (keys.length === 1) {
+      const vf = [
+        `fps=${FPS}`,
+        `scale=${width}:-2:flags=lanczos`,
+        "split[a][b]",
+        "[a]palettegen=max_colors=192[p]",
+        "[b][p]paletteuse=dither=bayer:bayer_scale=4",
+      ].join(",");
+      args.push("-vf", vf, "-loop", "0", gifPath);
+    } else {
+      const half = Math.floor(width / 2);
+      const filter = [
+        `[0:v]fps=${FPS},scale=${half}:-2:flags=lanczos,setsar=1[a]`,
+        `[1:v]fps=${FPS},scale=${half}:-2:flags=lanczos,setsar=1[b]`,
+        `[a][b]hstack=inputs=2,drawbox=x=${half - 1}:y=0:w=2:h=ih:color=0x52525b:t=fill,split[c][d]`,
+        "[c]palettegen=max_colors=192[p]",
+        "[d][p]paletteuse=dither=bayer:bayer_scale=4[out]",
+      ].join(";");
+      args.push("-filter_complex", filter, "-map", "[out]", "-loop", "0", gifPath);
+    }
+    await execFileP("ffmpeg", args);
     return gifPath;
   }
 }
@@ -535,19 +639,38 @@ export class Stage {
  */
 export async function recordDemo(browser, demo, { release, baseParams = "", outDir, framesRoot }) {
   const viewport = demo.viewport ?? DESKTOP;
+  const windowCount = demo.windows ?? 1;
+  if (windowCount !== 1 && windowCount !== 2) {
+    throw new Error(`${demo.id}: windows must be 1 or 2, got ${JSON.stringify(demo.windows)}`);
+  }
   const page = await browser.newPage();
+  const peer = windowCount === 2 ? await browser.newPage() : undefined;
   const framesDir = await mkdtemp(path.join(framesRoot, `${release}-${demo.id}-`));
-  const stage = new Stage(page, framesDir, { theme: demo.theme });
-  const query = `${baseParams}${demo.params ?? ""}`.replace(/^&/, "");
+  const stage = new Stage(page, framesDir, { theme: demo.theme, peer });
+  // Two windows are two documents over ONE mocked host: the `sharedHost`
+  // token turns on the harness's cross-page host row (a fresh token per demo,
+  // so no earlier capture's write can replay into this one), so a fold, a done
+  // mark, a rank move or a group write in one window reaches the other the way
+  // bb's does.
+  const hostToken = `${release}-${demo.id}-${Math.random().toString(36).slice(2, 8)}`;
+  const query = `${baseParams}${demo.params ?? ""}${
+    peer === undefined ? "" : `&sharedHost=${encodeURIComponent(hostToken)}`
+  }`.replace(/^&/, "");
   try {
     await page.setViewport(viewport);
+    if (peer !== undefined) await peer.setViewport(viewport);
     // Start every demo from a clean profile: the app persists filters,
     // folds, and toggles in localStorage, and a previous demo's write would
-    // otherwise hide cards this one needs.
+    // otherwise hide cards this one needs. Cleared before either page loads,
+    // so the shared host log starts empty for the pair too.
     await page.goto(BASE, { waitUntil: "domcontentloaded", timeout: 60_000 });
     await page.evaluate(() => window.localStorage.clear());
     await page.goto(`${BASE}?${query}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
     await page.waitForSelector(demo.ready ?? "[data-thread-card]", { timeout: 60_000 });
+    if (peer !== undefined) {
+      await peer.goto(`${BASE}?${query}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+      await peer.waitForSelector(demo.ready ?? "[data-thread-card]", { timeout: 60_000 });
+    }
     await stage.sleep(demo.settle ?? 700);
     if (typeof demo.clip === "string") {
       // The clip is pinned once, so the target has to be on camera before the
@@ -559,8 +682,17 @@ export async function recordDemo(browser, demo, { release, baseParams = "", outD
       stage.clip = demo.clipBox;
     }
     await stage.prepare();
-    await stage.park(viewport.width - 120, viewport.height - 100);
+    const rest = { x: viewport.width - 120, y: viewport.height - 100 };
+    await stage.park(rest.x, rest.y);
+    if (peer !== undefined) {
+      // Both pointers start parked, so neither window's cursor sits at 0,0.
+      stage.use("peer").park(rest.x, rest.y);
+      stage.use("main");
+    }
     if (typeof demo.setup === "function") await demo.setup(stage, page);
+    // The orientation beat (see lib/lead-in.mjs): the staged board at rest
+    // before the first gesture, once, for every demo in this release.
+    await stage.leadIn(leadInFor(demo));
     await demo.steps(stage, page);
     const gifPath = path.join(outDir, `${release}-${demo.id}.gif`);
     await stage.assemble(gifPath, { width: demo.gifWidth ?? GIF_WIDTH });
@@ -568,6 +700,7 @@ export async function recordDemo(browser, demo, { release, baseParams = "", outD
     return { gifPath, frames: stage.frames.length, seconds };
   } finally {
     await page.close().catch(() => {});
+    if (peer !== undefined) await peer.close().catch(() => {});
   }
 }
 
