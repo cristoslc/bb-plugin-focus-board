@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-10-28T05:34:38.190Z by `npm run uat`._
+_Generated 2026-11-01T09:06:45.520Z by `npm run uat`._
 
 ## chip-placement
 
-Source: `tests/manual/uat-chip-placement.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-chip-placement.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

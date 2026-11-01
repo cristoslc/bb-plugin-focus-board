@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-10-31T15:22:20.788Z by `npm run uat`._
+_Generated 2026-11-01T09:06:45.520Z by `npm run uat`._
 
 ## dot-drag-family
 
-Source: `tests/manual/uat-dot-drag.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-dot-drag.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

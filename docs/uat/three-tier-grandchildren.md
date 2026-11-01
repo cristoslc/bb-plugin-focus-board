@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-10-17T04:45:28.699Z by `npm run uat`._
+_Generated 2026-11-01T09:06:45.520Z by `npm run uat`._
 
 ## three-tier-grandchildren
 
-Source: `tests/manual/uat-grandchildren.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-grandchildren.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

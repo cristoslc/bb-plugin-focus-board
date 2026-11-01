@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-10-27T12:49:12.131Z by `npm run uat`._
+_Generated 2026-11-01T09:06:45.520Z by `npm run uat`._
 
 ## pane-phone-queue
 
-Source: `tests/manual/uat-pane-phone-queue.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-pane-phone-queue.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
