@@ -14,6 +14,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+#### Family cards
+
+- **A folded family's dots now sit in a capsule for each child that has sub-threads.** The faint pill binds a child's dot to its own dots, so the family boundary reads without hovering.
+  - Hovering the pill names the child and how many sub-threads hang under it; the dots inside still preview and open their own threads.
+  - The folded feature-group card draws the same capsule around a child's grandchildren.
+
 ### Fixed
 
 #### Board layout

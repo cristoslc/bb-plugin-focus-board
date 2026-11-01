@@ -28,6 +28,7 @@ import { useAttentionPulseGate } from "./attention-pulse-gate";
 import {
   DotGlyph,
   DOT_CLASS,
+  DOT_CLUSTER_CAPSULE_CLASS,
   DOT_GENERATION_CLASS,
   DOT_GENERATION_NAMES,
   type DotGeneration,
@@ -4436,16 +4437,46 @@ export function Board({
                                 className="flex flex-nowrap items-center gap-1"
                               >
                                 {boxDot(member, 0)}
-                                {descendantRowsOf(member.id).map((child) => (
-                                  <span
-                                    key={child.id}
-                                    data-collapsed-group-dot-cluster={child.id}
-                                    className="flex flex-nowrap items-center gap-0.5"
-                                  >
-                                    {boxDot(child, 1)}
-                                    {descendantRowsOf(child.id).map((sub) => boxDot(sub, 2))}
-                                  </span>
-                                ))}
+                                {descendantRowsOf(member.id).map((child) => {
+                                  // The parent strip's capsule one tier down
+                                  // and one step out (issue #282): a child that
+                                  // leads grandchildren is wrapped with them,
+                                  // so the boundary between one child's
+                                  // grandchildren and the next child's is
+                                  // visible while the box stays folded. A
+                                  // childless child keeps its bare dot, and
+                                  // the member tier is never wrapped — its own
+                                  // chip names the leading count.
+                                  const grandchildren = descendantRowsOf(child.id);
+                                  const clustered = grandchildren.length > 0;
+                                  return (
+                                    <span
+                                      key={child.id}
+                                      data-collapsed-group-dot-cluster={child.id}
+                                      data-collapsed-group-dot-capsule={
+                                        clustered ? child.id : undefined
+                                      }
+                                      // This card's dots name themselves with
+                                      // native tooltips, so the cluster does
+                                      // too rather than growing a second
+                                      // tooltip system: hovering the pill's
+                                      // padding names the child and how many
+                                      // threads sit under it.
+                                      title={
+                                        clustered
+                                          ? `${child.displayTitle} · ${grandchildren.length} nested ${grandchildren.length === 1 ? "thread" : "threads"}`
+                                          : undefined
+                                      }
+                                      className={cn(
+                                        "flex flex-nowrap items-center gap-0.5",
+                                        clustered && DOT_CLUSTER_CAPSULE_CLASS,
+                                      )}
+                                    >
+                                      {boxDot(child, 1)}
+                                      {grandchildren.map((sub) => boxDot(sub, 2))}
+                                    </span>
+                                  );
+                                })}
                               </span>
                             ))}
                             {nestedCount === 0 ? null : (

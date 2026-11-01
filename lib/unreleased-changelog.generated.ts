@@ -8,6 +8,14 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "Touch input"
   },
   {
+    "text": "**A folded family's dots now sit in a capsule for each child that has sub-threads.** The faint pill binds a child's dot to its own dots, so the family boundary reads without hovering.",
+    "children": [
+      "Hovering the pill names the child and how many sub-threads hang under it; the dots inside still preview and open their own threads.",
+      "The folded feature-group card draws the same capsule around a child's grandchildren."
+    ],
+    "group": "Family cards"
+  },
+  {
     "text": "**A running thread reads Working even while its pane is open.** The attention freeze pinned a card's lane along with its slot, so a card you were reading kept the lane it was opened in: a thread that started running sat under Unread for as long as the pane stayed open, and one that started needing you stayed quiet. A card's live state now wins; the freeze still holds its place inside the lane its state picks.",
     "children": [],
     "group": "Board layout"

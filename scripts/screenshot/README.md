@@ -139,6 +139,20 @@ host app involved.
   `expanded-folded.png`, `expanded-revealed.png`, `evidence.json`). Run the
   vite harness first; honors `CHROME_PATH`, `HARNESS_URL`, and `OUT_DIR`.
 
+- `repro-dot-cluster-capsules.mjs` — the capture and gate for issue #282's
+  cluster capsules (option D of the 2026-10-16 musing): loads the orchestrator
+  fixture folded (`?orchestrator=1&collapsed=thr_demo_orch`), clips the strip
+  in both themes, hovers a capsule's own padding to capture the cluster
+  preview, and loads the folded group card (`?descgroup=1&collapsedGroups=grp_desc`)
+  for the same capsule one surface over. Exits non-zero unless the strip
+  paints capsules, each resolves a real tint and radius in both themes, no
+  capsule claims more dots than the strip paints, and the folded card draws
+  one too. Artifacts land in
+  `docs/screenshots/repro-dot-cluster-capsules/` (`strip-dark.png`,
+  `strip-light.png`, `strip-cluster-hover-dark.png`, `group-folded-dark.png`,
+  `evidence.json`). Run the vite harness first; honors `CHROME_PATH`,
+  `HARNESS_URL`, and `OUT_DIR`.
+
 - `repro-collapsed-group-descendants.mjs` — one-shot headless verification for
   the folded feature-group card's descendant dots (issue #321): loads
   `?descgroup=1&collapsedGroups=grp_desc` (data.ts `SIM_DESC_GROUP_THREADS`, a

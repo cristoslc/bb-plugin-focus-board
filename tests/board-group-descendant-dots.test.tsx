@@ -400,6 +400,59 @@ describe("the dots are buttons inside a div: open a thread, never expand it", ()
   });
 });
 
+describe("the folded card draws the same cluster capsule as the parent strip (issue #282)", () => {
+  // Option D of the 2026-10-16 musing, one surface over: on the parent card a
+  // child leads its sub-dots; here a child leads its grandchildren. The
+  // capsule wraps that pair, so the boundary between one child's grandchildren
+  // and the next child is visible while the box is folded. The member tier
+  // keeps its own chip and the "N nested" tail, so the counts are untouched.
+  function capsule(childId: string): HTMLElement {
+    const el = document.querySelector(`[data-collapsed-group-dot-capsule="${childId}"]`);
+    if (!(el instanceof HTMLElement)) throw new Error(`missing capsule for ${childId}`);
+    return el;
+  }
+
+  it("wraps a child's dot with its grandchildren; a childless child stays bare", () => {
+    renderFoldedBox();
+    const parentCapsule = capsule("thr_a1");
+    expect(parentCapsule.className).toContain("rounded-full");
+    expect(parentCapsule.className).toContain("bg-muted/50");
+    const ids = Array.from(
+      parentCapsule.querySelectorAll("[data-collapsed-group-dot-button]"),
+    ).map((button) => button.getAttribute("data-collapsed-group-dot-button"));
+    expect(ids).toEqual(["thr_a1", "thr_a1x"]);
+    expect(document.querySelector('[data-collapsed-group-dot-capsule="thr_a2"]')).toBeNull();
+    // The member tier is not wrapped: its chip names its own count.
+    expect(document.querySelector('[data-collapsed-group-dot-capsule="thr_a"]')).toBeNull();
+  });
+
+  it("names the child and its nested count on hover, using the card's own tooltip", () => {
+    renderFoldedBox();
+    expect(capsule("thr_a1").getAttribute("title")).toBe("Child one · 1 nested thread");
+  });
+
+  it("leaves the member chip and the nested tail exactly as they were", () => {
+    renderFoldedBox();
+    expect(
+      collapsedCard().querySelector("[data-collapsed-group-count]")?.textContent,
+    ).toBe("2 threads");
+    expect(
+      collapsedCard().querySelector("[data-collapsed-group-nested-count]")?.textContent,
+    ).toBe("3 nested");
+    expect(dotIds()).toEqual(["thr_a", "thr_a1", "thr_a1x", "thr_a2", "thr_b"]);
+  });
+
+  it("a dot inside a capsule still opens its own thread", () => {
+    const onOpenThread = vi.fn();
+    const onGroupCollapsedChange = vi.fn();
+    renderFoldedBox({ onOpenThread, onGroupCollapsedChange });
+    fireEvent.click(dotButton("thr_a1x"));
+    expect(onOpenThread).toHaveBeenCalledWith("thr_a1x");
+    expect(onGroupCollapsedChange).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-collapsed-group="grp_auth"]')).not.toBeNull();
+  });
+});
+
 describe("a member with no descendants reads exactly as before", () => {
   it("paints one leading dot per member and keeps the chip's member count", () => {
     renderFoldedBox({ nested: new Map() });

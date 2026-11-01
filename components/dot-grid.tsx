@@ -40,6 +40,26 @@ export const DOT_GENERATION_NAMES = ["member", "child", "grandchild"] as const;
 
 export type DotGeneration = 0 | 1 | 2;
 
+/**
+ * The cluster capsule (issue #282, option D of the 2026-10-16 musing): the
+ * faint surface that binds a leading dot to the dots under it, so a family's
+ * boundary is visible without hover. Both dot surfaces paint it from this one
+ * string — the parent card's collapsed strip and the folded group card's grid
+ * — so a capsule means the same thing wherever it appears.
+ *
+ * It carries the surface only (tint, radius, padding): each surface keeps its
+ * own inside gap, one tier tighter on the folded card. A cluster of one dot
+ * gets no capsule at all, because there is no boundary to draw; the strip's
+ * lone dots stay exactly what they were. The tint is deliberately near the
+ * floor (`bg-muted/50`) and the capsule's only hover state is a slightly
+ * deeper tint: hovering a capsule lights the strip's own wash, which would
+ * otherwise wash the boundary away exactly while the pointer is reading it,
+ * and deepening the tint keeps the cluster legible under that wash without
+ * making the pill read as a button (the dots inside stay the controls).
+ */
+export const DOT_CLUSTER_CAPSULE_CLASS =
+  "rounded-full bg-muted/50 px-1 py-px transition-colors hover:bg-muted/70";
+
 export interface DotGlyphProps {
   state: ThreadState;
   /** A size class from `DOT_GENERATION_CLASS`. */
