@@ -1,0 +1,60 @@
+{
+  "dark": {
+    "dots": 86,
+    "capsules": 6,
+    "dotsInCapsules": 83,
+    "capsuleIds": [
+      "thr_demo_orch_L3",
+      "thr_demo_orch_L4",
+      "thr_demo_orch_L5",
+      "thr_demo_orch_L6",
+      "thr_demo_orch_L7",
+      "thr_demo_orch_L8"
+    ],
+    "capsuleSize": {
+      "width": 144,
+      "height": 18
+    },
+    "capsuleStyle": {
+      "backgroundColor": "oklab(0.2934 0 0 / 0.5)",
+      "borderRadius": "3.35544e+07px"
+    },
+    "stripHeight": 188
+  },
+  "clusterHover": "L4 lieutenantIdle · 5m ago6 sub-threads",
+  "light": {
+    "dots": 86,
+    "capsules": 6,
+    "dotsInCapsules": 83,
+    "capsuleIds": [
+      "thr_demo_orch_L3",
+      "thr_demo_orch_L4",
+      "thr_demo_orch_L5",
+      "thr_demo_orch_L6",
+      "thr_demo_orch_L7",
+      "thr_demo_orch_L8"
+    ],
+    "capsuleSize": {
+      "width": 144,
+      "height": 18
+    },
+    "capsuleStyle": {
+      "backgroundColor": "oklab(0.8626 0 0 / 0.5)",
+      "borderRadius": "3.35544e+07px"
+    },
+    "stripHeight": 188
+  },
+  "foldedGroup": {
+    "capsules": 2,
+    "capsuleTitles": [
+      "Child one: runs the build · 2 nested threads",
+      "Child two: unread report · 1 nested thread"
+    ],
+    "capsuleStyle": {
+      "backgroundColor": "oklab(0.2934 0 0 / 0.5)",
+      "borderRadius": "3.35544e+07px"
+    },
+    "nestedTail": "5 nested",
+    "memberChip": "2 threads"
+  }
+}
