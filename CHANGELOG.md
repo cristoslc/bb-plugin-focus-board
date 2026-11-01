@@ -7,14 +7,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [1.7.4] - 2026-11-01
+
+### Added
+
 #### Touch input
 
-- **Holding a card on touch picks it up to drag it.** A 180ms hold arms the card, the slide that follows shows the same insertion line and nest ring a cursor drag does, and the release writes the same reorder. A finger that moves before the hold finishes just pans the board, and a pickup released where it was lifted puts the card back and writes nothing.
+- **Holding a card on touch picks it up to drag it.** A 180ms hold lifts a floating snapshot of the card that rides the thumb one to one over a dimmed slot, and the release writes the same reorder a cursor drag does.
+  - The card's menu moved behind a new ⋯ button: tap opens the thread, hold drags it.
+  - A finger that moves before the hold finishes just pans the board, and a pickup released where it was lifted puts the card back and writes nothing.
   - The folded feature-group card drags its whole unit the same way, and a nested child row reorders inside its own family.
 
 ### Changed
 
-#### Family cards
+#### Groups and family boxes
 
 - **A folded family's dots now sit in a capsule for each child that has sub-threads.** The faint pill binds a child's dot to its own dots, so the family boundary reads without hovering.
   - Hovering the pill names the child and how many sub-threads hang under it; the dots inside still preview and open their own threads.
@@ -27,8 +37,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **A running thread reads Working even while its pane is open.** The attention freeze pinned a card's lane along with its slot, so a card you were reading kept the lane it was opened in: a thread that started running sat under Unread for as long as the pane stayed open, and one that started needing you stayed quiet. A card's live state now wins; the freeze still holds its place inside the lane its state picks.
 
 #### Touch input
-
-- **A picked-up card now rides the finger, and a long press no longer opens a menu over the drag.** The hold lifts a floating snapshot of the card that follows the thumb one to one, over a dimmed slot that holds its place. The menu moved behind the card's new ⋯ button: tap opens the thread, hold drags it.
 
 - **A phone's board pans under a finger instead of lifting a card.** Cards, child rows, strip dots, and group boxes are no longer native drag sources, so the platform's touch-drag recognizer cannot take the pan. Card text stays unselectable on touch, where a long press used to start a selection instead of a scroll.
 - **A slide that starts on the toolbar or a lane's title strip pans the board, never the page behind it.** Neither sits inside a scroller, so the gesture used to leave the board entirely. Every slide across the board's surface now lands on the board or on the lane the finger started in.
