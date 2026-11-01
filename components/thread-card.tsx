@@ -2,7 +2,7 @@ import { isValidElement, memo, type DragEvent, type ReactNode, useState } from "
 import { createPortal } from "react-dom";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { attentionPulseRef } from "./attention-pulse-gate";
-import { DotGlyph, DOT_GENERATION_CLASS, DOT_CLASS } from "./dot-grid";
+import { DotGlyph, DOT_CLUSTER_CAPSULE_CLASS, DOT_GENERATION_CLASS, DOT_CLASS } from "./dot-grid";
 import { pulsePeriodMs } from "@/lib/pulse-rate";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
@@ -1377,11 +1377,29 @@ export function ThreadCardImpl({
     previewDot === null || previewChild === undefined
       ? 0
       : visibleSubsFor(previewDot.id).length;
+  /** Anchor the one preview bubble on an element: a dot anchors it on its own
+   * box, a cluster capsule (issue #282) on the cluster's, so both read above
+   * the thing the pointer is in. */
+  const previewAt = (element: Element, id: string): void => {
+    const rect = element.getBoundingClientRect();
+    setPreviewDot({
+      id,
+      centerX: rect.left + rect.width / 2,
+      topY: rect.top,
+    });
+  };
   /** One dot button in the collapsed strip: a direct child (full-size
    * glyph) or a sub-child (one size step down, family-ordered after its
    * parent's dot). The control contract is identical at both depths:
-   * hover or focus previews, click opens that thread's pane. */
-  const stripDot = (member: PluginSidebarThread, isSub: boolean) => {
+   * hover or focus previews, click opens that thread's pane. `clusterLead`
+   * is the child whose capsule holds this dot (itself, for a child dot):
+   * the pointer leaving a dot but staying inside that capsule hands the
+   * bubble back to the cluster's own preview instead of closing it. */
+  const stripDot = (
+    member: PluginSidebarThread,
+    isSub: boolean,
+    clusterLead: PluginSidebarThread = member,
+  ) => {
     const state = threadState(member, errorAckIds);
     // The rate pulse (issue #279): a working member's dot breathes at a period
     // derived from its token burn. A member the sampler cannot measure yet
@@ -1425,12 +1443,7 @@ export function ThreadCardImpl({
           event.dataTransfer.setData(DRAG_ID_KEY, member.id);
           event.dataTransfer.setData(DOT_DRAG_TYPE, "");
           event.dataTransfer.effectAllowed = "move";
-          const rect = event.currentTarget.getBoundingClientRect();
-          setPreviewDot({
-            id: member.id,
-            centerX: rect.left + rect.width / 2,
-            topY: rect.top,
-          });
+          previewAt(event.currentTarget, member.id);
           setDotDragMemberId(member.id);
           childDotDrag.onDragStart(member.id, event);
         }}
@@ -1453,25 +1466,29 @@ export function ThreadCardImpl({
           // A hover behind an active dot drag cannot steal the pinned
           // tooltip: it stays naming the dragged member (goal 4).
           if (dotDragMemberId !== null) return;
-          const rect = event.currentTarget.getBoundingClientRect();
-          setPreviewDot({
-            id: member.id,
-            centerX: rect.left + rect.width / 2,
-            topY: rect.top,
-          });
+          previewAt(event.currentTarget, member.id);
         }}
         onFocus={(event) => {
-          const rect = event.currentTarget.getBoundingClientRect();
-          setPreviewDot({
-            id: member.id,
-            centerX: rect.left + rect.width / 2,
-            topY: rect.top,
-          });
+          previewAt(event.currentTarget, member.id);
         }}
-        onMouseLeave={() => {
+        onMouseLeave={(event) => {
           // The pinned dragged-dot tooltip ignores leave — it dies at
           // dragend, not on a hover boundary the drag's pointer crossed.
-          if (dotDragMemberId === null) setPreviewDot(null);
+          if (dotDragMemberId !== null) return;
+          // Moving off a dot but still inside its capsule: the next stop is
+          // another dot or the capsule's own padding, so the bubble is handed
+          // to the cluster (the child plus its sub-thread count) rather than
+          // blinking shut between two dots of one family.
+          const capsule = event.currentTarget.closest("[data-child-dot-group]");
+          if (
+            capsule instanceof HTMLElement &&
+            event.relatedTarget instanceof Node &&
+            capsule.contains(event.relatedTarget)
+          ) {
+            previewAt(capsule, clusterLead.id);
+            return;
+          }
+          setPreviewDot(null);
         }}
         onBlur={() => setPreviewDot(null)}
         onClick={(event) => {
@@ -1987,11 +2004,14 @@ export function ThreadCardImpl({
             // count above (rows plus sub-rows) member for member; the old
             // "19 child threads over nine dots" reading cannot recur. The
             // idle-children filter (issue #172) hides an idle member's dot
-            // with its row, at either depth. Hovering a dot previews that
-            // thread (its title plus what the SDK exposes: state label,
-            // last-activity age, indicator label; the SDK does not expose a
-            // thread's messages; a parent dot's preview names its
-            // sub-threads). Clicking a dot opens that thread's pane and
+            // with its row, at either depth. Each cluster that holds more
+            // than one dot wears a faint capsule (issue #282), so a family's
+            // boundary is visible without hover, and entering the capsule
+            // previews its child with the sub-thread count. Hovering a dot
+            // previews that thread (its title plus what the SDK exposes:
+            // state label, last-activity age, indicator label; the SDK does
+            // not expose a thread's messages; a parent dot's preview names
+            // its sub-threads). Clicking a dot opens that thread's pane and
             // leaves the rows folded. The strip's background keeps the
             // strip's expand role, and the section toggle above stays the
             // keyboard path.
@@ -2037,16 +2057,50 @@ export function ThreadCardImpl({
                   "ring-2 ring-amber-500/40 bg-accent/60",
               )}
             >
-              {visibleChildren.map((child) => (
-                <span
-                  key={child.id}
-                  data-child-dot-group={child.id}
-                  className="flex flex-nowrap items-center gap-1"
-                >
-                  {stripDot(child, false)}
-                  {visibleSubsFor(child.id).map((sub) => stripDot(sub, true))}
-                </span>
-              ))}
+              {visibleChildren.map((child) => {
+                // A child that leads sub-dots draws its capsule (issue #282):
+                // one faint pill per multi-dot cluster makes the family's
+                // boundary visible without hover, and the whole pill is the
+                // cluster's hover target, so entering the padding names the
+                // child and its sub-thread count. A lone dot gets no pill:
+                // there is no boundary to draw, and the strip stays quiet
+                // where a family has no grandchildren.
+                const subs = visibleSubsFor(child.id);
+                const clustered = subs.length > 0;
+                return (
+                  <span
+                    key={child.id}
+                    data-child-dot-group={child.id}
+                    data-child-dot-capsule={clustered ? child.id : undefined}
+                    onMouseEnter={(event) => {
+                      // The pinned drag bubble outranks any hover, the dot's
+                      // own rule: a drag never loses its tooltip.
+                      if (dotDragMemberId !== null) return;
+                      previewAt(event.currentTarget, child.id);
+                    }}
+                    onMouseLeave={(event) => {
+                      if (dotDragMemberId !== null) return;
+                      // Moving capsule to capsule hands the bubble over
+                      // through the next enter; leaving into the strip's own
+                      // background closes it, as leaving a dot always has.
+                      if (
+                        event.relatedTarget instanceof Node &&
+                        event.currentTarget.contains(event.relatedTarget)
+                      ) {
+                        return;
+                      }
+                      setPreviewDot(null);
+                    }}
+                    className={cn(
+                      "flex flex-nowrap items-center gap-1",
+                      clustered && DOT_CLUSTER_CAPSULE_CLASS,
+                    )}
+                  >
+                    {stripDot(child, false)}
+                    {subs.map((sub) => stripDot(sub, true, child))}
+                  </span>
+                );
+              })}
               {stripNestHover !== undefined && stripNestHover !== null ? (
                 // The collapsed CARD, painted as the member it is about to
                 // become: one trailing ghost dot, the glyph size of a child

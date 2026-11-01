@@ -464,10 +464,12 @@ describe("the strip flattens the family, a child's sub-dots following its dot", 
     expect(dotIds()).toEqual(["thr_c1", "thr_c1_s2", "thr_c2"]);
   });
 
-  it("the dots agree with the count: the operator's 19-over-9 reading cannot recur", () => {
-    // Nine children, the first five carrying two sub-threads each: both the
-    // toggle's count and the strip's dots read 19 (the AssetCALC report's
-    // numbers, now consistent by construction).
+  /** The AssetCALC shape (nine children, the first five carrying two
+   *  sub-threads each) as a family the strip's agreement cases share. */
+  function orchestratorFamily(): {
+    children: PluginSidebarThread[];
+    subsByParent: Map<string, PluginSidebarThread[]>;
+  } {
     const children = Array.from({ length: 9 }, (_, index) =>
       thread({
         id: `thr_c${index + 1}`,
@@ -490,6 +492,14 @@ describe("the strip flattens the family, a child's sub-dots following its dot", 
         ),
       );
     }
+    return { children, subsByParent };
+  }
+
+  it("the dots agree with the count: the operator's 19-over-9 reading cannot recur", () => {
+    // Nine children, the first five carrying two sub-threads each: both the
+    // toggle's count and the strip's dots read 19 (the AssetCALC report's
+    // numbers, now consistent by construction).
+    const { children, subsByParent } = orchestratorFamily();
     const props = {
       thread: thread({ id: "thr_parent", displayTitle: "Parent", updatedAt: 6000 }),
       stateDot: null,
@@ -506,6 +516,128 @@ describe("the strip flattens the family, a child's sub-dots following its dot", 
     const label = document.querySelector("button[data-child-threads-toggle]");
     expect(label?.textContent).toContain("19 child threads");
     expect(dotIds()).toHaveLength(19);
+  });
+
+  // Issue #282: the family-ordered strip grouped each child's dot with its
+  // sub-dots structurally but drew no edge, so an orchestration card read as
+  // one flat field of dots. Option D of the 2026-10-16 musing: a faint capsule
+  // around each multi-dot cluster, and a cluster-level hover naming the child
+  // with its sub-thread count. A one-dot cluster draws nothing new.
+  function capsule(childId: string): HTMLElement {
+    const el = document.querySelector(`[data-child-dot-capsule="${childId}"]`);
+    if (!(el instanceof HTMLElement)) throw new Error(`missing capsule for ${childId}`);
+    return el;
+  }
+
+  it("draws a capsule around a child's dot and its sub-dots", () => {
+    renderGrandCard({ isCollapsed: true });
+    const parentCapsule = capsule("thr_c1");
+    expect(parentCapsule.className).toContain("rounded-full");
+    expect(parentCapsule.className).toContain("bg-muted/50");
+    // The capsule is the group span: both dots sit inside it, in family order.
+    const ids = Array.from(parentCapsule.querySelectorAll("button[data-child-dot]")).map(
+      (button) => button.getAttribute("data-child-dot"),
+    );
+    expect(ids).toEqual(["thr_c1", "thr_c1_s1", "thr_c1_s2"]);
+    // A childless child has no boundary to draw, so it gets no capsule.
+    expect(document.querySelector('[data-child-dot-capsule="thr_c2"]')).toBeNull();
+  });
+
+  it("hovering a cluster names its child and the child's sub-thread count", () => {
+    renderGrandCard({ isCollapsed: true });
+    fireEvent.mouseEnter(capsule("thr_c1"));
+    const bubble = document.querySelector("[data-child-dot-preview]");
+    if (!(bubble instanceof HTMLElement)) throw new Error("missing cluster preview");
+    expect(bubble.textContent).toContain("Child one");
+    expect(bubble.textContent).toContain("2 sub-threads");
+    // Leaving the capsule closes it, the way leaving a dot does.
+    fireEvent.mouseLeave(capsule("thr_c1"));
+    expect(document.querySelector("[data-child-dot-preview]")).toBeNull();
+  });
+
+  it("a dot still previews itself inside its capsule", () => {
+    renderGrandCard({ isCollapsed: true });
+    fireEvent.mouseEnter(capsule("thr_c1"));
+    expect(openPreview("thr_c1_s2").textContent).toContain("Sub two");
+  });
+
+  it("moving off a dot but staying in its capsule hands the bubble to the cluster", () => {
+    // Between two dots of one family the pointer crosses capsule padding; the
+    // bubble holds the cluster's own reading (the child and its sub-thread
+    // count) instead of blinking shut and reopening on the next dot.
+    renderGrandCard({ isCollapsed: true });
+    openPreview("thr_c1_s1");
+    fireEvent.mouseLeave(dot("thr_c1_s1"), { relatedTarget: capsule("thr_c1") });
+    const bubble = document.querySelector("[data-child-dot-preview]");
+    if (!(bubble instanceof HTMLElement)) throw new Error("missing cluster preview");
+    expect(bubble.textContent).toContain("Child one");
+    expect(bubble.textContent).toContain("2 sub-threads");
+  });
+
+  it("the capsule adds no control and no accessible name of its own", () => {
+    renderGrandCard({ isCollapsed: true });
+    const parentCapsule = capsule("thr_c1");
+    // The capsule is a grouping surface only: no role, no tab stop, no label
+    // to compete with the dots' own names.
+    expect(parentCapsule.getAttribute("role")).toBeNull();
+    expect(parentCapsule.getAttribute("tabindex")).toBeNull();
+    expect(parentCapsule.getAttribute("aria-label")).toBeNull();
+    expect(dot("thr_c1_s1").getAttribute("aria-label")).toBe("Open sub-thread: Sub one");
+    expect(dot("thr_c1").getAttribute("aria-label")).toBe("Open child thread: Child one");
+  });
+
+  it("the capsules hold the count-dots agreement, cluster by cluster", () => {
+    const { children, subsByParent } = orchestratorFamily();
+    const props = {
+      thread: thread({ id: "thr_parent", displayTitle: "Parent", updatedAt: 6000 }),
+      stateDot: null,
+      isActive: false,
+      isDone: false,
+      projectName: "One",
+      onOpen: vi.fn(),
+      onOpenThread: vi.fn(),
+      childThreads: children,
+      grandchildThreadsByParent: subsByParent,
+      isCollapsed: true,
+    } as unknown as CardProps;
+    render(<ThreadCard {...props} />);
+    // Five children lead sub-dots (three dots each), four are lone dots, and
+    // the strip as a whole still paints the toggle's 19.
+    const capsules = Array.from(document.querySelectorAll("[data-child-dot-capsule]"));
+    expect(capsules).toHaveLength(5);
+    for (const el of capsules) {
+      expect(el.querySelectorAll("button[data-child-dot]")).toHaveLength(3);
+    }
+    expect(dotIds()).toHaveLength(19);
+  });
+
+  it("a single-child family's strip is unchanged: one bare dot, no capsule", () => {
+    const only = thread({
+      id: "thr_only",
+      parentThreadId: "thr_parent",
+      displayTitle: "Only child",
+      updatedAt: 4000,
+    });
+    const props = {
+      thread: thread({ id: "thr_parent", displayTitle: "Parent", updatedAt: 5000 }),
+      stateDot: null,
+      isActive: false,
+      isDone: false,
+      projectName: "One",
+      onOpen: vi.fn(),
+      onOpenThread: vi.fn(),
+      childThreads: [only],
+      isCollapsed: true,
+    } as unknown as CardProps;
+    render(<ThreadCard {...props} />);
+    expect(dotIds()).toEqual(["thr_only"]);
+    expect(document.querySelector("[data-child-dot-capsule]")).toBeNull();
+    // The group span keeps exactly its pre-#282 classes.
+    const group = document.querySelector('[data-child-dot-group="thr_only"]');
+    if (!(group instanceof HTMLElement)) throw new Error("missing child dot group");
+    expect(group.className).toBe("flex flex-nowrap items-center gap-1");
+    // And the lone dot still previews its thread.
+    expect(openPreview("thr_only").textContent).toContain("Only child");
   });
 });
 
