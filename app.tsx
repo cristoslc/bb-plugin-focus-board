@@ -1221,10 +1221,13 @@ function BoardPage({ subPath }: { subPath: string }) {
   );
   // ---- The attention freeze (components/attention-freeze).
   // A card the operator attends to — the pointer on it, or the pane open on
-  // it — holds the placement captured at attention time: its lane, its slot,
-  // its family's lane claim, its row on the parent view. Live data churn
-  // re-sorts the board AROUND the attended placement; the placement rules
-  // run again the moment attention releases (mouse out / pane close).
+  // it — holds the placement captured at attention time: its slot, its
+  // family's card slot, its row on the parent view. Live data churn re-sorts
+  // the board AROUND the attended placement; the placement rules run again
+  // the moment attention releases (mouse out / pane close). One claim is
+  // live, not held: under the status grouping a lane IS the thread's state,
+  // so a state flip re-lanes the attended card at once
+  // (components/grouping.ts `frozenLaneHolds`, issue #338).
   // User-initiated placements (drops, rank moves, menu actions, pane
   // toggles) strip the pin first so the gesture's move lands; the recapture
   // effect below re-pins the settled result.

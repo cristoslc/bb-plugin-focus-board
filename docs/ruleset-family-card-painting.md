@@ -56,7 +56,7 @@ subgraph place["2. Place cards and families"]
   q1 -->|"Status, recency, none"| nst
   nst --> dcap["Two-level cap: every descendant flattens onto the family root as real rows, no chip"]
   nst --> flane["Under status or recency: the family card rides its busiest live member lane. A pinned parent holds the family in Pinned"]
-  flane --> ladder["Precedence ladder, stated once: user gesture, then attention freeze, then family lane, then group frames, then the member's own data"]
+  flane --> ladder["Precedence ladder, stated once: user gesture, then attention freeze, then family lane, then group frames, then the member's own data. Under the status grouping a state flip outranks the freeze's lane pin"]
   nst --> arch["Hidden members never render; the index is the single authoritative hide. A missing parent leaves a child root: standalone, no special marking"]
 end
 
@@ -69,7 +69,7 @@ end
 
 subgraph refresh["4. Refresh: what a live change repaints"]
   chg["A live change re-runs the whole pipeline; nothing patches in place"] --> attn{"Card or family under attention? Hover, open pane, or open menu"}
-  attn -->|Yes| pin["Freeze. Pin the focused card's lane and slot keyed column plus thread, its family root card, and the nested row slot. The board re-sorts around them"]
+  attn -->|Yes| pin["Freeze. Pin the focused card's slot keyed column plus thread, its family root card's slot, and the nested row slot. The board re-sorts around them; a state flip still re-lanes the card (status grouping: Needs you, Working, Unread are state, not order)"]
   attn -->|No| freely["Re-place freely"]
   pin -->|Releases on mouse-away, pane close, menu close. A user drag or menu action strips the pin first| freely
   freely --> diff["Diff the previous lanes against the new placement"]
@@ -113,8 +113,12 @@ cols -.->|"every state change re-runs the pipeline"| chg
    lane, everything else to the live board. Nothing overrides the split.
 6. **Live lane.** A live card takes the first claim it has: the attention
    freeze's lane, then the family lane (Attention/Last activity views: the
-   strongest member's lane), then its own data's natural lane. The retired
-   pane-slot and box overrides feed no claims.
+   strongest member's lane), then its own data's natural lane. One exception
+   outranks the freeze: under Attention, a lane names the thread's STATE
+   (Needs you, Working, Unread), so a card that flips state re-lanes at once
+   even while attended — the freeze keeps its slot and its idle bucket, never
+   the state lane it was read in. The retired pane-slot and box overrides
+   feed no claims.
 7. **Lane visibility.** A lane shows only while it holds a card, with the two
    standing exceptions: the Working lane in Attention and the None view's
    single column.
@@ -155,14 +159,19 @@ cols -.->|"every state change re-runs the pipeline"| chg
 15. **Rebuild.** Any live data change re-runs the whole pipeline; nothing
     patches in place.
 16. **Freeze.** While a card has attention, the board pins its rendered
-    placement: the card's lane and slot (keyed column plus thread, so a Done
-    projection twin keeps its own slot), its family root's card, and the
+    placement: the card's slot (keyed column plus thread, so a Done
+    projection twin keeps its own slot), its family root's card slot, and the
     attended row's row slot (the row also stays nested). The Done and Pinned
-    space splits still win.
+    space splits still win. The lane itself is pinned only where the lane is
+    order rather than state: every grouping but Attention, and under
+    Attention the idle buckets. A state flip (Needs you, Working, Unread)
+    re-lanes the attended card at once — a running thread parked in Unread
+    is the board lying about the one signal it exists to carry.
 17. **Freeze lifetime.** A freeze holds in the view it was taken in, releases
     when attention ends, is stripped before a user's own placement write
-    lands, re-resolves after every rebuild, and prunes when its card leaves
-    the board. Deferral note: the view-crossing halves (pane capture across
+    lands, re-resolves after every rebuild (the recapture pass reads the
+    live lane, which the pin no longer overrides), and prunes when its card
+    leaves the board. Deferral note: the view-crossing halves (pane capture across
     view switches) land with the freeze-store unification,
     [docs/tech-debt/2026-10-13-derived-ruleset-deferred.md](tech-debt/2026-10-13-derived-ruleset-deferred.md).
 18. **Motion.** A card animates only when it sat in exactly one lane before

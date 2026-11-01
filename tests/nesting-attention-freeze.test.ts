@@ -66,7 +66,10 @@ describe("attention freeze through board assembly", () => {
     expect(placementOf(pinned, "s1")).toEqual(captured);
   });
 
-  it("attention wins over a family lane override while the family is attended", () => {
+  it("a state flip re-lanes an attended family — the capture never outranks live state", () => {
+    // The operator's report (2026-10-31, thr_cyyyqxsvix): a card attended by
+    // an open pane kept its captured lane through a live state flip, so a
+    // working thread read Unread for as long as the pane stayed open.
     const quiet = [fixture("p", { updatedAt: 5000 }), fixture("c", { parentThreadId: "p", updatedAt: 4000 })];
     const base = assembleBoard(quiet, "status", context, new Map(), new Set<string>(), NOW);
     const quietColumnId = placementOf(base, "p")!.columnId;
@@ -82,7 +85,8 @@ describe("attention freeze through board assembly", () => {
     const liveColumnId = placementOf(live, "p")!.columnId;
     expect(liveColumnId).not.toBe(quietColumnId);
 
-    // Attending to the family's parent card pins the family's quiet lane.
+    // Attending to the family's parent card captured the quiet lane, and the
+    // family's live lane has since moved: the card follows its state.
     const plan: AttentionFreezePlan = {
       columns: new Map([["p", { id: quietColumnId, label: quietColumnId }]]),
       slots: new Map(),
@@ -92,7 +96,26 @@ describe("attention freeze through board assembly", () => {
     const pinned = assembleBoard(attended, "status", context, new Map(), new Set<string>(), NOW, {
       attentionFreeze: plan,
     });
-    expect(placementOf(pinned, "p")!.columnId).toBe(quietColumnId);
+    expect(placementOf(pinned, "p")!.columnId).toBe(liveColumnId);
+  });
+
+  it("an idle-bucket aging flip keeps an attended card's captured lane", () => {
+    // Time churn is not a state flip: a card that ages out of its idle
+    // bucket while the operator attends it holds the bucket it was read in.
+    const threads = [fixture("s1", { updatedAt: NOW - 3 * 60 * 60 * 1000 })];
+    const base = assembleBoard(threads, "status", context, new Map(), new Set<string>(), NOW);
+    expect(placementOf(base, "s1")!.columnId).toBe("idle-today");
+
+    const plan: AttentionFreezePlan = {
+      columns: new Map([["s1", { id: "idle-yesterday", label: "Idle · Yesterday" }]]),
+      slots: new Map(),
+      stayNested: new Set(),
+      rowSlots: new Map(),
+    };
+    const pinned = assembleBoard(threads, "status", context, new Map(), new Set<string>(), NOW, {
+      attentionFreeze: plan,
+    });
+    expect(placementOf(pinned, "s1")!.columnId).toBe("idle-yesterday");
   });
 
   it("an attended nested child stays nested and keeps its row slot", () => {

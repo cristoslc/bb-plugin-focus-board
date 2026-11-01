@@ -16,6 +16,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+#### Board layout
+
+- **A running thread reads Working even while its pane is open.** The attention freeze pinned a card's lane along with its slot, so a card you were reading kept the lane it was opened in: a thread that started running sat under Unread for as long as the pane stayed open, and one that started needing you stayed quiet. A card's live state now wins; the freeze still holds its place inside the lane its state picks.
+
 #### Touch input
 
 - **A picked-up card now rides the finger, and a long press no longer opens a menu over the drag.** The hold lifts a floating snapshot of the card that follows the thumb one to one, over a dimmed slot that holds its place. The menu moved behind the card's new ⋯ button: tap opens the thread, hold drags it.
