@@ -95,6 +95,12 @@ The backfill's per-bullet decisions live here so the record survives the pull re
 | 1.7.3 | A child in a different group than its parent shows twice | demonstrated | `?dualgroups=1` |
 | 1.7.3 | A pinned member keeps its group's dashed frame | demonstrated | `?pinnedgroup=1` |
 | 1.7.3 | Two groups can no longer share a name | demonstrated | `?dualgroups=1` plus the picker's rename editor |
+| 1.7.4 | Holding a card on touch picks it up to drag it | demonstrated | the storyboard's CDP touch finger (puppeteer touchscreen, the touch suites' 420ms hold) |
+| 1.7.4 | A folded family's dots now sit in a capsule for each child that has sub-threads | demonstrated | the demo board's Family D folded through `?collapsed=`, hovered for its name bubble |
+| 1.7.4 | A running thread reads Working even while its pane is open | demonstrated | a mid-clip state flip through the harness's `__uat.pushThreadUpdate` |
+| 1.7.4 | A phone's board pans under a finger instead of lifting a card | demonstrated | CDP touch moving before the hold arms, the pan the board-touch suite drives |
+| 1.7.4 | A slide that starts on the toolbar or a lane's title strip pans the board, never the page behind it | demonstrated | CDP touch from the toolbar origin |
+| 1.7.4 | A lane with nothing to its right stops trapping the slide | demonstrated | CDP touch from the board's far right; the slide hands outward |
 
 Still skipped, with the reason:
 

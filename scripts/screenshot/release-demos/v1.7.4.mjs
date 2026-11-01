@@ -96,7 +96,23 @@ export const demos = [
     steps: async (g) => {
       await g.scrollInto('[data-thread-card="thr_demo_gutter"]', { hold: 0.5 });
       await g.shot("folded", { hold: 1.6 });
-      await g.hover('[data-child-dot-capsule="thr_demo_gutter_c1"]', { settle: 1.6 });
+      await g.hover('[data-child-dot-capsule="thr_demo_gutter_c1"]', { settle: 0.4 });
+      const shown = await g.page.evaluate(
+        () => document.querySelector("[data-child-dot-preview]") !== null,
+      );
+      if (!shown) {
+        // The strip re-renders under a static pointer, and a headless hover
+        // can lose the enter to the replacement node. The strip's own second
+        // input path previews the same bubble ("hover or focus previews" is
+        // the dot button's contract), so fall back to focusing the child's
+        // dot with the pointer still resting on the pill.
+        await g.page.evaluate(() => {
+          const dot = document.querySelector('[data-child-dot="thr_demo_gutter_c1"]');
+          if (!(dot instanceof HTMLElement)) throw new Error("no child dot button");
+          dot.focus();
+        });
+        await g.sleep(300);
+      }
       await g.shot("hovered", { hold: 2.2 });
     },
   },
@@ -109,9 +125,14 @@ export const demos = [
     id: "attended-state-releanes",
     params: "&demo=1",
     viewport: { width: 1920, height: 1080, deviceScaleFactor: 2 },
-    ready: '[data-thread-card="thr_demo_gutter"]',
+    // thr_chips_pair starts idle in Idle·Recent, so the flip to active has a
+    // lane to leave; a card Working already lifted (by its own children)
+    // would sit still and show nothing.
+    ready: '[data-thread-card="thr_chips_pair"]',
     steps: async (g) => {
-      await g.domClick('[data-thread-card="thr_demo_gutter"]', { settle: 1.2 });
+      // The pane opens from the card's anchor (the runner's domClick clicks
+      // the matched element itself, and the card div alone carries no opener).
+      await g.domClick('[data-thread-card="thr_chips_pair"] a', { settle: 1.2 });
       await g.waitFor('aside[aria-label^="Thread:"]', 8_000);
       await g.sleep(600);
       await g.shot("pane-open", { hold: 1.4 });
@@ -120,7 +141,7 @@ export const demos = [
         if (!harness || typeof harness.pushThreadUpdate !== "function") {
           throw new Error("the harness exposes no __uat.pushThreadUpdate");
         }
-        harness.pushThreadUpdate("thr_demo_gutter", {
+        harness.pushThreadUpdate("thr_chips_pair", {
           status: "active",
           runtimeStatus: "active",
         });
@@ -132,7 +153,9 @@ export const demos = [
 
   // Fixed — a phone's board pans under a finger instead of lifting a card:
   // the finger moves before the hold finishes, so the gesture is a pan, the
-  // board scrolls under it, and no card ever lifts.
+  // board scrolls under it, and no card ever lifts. The phone board's lanes
+  // sit side by side, so the pan runs horizontally, the way the touch suite
+  // drives it (dx negative pans the board toward later lanes).
   {
     id: "phone-board-pan",
     params: "&groupBy=status",
@@ -144,7 +167,7 @@ export const demos = [
       await touch.touchStart(from.x, from.y);
       const steps = 10;
       for (let index = 1; index <= steps; index += 1) {
-        await touch.touchMove(from.x, from.y + 30 * index);
+        await touch.touchMove(from.x - 24 * index, from.y);
         await g.sleep(90);
         if (index === 5) await g.shot("mid-pan", { hold: 1.0 });
       }
@@ -168,7 +191,7 @@ export const demos = [
       await touch.touchStart(from.x, from.y);
       const steps = 10;
       for (let index = 1; index <= steps; index += 1) {
-        await touch.touchMove(from.x, from.y + 26 * index);
+        await touch.touchMove(from.x - 20 * index, from.y);
         await g.sleep(90);
         if (index === 5) await g.shot("mid-pan", { hold: 1.0 });
       }
@@ -179,21 +202,32 @@ export const demos = [
   },
 
   // Fixed — a lane with nothing to its right stops trapping the slide: the
-  // finger starts inside the last lane's card list and drags toward it, and
-  // the pan hands outward to the board instead of rubber-banding in a list
-  // with no range.
+  // board first scrolls to its far right so the last lane is on screen, the
+  // finger starts inside that lane's card list, and dragging back toward the
+  // start hands the pan outward to the board instead of rubber-banding in a
+  // list with no range.
   {
     id: "lane-trap-slide",
     params: "&groupBy=status",
     viewport: { width: 1024, height: 768, deviceScaleFactor: 2, hasTouch: true, isMobile: true },
     ready: '[data-thread-card="thr_ship_release"]',
+    // The rest position is the board's far right, so the at-rest frame has the
+    // last lane on screen; the setup runs before the lead-in holds it.
+    setup: async (g) => {
+      await g.page.evaluate(() => {
+        const board = document.querySelector("[data-columns-board]");
+        if (board === null) throw new Error("no board scroller");
+        board.scrollLeft = board.scrollWidth;
+      });
+      await g.sleep(500);
+    },
     steps: async (g) => {
       const from = await g.page.evaluate(pageLastLanePoint);
       const touch = g.page.touchscreen;
       await touch.touchStart(from.x, from.y);
       const steps = 10;
       for (let index = 1; index <= steps; index += 1) {
-        await touch.touchMove(from.x + 34 * index, from.y);
+        await touch.touchMove(from.x + 26 * index, from.y);
         await g.sleep(90);
         if (index === 5) await g.shot("mid-slide", { hold: 1.0 });
       }
