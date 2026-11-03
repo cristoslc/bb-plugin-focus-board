@@ -446,6 +446,145 @@ const pageHeaderAmber = ({ from, column }) => {
 };
 
 /**
+ * Edge autoscroll (issue #350), stage 1 of 2: start a real drag on the
+ * source card's anchor, then park the pointer INSIDE an edge zone — the
+ * columns board's own edge by default, or the lane named by `lane` (its card
+ * list's edge: a tall lane's stack in the column read, a row's card flow in
+ * the rows read) — with one dragover at that point, carrying the coordinates
+ * a cursor would report. The autoscroll loop keeps panning from that parked
+ * position for as long as the drag stays live, so the Node side sleeps
+ * `hold_ms` between this and `pageDragEdgePanFinish` while the surface pans
+ * under the drag.
+ *
+ * The dragover is dispatched at the element the parked point actually hits
+ * (`elementFromPoint` — the read a real browser performs for every dragover),
+ * so the lane resolution and the zones decide exactly as they do under an
+ * operator's cursor. The DataTransfer rides on `window` between the two
+ * stages — the same JS realm, so the drop's payload is the dragstart's write.
+ */
+const pageDragEdgePanStart = ({ from, edge, lane }) => {
+  const anchor =
+    document.querySelector(`li[data-rank-slot="${from}"] a[draggable]`) ??
+    document.querySelector(`a[data-thread-card="${from}"][draggable]`);
+  const board = document.querySelector("[data-columns-board]");
+  if (!anchor || !board) {
+    throw new Error(`drag_edge_pan: missing source ${from}=${anchor !== null} or board=${board !== null}`);
+  }
+  const surface = lane
+    ? document.querySelector(`section[data-column-id="${lane}"] [data-card-list]`)
+    : board;
+  if (surface === null) throw new Error(`drag_edge_pan: no surface (lane ${lane ?? "board"})`);
+  const dt = new DataTransfer();
+  anchor.dispatchEvent(
+    new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: dt }),
+  );
+  const box = surface.getBoundingClientRect();
+  const inset = 6; // deep inside the 48px zone: a cursor pushed against the edge
+  const midX = box.left + box.width / 2;
+  const midY = box.top + box.height / 2;
+  const point = {
+    right: { x: box.right - inset, y: midY },
+    left: { x: box.left + inset, y: midY },
+    bottom: { x: midX, y: box.bottom - inset },
+    top: { x: midX, y: box.top + inset },
+  }[edge];
+  if (point === undefined) throw new Error(`drag_edge_pan: unknown edge ${edge}`);
+  const hit = document.elementFromPoint(point.x, point.y) ?? surface;
+  hit.dispatchEvent(
+    new DragEvent("dragover", {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer: dt,
+      clientX: point.x,
+      clientY: point.y,
+    }),
+  );
+  window.__dragEdgePan = { dt, from };
+  return {
+    point,
+    hit: hit.className ? String(hit.className).slice(0, 60) : hit.tagName,
+    laneDirection: board.getAttribute("data-lane-direction"),
+    scrollX: Math.round(board.scrollLeft),
+    scrollY: Math.round(board.scrollTop),
+    rangeX: board.scrollWidth - board.clientWidth,
+    rangeY: board.scrollHeight - board.clientHeight,
+  };
+};
+
+/**
+ * Edge autoscroll (issue #350), stage 2 of 2: the hold is over, the target
+ * lane has been revealed — drop on `drop_to`'s card at its leading half and
+ * end the drag. The drop reads the slot's CURRENT box, i.e. the position the
+ * pan carried it to, which is the whole point of the feature.
+ */
+const pageDragEdgePanFinish = ({ drop_to, edge = "right" }) => {
+  const parked = window.__dragEdgePan;
+  const board = document.querySelector("[data-columns-board]");
+  if (parked === undefined || parked === null || board === null) {
+    throw new Error("drag_edge_pan finish: no parked drag (start stage did not run)");
+  }
+  const slot =
+    document.querySelector(`li[data-rank-slot="${drop_to}"]`) ??
+    document.querySelector(`[data-thread-card="${drop_to}"]`);
+  if (slot === null) throw new Error(`drag_edge_pan: no revealed target ${drop_to}`);
+  const sbox = slot.getBoundingClientRect();
+  // The slot's top-left corner: the leading half on the lane's flow axis
+  // (top for a column read, left for a row read) AND over the family's own
+  // card when the slot holds one — a family slot stacks its nested rows
+  // below, so a mid-slot point would land on a child row's join surface
+  // instead of the insertion edge the step means.
+  const clientX = sbox.left + 10;
+  const clientY = sbox.top + 10;
+  const point = {
+    bubbles: true,
+    cancelable: true,
+    dataTransfer: parked.dt,
+    clientX,
+    clientY,
+  };
+  const over = new DragEvent("dragover", point);
+  slot.dispatchEvent(over);
+  slot.dispatchEvent(new DragEvent("drop", point));
+  const sourceAnchor =
+    document.querySelector(`li[data-rank-slot="${parked.from}"] a[draggable]`) ??
+    document.querySelector(`a[data-thread-card="${parked.from}"][draggable]`);
+  if (sourceAnchor !== null) {
+    sourceAnchor.dispatchEvent(new DragEvent("dragend", { bubbles: true, dataTransfer: parked.dt }));
+  }
+  window.__dragEdgePan = null;
+  // What the drop actually landed on, and the lane's top-level order at drop
+  // time — the detail a mis-aimed reveal needs to be diagnosable.
+  const laneSection = slot.closest("section[data-column-id]");
+  const droppedOn =
+    slot.querySelector("a[data-thread-card]")?.getAttribute("data-thread-card") ??
+    slot.getAttribute("data-thread-card") ??
+    null;
+  const laneOrder = laneSection
+    ? [...laneSection.querySelectorAll(":scope > div > ul > li")].flatMap((li) =>
+        li.getAttribute("data-group-box") !== null
+          ? [...li.querySelectorAll(":scope > div > ul > li")].map((s) =>
+              s.querySelector("a[href]")?.getAttribute("href")?.split("/").pop(),
+            )
+          : [li.querySelector("a[href]")?.getAttribute("href")?.split("/").pop()],
+      )
+    : null;
+  return {
+    dropAllowed: over.defaultPrevented,
+    droppedOn,
+    lane: laneSection?.getAttribute("data-column-id") ?? null,
+    laneOrder,
+    scrollX: Math.round(board.scrollLeft),
+    scrollY: Math.round(board.scrollTop),
+    targetBox: {
+      left: Math.round(sbox.left),
+      top: Math.round(sbox.top),
+      right: Math.round(sbox.right),
+      bottom: Math.round(sbox.bottom),
+    },
+  };
+};
+
+/**
  * Hover a card edge with a live drag, then (optionally) have the pointer
  * CROSS OUT of the slot toward the column's title strip, exactly as the
  * browser reports the boundary crossing (dragleave on the slot with the
@@ -1609,6 +1748,39 @@ const pageColumnCardVisible = (threadId) => {
 };
 
 /**
+ * The inverse read, on the axis the board PANS (issue #350): the card must
+ * sit OUTSIDE the board's visible range — the premise a "drop in the
+ * revealed lane" step needs. Vertical lanes stack sideways, so the check is
+ * horizontal; horizontal lanes stack vertically, so it is vertical. The
+ * board's own data-lane-direction picks the axis, the same read the drag
+ * path itself uses.
+ */
+const pageColumnCardOffscreen = (threadId) => {
+  const board = document.querySelector("[data-columns-board]");
+  if (!board) return { ok: false, reason: "no columns board on the page" };
+  const host = document.querySelector(`[data-thread-card="${CSS.escape(threadId)}"]`);
+  if (!host) return { ok: false, reason: `no card ${threadId}` };
+  const b = board.getBoundingClientRect();
+  const c = host.getBoundingClientRect();
+  if (c.width === 0) return { ok: false, reason: `card ${threadId} rendered with no size` };
+  const horizontal = board.getAttribute("data-lane-direction") === "horizontal";
+  const outside = horizontal
+    ? c.top < b.top || c.bottom > b.bottom
+    : c.left < b.left || c.right > b.right;
+  return outside
+    ? {
+        ok: true,
+        reason: horizontal
+          ? `card ${threadId} sits outside the board's visible range ${Math.round(b.top)}…${Math.round(b.bottom)} vertically`
+          : `card ${threadId} sits outside the board's visible range ${Math.round(b.left)}…${Math.round(b.right)} horizontally`,
+      }
+    : {
+        ok: false,
+        reason: `card ${threadId} is already inside the board's visible range — the reveal premise does not hold`,
+      };
+};
+
+/**
  * The what's-new surface: the gift button is always present; the pulse and
  * the modal are the state. Read via aria-label so the assertion sees what
  * the operator sees.
@@ -2509,6 +2681,14 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
       const got = await page.evaluate(pageColumnCardVisible, rule.column_card_visible);
       expect(
         `card ${rule.column_card_visible} in the columns board's view`,
+        got.ok === true,
+        got.reason,
+      );
+    }
+    if (rule.column_card_offscreen !== undefined) {
+      const got = await page.evaluate(pageColumnCardOffscreen, rule.column_card_offscreen);
+      expect(
+        `card ${rule.column_card_offscreen} outside the columns board's view`,
         got.ok === true,
         got.reason,
       );
@@ -3848,7 +4028,7 @@ async function runSuite(file, { port, browser, cell = null }) {
       // is insertion order), not in this runner's historical fixed order — a
       // pane-history step sequences pushes and backs deliberately, and
       // silently reordering them rewrites the history under test.
-      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "drag_child_to_header", "drag_dot_to_dot", "drag_dot_to_floor", "drag_card_to_strip", "hover_header", "hover", "hover_card", "mouse_to", "key", "back", "click", "click_aria", "click_row_sweep", "type", "menu", "card_menu", "menu_dismiss", "scroll", "wheel_pan", "touch_pan", "touch_drag", "resize", "resize_pane", "sleep", "blur", "press_escape", "push_url", "push_update"];
+      const GESTURE_ORDER = ["drag", "drag_unidentified", "drag_to_column", "drag_child_to_floor", "drag_child_to_header", "drag_dot_to_dot", "drag_dot_to_floor", "drag_card_to_strip", "drag_edge_pan", "hover_header", "hover", "hover_card", "mouse_to", "key", "back", "click", "click_aria", "click_row_sweep", "type", "menu", "card_menu", "menu_dismiss", "scroll", "wheel_pan", "touch_pan", "touch_drag", "resize", "resize_pane", "sleep", "blur", "press_escape", "push_url", "push_update"];
       let gestureFailed = false;
       // A gesture that cannot even run (its own element is absent — a
       // regression deleted what the step targets) records the step and
@@ -3913,6 +4093,29 @@ async function runSuite(file, { port, browser, cell = null }) {
             await page.evaluate(pageDragDotToFloor, payload);
           } else if (gesture === "drag_card_to_strip") {
             await page.evaluate(pageDragCardToStrip, payload);
+          } else if (gesture === "drag_edge_pan") {
+            // Two stages with the hold between them (issue #350): the drag
+            // parks at the board's edge while the autoscroll loop pans, then
+            // the drop lands in whatever lane the pan revealed. A stage that
+            // cannot even start (no source anchor) fails the step rather
+            // than silently skipping the gesture.
+            const started = await page.evaluate(pageDragEdgePanStart, payload);
+            await sleep(Math.max(0, Number(payload.hold_ms ?? 1500)));
+            const finished = await page.evaluate(pageDragEdgePanFinish, payload);
+            if (finished.dropAllowed === false) {
+              gestureFailed = true;
+              report.steps.push({ id: step.id, title: step.title, ok: false, results: [
+                { name: "drag_edge_pan drop", ok: false,
+                  detail: `no dragover handler claimed the revealed target (start ${JSON.stringify(started)}, finish ${JSON.stringify(finished)})` },
+              ] });
+            } else {
+              gestureResults.push({
+                name: "edge pan revealed the drop target",
+                ok: true,
+                detail: `panned to x=${finished.scrollX} y=${finished.scrollY}, dropped on ${finished.droppedOn} in lane ${finished.lane} (order ${JSON.stringify(finished.laneOrder)}), box ${JSON.stringify(finished.targetBox)}`,
+              });
+              await sleep(300);
+            }
           } else if (gesture === "hover_header") {
             // Two-stage: hover=false sets the line and keeps the drag alive;
             // hover=true is the pointer's boundary crossing out of the slot
