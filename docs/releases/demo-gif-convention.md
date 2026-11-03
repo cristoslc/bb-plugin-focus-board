@@ -102,6 +102,7 @@ The backfill's per-bullet decisions live here so the record survives the pull re
 | 1.7.4 | A phone's board pans under a finger instead of lifting a card | demonstrated | CDP touch moving before the hold arms, the pan the board-touch suite drives |
 | 1.7.4 | A slide that starts on the toolbar or a lane's title strip pans the board, never the page behind it | demonstrated | CDP touch from the toolbar origin |
 | 1.7.4 | A lane with nothing to its right stops trapping the slide | demonstrated | CDP touch from the board's far right; the slide hands outward |
+| 1.7.5 | Dragging a card against a board edge now pans the board | demonstrated | the demo board's own nine-lane overflow, staged with the uat-drag-autoscroll suite's park-and-drop gesture; the park holds on dragover-only frames because a CDP mousemove per frame throttles the loop to a third of its pace |
 
 Still skipped, with the reason:
 
