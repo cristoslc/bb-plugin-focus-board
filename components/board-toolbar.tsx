@@ -391,7 +391,7 @@ interface ProjectDropdownProps {
   onToggleMany: (projectIds: readonly string[], add: boolean) => void;
   onSingleSelect: (projectId: string) => void;
   onClear: () => void;
-  onCreate: (name: string) => Promise<void>;
+  onCreate: (name: string) => Promise<{ id: string }>;
 }
 
 function ProjectDropdown({
@@ -567,7 +567,9 @@ interface BoardToolbarProps {
    *  Undefined when no scope is in force; a stale root reads "Unknown
    *  family" from the app so the chip stays visible and clearable. */
   familyScopeLabel?: string;
-  onCreateProject: (name: string) => Promise<void>;
+  /** The board's one project-create path; resolves with the created project
+   *  (the composer dialog selects it, the filter just closes its field). */
+  onCreateProject: (name: string) => Promise<{ id: string }>;
   totalCount: number;
   onClearFilters: () => void;
   anyFilterActive: boolean;

@@ -2628,7 +2628,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   }, [paneThreadId, captureThreadAttention]);
 
   // Project creation needs a host checkout path; the personal workspace's
-  // host hosts every project, so create under the first known host.
+  // host hosts every project, so create under the first known host. The
+  // created project comes back so both callers (the toolbar's Project
+  // filter and the composer dialog's New project option) can act on it —
+  // the dialog selects it in the composer's picker.
   const createProject = useCallback(
     async (name: string) => {
       const hosts = await sdk.hosts.list();
@@ -2636,7 +2639,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         throw new Error("No connected host to create the project checkout on.");
       }
       const host = hosts.find((candidate) => candidate.lifecycle?.phase === "active") ?? hosts[0];
-      await sdk.projects.create({
+      return sdk.projects.create({
         name,
         source: {
           type: "local_path",
@@ -3764,6 +3767,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           newThreadParentId === null && newThreadGroupId === null ? maximizeNewThread : undefined
         }
         rememberEnvironment={rememberSpawnEnvironment}
+        onCreateProject={createProject}
         onSpawned={handleComposerSpawnedThread}
       />
       <SettingsModal
