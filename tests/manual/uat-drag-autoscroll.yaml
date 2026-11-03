@@ -1,0 +1,138 @@
+# Operator-assisted E2E: a card drag parked against a scroller's edge pans
+# that scroller (issue #350).
+#
+# The operator's report: "dragging cards horizontally doesn't scroll
+# horizontally." Each step here drives the real autoscroll loop in real
+# Chrome: dragstart on the source card's anchor, one dragover parking the
+# pointer inside the edge zone, a hold while the loop pans (requestAnimationFrame
+# against the real layout), then a dragover + drop on the card the pan
+# revealed. The premise and the payoff are both asserted: the target card
+# starts OUTSIDE the board's visible range, the surface's scroll offset
+# moved, and the drop commits the same ranked write a visible-lane drop
+# commits.
+#
+# Run: npm run uat -- tests/manual/uat-drag-autoscroll.yaml
+#
+# Viewport 1024x640 is what gives the edges bite: the status board's nine
+# lanes span 2444px horizontally (board range 1420) and, in the rows read,
+# 2900px vertically (board range 2137), so both boards overflow their
+# viewport and every lane named below starts offscreen where the step says
+# it does.
+suite: drag-edge-autoscroll
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5173
+defaults:
+  groupBy: status
+  theme: dark
+  viewport: { width: 1024, height: 640 }
+
+steps:
+  # ── The columns board (vertical lanes) — the operator's report ──────────
+  - id: drag-held-at-the-right-edge-pans-and-drops-in-the-revealed-lane
+    title: A cursor drag parked at the board's right edge pans the board and drops in the revealed Done lane
+    # The Done lane sits at x 2188..2444 — fully offscreen at scroll 0. The
+    # hold pans the board to its maximum (1420px at ~368px/s, ~3.9s), which
+    # is exactly the scroll position where the Done lane enters the
+    # viewport; the drop then lands on Done's first card, marking the card
+    # done AND ranking it at that edge in the one gesture.
+    goto: "?groupBy=status"
+    assert_before_drag:
+      - column_card_offscreen: thr_pane_padding
+      - scroll_offset: { target: board, axis: x, equals: 0 }
+    drag_edge_pan:
+      from: thr_review_pr
+      edge: right
+      hold_ms: 5000
+      drop_to: thr_pane_padding
+    assert:
+      - scroll_offset: { target: board, axis: x, min: 1200 }
+      - rpc_called_method: done_set
+      - column: done
+        ordered: [thr_review_pr, thr_pane_padding, thr_license, thr_proj_family]
+      - store: { done: [thr_review_pr] }
+
+  - id: a-hover-at-the-edge-scrolls-nothing
+    title: Parking the pointer at the board's edge with no drag in flight pans nothing
+    # The loop is drag-gated: arm comes from the drag lifecycle, so a plain
+    # hover held at the same edge for 2s must not move the board.
+    goto: "?groupBy=status"
+    mouse_to: { x: 1018, y: 340, wait_ms: 2000 }
+    assert:
+      - scroll_offset: { target: board, axis: x, equals: 0 }
+
+  - id: drag-held-at-the-left-edge-pans-back
+    title: With the board scrolled to its far end, a drag parked at the left edge pans back to the Unread lane
+    # The reverse direction: the board starts at max scroll (the setup scroll
+    # runs first — assertions declared in assert_before_drag run before every
+    # gesture, so the scrolled premise lives in the gesture's own report
+    # detail instead), the drag parks at the LEFT edge, and the pan walks
+    # back far enough to reveal the Unread lane (x 556..812). The drop on an
+    # Unread card's top half ranks the card into that lane's store.
+    goto: "?groupBy=status"
+    scroll: { target: columns, dx: 1420 }
+    drag_edge_pan:
+      from: thr_icon_lazy
+      edge: left
+      hold_ms: 2500
+      drop_to: thr_uat_queue
+    assert:
+      - scroll_offset: { target: board, axis: x, max: 1100 }
+      - store: { "status:unread": [thr_rpc_auth, thr_icon_lazy] }
+
+  # ── The rows board (horizontal lanes) ────────────────────────────────────
+  - id: drag-held-at-the-bottom-edge-pans-and-drops-in-the-revealed-row
+    title: A cursor drag parked at the rows board's bottom edge pans it vertically and drops in the revealed Unread row
+    # The rows board stacks lanes vertically (each 288px tall + gap): the
+    # Unread row sits at y 665..953, fully offscreen at scroll 0. The hold
+    # pans the board down ~550px, which puts the whole row in the viewport;
+    # the drop on its first card's leading half marks the card unread AND
+    # ranks it there.
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert_before_drag:
+      - column_card_offscreen: thr_rpc_auth
+      - scroll_offset: { target: board, axis: y, equals: 0 }
+    drag_edge_pan:
+      from: thr_roadmap
+      edge: bottom
+      hold_ms: 1500
+      drop_to: thr_rpc_auth
+    assert:
+      - scroll_offset: { target: board, axis: y, min: 300 }
+      - column: unread
+        ordered: [thr_roadmap, thr_rpc_auth, thr_uat_queue, thr_review_pr]
+      - store: { "status:unread": [thr_roadmap] }
+
+  - id: a-hover-at-the-rows-edge-scrolls-nothing
+    title: Parking the pointer at the rows board's bottom edge with no drag in flight pans nothing
+    goto: "?groupBy=status&laneDirection=horizontal"
+    mouse_to: { x: 512, y: 634, wait_ms: 2000 }
+    assert:
+      - scroll_offset: { target: board, axis: y, equals: 0 }
+
+  - id: drag-held-at-a-rows-right-edge-pans-that-row
+    title: A cursor drag parked at a row's right edge pans that row's card flow, and the drop lands in it
+    # In the rows read each lane's card list scrolls its own X: the
+    # idle-awhile row holds 390px of card flow beyond its visible width, so
+    # the drag parked at the row's RIGHT edge pans the ROW (the board's own
+    # axes stay still — its X has no range and the park is mid-height). The
+    # gutter family's slot starts fully past the viewport's right edge and
+    # the drop lands on its leading half, ranking the dragged card into the
+    # row's store exactly as a same-lane drop does.
+    goto: "?groupBy=status&laneDirection=horizontal"
+    scroll: { target: columns, dy: 2137 }
+    assert_before_drag:
+      - column_card_offscreen: thr_gutter_family
+      - scroll_offset: { target: lane, column: idle-awhile, axis: x, equals: 0 }
+      - scroll_offset: { target: board, axis: x, equals: 0 }
+    drag_edge_pan:
+      from: thr_grouping_spike
+      lane: idle-awhile
+      edge: right
+      hold_ms: 1500
+      drop_to: thr_gutter_family
+    assert:
+      - scroll_offset: { target: lane, column: idle-awhile, axis: x, min: 100 }
+      - scroll_offset: { target: board, axis: x, equals: 0 }
+      - store:
+          { "status:idle-awhile": [thr_parent_lane, thr_proj_family, thr_big_family, thr_grouping_spike] }

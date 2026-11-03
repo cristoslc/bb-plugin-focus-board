@@ -45,6 +45,7 @@ import { Icon } from "@/components/ui/icon";
 import { usePrefersReducedMotion } from "@/components/ui/hooks/use-media-query";
 import { usePointerCoarse } from "@/components/ui/hooks/use-pointer-coarse";
 import { touchDragArmed, useTouchHoldDrag } from "@/components/touch-hold-drag";
+import { useBoardDragAutoscroll } from "@/components/board-drag-autoscroll";
 import { cn } from "@/lib/utils";
 import {
   childRankKey,
@@ -1672,6 +1673,18 @@ export function Board({
   // ThreadCard's `childDotDrag.escaped` wire.
   const [dotDragEscapedMember, setDotDragEscapedMember] = useState<string | null>(null);
 
+  // ── Drag edge autoscroll (issue #350) ───────────────────────────────────
+  // A card drag parked against a scroller's edge pans that scroller, so a
+  // card can be dropped on a lane that was offscreen when the drag started.
+  // The loop is armed and stopped by rankDragLifecycle below — the same
+  // lifecycle the touch pickup rides — so card drags, group-box unit drags,
+  // the Pinned lane, and an escaped dot all autoscroll, while a plain hover
+  // (no lifecycle) and a plain dot drag (which never enters the lifecycle)
+  // scroll nothing. lib/board-drag-autoscroll.ts holds the zone/ramp math;
+  // components/board-drag-autoscroll.ts holds the loop and the dragover feed
+  // both drag paths share.
+  const dragAutoscroll = useBoardDragAutoscroll(scrollRef, laneDirection, ranking);
+
   function clearRankDrop(): void {
     setRankDrop(null);
   }
@@ -1699,6 +1712,11 @@ export function Board({
    */
   const rankDragLifecycle = (id: string | null): void => {
     draggingIdRef.current = id;
+    // The autoscroll loop follows the same lifecycle: armed with the drag,
+    // halted the moment it ends — by drop, dragend, Escape, or the
+    // drag-out-of-DOM safety below. A hover arms nothing, so nothing scrolls.
+    if (id !== null) dragAutoscroll.arm();
+    else dragAutoscroll.stop();
     // Any drag in flight is the board's signal to grow the column headers (they
     // are detach targets the whole time a family drag lives).
     setDragInFlight(id !== null);

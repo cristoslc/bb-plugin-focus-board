@@ -109,6 +109,19 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   starting state and the resulting one.
 - `drag_to_column` drops on a whole lane rather than a card within it, which is
   how the cross-lane Done/Unread drops are exercised.
+- `drag_edge_pan` parks a live drag against a scroller's edge (issue #350):
+  `dragstart` on `from`'s anchor, one dragover at the edge point, a hold of
+  `hold_ms` (default 1500) while the autoscroll loop pans, then a dragover +
+  drop on `drop_to`'s slot and the dragend. `edge` is `right`/`left`/`top`/
+  `bottom`; `lane` (a column id) aims the edge at that lane's own card list
+  (a tall lane's stack in the column read, a row's card flow in the rows
+  read) instead of the board. The drop reads the target's CURRENT box, so it
+  lands where the pan carried it, and the result names the pan's offsets plus
+  the lane order at drop time.
+- `column_card_offscreen` (`thr_x`) is the inverse of `column_card_visible`:
+  the card must sit OUTSIDE the board's visible range, on the axis the board
+  pans (horizontal for vertical lanes, vertical for rows) — the premise a
+  "drop in the revealed lane" step needs.
 - `store` / `rpc_called` / `rpc_not_called` read the mock's rank store and its
   call log, so a test can assert what was *persisted*, not just what rendered.
 - `insertion_line` / `no_insertion_line` re-run the hover and then sample the
@@ -289,6 +302,13 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   keyboard through the browser's REAL key delivery, pointer clicks, menu
   actions, host pushes, Escape) and asserts the board invariants after
   every one. Deterministic per seed; a failure prints the trail.
+- `uat-drag-autoscroll.yaml` — a card drag parked against a scroller's edge
+  pans that scroller (issue #350): at a 1024×640 viewport the right edge pans
+  the columns board and the drop lands in the revealed Done lane, the left
+  edge pans back from max scroll, the rows board's bottom edge pans it
+  vertically into the Unread row, a row's right edge pans that row's card
+  flow into the gutter family's slot, and the two hover steps prove a
+  pointer parked at the same edges with NO drag in flight moves nothing.
 
 ## Invariants (suite-level `invariants: true`)
 
