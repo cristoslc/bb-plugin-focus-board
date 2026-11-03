@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-01T09:06:45.520Z by `npm run uat`._
+_Generated 2026-11-03T04:29:16.836Z by `npm run uat`._
 
 ## lane-direction
 
-Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-lane-direction.yaml` · theme dark
+Source: `tests/manual/uat-lane-direction.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
