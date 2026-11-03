@@ -15,6 +15,7 @@ const onSpawned = vi.fn();
 const onMaximize = vi.fn();
 const rememberProjectId = vi.fn();
 const rememberEnvironment = vi.fn();
+const createProject = vi.fn();
 
 // The submit request is opaque to the modal (it forwards verbatim to
 // spawn), so the test builds a minimal one and casts. The environment field
@@ -68,6 +69,8 @@ beforeEach(() => {
   onMaximize.mockReset();
   rememberProjectId.mockReset();
   rememberEnvironment.mockReset();
+  createProject.mockReset();
+  createProject.mockResolvedValue({ id: "proj_new", name: "Fresh project" });
   lastComposerProps = null;
   lastSubmitPromise = null;
 });
@@ -89,6 +92,7 @@ function renderModal(
     withMaximize = false,
     rememberProjectId,
     rememberEnvironment,
+    onCreateProject,
   }: {
     open?: boolean;
     defaultProjectId?: string;
@@ -103,6 +107,7 @@ function renderModal(
     withMaximize?: boolean;
     rememberProjectId?: ReturnType<typeof vi.fn>;
     rememberEnvironment?: ReturnType<typeof vi.fn>;
+    onCreateProject?: ReturnType<typeof vi.fn>;
   } = {},
 ) {
   return render(
@@ -121,6 +126,7 @@ function renderModal(
       onSpawned,
       ...(rememberProjectId !== undefined ? { rememberProjectId } : {}),
       ...(rememberEnvironment !== undefined ? { rememberEnvironment } : {}),
+      ...(onCreateProject !== undefined ? { onCreateProject } : {}),
       // A child preset cannot follow to the main view; the app passes the
       // handler only for root threads, mirrored here by the flag.
       onMaximize: withMaximize ? onMaximize : undefined,
@@ -412,5 +418,144 @@ describe("the child preset's group inheritance (New child thread… from a group
   it("a grouped child spawn still keeps the nesting hint", () => {
     renderModal({ parentThreadId: "thr_p", parentThreadTitle: "Auth rework", parentGroupName: "Auth rework" });
     expect(document.querySelector('[data-new-child-hint=""]')).not.toBeNull();
+  });
+});
+
+describe("the New project option (issue #355)", () => {
+  const newProjectOption = () => document.querySelector('[data-new-project-option=""]');
+  const newProjectError = () => document.querySelector('[data-new-project-error=""]');
+
+  it("renders the New project option below the composer when the app provides the create hand-off", () => {
+    renderModal({ onCreateProject: createProject });
+    expect(newProjectOption()).not.toBeNull();
+    // Placement: after the composer in the dialog's reading order, the way
+    // bb's classic picker lists "New project" after the project rows.
+    const composer = document.querySelector(
+      'button[type="button"]:not([aria-label="Close"]):not([aria-label="Maximize new thread"])',
+    );
+    expect(composer).not.toBeNull();
+    expect(newProjectOption()!.compareDocumentPosition(composer!) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+  });
+
+  it("without the create hand-off, renders no New project option (inverse)", () => {
+    renderModal();
+    expect(newProjectOption()).toBeNull();
+  });
+
+  it("activating the option swaps it for an inline name field with create and cancel controls, not a second modal", () => {
+    renderModal({ onCreateProject: createProject });
+    fireEvent.click(newProjectOption()!);
+    expect(screen.getByLabelText("New project name")).toBeTruthy();
+    expect(screen.getByLabelText("Create project")).toBeTruthy();
+    expect(screen.getByLabelText("Cancel new project")).toBeTruthy();
+    expect(newProjectOption()).toBeNull();
+    // Still the one dialog: the field lives inside it.
+    expect(screen.getByLabelText("New project name").closest('[role="dialog"]')).not.toBeNull();
+  });
+
+  it("cancel returns to the resting option and leaves the composer's project seed untouched", () => {
+    renderModal({ onCreateProject: createProject, defaultProjectId: "proj_seed" });
+    fireEvent.click(newProjectOption()!);
+    fireEvent.click(screen.getByLabelText("Cancel new project"));
+    expect(newProjectOption()).not.toBeNull();
+    expect(screen.queryByLabelText("New project name")).toBeNull();
+    expect(createProject).not.toHaveBeenCalled();
+    expect(lastComposerProps?.defaultProjectId).toBe("proj_seed");
+  });
+
+  it("Escape in the name field cancels back to the resting option without closing the dialog", () => {
+    renderModal({ onCreateProject: createProject });
+    fireEvent.click(newProjectOption()!);
+    fireEvent.keyDown(screen.getByLabelText("New project name"), { key: "Escape" });
+    expect(newProjectOption()).not.toBeNull();
+    expect(screen.queryByLabelText("New project name")).toBeNull();
+    // The dialog itself stays open: the composer is still mounted.
+    expect(document.querySelector('button[type="button"]:not([aria-label="Close"]):not([aria-label="Maximize new thread"])')).not.toBeNull();
+  });
+
+  it("a blank name keeps create disabled", () => {
+    renderModal({ onCreateProject: createProject });
+    fireEvent.click(newProjectOption()!);
+    const confirm = screen.getByLabelText("Create project") as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("New project name"), { target: { value: "   " } });
+    expect(confirm.disabled).toBe(true);
+  });
+
+  it("on success, creates with the trimmed name, seeds the composer's picker with the new project, and returns to the resting option", async () => {
+    renderModal({ onCreateProject: createProject, defaultProjectId: "proj_seed" });
+    fireEvent.click(newProjectOption()!);
+    fireEvent.change(screen.getByLabelText("New project name"), { target: { value: "  Fresh project  " } });
+    fireEvent.click(screen.getByLabelText("Create project"));
+    await waitFor(() => {
+      expect(newProjectOption()).not.toBeNull();
+    });
+    expect(createProject).toHaveBeenCalledTimes(1);
+    expect(createProject).toHaveBeenCalledWith("Fresh project");
+    // The spawn's project comes from the host composer's picker, which the
+    // defaultProjectId seed drives — the created project's id is that seed.
+    expect(lastComposerProps?.defaultProjectId).toBe("proj_new");
+    expect(screen.queryByLabelText("New project name")).toBeNull();
+    expect(newProjectError()).toBeNull();
+  });
+
+  it("the created project's id overrides the app's seed for the composer (the spawn lands in the new project)", async () => {
+    renderModal({ onCreateProject: createProject, defaultProjectId: "proj_seed" });
+    fireEvent.click(newProjectOption()!);
+    fireEvent.change(screen.getByLabelText("New project name"), { target: { value: "Fresh project" } });
+    fireEvent.click(screen.getByLabelText("Create project"));
+    await waitFor(() => {
+      expect(lastComposerProps?.defaultProjectId).toBe("proj_new");
+    });
+  });
+
+  it("on failure, shows the reason inline, keeps the typed name, and stays on the field", async () => {
+    createProject.mockRejectedValue(
+      new Error("No connected host to create the project checkout on."),
+    );
+    renderModal({ onCreateProject: createProject });
+    fireEvent.click(newProjectOption()!);
+    const typed = "Fresh project";
+    fireEvent.change(screen.getByLabelText("New project name"), { target: { value: typed } });
+    fireEvent.click(screen.getByLabelText("Create project"));
+    await waitFor(() => {
+      expect(newProjectError()).not.toBeNull();
+    });
+    expect(newProjectError()!.textContent).toContain("No connected host");
+    expect((screen.getByLabelText("New project name") as HTMLInputElement).value).toBe(typed);
+    expect(newProjectOption()).toBeNull();
+    // The composer's seed never moved: the failed create selected nothing.
+    expect(lastComposerProps?.defaultProjectId).toBeUndefined();
+  });
+
+  it("reopening the dialog clears the created-project seed (the ladder seeds again)", async () => {
+    const view = renderModal({ onCreateProject: createProject, defaultProjectId: "proj_seed" });
+    fireEvent.click(newProjectOption()!);
+    fireEvent.change(screen.getByLabelText("New project name"), { target: { value: "Fresh project" } });
+    fireEvent.click(screen.getByLabelText("Create project"));
+    await waitFor(() => {
+      expect(lastComposerProps?.defaultProjectId).toBe("proj_new");
+    });
+    view.rerender(
+      createElement(NewThreadModal, {
+        open: false,
+        onOpenChange,
+        defaultProjectId: "proj_seed",
+        onCreateProject: createProject,
+        onSpawned,
+      }),
+    );
+    view.rerender(
+      createElement(NewThreadModal, {
+        open: true,
+        onOpenChange,
+        defaultProjectId: "proj_seed",
+        onCreateProject: createProject,
+        onSpawned,
+      }),
+    );
+    expect(lastComposerProps?.defaultProjectId).toBe("proj_seed");
+    // And the option is resting again, not the name field.
+    expect(newProjectOption()).not.toBeNull();
   });
 });

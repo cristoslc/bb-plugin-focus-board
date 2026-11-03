@@ -58,7 +58,7 @@ function renderToolbar(overrides: Partial<BoardToolbarProps> = {}) {
     } as const,
     onWallpaperChange: vi.fn(),
     providers: PROVIDERS,
-    onCreateProject: vi.fn(() => Promise.resolve()),
+    onCreateProject: vi.fn(() => Promise.resolve({ id: "proj_new" })),
     totalCount: 0,
     onClearFilters: vi.fn(),
     anyFilterActive: false,

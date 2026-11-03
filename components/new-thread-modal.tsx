@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Icon } from "@/components/ui/icon";
+import { Input } from "@/components/ui/input";
 import type { ThreadPaneThread } from "@/components/thread-pane";
 
 /**
@@ -56,6 +57,7 @@ export function NewThreadModal({
   onMaximize,
   rememberProjectId,
   rememberEnvironment,
+  onCreateProject,
   onSpawned,
 }: {
   open: boolean;
@@ -133,14 +135,72 @@ export function NewThreadModal({
     projectId: string,
     environment: NewThreadRequest["environment"],
   ) => void;
+  /**
+   * The dialog's New project option (issue #355): creates a project by name
+   * through the board's one create path (the same helper the toolbar's
+   * Project filter uses), then selects the created project in the
+   * composer's project picker. Absent (the host cannot create, the tests'
+   * stub flows) renders no option — the composer works exactly as before.
+   * The picker's dropdown itself is host-owned and the plugin-facing
+   * composer drops bb's `createProject` capability, so the option lives as
+   * a dialog footer row styled after the classic picker entry.
+   */
+  onCreateProject?: (name: string) => Promise<{ id: string }>;
   onSpawned: (thread: SpawnedThread) => void;
 }) {
   const sdk = useSdk();
   const [spawnFailed, setSpawnFailed] = useState(false);
-  // A stale error must not greet the next open.
+  // The New project option's inline field state (issue #355). The created
+  // project's id rides the composer's `defaultProjectId` seed — the host
+  // composer re-seeds its pickers when that prop changes value, so the
+  // spawn lands in the new project. A stale field, error, or seed must not
+  // greet the next open.
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [createPending, setCreatePending] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   useEffect(() => {
-    if (!open) setSpawnFailed(false);
+    if (!open) {
+      setSpawnFailed(false);
+      setCreatingProject(false);
+      setNewProjectName("");
+      setCreatePending(false);
+      setCreateError(null);
+      setCreatedProjectId(null);
+    }
   }, [open]);
+
+  // The create write mirrors the group dialog's rename handling: the write
+  // starts in the tick it fires, a success closes the field and selects the
+  // created project, a refusal keeps the field open on the typed name with
+  // the failing write's own words inline.
+  const submitCreateProject = useCallback(() => {
+    const name = newProjectName.trim();
+    if (name === "" || createPending || onCreateProject === undefined) return;
+    setCreatePending(true);
+    setCreateError(null);
+    let pending: Promise<{ id: string }>;
+    try {
+      pending = onCreateProject(name);
+    } catch (error) {
+      setCreatePending(false);
+      setCreateError(error instanceof Error ? error.message : String(error));
+      return;
+    }
+    void Promise.resolve(pending).then(
+      (created) => {
+        setCreatedProjectId(created.id);
+        setCreatingProject(false);
+        setNewProjectName("");
+        setCreatePending(false);
+      },
+      (error: unknown) => {
+        setCreatePending(false);
+        setCreateError(error instanceof Error ? error.message : String(error));
+      },
+    );
+  }, [newProjectName, createPending, onCreateProject]);
 
   // SDK contract: the composer clears its draft when onSubmit resolves and
   // KEEPS it when it throws. A failed create must therefore surface the
@@ -262,13 +322,87 @@ export function NewThreadModal({
         resurrecting the clipper; the host keeps its own internal editor
         scroll. */}
         <NewThreadComposer
-          defaultProjectId={defaultProjectId}
+          defaultProjectId={createdProjectId ?? defaultProjectId}
           {...(defaultEnvironment !== undefined ? { defaultEnvironment } : {})}
           {...(defaultProviderId !== undefined ? { defaultProviderId } : {})}
           {...(defaultModel !== undefined ? { defaultModel } : {})}
           focusRequest={focusRequest}
           onSubmit={handleSubmit}
         />
+        {onCreateProject !== undefined ? (
+          <div
+            data-new-project-footer=""
+            className="mt-1 border-t pt-2"
+          >
+            {creatingProject ? (
+              <div className="flex items-center gap-1 px-1 py-1">
+                <Input
+                  value={newProjectName}
+                  onChange={(event) => setNewProjectName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      submitCreateProject();
+                    } else if (event.key === "Escape") {
+                      // Radix's document-level Escape would also close the
+                      // whole dialog; default-preventing here keeps it for
+                      // the field alone (the host checks defaultPrevented).
+                      event.preventDefault();
+                      setCreatingProject(false);
+                      setNewProjectName("");
+                      setCreateError(null);
+                    }
+                  }}
+                  placeholder="Project name"
+                  aria-label="New project name"
+                  autoFocus
+                  disabled={createPending}
+                  className="h-7 text-xs"
+                />
+                <button
+                  type="button"
+                  aria-label="Create project"
+                  disabled={createPending || newProjectName.trim() === ""}
+                  onClick={submitCreateProject}
+                  className="inline-flex h-7 shrink-0 items-center rounded-md px-2 text-xs text-foreground hover:bg-accent disabled:opacity-50"
+                >
+                  <Icon name="Check" className="size-3.5" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Cancel new project"
+                  onClick={() => {
+                    setCreatingProject(false);
+                    setNewProjectName("");
+                    setCreateError(null);
+                  }}
+                  className="inline-flex h-7 shrink-0 items-center rounded-md px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <Icon name="X" className="size-3.5" aria-hidden />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                data-new-project-option=""
+                onClick={() => setCreatingProject(true)}
+                className="flex w-full items-center gap-1.5 rounded-sm px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
+                <Icon name="FolderPlus" className="size-3.5 shrink-0" aria-hidden />
+                New project…
+              </button>
+            )}
+            {createError === null ? null : (
+              <p
+                role="alert"
+                data-new-project-error=""
+                className="px-1 pt-1 text-xs text-destructive"
+              >
+                Create failed: {createError}
+              </p>
+            )}
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );
