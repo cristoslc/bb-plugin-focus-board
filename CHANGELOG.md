@@ -7,6 +7,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [1.7.6] - 2026-11-04
+
+### Added
+
 - **The New Thread dialog gains New project.** An option under the composer creates a project by name without leaving the dialog, then picks it in the composer's project list so the spawn lands there. A refused create keeps the typed name and shows the reason inline.
 
 ### Changed
