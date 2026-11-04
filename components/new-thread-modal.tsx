@@ -142,8 +142,9 @@ export function NewThreadModal({
    * composer's project picker. Absent (the host cannot create, the tests'
    * stub flows) renders no option — the composer works exactly as before.
    * The picker's dropdown itself is host-owned and the plugin-facing
-   * composer drops bb's `createProject` capability, so the option lives as
-   * a dialog footer row styled after the classic picker entry.
+   * composer drops bb's `createProject` capability (get-bb/bb#7015), so the
+   * option lives as a small icon-only button beside the composer's project
+   * picker, swapped for an inline name field when armed.
    */
   onCreateProject?: (name: string) => Promise<{ id: string }>;
   onSpawned: (thread: SpawnedThread) => void;
@@ -330,10 +331,7 @@ export function NewThreadModal({
           onSubmit={handleSubmit}
         />
         {onCreateProject !== undefined ? (
-          <div
-            data-new-project-footer=""
-            className="mt-1 border-t pt-2"
-          >
+          <div data-new-project-footer="" className="mt-1 flex flex-col items-start gap-0.5">
             {creatingProject ? (
               <div className="flex items-center gap-1 px-1 py-1">
                 <Input
@@ -382,21 +380,28 @@ export function NewThreadModal({
                 </button>
               </div>
             ) : (
+              // Icon-only, tucked tight under the composer's bottom-left where
+              // the project picker sits (its row's first control): the closest
+              // a plugin can get to the main view's in-dropdown "New project"
+              // entry while the host bridge drops the createProject capability
+              // (get-bb/bb#7015). A small button, not a footer bar, so the row
+              // it joins reads as the picker's.
               <button
                 type="button"
                 data-new-project-option=""
+                aria-label="New project"
+                title="New project"
                 onClick={() => setCreatingProject(true)}
-                className="flex w-full items-center gap-1.5 rounded-sm px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <Icon name="FolderPlus" className="size-3.5 shrink-0" aria-hidden />
-                New project…
+                <Icon name="FolderPlus" className="size-4" aria-hidden />
               </button>
             )}
             {createError === null ? null : (
               <p
                 role="alert"
                 data-new-project-error=""
-                className="px-1 pt-1 text-xs text-destructive"
+                className="px-1 text-xs text-destructive"
               >
                 Create failed: {createError}
               </p>
