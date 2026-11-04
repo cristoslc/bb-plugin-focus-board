@@ -427,14 +427,19 @@ describe("the New project option (issue #355)", () => {
 
   it("renders the New project option below the composer when the app provides the create hand-off", () => {
     renderModal({ onCreateProject: createProject });
-    expect(newProjectOption()).not.toBeNull();
-    // Placement: after the composer in the dialog's reading order, the way
-    // bb's classic picker lists "New project" after the project rows.
+    const option = newProjectOption()! as HTMLButtonElement;
+    expect(option).not.toBeNull();
+    // Icon-only: the classic entry's folder-plus glyph carries the meaning,
+    // the accessible name carries the words.
+    expect(option.getAttribute("aria-label")).toBe("New project");
+    expect(option.textContent).toBe("");
+    // Placement: after the composer in the dialog's reading order, tucked at
+    // the composer's bottom edge where the project picker's row sits.
     const composer = document.querySelector(
-      'button[type="button"]:not([aria-label="Close"]):not([aria-label="Maximize new thread"])',
+      'button[type="button"]:not([aria-label="Close"]):not([aria-label="Maximize new thread"]):not([aria-label="New project"])',
     );
     expect(composer).not.toBeNull();
-    expect(newProjectOption()!.compareDocumentPosition(composer!) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(option.compareDocumentPosition(composer!) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
   });
 
   it("without the create hand-off, renders no New project option (inverse)", () => {

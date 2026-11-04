@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **The New project affordance becomes an icon-only button beside the composer's project picker.** The same create-and-select flow, now a compact folder-plus button at the picker's row instead of a footer bar, per the operator's shape ruling. When bb ships the forwarded `createProject` capability (get-bb/bb#7015), the flow moves into the picker's dropdown unchanged.
+
 ### Fixed
 
 ## [1.7.6] - 2026-11-04
