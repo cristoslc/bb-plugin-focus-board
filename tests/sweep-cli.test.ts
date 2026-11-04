@@ -281,6 +281,25 @@ describe("bb focus-board sweep", () => {
       ).toEqual(["thr_quiet"]);
     });
 
+    it("an idle thread with background work in flight is never idle-eligible", async () => {
+      await load();
+      const busy = (id: string, activity: Record<string, number>) => {
+        const row = idleThread(id, 90);
+        return { ...row, activity: { ...row.activity, ...activity } };
+      };
+      listedThreads = [
+        busy("thr_bg_agent", { activeBackgroundAgentCount: 1 }),
+        busy("thr_bg_command", { activeBackgroundCommandCount: 2 }),
+        busy("thr_workflow", { activeWorkflowCount: 1 }),
+        idleThread("thr_quiet", 90),
+      ];
+      const result = await harness.behavior.runCli(["sweep", "--json"]);
+      expect(
+        (JSON.parse(result.stdout) as { eligible: Array<{ id: string }> })
+          .eligible.map((entry) => entry.id),
+      ).toEqual(["thr_quiet"]);
+    });
+
     it("a snoozed thread sleeps through the sweep; the snooze beats the sweep", async () => {
       await load();
       listedThreads = [

@@ -3415,6 +3415,10 @@ export default async function plugin(bb: BbPluginApi) {
                 ? thread.latestAttentionAt > 0
                 : thread.latestAttentionAt > thread.lastReadAt,
             hasLiveChildren: liveChildParentIds.has(thread.id),
+            backgroundWork:
+              (thread.activity?.activeBackgroundAgentCount ?? 0) > 0 ||
+              (thread.activity?.activeBackgroundCommandCount ?? 0) > 0 ||
+              (thread.activity?.activeWorkflowCount ?? 0) > 0,
           };
         }),
       );

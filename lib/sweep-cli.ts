@@ -47,6 +47,12 @@ export interface SweepFact {
   status: string;
   /** The operator has not seen the latest activity in the thread. */
   unread: boolean;
+  /**
+   * True while a background agent, background command, or workflow run is in
+   * flight. The turn has ended, so `status` reads "idle", but the thread is
+   * still working; the idle arm never touches it. Absent counts as false.
+   */
+  backgroundWork?: boolean;
   /** True when at least one live (non-archived) child hangs off this id. */
   hasLiveChildren: boolean;
   /**
@@ -93,7 +99,7 @@ export function sweepCliEligible(
       }
       continue; // Done threads are only Done-arm candidates.
     }
-    if (!fact.pinned && !RUNNING_STATUSES.has(fact.status) && !fact.unread && now - fact.updatedAt >= idleThreshold) {
+    if (!fact.pinned && !RUNNING_STATUSES.has(fact.status) && fact.backgroundWork !== true && !fact.unread && now - fact.updatedAt >= idleThreshold) {
       eligible.push({ id: fact.id, reason: "idle" });
     }
   }
