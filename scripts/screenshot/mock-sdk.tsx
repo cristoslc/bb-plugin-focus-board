@@ -10,7 +10,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
-import { SIM_ATTENTION_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DESC_GROUP, SIM_DESC_GROUP_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_DUAL_GROUPS, SIM_DUAL_GROUP_THREADS, SIM_IDLE_BUSY_THREADS, SIM_ORCH_FAMILY_THREADS, SIM_OVERVIEW_GROUPS, SIM_OVERVIEW_LINKS, SIM_OVERVIEW_THREADS, SIM_PINNED_GROUP, SIM_PINNED_GROUP_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimThread } from "./data";
+import { SIM_ATTENTION_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DESC_GROUP, SIM_DESC_GROUP_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_DUAL_GROUPS, SIM_DUAL_GROUP_THREADS, SIM_IDLE_BUSY_THREADS, SIM_ORCH_FAMILY_THREADS, SIM_OVERVIEW_GROUPS, SIM_OVERVIEW_LINKS, SIM_OVERVIEW_THREADS, SIM_PINNED_GROUP, SIM_PINNED_GROUP_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimProject, type SimThread } from "./data";
 import {
   type FractionColumn,
   mintLegacyColumn,
@@ -216,7 +216,7 @@ export function experimental_useSidebarThreads(): unknown {
     // memo chain keyed on this identity must see a fresh object to re-sort
     // the Pinned lane.
     threads: simThreads,
-    projects: SIM_PROJECTS,
+    projects: simProjects,
     sections: SIM_SECTIONS,
     experimental_archived: null,
   };
@@ -324,6 +324,14 @@ let simThreads: readonly SimThread[] = EMPTY_MODE
  */
 let simThreadsRevision = 0;
 const sidebarListenerSet = new Set<() => void>();
+
+/** The sidebar's project list the mock serves. A mutable copy of the data
+ *  constant (thread seeding keeps reading the constant, so a late project
+ *  never re-seeds existing threads), returned by LIVE reference like
+ *  simThreads: the identity stays stable across renders, and projects.create
+ *  replaces the array and bumps the revision below, so the board's Project
+ *  filter lists the created project — the way the real host's sidebar would. */
+let simProjects: SimProject[] = [...SIM_PROJECTS];
 
 /** Rewrite the simulated sidebar and wake every reader (the hook, the realtime subscribers). */
 function bumpSimThreads(
@@ -593,13 +601,39 @@ const mockSdk = {
   },
   projects: {
     list: async () =>
-      SIM_PROJECTS.map((project) => ({
+      simProjects.map((project) => ({
         ...project,
         // The Focus Board sim project carries the real repo so ticket chips
         // build hrefs and the status batch finds a repo to ask.
         gitRemoteUrl: project.id === "proj_board" ? "https://github.com/cristoslc/bb-plugin-focus-board.git" : null,
       })),
-    create: async () => ({}),
+    // The dialog's New project option (issue #355) and the toolbar's Project
+    // filter share this create path. The mock mirrors the host's contract:
+    // the created project comes back so the dialog can seed its composer's
+    // picker with it, a blank or duplicate name refuses with the reason, and
+    // the sidebar wakes so the board's filter lists the new project.
+    create: async (args: { name: string }) => {
+      const name = (args?.name ?? "").trim();
+      if (name === "") throw new Error("Project name is required.");
+      uatCalls.push({ method: "projects.create", args: { name } });
+      const duplicate = simProjects.find(
+        (project) => project.name.toLowerCase() === name.toLowerCase(),
+      );
+      if (duplicate !== undefined) throw new Error(`A project named "${name}" already exists.`);
+      const slug =
+        name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "project";
+      const created: SimProject = {
+        id: `proj_sim_${slug}`,
+        name,
+        isPersonal: false,
+        href: `/projects/${slug}`,
+        settingsHref: `/projects/${slug}/settings`,
+      };
+      simProjects = [...simProjects, created];
+      simThreadsRevision += 1;
+      for (const listener of sidebarListenerSet) listener();
+      return created;
+    },
   },
 };
 
