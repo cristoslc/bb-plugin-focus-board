@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-03T04:29:00.732Z by `npm run uat`._
+_Generated 2026-11-04T08:49:04.324Z by `npm run uat`._
 
 ## board-drag-surface
 
-Source: `tests/manual/uat-board-drag-surface.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-board-drag-surface.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
