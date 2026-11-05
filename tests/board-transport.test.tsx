@@ -14,6 +14,7 @@ import {
   TRANSPORT_WIPE_IN_MS,
   TRANSPORT_COLLAPSE_MS,
   TRANSPORT_SPARK_COUNT,
+  LOAD_TRANSPORT_MOUNT_GUARD_MS,
 } from "../components/card-transport";
 import { thread } from "./thread-fixture";
 
@@ -56,6 +57,19 @@ function boardProps(
   } as unknown as BoardProps;
 }
 
+/**
+ * The load-echo mount guard (issue #373): the board arms no transport play
+ * within LOAD_TRANSPORT_MOUNT_GUARD_MS of its first lane-map seed. The
+ * relocation pins walk their mounts past the window with the same fake clock
+ * the phase timers ride, so the law these suites prove stays the post-window
+ * one: every move after the load echo dissolves.
+ */
+async function pastLoadEcho(): Promise<void> {
+  await act(async () => {
+    vi.advanceTimersByTime(LOAD_TRANSPORT_MOUNT_GUARD_MS + 50);
+  });
+}
+
 describe("a card relocating between lanes plays the transport dissolve", () => {
   it("the old lane keeps the card in place while it wipes, the new lane reflows as the wipe-in starts", async () => {
     vi.useFakeTimers();
@@ -74,6 +88,10 @@ describe("a card relocating between lanes plays the transport dissolve", () => {
     const { rerender } = render(
       <Board {...boardProps("status", before, undefined, { transportVariant: "dissolve" })} />,
     );
+    // Moved to past the load-echo window (issue #373): the mount-age guard
+    // withholds plays for the board's own echo; this pin relocates a card
+    // deliberately, so the walk proves the dissolve law post-window.
+    await pastLoadEcho();
     rerender(
       <Board {...boardProps("status", after, undefined, { transportVariant: "dissolve" })} />,
     );
@@ -209,6 +227,55 @@ describe("a card relocating between lanes plays the transport dissolve", () => {
   });
 });
 
+describe("the load-echo mount guard (issue #373)", () => {
+  it("a relocation within the first lane-map seed's window lands in place: no ghost, no arrival, the final layout held", async () => {
+    vi.useFakeTimers();
+    const before = [
+      thread({ id: "thr_a", isUnread: true, updatedAt: NOW - 1000 }),
+      thread({ id: "thr_b", isUnread: true, updatedAt: NOW - 2000 }),
+      thread({ id: "thr_c", isUnread: true, updatedAt: NOW - 3000 }),
+    ];
+    const after = [
+      thread({ id: "thr_a", isPinned: true, pinnedAt: 1, pinSortKey: 1, updatedAt: NOW - 1000 }),
+      thread({ id: "thr_b", isUnread: true, updatedAt: NOW - 2000 }),
+      thread({ id: "thr_c", isUnread: true, updatedAt: NOW - 3000 }),
+    ];
+    const { rerender } = render(
+      <Board {...boardProps("status", before, undefined, { transportVariant: "dissolve" })} />,
+    );
+    // The mount echo's own relocation (the done projection, a feature-group
+    // box coalescing): within the window it applies the final layout
+    // directly — the lanes land exactly where the play would have left them,
+    // with nothing dissolving.
+    rerender(<Board {...boardProps("status", after, undefined, { transportVariant: "dissolve" })} />);
+    expect(document.querySelector("[data-transport-ghost]")).toBeNull();
+    expect(document.querySelector("[data-transport-arrival]")).toBeNull();
+    // The final layout is the landed one, unclipped: the card sits in its
+    // new lane's flow, and the old lane reflects the removal.
+    const newLane = document.querySelector('[data-column-id="pinned"]');
+    expect(newLane?.querySelector('[data-thread-card="thr_a"]')).not.toBeNull();
+    expect(newLane?.querySelector("[style*='max-height']")).toBeNull();
+    expect(document.querySelectorAll('[data-column-id="unread"] [data-thread-card]')).toHaveLength(2);
+    // The window expires: the NEXT relocation arms the dissolve exactly as
+    // before the guard (the mechanism's post-window law, the same shape the
+    // suites above pin). Three cards so the old lane keeps a resident (an
+    // emptied lane leaves the render, per the columns' own existence rule,
+    // and its ghost has no lane to weave into — that edge predates the
+    // guard, observed on 47ffa8b with the same zero-ghost shape).
+    await pastLoadEcho();
+    const further = [
+      thread({ id: "thr_a", isPinned: true, pinnedAt: 1, pinSortKey: 1, updatedAt: NOW - 1000 }),
+      thread({ id: "thr_b", isPinned: true, pinnedAt: 2, pinSortKey: 2, updatedAt: NOW - 2000 }),
+      thread({ id: "thr_c", isUnread: true, updatedAt: NOW - 3000 }),
+    ];
+    rerender(<Board {...boardProps("status", further, undefined, { transportVariant: "dissolve" })} />);
+    const ghost = document.querySelector("[data-transport-out]");
+    expect(ghost).not.toBeNull();
+    expect(ghost?.getAttribute("data-transport-out")).toBe("wiping-out");
+    expect(document.querySelector('[data-column-id="unread"]')?.querySelector("[data-transport-ghost]")).not.toBeNull();
+  });
+});
+
 describe("a box run relocating between lanes transports as ONE unit", () => {
   function boxScenario() {
     const before = [
@@ -243,6 +310,7 @@ describe("a box run relocating between lanes transports as ONE unit", () => {
         {...boardProps("status", before, groupBoxOf, { transportVariant: "dissolve" })}
       />,
     );
+    await pastLoadEcho();
     rerender(
       <Board {...boardProps("status", after, groupBoxOf, { transportVariant: "dissolve" })} />,
     );
@@ -312,7 +380,7 @@ describe("a box run relocating between lanes transports as ONE unit", () => {
     expect(oldLane?.querySelector("[data-transport-out]")).toBeNull();
   });
 
-  it("a whole-box move counts as ONE unit, so a 13-member box stays under the batch cap", () => {
+  it("a whole-box move counts as ONE unit, so a 13-member box stays under the batch cap", async () => {
     vi.useFakeTimers();
     const members = Array.from({ length: 13 }, (_, index) =>
       thread({ id: `thr_m${index}`, isUnread: true, updatedAt: NOW - index - 1 }),
@@ -336,6 +404,7 @@ describe("a box run relocating between lanes transports as ONE unit", () => {
       companion,
     ];
     const { rerender } = render(<Board {...boardProps("status", before, groupBoxOf)} />);
+    await pastLoadEcho();
     rerender(<Board {...boardProps("status", after, groupBoxOf)} />);
     // 13 per-card moves would exceed the cap and reflow; the collapsed unit
     // dissolves as one box instead.
@@ -365,7 +434,7 @@ describe("cardTransport: the shipped default is zoom; none teleports instantly",
     expect(document.querySelector("[data-transport-ghost]")).toBeNull();
   });
 
-  it("teleport plans the dissolve, sparks included — distinct from the variant seam", () => {
+  it("teleport plans the dissolve, sparks included — distinct from the variant seam", async () => {
     vi.useFakeTimers();
     const { rerender } = render(
       <Board
@@ -375,6 +444,7 @@ describe("cardTransport: the shipped default is zoom; none teleports instantly",
         })}
       />,
     );
+    await pastLoadEcho();
     rerender(
       <Board
         {...boardProps("status", after, undefined, {
@@ -387,13 +457,14 @@ describe("cardTransport: the shipped default is zoom; none teleports instantly",
     expect(document.querySelector("[data-transport-sparks]")).not.toBeNull();
   });
 
-  it("zoom chosen explicitly matches the variant seam's zoom read (no sparks)", () => {
+  it("zoom chosen explicitly matches the variant seam's zoom read (no sparks)", async () => {
     vi.useFakeTimers();
     const { rerender } = render(
       <Board
         {...boardProps("status", before, undefined, { cardTransport: "zoom" })}
       />,
     );
+    await pastLoadEcho();
     rerender(
       <Board
         {...boardProps("status", after, undefined, { cardTransport: "zoom" })}
@@ -403,13 +474,14 @@ describe("cardTransport: the shipped default is zoom; none teleports instantly",
     expect(document.querySelector("[data-transport-sparks]")).toBeNull();
   });
 
-  it("the motion override suppresses the wipes without killing the choreography", () => {
+  it("the motion override suppresses the wipes without killing the choreography", async () => {
     vi.useFakeTimers();
     const { rerender } = render(
       <Board
         {...boardProps("status", before, undefined, { motionPref: "manual", motionPacing: "reduce" })}
       />,
     );
+    await pastLoadEcho();
     rerender(
       <Board
         {...boardProps("status", after, undefined, { motionPref: "manual", motionPacing: "reduce" })}
@@ -427,7 +499,7 @@ describe("the pacing preference stretches the transport's clock (issue #152)", (
   // The phase machine runs on plain timers even in jsdom (no WAAPI), so the
   // clock the pacing scales is pinned here at the state transitions, not the
   // visuals.
-  const pacingBoard = (motionPacing: number) => {
+  const pacingBoard = async (motionPacing: number) => {
     const before = [
       thread({ id: "thr_a", isUnread: true, updatedAt: NOW - 1000 }),
       thread({ id: "thr_b", isUnread: true, updatedAt: NOW - 2000 }),
@@ -441,6 +513,7 @@ describe("the pacing preference stretches the transport's clock (issue #152)", (
         {...boardProps("status", before, undefined, { transportVariant: "dissolve", motionPacing })}
       />,
     );
+    await pastLoadEcho();
     rerender(
       <Board
         {...boardProps("status", after, undefined, { transportVariant: "dissolve", motionPacing })}
@@ -449,9 +522,9 @@ describe("the pacing preference stretches the transport's clock (issue #152)", (
     return document.querySelector("[data-transport-out]")!.getAttribute("data-transport-out");
   };
 
-  it("stock pacing keeps the stock clock: the collapse starts at 400ms", () => {
+  it("stock pacing keeps the stock clock: the collapse starts at 400ms", async () => {
     vi.useFakeTimers();
-    expect(pacingBoard(1)).toBe("wiping-out");
+    expect(await pacingBoard(1)).toBe("wiping-out");
     act(() => {
       vi.advanceTimersByTime(450);
     });
@@ -460,9 +533,9 @@ describe("the pacing preference stretches the transport's clock (issue #152)", (
     ).toBe("collapsing");
   });
 
-  it("a 2x pacing holds the ghost in its wipe past the stock collapse tick", () => {
+  it("a 2x pacing holds the ghost in its wipe past the stock collapse tick", async () => {
     vi.useFakeTimers();
-    expect(pacingBoard(2)).toBe("wiping-out");
+    expect(await pacingBoard(2)).toBe("wiping-out");
     act(() => {
       vi.advanceTimersByTime(450);
     });
@@ -478,9 +551,9 @@ describe("the pacing preference stretches the transport's clock (issue #152)", (
     ).toBe("collapsing");
   });
 
-  it("a 4x pacing holds the ghost past every smaller notch's collapse tick", () => {
+  it("a 4x pacing holds the ghost past every smaller notch's collapse tick", async () => {
     vi.useFakeTimers();
-    expect(pacingBoard(4)).toBe("wiping-out");
+    expect(await pacingBoard(4)).toBe("wiping-out");
     act(() => {
       vi.advanceTimersByTime(450);
     });
@@ -495,7 +568,7 @@ describe("the pacing preference stretches the transport's clock (issue #152)", (
     ).toBe("collapsing");
   });
 
-  it("the manual reduce notch suppresses the wipes with prolonged pacing nowhere in play", () => {
+  it("the manual reduce notch suppresses the wipes with prolonged pacing nowhere in play", async () => {
     vi.useFakeTimers();
     const before = [
       thread({ id: "thr_a", isUnread: true, updatedAt: NOW - 1000 }),
@@ -514,6 +587,7 @@ describe("the pacing preference stretches the transport's clock (issue #152)", (
         })}
       />,
     );
+    await pastLoadEcho();
     rerender(
       <Board
         {...boardProps("status", after, undefined, {
@@ -558,7 +632,7 @@ describe("the transport ghost never claims aria-current (issue #105)", () => {
     thread({ id: "thr_b", isUnread: true, updatedAt: NOW - 2000 }),
   ];
 
-  it("the dissolve ghost drops aria-current while keeping its active-slot visuals", () => {
+  it("the dissolve ghost drops aria-current while keeping its active-slot visuals", async () => {
     vi.useFakeTimers();
     const { rerender } = render(
       <Board
@@ -568,6 +642,7 @@ describe("the transport ghost never claims aria-current (issue #105)", () => {
         })}
       />,
     );
+    await pastLoadEcho();
     rerender(
       <Board
         {...boardProps("status", after, undefined, {
@@ -594,7 +669,7 @@ describe("the transport ghost never claims aria-current (issue #105)", () => {
     expect(ghost?.querySelector("[data-thread-card] a")?.className).toContain("ring-2");
   });
 
-  it("the zoom ghost never claims aria-current either", () => {
+  it("the zoom ghost never claims aria-current either", async () => {
     vi.useFakeTimers();
     const { rerender } = render(
       <Board
@@ -604,6 +679,7 @@ describe("the transport ghost never claims aria-current (issue #105)", () => {
         })}
       />,
     );
+    await pastLoadEcho();
     rerender(
       <Board
         {...boardProps("status", after, undefined, {
@@ -620,7 +696,7 @@ describe("the transport ghost never claims aria-current (issue #105)", () => {
     expect(markers[0].closest("[data-transport-ghost]")).toBeNull();
   });
 
-  it("a nested child row marked active inside a relocating parent's ghost stays silent too", () => {
+  it("a nested child row marked active inside a relocating parent's ghost stays silent too", async () => {
     vi.useFakeTimers();
     // The ACTIVE card is the CHILD; the parent relocates lanes, so the ghost
     // dissolves with the child row inside it — a marker on the ghost's copy
@@ -655,6 +731,7 @@ describe("the transport ghost never claims aria-current (issue #105)", () => {
       nestedChildrenByParent: new Map([["thr_parent", [child]]]),
     };
     const { rerender } = render(<Board {...(props as BoardProps)} />);
+    await pastLoadEcho();
     rerender(<Board {...({ ...props, columns: buildColumns(after, "status", context, new Map(), new Set(), NOW, {})} as BoardProps)} />);
 
     // The ghost holds the card AND its nested rows; the child row inside it
