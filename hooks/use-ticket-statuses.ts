@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { scheduleIdleCallback } from "../lib/idle-callback";
 
 export type TicketStatus = { kind: string; state: string };
 
@@ -51,6 +52,19 @@ export function useTicketStatuses({
   const [ticketStatuses, setTicketStatuses] = useState<
     Record<string, Record<number, TicketStatus>>
   >({});
+  // The load's first fetch rides idle (issue #373's attribution: the mount
+  // fetch was the post-paint churn's visible driver). Before the FIRST
+  // snapshot has landed, every fetch trigger (the mount fetch, an effect
+  // re-run, the focus catch-up) schedules through the idle seam and its hard
+  // fallback ceiling instead of issuing inside the load burst; once a
+  // snapshot has landed, every trigger fetches immediately — the operator
+  // moments (issue #205), the poll interval, and the focus catch-up keep
+  // today's timing. A fetch that failed never counts as landed, so the
+  // catch-up paths stay gated until real statuses exist. A ref-set clear (the
+  // empty key) is a render-side clear, not a landing, and leaves the gate in
+  // place: the load's own key churn (links and project remotes landing
+  // mid-echo) keeps the whole first wave on the idle path.
+  const landedRef = useRef(false);
   useEffect(() => {
     if (visibleRefKey === "") {
       setTicketStatuses({});
@@ -78,6 +92,7 @@ export function useTicketStatuses({
       let pending = wanted.size;
       const settle = () => {
         if (!cancelled && pending === 0) {
+          landedRef.current = true;
           setTicketStatuses(next);
           fetching = false;
         }
@@ -125,15 +140,32 @@ export function useTicketStatuses({
         );
       }
     };
-    fetchAll();
+    // The idle gate itself: while unlanded, every trigger schedules the fetch
+    // at idle (ceiling-bounded) and its pending handle joins the cleanup set,
+    // so a re-run or an unmount cancels what never fired.
+    const pendingCancels = new Set<() => void>();
+    const fireFetch = () => {
+      if (landedRef.current) {
+        fetchAll();
+        return;
+      }
+      const cancel = scheduleIdleCallback(fetchAll);
+      pendingCancels.add(cancel);
+    };
+    fireFetch();
     // 30s poll: the tracker_status read is a local SQLite query, so the
-    // cadence costs nothing and bounds staleness between focus events.
-    const interval = setInterval(fetchAll, TICKET_STATUS_POLL_MS);
-    window.addEventListener("focus", fetchAll);
+    // cadence costs nothing and bounds staleness between focus events. The
+    // tick and the catch-up route through fireFetch: while unlanded they ride
+    // the idle ceiling (the state still lands), after it they fetch exactly
+    // as today.
+    const interval = setInterval(fireFetch, TICKET_STATUS_POLL_MS);
+    window.addEventListener("focus", fireFetch);
     return () => {
       cancelled = true;
       clearInterval(interval);
-      window.removeEventListener("focus", fetchAll);
+      window.removeEventListener("focus", fireFetch);
+      for (const cancel of pendingCancels) cancel();
+      pendingCancels.clear();
     };
   }, [visibleRefKey, refreshSignal, rpc]);
   return ticketStatuses;

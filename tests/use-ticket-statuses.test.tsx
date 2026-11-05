@@ -14,10 +14,25 @@ import {
   useTicketStatuses,
   type TrackerStatusRpc,
 } from "../hooks/use-ticket-statuses";
+import { IDLE_CALLBACK_FALLBACK_MS } from "../lib/idle-callback";
 
 const REF_KEY = "o/r#91";
 const REF = 91;
 const POLL_MS = 30_000;
+
+/**
+ * The mount fetch's idle gate (issue #373): the hook's fetches issued before
+ * its first snapshot landed ride the idle seam, whose jsdom path is the
+ * fallback timer. Every test with a mount fetch advances to that wall first;
+ * the law each moved assertion still proves is the poll firing and the state
+ * landing — the timing moved to the ceiling, nothing else.
+ */
+const FIRE_IDLE = IDLE_CALLBACK_FALLBACK_MS + 5;
+async function fireIdleFetch(): Promise<void> {
+  await act(async () => {
+    vi.advanceTimersByTime(FIRE_IDLE);
+  });
+}
 
 /** Mutable fake plugin cache behind a controllable rpc mock. */
 function makeRpcMock() {
@@ -58,6 +73,7 @@ describe("useTicketStatuses refreshing behavior (issue #92)", () => {
       ({ k }: { k: string }) => useTicketStatuses({ rpc: mock.rpc, visibleRefKey: k }),
       { initialProps: { k: REF_KEY } },
     );
+    await fireIdleFetch();
     await mock.settleAll();
     expect(result.current).toEqual({
       "o/r": { [REF]: { kind: "pull", state: "OPEN" } },
@@ -81,6 +97,7 @@ describe("useTicketStatuses refreshing behavior (issue #92)", () => {
       ({ k }: { k: string }) => useTicketStatuses({ rpc: mock.rpc, visibleRefKey: k }),
       { initialProps: { k: REF_KEY } },
     );
+    await fireIdleFetch();
     await mock.settleAll();
     const callsAfterFirstFetch = mock.calls.length;
 
@@ -98,6 +115,7 @@ describe("useTicketStatuses refreshing behavior (issue #92)", () => {
       ({ k }: { k: string }) => useTicketStatuses({ rpc: mock.rpc, visibleRefKey: k }),
       { initialProps: { k: REF_KEY } },
     );
+    await fireIdleFetch();
     await mock.settleAll();
     expect(mock.calls.length).toBe(1);
     // A focus refetch starts five seconds before a poll tick and hangs well
@@ -140,6 +158,7 @@ describe("useTicketStatuses refreshing behavior (issue #92)", () => {
       ({ k }: { k: string }) => useTicketStatuses({ rpc: mock.rpc, visibleRefKey: k }),
       { initialProps: { k: REF_KEY } },
     );
+    await fireIdleFetch();
     await mock.settleAll();
     expect(mock.calls[0]).toEqual({ repo: "o/r", numbers: [REF] });
 
@@ -154,6 +173,7 @@ describe("useTicketStatuses refreshing behavior (issue #92)", () => {
       ({ k }: { k: string }) => useTicketStatuses({ rpc: mock.rpc, visibleRefKey: k }),
       { initialProps: { k: REF_KEY } },
     );
+    await fireIdleFetch();
     await mock.settleAll();
     expect(result.current).not.toEqual({});
 
@@ -167,6 +187,7 @@ describe("useTicketStatuses refreshing behavior (issue #92)", () => {
       ({ k }: { k: string }) => useTicketStatuses({ rpc: mock.rpc, visibleRefKey: k }),
       { initialProps: { k: REF_KEY } },
     );
+    await fireIdleFetch();
     await mock.settleAll();
     const callsAtUnmount = mock.calls.length;
     unmount();
@@ -185,6 +206,7 @@ describe("useTicketStatuses refresh triggers (issue #205)", () => {
         useTicketStatuses({ rpc: mock.rpc, visibleRefKey: k, refreshSignal: s }),
       { initialProps: { k: REF_KEY, s: "before" } },
     );
+    await fireIdleFetch();
     await mock.settleAll();
     expect(result.current).toEqual({
       "o/r": { [REF]: { kind: "pull", state: "OPEN" } },
@@ -207,6 +229,7 @@ describe("useTicketStatuses refresh triggers (issue #205)", () => {
         useTicketStatuses({ rpc: mock.rpc, visibleRefKey: k, refreshSignal: s }),
       { initialProps: { k: REF_KEY, s: "same" } },
     );
+    await fireIdleFetch();
     await mock.settleAll();
     const callsAfterFirstFetch = mock.calls.length;
     rerender({ k: REF_KEY, s: "same" });
@@ -223,6 +246,7 @@ describe("useTicketStatuses refresh triggers (issue #205)", () => {
         useTicketStatuses({ rpc: mock.rpc, visibleRefKey: k, refreshSignal: s }),
       { initialProps: { k: REF_KEY, s: "a" } },
     );
+    await fireIdleFetch();
     await mock.settleAll();
     const callsAfterFirstFetch = mock.calls.length;
     // Pane opened a second after the last fetch: the bump lands immediately.
@@ -289,6 +313,10 @@ describe("useTicketStatuses hung-call degradation (issue #214)", () => {
       ({ k }: { k: string }) => useTicketStatuses({ rpc: mock.rpc, visibleRefKey: k }),
       { initialProps: { k: "o/a#91" } },
     );
+    // Moved to the idle wall (issue #373): the mount fetch now fires at the
+    // seam's fallback ceiling. The law is unchanged: the call was issued, and
+    // the state (here the degraded-to-empty snapshot) lands.
+    await fireIdleFetch();
     expect(mock.calls.length).toBe(1);
     // The transport never answers: at the timeout wall the guard has freed
     // and the hung repo degrades to "no status known".
@@ -316,6 +344,7 @@ describe("useTicketStatuses hung-call degradation (issue #214)", () => {
       ({ k }: { k: string }) => useTicketStatuses({ rpc: mock.rpc, visibleRefKey: k }),
       { initialProps: { k: "o/a#91,o/b#7" } },
     );
+    await fireIdleFetch();
     expect(mock.calls.length).toBe(2);
     await mock.resolveRepo("o/a");
     // Repo B hangs; at the timeout wall the batch settles on its leg and
@@ -334,7 +363,9 @@ describe("useTicketStatuses hung-call degradation (issue #214)", () => {
         useTicketStatuses({ rpc: mock.rpc, visibleRefKey: k, refreshSignal: s }),
       { initialProps: { k: "o/a#91", s: "a" } },
     );
-    // The timeout wins; the transport then answers late with a rejection.
+    // The idle fire first (issue #373), then the timeout wall from the call's
+    // own start; the transport then answers late with a rejection.
+    await fireIdleFetch();
     await act(async () => {
       vi.advanceTimersByTime(TICKET_STATUS_TIMEOUT_MS + 5);
     });

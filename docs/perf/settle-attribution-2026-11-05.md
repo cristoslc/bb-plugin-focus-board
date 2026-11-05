@@ -152,3 +152,39 @@ Sequencing judgment (mine, for the record): Gate T is the tail's end and its
 biggest single win; Gate C is the mechanism the memo named. Doing T first and
 re-running the attribution after would show the residual tail with C's
 decision on real numbers.
+
+## The Gate C after-run (the chip first fetches ride idle; the transports stand)
+
+The lane acked Gate C (the chip hooks' first fetches move to idle, the
+transports on hold), and this section is C's attribution of record. The
+mechanism, once landed: before a chip surface's first snapshot has landed, its
+fetch triggers (`tracker_status`'s effect fetches in
+`hooks/use-ticket-statuses.ts`, the `tracker_validate` effect in `app.tsx`)
+schedule through `lib/idle-callback.ts` — the host's `requestIdleCallback` with
+a hard 400ms fallback ceiling (`IDLE_CALLBACK_FALLBACK_MS`) — and once a
+verdict or status set has landed, every trigger fetches immediately, exactly
+as today. Poll intervals, focus catch-ups, timeout and failure laws are
+byte-identical; a ref-set clear is not a landing, so the load's own key churn
+rides the gate whole; a failed fetch never counts as landed.
+
+The after-battery (`docs/perf/settle-attribution-2026-11-05T05-02-25-626Z.json`,
+same tree minus C, three runs per scale):
+
+| Scale | settleTail before | settleTail after | chip calls fired at |
+|---|---|---|---|
+| 100 | 399 / 396 / 399 | 402 / 401 / 401 | +121 / +135 (idle) |
+| 300 | 431 / 430 / 430 | 431 / 428 / 429 | +192 / +224 (idle) |
+| 500 | 491 / 490 / 486 | 491 / 498 / 498 | +314 / +364 (idle) |
+
+- The settle number did not move, as predicted: the transports' ghost removals
+  still end the tail at every scale (Gate T's hold stands).
+- The chip wave DID move: `tracker_validate` / `tracker_status` now fire at the
+  browser's idle callbacks (+121..+364 by scale; the 400ms ceiling is only the
+  bound Chrome never reached on this machine) and land at +201..+375, instead
+  of the pre-gate wall of +113..+278 — the load window now carries no
+  un-idle-scheduled decoration fetch at all.
+- The same change under the modeled profile does not move that profile's
+  settleTail either: the after-run's modeled cells (95/119/183) match the
+  lane's re-baseline (91/112/175, `load-bench-2026-11-05T04-16-00-974Z.json`)
+  within jitter, and the whole `--assert` battery passes with the standing
+  budgets (`load-bench-2026-11-05T05-03-40-945Z.json`, zero violations).
