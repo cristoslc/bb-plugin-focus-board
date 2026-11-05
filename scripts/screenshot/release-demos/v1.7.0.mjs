@@ -229,66 +229,114 @@ export const demos = [
   // Added — the wallpaper crop tunes over the image itself. `?wallpaper=photo`
   // seeds the harness's photo fixture as an untouched-default layer, so the
   // Appearance picker's preview paints the image at its own (16:9) aspect with
-  // the board's paint frame laid over it. The clip then drives all three crop
-  // controls: the fit toggle (letterbox bars vanish into a filled, cropped
-  // paint), the zoom slider (the frame shrinks inside the image), and a drag
-  // on the preview (the frame reframes to the pointer).
+  // the board's paint frame laid over it. The setup silently opens the dialog
+  // and pins the clip before the first captured frame (the lead-in), so the
+  // gif's every frame is clipped and the encoder's interframe diff holds: the
+  // first pass let the full-page opening frames mix sizes into one concat and
+  // the gif landed at 39MB. The steps then drive all three crop controls: the
+  // fit toggle (letterbox bars vanish into a filled, cropped paint), the zoom
+  // slider (the frame shrinks inside the image), and a drag on the preview (the
+  // frame reframes to the pointer).
   {
     id: "wallpaper-crop-tuning",
     params: "&wallpaper=photo",
     viewport: { width: 1400, height: 900, deviceScaleFactor: 2 },
-    steps: async (g) => {
-      await g.shot("board", { hold: 1.0 });
-      await g.clickAria("Focus Board settings", { settle: 1.2 });
+    gifWidth: 760,
+    setup: async (g) => {
+      // Uncaptured path to the picker: a real click on the settings gear, the
+      // Appearance tab, and the wallpaper block scrolled to centre.
+      await g.page.evaluate(() => {
+        const gear = [...document.querySelectorAll("button")].find((el) =>
+          (el.getAttribute("aria-label") ?? "").startsWith("Focus Board settings"),
+        );
+        if (!(gear instanceof HTMLElement)) throw new Error("no settings gear in the toolbar");
+        gear.click();
+      });
       await g.waitFor('[role="dialog"]', 8_000);
-      await g.clickButton("Appearance", { settle: 1.2 });
-      await g.scrollInto("[data-wallpaper-viewport]", { hold: 0.8 });
-      await g.clipTo('[role="dialog"]', 12);
-      await g.shot("preview", { hold: 2.2 });
-      await g.clickAria("Wallpaper fit: fill", { settle: 2.0 });
+      await g.sleep(400);
+      await g.page.evaluate(() => {
+        const tab = [...document.querySelectorAll("button")].find(
+          (el) => (el.textContent ?? "").trim().startsWith("Appearance"),
+        );
+        if (!(tab instanceof HTMLElement)) throw new Error("no Appearance tab in the settings dialog");
+        tab.click();
+      });
+      await g.waitFor("[data-wallpaper-viewport]", 8_000);
+      // Let the picker settle before scrolling: the edge-color sampler's one
+      // commit fires here, and its re-render resets the dialog's scroll — a
+      // clip measured before it frames a scrolled-back region.
+      await g.sleep(1600);
+      await g.page.evaluate(() => {
+        const preview = document.querySelector("[data-wallpaper-viewport]");
+        if (preview instanceof HTMLElement) preview.scrollIntoView({ block: "center", behavior: "instant" });
+      });
+      await g.sleep(500);
+      // The story's stage: the preview plus the url/dim/fit/zoom rows under it.
+      await g.clipUnion(
+        [
+          "[data-wallpaper-viewport]",
+          '[aria-label="Wallpaper image url"]',
+          '[aria-label="Wallpaper fit: fill"]',
+          '[aria-label="Wallpaper zoom"]',
+        ],
+        16,
+      );
+    },
+    steps: async (g) => {
+      await g.shot("letterbox", { hold: 1.8 });
+      // The fit toggle: the control sits on camera inside the pinned clip, so
+      // click it without the scrollIntoView clickAria parks — scrolling the
+      // dialog here would slide the clip's content a beat later.
+      const fill = await g.rectOf('[aria-label="Wallpaper fit: fill"]');
+      if (fill === null) throw new Error("the picker has no fill toggle");
+      const fillPoint = { x: fill.x + fill.width / 2, y: fill.y + fill.height / 2 };
+      await g.glide(fillPoint, { frames: 4 });
+      await g.page.mouse.click(fillPoint.x, fillPoint.y);
+      await g.shot("filled", { hold: 2.0 });
       // The zoom slider: press at its thumb (the untouched layer sits at 1,
       // the track's left end) and walk it to about 60% while the paint's
       // frame shrinks around the focal point.
       const zoom = await g.rectOf('[aria-label="Wallpaper zoom"]');
       if (zoom === null) throw new Error("the picker has no zoom slider");
       const thumb = { x: zoom.x + 4, y: zoom.y + zoom.height / 2 };
-      await g.glide(thumb, { frames: 4 });
+      await g.glide(thumb, { frames: 3 });
       await g.page.mouse.move(thumb.x, thumb.y);
       await g.page.mouse.down();
       const travel = zoom.width - 8;
-      for (let i = 1; i <= 9; i += 1) {
-        const x = thumb.x + (travel * 0.6 * i) / 9;
+      for (let i = 1; i <= 8; i += 1) {
+        const x = thumb.x + (travel * 0.6 * i) / 8;
         await g.page.mouse.move(x, thumb.y);
         await g.syncCursor(x, thumb.y);
         await g.shot(`zoom-${String(i).padStart(2, "0")}`, { hold: g.frameSeconds });
       }
       await g.page.mouse.up();
-      await g.shot("zoomed", { hold: 1.6 });
+      await g.shot("zoomed", { hold: 1.4 });
       // The focal-point drag: pressing the preview reframes the crop window
       // to the pointer, then the drag walks it toward the sun.
       const box = await g.rectOf("[data-wallpaper-viewport] [data-wallpaper-imagebox]");
       if (box === null) throw new Error("the picker preview has no image box");
-      await g.glide({ x: box.x + box.width * 0.32, y: box.y + box.height * 0.4 }, { frames: 4 });
+      await g.glide({ x: box.x + box.width * 0.32, y: box.y + box.height * 0.4 }, { frames: 3 });
       await g.page.mouse.down();
       await g.shot("grab", { hold: 0.5 });
-      for (let i = 1; i <= 9; i += 1) {
-        const x = box.x + box.width * (0.32 + 0.44 * (i / 9));
-        const y = box.y + box.height * (0.4 + 0.18 * (i / 9));
+      for (let i = 1; i <= 8; i += 1) {
+        const x = box.x + box.width * (0.32 + 0.44 * (i / 8));
+        const y = box.y + box.height * (0.4 + 0.18 * (i / 8));
         await g.page.mouse.move(x, y);
         await g.syncCursor(x, y);
         await g.shot(`reframe-${String(i).padStart(2, "0")}`, { hold: g.frameSeconds });
       }
       await g.page.mouse.up();
-      await g.shot("reframed", { hold: 2.2 });
+      await g.shot("reframed", { hold: 2.0 });
     },
   },
 
   // Added — the wallpaper frames the window, not the board's viewport. The
-  // seeded photo paints into a window-sized box behind the board; every pane
-  // change below only carves the porthole the board looks through. The board
-  // at rest shows the letterboxed paint; opening the thread pane covers the
-  // pine shore without moving the sun, ridges, or bars; dragging the pane
-  // wider carves more of the same fixed image; closing it restores the view.
+  // seeded photo paints into a window-sized box behind the board; the pane's
+  // open and close below only carve the porthole the board looks through. The
+  // board at rest shows the letterboxed paint; opening the thread pane covers
+  // the pine shore without moving the sun, ridges, or bars; closing it
+  // restores the view. (The pane's own resize drag is pointer-capture based
+  // on this build; the open/close pair is the bullet's named gesture.)
   {
     id: "wallpaper-frames-window",
     params: "&wallpaper=photo",
@@ -299,12 +347,6 @@ export const demos = [
       await g.waitFor('aside[aria-label^="Thread:"]', 8_000);
       await g.sleep(500);
       await g.shot("pane-open", { hold: 2.0 });
-      await g.dragPath(
-        '[role="separator"][aria-label="Resize thread pane"]',
-        [{ x: 700, y: 450, frames: 9 }],
-        { settle: 1.4 },
-      );
-      await g.shot("pane-wider", { hold: 2.0 });
       await g.domClick('[aria-label="Close thread pane"]', { settle: 1.4 });
       await g.shot("board-restored", { hold: 2.2 });
     },

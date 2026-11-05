@@ -214,7 +214,12 @@ export class Stage {
         this.framesDir,
         keys.length === 1 ? `${name}.png` : `${name}__${key}.png`,
       );
-      const options = { path: file, timeout: 30_000 };
+      // captureBeyondViewport stays off: enabling it re-lays the page into a
+      // full-page surface on every clipped screenshot, which re-mounts React
+      // content mid-demo (the settings dialog's scrolled content resets to
+      // the top). The stage only ever shoots the live viewport or a clip
+      // pinned to an on-camera element, so the emulation buys nothing.
+      const options = { path: file, timeout: 30_000, captureBeyondViewport: false };
       if (this.clip !== null) options.clip = this.clip;
       await this.windows[key].screenshot(options);
       files.push(file);
