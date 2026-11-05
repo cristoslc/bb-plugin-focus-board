@@ -188,7 +188,7 @@ function MultiSelectDropdown({
           setAnchor({ x: box.left, y: box.bottom + 4 });
         }}
         className={cn(
-          "inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-foreground",
+          "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs font-medium text-foreground",
           "hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         )}
       >

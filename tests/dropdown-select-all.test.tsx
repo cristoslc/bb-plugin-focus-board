@@ -96,6 +96,19 @@ function searchInput(): HTMLInputElement {
 
 afterEach(cleanup);
 
+describe("the chip triggers' hover affordance", () => {
+  it("every dropdown chip names the pointer cursor (bb's own row hover signal)", () => {
+    renderToolbar();
+    for (const chip of [...document.querySelectorAll('button[aria-haspopup="listbox"]')]) {
+      // Tailwind v4's preflight resets buttons to the arrow; the chips are
+      // text-label triggers, the same class of affordance bb's sidebar rows
+      // are, and those rows compute cursor: pointer (measured live on the
+      // board's own host, 2026-11-05).
+      expect(chip.className).toContain("cursor-pointer");
+    }
+  });
+});
+
 describe("select-all beside the dropdown search bar", () => {
   it("a searchable filter dropdown grows a checkbox left of its search bar", () => {
     renderToolbar();

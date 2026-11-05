@@ -255,8 +255,13 @@ describe("lane header: the per-lane menu", () => {
     renderBoard(twoUnread);
     // The toolbar chips light on hover with bg-accent (components/
     // board-toolbar.tsx's trigger anatomy); the lane's name is the same kind
-    // of dropdown trigger and must read as one.
-    expect(laneMenuTrigger("unread").className).toContain("hover:bg-accent");
+    // of dropdown trigger and must read as one. bb's own rows carry the
+    // pointer cursor as the hover signal (its sidebar rows compute
+    // cursor: pointer, measured live 2026-11-05); Tailwind v4's preflight
+    // resets buttons to the arrow, so the pair names the cursor explicitly.
+    const trigger = laneMenuTrigger("unread");
+    expect(trigger.className).toContain("hover:bg-accent");
+    expect(trigger.className).toContain("cursor-pointer");
   });
 
   it("Escape closes the lane menu, like every dropdown on the board", () => {
