@@ -112,22 +112,27 @@ const pines = [
 ];
 
 /** The Bayer 4×4 matrix, at small amplitude: the ordered pattern repeats, so
- *  it breaks gradient banding without wrecking deflate. */
+ *  it breaks gradient banding without wrecking deflate, and keeps the gif
+ *  palette pass cheap. */
 const BAYER = [
   [0, 8, 2, 10],
   [12, 4, 14, 6],
   [3, 11, 1, 9],
   [15, 7, 13, 5],
 ];
+const DITHER = 1.1;
 
 /** The water's color at (x, y): a compressed reflection of the sky and the
- *  two ridges, a ripple modulation, and a glitter path under the sun. */
+ *  two ridges, a gentle ripple modulation, and a glitter path under the sun.
+ *  The ripples stay near-flat on purpose: the fixture must read as a photo,
+ *  but high-frequency pixel noise defeats the gif's palette pass (the first
+ *  fixture's rough water landed the crop demo at 39MB). */
 function waterColor(x, y) {
   const source = Math.max(0, HORIZON - (y - HORIZON) * 0.92);
   let color = skyColor(Math.min(source, HORIZON - 1) / HORIZON).map((c) => c * 0.56);
   if (source >= farRidgeTop(x)) color = blend(color, [0x2a, 0x2f, 0x50], 0.5);
   if (source >= nearRidgeTop(x)) color = blend(color, [0x21, 0x26, 0x40], 0.55);
-  const ripple = Math.sin(y * 2.1 + x * 0.11) * 6 + Math.sin(y * 0.9 - x * 0.043 + 1.2) * 5;
+  const ripple = Math.sin(y * 1.6 + x * 0.09) * 2.5 + Math.sin(y * 0.8 - x * 0.037 + 1.2) * 2;
   color = [color[0] + ripple, color[1] + ripple * 0.9, color[2] + ripple * 0.7];
   const glitter = Math.abs(x - SUN.x);
   if (glitter < 42 && Math.sin(y * 1.7) > 0.55) {
@@ -202,7 +207,7 @@ function render() {
     let prevB = 0;
     for (let x = 0; x < WIDTH; x += 1) {
       const color = pixel(x, y);
-      const dither = (BAYER[y & 3][x & 3] / 16 - 0.5) * 2.6;
+      const dither = (BAYER[y & 3][x & 3] / 16 - 0.5) * DITHER;
       // True sample values first; the stored byte is the Sub difference
       // against the previous pixel's true values (0 at the row's start).
       const vR = Math.max(0, Math.min(255, Math.round(color[0] + dither)));
