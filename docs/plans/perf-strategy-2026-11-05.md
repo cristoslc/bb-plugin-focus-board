@@ -81,38 +81,37 @@ ride a later effect and are excluded from the fan-in on purpose.
 
 ### 3. One aggregate mount read (`board_state_get`) for the nine mount lists
 
-- **Target**: Rank 4 + a client simplification: at mount the board issues
-  ten `rpc.call`s; a single aggregate RPC serving the same nine lists +
-  sweep config (pulse stays its own poll — its cadence and demand lease are
-  load-independent) replaces the mount fan-out with ONE bridge trip and ONE
-  `bb.sdk.threads.list({})` scan shared by every list handler that wants
-  one.
+- **RULING (2026-11-05, Child C's PR #381): measured, DROPPED — not adopted.**
+  Child C landed the aggregate exactly as specced (server composing the same
+  zod payloads from one shared scan and one namespace read per thread via
+  `readBounded`; the client mount issuing one call dispatching today's
+  setters; the refused-aggregate fallback to the exact nine per-list calls;
+  all gates green, 2965 tests on its head efc21fe+16). The modeled fan-in
+  moved 53.0/77.5 → 53.0/77.0 (Δ ≤ 1ms, inside the profile's 1.6-3.7ms
+  run-to-run spread) — inside noise, the memo's own pre-committed drop
+  condition. The arithmetic is settled: with Child A's bounded parallel
+  walk, the modeled window was already one walk's wall, and the aggregate's
+  shared walk costs the same wall. What the aggregate wins beyond the model
+  — five `threads.list` scans → one, ten bridge trips → two, and up to nine
+  setState arrivals → one batch (already batched by React) — is real on a
+  production host but below this harness's resolution and the modeled knobs
+  price none of it. The complexity it buys that win with (a new RPC, the
+  mount restructure, the fallback path) fails the evidence bar the memo set:
+  the queue follows measurements, not its own earlier guesses. PR #381 and
+  its evidence stay as the documented record; the single-scan win remains
+  available if the operator ever wants a live-bb measurement of it (outside
+  this lane's synthetic mandate).
 - **Mechanism**: `server.ts` gains `board_state_get` returning each list's
   existing payload (same zod shapes, composed); the mount effect calls it
   once and dispatches the same setState setters; the SIGNAL-path refetch
   units (`refetchDoneState` etc.) stay byte-identical — signals keep
   refetching exactly the state that changed, coalescing unchanged.
-- **Expected win**: modest on its own after #1 (the round trips overlap in
-  both shapes): measured, then decide — the modeled picture is ~one 8ms
-  trip + the aggregate's single scan instead of five scans (a fixed cost
-  per handler the current model does not price; if the measured fix is
-  inside noise the child reports "measured, not adopted" and the lane drops
-  it — the queue follows measurements, not the memo's earlier guesses).
-- **Side-effect risk + proof**: the client mount's failure semantics are
-  per-call optional-state (`() => {}` rejections); the aggregate turns "one
-  list failed" into... — the child must decide the aggregate's failure
-  shape BEFORE implementation (fail the whole read → the empty defaults'
-  optional-state semantics preserved per list? the aggregate cannot answer
-  a list-partially-failed contract without each list's payload carrying its
-  own error shape). The commission spells this: the aggregate FAILS LOUD if
-  the composition fails, degrades per-list exactly as today's per-call
-  rejections do when one METHOD is unavailable (an old host serving a half
-  build must not hard-fail the mount the way "one missing method" doesn't
-  today — the aggregate stays optional-state by falling back to the
-  per-list calls on a refused aggregate).
-- **Suite catch**: the mount-fan-in RPC-name requirement updates (the bench
-  requires the ten names — the child updates the bench's contract list in
-  the same PR), stage budgets, and the app tests' fake-sdk mount behavior.
+- **Failure shape** (as specced then): fail the whole read loud, degrade to
+  the per-list mount calls on a refused aggregate (an old host serving a
+  half build must not hard-fail the mount — the aggregate stays
+  optional-state by fallback).
+- **Suite catch** (as specced): the mount-fan-in RPC-name updates, stage
+  budgets, and the app tests' fake-sdk mount behavior.
 
 ### 4. The board's first-commit/cost-per-card (Rank 3) — DEFERRED, with reasons
 
