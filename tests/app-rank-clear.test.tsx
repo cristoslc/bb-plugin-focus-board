@@ -94,7 +94,9 @@ describe("the lane menu's remove-custom-order write", () => {
     );
     // Seeded ranked state, the menu names it.
     fireEvent.click(
-      document.querySelector('section[data-column-id="unread"] > header') as HTMLElement,
+      document.querySelector(
+        'section[data-column-id="unread"] button[data-lane-menu-trigger]',
+      ) as HTMLElement,
     );
     const menu = screen.getByRole("menu", { name: "Lane actions" });
     expect(menu.querySelector("[data-lane-sort-state]")?.getAttribute("data-lane-sort-state")).toBe(

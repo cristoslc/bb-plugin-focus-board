@@ -74,6 +74,13 @@ function laneHeader(columnId: string): HTMLElement {
   return header;
 }
 
+function laneMenuTrigger(columnId: string): HTMLElement {
+  const header = laneHeader(columnId);
+  const trigger = header.querySelector<HTMLElement>("button[data-lane-menu-trigger]");
+  if (trigger === null) throw new Error(`no lane menu trigger in ${columnId}`);
+  return trigger;
+}
+
 afterEach(cleanup);
 beforeEach(() => {
   vi.clearAllMocks();
@@ -94,23 +101,80 @@ describe("lane header: sort-order marker retired", () => {
 });
 
 describe("lane header: the per-lane menu", () => {
-  it("opens on a header click and shows the lane's sort state", () => {
+  it("every lane carries the card idiom's 3-dot trigger, left of its label", () => {
+    renderBoard(twoUnread);
+    for (const columnId of ["unread", "working"]) {
+      const section = document.querySelector(`section[data-column-id="${columnId}"]`);
+      const trigger = section?.querySelector("header button[data-lane-menu-trigger]");
+      expect(trigger).not.toBeNull();
+      expect(trigger?.getAttribute("aria-label")).toBe(
+        columnId === "unread" ? "Unread lane actions" : "Working lane actions",
+      );
+      // Left of the label: the trigger's next element sibling is the heading.
+      expect(trigger?.nextElementSibling?.tagName).toBe("H3");
+    }
+  });
+
+  it("opens on the trigger's click and shows the lane's sort state", () => {
     const rankStore: RankStore = { "status:unread": ["thr_u2"] };
     renderBoard(twoUnread, { rankStore, onRankMove: vi.fn() });
-    fireEvent.click(laneHeader("unread"));
+    fireEvent.click(laneMenuTrigger("unread"));
     const menu = screen.getByRole("menu", { name: "Lane actions" });
     const sortRow = menu.querySelector("[data-lane-sort-state]");
     expect(sortRow?.getAttribute("data-lane-sort-state")).toBe("yours");
     expect(sortRow?.textContent).toContain("your order");
   });
 
-  it("an unranked lane's menu shows recency and its direction", () => {
+  it("a bare click on the header itself opens nothing — the 3-dot trigger owns the affordance", () => {
     renderBoard(twoUnread);
     fireEvent.click(laneHeader("unread"));
+    expect(screen.queryByRole("menu", { name: "Lane actions" })).toBeNull();
+  });
+
+  it("an unranked lane's menu shows recency and its direction", () => {
+    renderBoard(twoUnread);
+    fireEvent.click(laneMenuTrigger("unread"));
     const menu = screen.getByRole("menu", { name: "Lane actions" });
     const sortRow = menu.querySelector("[data-lane-sort-state]");
     expect(sortRow?.getAttribute("data-lane-sort-state")).toBe("recency");
     expect(sortRow?.textContent).toContain("newest first");
+  });
+
+  it("the sort section carries the direction pair, the active one checked", () => {
+    renderBoard(twoUnread, { onLaneOrderDirection: vi.fn() });
+    fireEvent.click(laneMenuTrigger("unread"));
+    const newest = screen.getByRole("menuitemradio", { name: "Newest first" });
+    const oldest = screen.getByRole("menuitemradio", { name: "Oldest first" });
+    expect(newest.getAttribute("aria-checked")).toBe("true");
+    expect(oldest.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("picking a direction without a wired write renders no dead pair", () => {
+    renderBoard(twoUnread);
+    fireEvent.click(laneMenuTrigger("unread"));
+    expect(screen.queryByRole("menuitemradio", { name: "Newest first" })).toBeNull();
+    expect(screen.queryByRole("menuitemradio", { name: "Oldest first" })).toBeNull();
+  });
+
+  it("picking Oldest first writes the lane's direction and closes", () => {
+    const onLaneOrderDirection = vi.fn();
+    renderBoard(twoUnread, { onLaneOrderDirection });
+    fireEvent.click(laneMenuTrigger("unread"));
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Oldest first" }));
+    expect(onLaneOrderDirection).toHaveBeenCalledWith("status:unread", "oldest-first");
+    expect(screen.queryByRole("menu", { name: "Lane actions" })).toBeNull();
+  });
+
+  it("a lane sorted oldest-first has the toggle checked on the other side", () => {
+    renderBoard(twoUnread, {
+      laneOrderDirections: { "status:unread": "oldest-first" },
+      onLaneOrderDirection: vi.fn(),
+    });
+    fireEvent.click(laneMenuTrigger("unread"));
+    const newest = screen.getByRole("menuitemradio", { name: "Newest first" });
+    const oldest = screen.getByRole("menuitemradio", { name: "Oldest first" });
+    expect(newest.getAttribute("aria-checked")).toBe("false");
+    expect(oldest.getAttribute("aria-checked")).toBe("true");
   });
 
   it("Remove custom order performs the clear write and closes the menu", () => {
@@ -121,7 +185,7 @@ describe("lane header: the per-lane menu", () => {
       onRankMove: vi.fn(),
       onRankClear,
     });
-    fireEvent.click(laneHeader("unread"));
+    fireEvent.click(laneMenuTrigger("unread"));
     fireEvent.click(screen.getByRole("menuitem", { name: "Remove custom order" }));
     expect(onRankClear).toHaveBeenCalledWith("status:unread", ["thr_u2", "thr_u1"]);
     expect(screen.queryByRole("menu", { name: "Lane actions" })).toBeNull();
@@ -129,7 +193,7 @@ describe("lane header: the per-lane menu", () => {
 
   it("an unranked lane offers no remove entry", () => {
     renderBoard(twoUnread, { onRankClear: vi.fn() });
-    fireEvent.click(laneHeader("unread"));
+    fireEvent.click(laneMenuTrigger("unread"));
     expect(screen.queryByRole("menuitem", { name: "Remove custom order" })).toBeNull();
   });
 
@@ -139,7 +203,7 @@ describe("lane header: the per-lane menu", () => {
     armed.setAttribute("data-touch-drag-armed", "thr_u1");
     document.body.append(armed);
     try {
-      fireEvent.click(laneHeader("unread"));
+      fireEvent.click(laneMenuTrigger("unread"));
       expect(screen.queryByRole("menu", { name: "Lane actions" })).toBeNull();
     } finally {
       armed.remove();
@@ -190,7 +254,7 @@ describe("lane header: the sweep pill is eligibility plus count", () => {
       sweepCandidatesFor: () => [],
       onSweepArm,
     });
-    fireEvent.click(laneHeader("unread"));
+    fireEvent.click(laneMenuTrigger("unread"));
     fireEvent.click(screen.getByRole("menuitem", { name: "Sweep this lane…" }));
     expect(onSweepArm).toHaveBeenCalledWith("unread");
   });

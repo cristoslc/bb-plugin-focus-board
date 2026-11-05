@@ -1867,6 +1867,7 @@ const pageColumnSweep = (columnId) => {
   const header = section.querySelector(":scope > header");
   if (!header) return { ok: false, reason: `no header in ${columnId}` };
   const pill = header.querySelector("[data-sweep-button]");
+  const trigger = header.querySelector("[data-lane-menu-trigger]");
   const board = document.querySelector("[data-columns-board]") ?? document;
   const highlighted = [...(board.querySelectorAll("[data-sweep-highlighted]") ?? [])].map(
     (el) => el.getAttribute("data-thread-card"),
@@ -1880,10 +1881,13 @@ const pageColumnSweep = (columnId) => {
     armed: pill?.getAttribute("aria-pressed") === "true",
     cancel: header.querySelector("[data-sweep-cancel]") !== null,
     highlighted,
-    headerLabel: header.getAttribute("aria-label") ?? null,
+    headerLabel: trigger?.getAttribute("aria-label") ?? null,
     menuOpen: menu !== null,
     menuEntry: menu?.textContent?.includes("Sweep this lane") ?? false,
     menuRemove: menu?.textContent?.includes("Remove custom order") ?? false,
+    menuOldestChecked:
+      menu?.querySelector('[role="menuitemradio"][aria-checked="true"]')?.textContent?.includes("Oldest first") ??
+      false,
     menuSort: menu?.querySelector("[data-lane-sort-state]")?.getAttribute("data-lane-sort-state") ?? null,
   };
 };
@@ -2737,6 +2741,13 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
             `lane ${want.column} menu sort state is ${want.menuSort}`,
             got.menuSort === want.menuSort,
             `sort state reads ${JSON.stringify(got.menuSort)}`,
+          );
+        }
+        if (want.menuOldestChecked !== undefined) {
+          expect(
+            `lane ${want.column} menu ${want.menuOldestChecked ? "reads oldest first as the checked direction" : "does not read oldest first as the checked direction"}`,
+            got.menuOldestChecked === want.menuOldestChecked,
+            `checked direction reads ${JSON.stringify(got.menuOldestChecked)}`,
           );
         }
       }

@@ -3,14 +3,15 @@
   "url": "http://localhost:5231/",
   "header": {
     "ordered": "true",
-    "headerLabel": "Unread lane actions",
-    "oldBadgeGone": true,
-    "glyphCount": 64
+    "triggerLabel": "Unread lane actions",
+    "triggerLeftOfLabel": true,
+    "oldBadgeGone": true
   },
   "menu": {
     "open": true,
     "sortState": "yours",
     "sortText": "Order: your order — arranged by hand, top of the lane first",
+    "directionChecked": "Newest first",
     "removeEntry": true,
     "sweepEntry": true
   },

@@ -116,7 +116,7 @@ import {
   type TransportSpark,
   type TransportVariantId,
 } from "./card-transport";
-import type { MotionPacing } from "./preferences";
+import type { LaneOrderDirection, MotionPacing } from "./preferences";
 
 /**
  * The shimmer's static half: a field of glints laid over one transport slot
@@ -454,6 +454,16 @@ interface BoardProps {
    */
   onRankClear?: (columnKey: string, visibleIds: readonly string[]) => void;
   /**
+   * Per-lane sort direction (the lane menu's sort pair, keyed by
+   * `columnRankKey`). Absent = the standing newest-first read.
+   */
+  laneOrderDirections?: Readonly<Record<string, LaneOrderDirection>>;
+  /**
+   * Write a lane's recency direction: `null` returns the lane to the
+   * standing newest-first read. The lane menu's sort pair is the affordance.
+   */
+  onLaneOrderDirection?: (columnKey: string, direction: LaneOrderDirection | null) => void;
+  /**
    * Drop a card ONTO a card: make the dropped thread a child of the target.
    * The write goes to the caller (the RPC lives app-side); the board has
    * already refused the illegal edges — a drop onto itself or onto the
@@ -678,6 +688,8 @@ export function Board({
   rankStore,
   onRankMove,
   onRankClear,
+  laneOrderDirections,
+  onLaneOrderDirection,
   onAttentionEnter,
   onAttentionLeave,
   onReparent,
@@ -2971,7 +2983,7 @@ export function Board({
                   // strip the lane's label stacks down.
                   horizontalLanes
                     ? "group flex w-40 shrink-0 flex-col items-start gap-1 pb-1 pl-1 pr-1 pt-1.5 transition-colors"
-                    : "group flex items-baseline gap-1.5 px-1 pb-1.5 transition-colors",
+                    : "group flex items-center gap-1.5 px-1 pb-1.5 transition-colors",
                   // Grow the hit strip only while a drag flies, and grow it
                   // with negated margins so no card moves beneath the cursor:
                   // +4px each side here, -4px back from the content flow.
@@ -3039,25 +3051,34 @@ export function Board({
                   }
                   // Same-lane top-level: a deliberate no-op.
                 }}
-                onClick={(event) => {
-                  // The lane menu's trigger: the whole header strip is the
-                  // click surface, and it owns the menu because the pill and
-                  // hide buttons stop their own clicks (and a drag release
-                  // on the header fires no click at all). The guard refuses
-                  // one window: a lift armed by the touch pickup owns its
-                  // gesture outright (issue #336), so a click arriving under
-                  // it — a stray tap on the second finger, for one — can
-                  // never open a menu over the card being dragged.
-                  if (touchDragArmed()) return;
-                  event.stopPropagation();
-                  setLaneMenu({ columnId: column.id, x: event.clientX, y: event.clientY });
-                }}
-                aria-haspopup="menu"
-                aria-label={`${column.label} lane actions`}
               >
-                <h3 className="truncate text-[11px] font-medium text-muted-foreground">
-                  {column.label}
-                </h3>
+                <span className="flex min-w-0 items-center gap-0.5">
+                  {/* The lane menu's trigger, the card's own ⋯ idiom and seat:
+                      an explicit affordance left of the label (operator
+                      amendment to the per-lane menu ruling) — the bare header
+                      is a drop surface, never a menu trigger. */}
+                  <button
+                    type="button"
+                    data-lane-menu-trigger=""
+                    aria-haspopup="menu"
+                    aria-label={`${column.label} lane actions`}
+                    onClick={(event) => {
+                      // A lift armed by the touch pickup owns its gesture
+                      // outright (issue #336): a click arriving under it — a
+                      // stray tap on the second finger, for one — can never
+                      // open a menu over the card being dragged.
+                      if (touchDragArmed()) return;
+                      event.stopPropagation();
+                      setLaneMenu({ columnId: column.id, x: event.clientX, y: event.clientY });
+                    }}
+                    className="inline-flex size-4 shrink-0 items-center justify-center rounded-sm text-muted-foreground/70 transition-colors hover:bg-accent/60 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Icon name="MoreHorizontal" className="size-3" aria-hidden />
+                  </button>
+                  <h3 className="min-w-0 truncate text-[11px] font-medium text-muted-foreground">
+                    {column.label}
+                  </h3>
+                </span>
                 <span className="text-[11px] tabular-nums text-muted-foreground/60">
                   {column.threads.length}
                 </span>
@@ -5046,6 +5067,7 @@ export function Board({
             const laneMenuColumn = columns.find((c) => c.id === laneMenu.columnId);
             const laneMenuRankKey = columnRankKey(groupBy, laneMenu.columnId);
             const laneMenuOrdered = ranking && columnIsRanked(rankStore ?? {}, laneMenuRankKey);
+            const laneMenuDirection = laneOrderDirections?.[laneMenuRankKey];
             const laneMenuSweepKind = sweepActive ? sweepColumnKind(laneMenu.columnId) : null;
             const laneMenuRunning =
               sweepRun !== null && sweepRun.columnId === laneMenu.columnId;
@@ -5069,9 +5091,40 @@ export function Board({
                   <span>
                     {laneMenuOrdered
                       ? "Order: your order — arranged by hand, top of the lane first"
-                      : "Order: by recency — newest first"}
+                      : laneMenuDirection === "oldest-first"
+                        ? "Order: by recency — oldest first"
+                        : "Order: by recency — newest first"}
                   </span>
                 </div>
+                {/* The sort pair: the amendment's real actions. The recency
+                    dimension is the one every lane reads (a hand-ordered
+                    lane's ranked part keeps its arrangement; the unranked
+                    tail — and the whole lane once the order is removed —
+                    reads the chosen direction), so ascending vs descending
+                    is a live choice on every lane, not a display. The
+                    checked mark is the toolbar option menus' own idiom. */}
+                {onLaneOrderDirection !== undefined ? (
+                  <MenuPopoverEntry
+                    label="Newest first"
+                    icon="ChevronsUp"
+                    checked={laneMenuDirection === undefined}
+                    onRun={() => {
+                      closeLaneMenu();
+                      onLaneOrderDirection(laneMenuRankKey, null);
+                    }}
+                  />
+                ) : null}
+                {onLaneOrderDirection !== undefined ? (
+                  <MenuPopoverEntry
+                    label="Oldest first"
+                    icon="ChevronsDown"
+                    checked={laneMenuDirection === "oldest-first"}
+                    onRun={() => {
+                      closeLaneMenu();
+                      onLaneOrderDirection(laneMenuRankKey, "oldest-first");
+                    }}
+                  />
+                ) : null}
                 {laneMenuRemoveVisible ? (
                   <MenuPopoverEntry
                     label="Remove custom order"

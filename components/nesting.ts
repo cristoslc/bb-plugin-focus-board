@@ -12,12 +12,14 @@ import {
   buildColumns,
   columnFor,
   derivedCompare,
+  derivedCompareForDirection,
   doneRecencyCompare,
   groupBucketFor,
   groupFilterMisses,
   threadPassesFilter,
   threadState,
 } from "./grouping";
+import type { LaneOrderDirection } from "./preferences";
 import { groupBoxesApply } from "./group-boxes";
 import {
   applySlotPins,
@@ -98,6 +100,14 @@ export interface NestingOptions {
    * a parent that honours a rank with children that ignore it is a lie.
    */
   ranks?: RankStore;
+  /**
+   * Per-lane sort direction (the lane menu's sort pair), keyed by
+   * `columnRankKey`. Threaded the same two ways the ranks are: the columns
+   * build with it and a family's rows follow the direction too, so the
+   * nested pass can never contradict the lane it nests under. Absent =
+   * the standing newest-first read.
+   */
+  laneOrderDirections?: Readonly<Record<string, LaneOrderDirection>>;
   /**
    * Thread id → epoch-ms done stamp, for the done-children rows under a done
    * parent's Done card (newest done first). The Done column itself does not
@@ -208,6 +218,9 @@ export function assembleBoard(
           now,
           ranks,
           attentionColumns,
+          new Map(),
+          new Set<string>(),
+          options.laneOrderDirections,
         ),
         attention?.slots ?? new Map(),
       ),
@@ -243,6 +256,7 @@ export function assembleBoard(
       familyOverrides,
       attentionColumns,
       options.errorAcks,
+      options.laneOrderDirections,
     ),
     visible,
     groupBy,
@@ -886,7 +900,7 @@ export function nestUnderParents(
   // column lists entirely. Only roots (and promoted/flat children) stay.
   const nestedKeyIds = nestedKeys(nested);
   const doneNestedKeyIds = nestedKeys(doneNested);
-  sortNestedByColumnRank(nested, columns, groupBy, ranks, doneTimes);
+  sortNestedByColumnRank(nested, columns, groupBy, ranks, doneTimes, options.laneOrderDirections);
   // Done-space rows read in the Done column's own order: newest done first.
   for (const children of doneNested.values()) {
     children.sort(doneRecencyCompare(doneTimes));
@@ -1058,6 +1072,7 @@ function sortNestedByColumnRank(
   groupBy: GroupBy,
   ranks: RankStore,
   doneTimes: ReadonlyMap<string, number>,
+  laneOrderDirections: Readonly<Record<string, LaneOrderDirection>> = {},
 ): void {
   const columnOfThread = new Map<string, string>();
   for (const column of columns) {
@@ -1074,13 +1089,18 @@ function sortNestedByColumnRank(
     // parent card shares with the whole column). The column order and then
     // the derived order break ties underneath, so a family nobody has
     // reordered (and every child rank does not name) keeps the sort the
-    // board has always shown.
+    // board has always shown. The lane's direction runs that derived
+    // compare too: a parent that honours a rank with children that ignore
+    // the lane's direction is a lie, exactly as for ranks.
+    const rankKey = columnId === undefined ? null : columnRankKey(groupBy, columnId);
     const base =
-      columnId === undefined
-        ? []
-        : orderForColumn(ranks, columnRankKey(groupBy, columnId));
+      rankKey === null ? [] : orderForColumn(ranks, rankKey);
     const childOrder = orderForColumn(ranks, childRankKey(parentId));
-    children.sort(compareByRank(childOrder, compareByRank(base, derivedCompare)));
+    children.sort(
+      compareByRank(childOrder, compareByRank(base, derivedCompareForDirection(
+        rankKey === null ? undefined : laneOrderDirections[rankKey],
+      ))),
+    );
   }
 }
 
