@@ -9,16 +9,37 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **Ticket chips' first status and validation fetches ride an idle callback.** A load no longer spends its post-paint window churning on chip decoration; the statuses still land within the seam's 400ms ceiling, before an operator can gesture, and the polls, focus catch-ups, and failure paths are unchanged.
-- **The New project button sits on the New Thread dialog's project row, and its create follows bb's typical flow.** The folder-plus button now anchors at the pickers row's open left edge, where the stacked shape left an empty band. Its click runs bb's typical create: the native folder picker names the project (boards the picker cannot be asked on fall back to the inline name field, with the reason shown).
+### Fixed
+
+## [1.7.7] - 2026-11-05
+
+### Added
+
+### Changed
+
+#### The thread pane
+
 - **The thread pane focuses the message composer when it opens or switches threads.** The pane passes the SDK's `focusRequest` with a counter that bumps on open and on switch, so a keyboard-first operator can type without clicking into the box first. Same-thread refreshes leave the counter alone.
 - **Message rows in the pane gain the board's two actions: Copy message and Open in main view.** The host keeps other plugins' actions out of plugin panels (upstream), and the pane previously passed none of its own; both actions now ride the embedded chat's per-message bar.
+- **The New project button sits on the New Thread dialog's project row, and its create follows bb's typical flow.** The folder-plus button now anchors at the pickers row's open left edge, where the stacked shape left an empty band. Its click runs bb's typical create: the native folder picker names the project (boards the picker cannot be asked on fall back to the inline name field, with the reason shown).
+
+#### Cards and chips
+
+- **Ticket chips' first status and validation fetches ride an idle callback.** A load no longer spends its post-paint window churning on chip decoration; the statuses still land within the seam's 400ms ceiling, before an operator can gesture, and the polls, focus catch-ups, and failure paths are unchanged.
 
 ### Fixed
 
+#### Magic rename
+
 - **Magic rename's thread-model row is blocked when the thread's environment cannot run it.** The fallback menu now reads the environment row itself instead of trusting that the ids exist, so a destroyed, errored, or still-provisioning environment renders the row disabled with its actual state named, rather than a ✨ ready marker whose pick failed with bb's raw "HTTP 409: Environment unavailable".
-- **Threads running background work stay in Working.** A thread whose turn ended while a background agent, background command, or workflow run is still going used to show as Idle. It now stays in Working until that work lands, and the idle sweep leaves it alone.
 - **Magic rename's "use the thread's active model" probe generates on that model again.** bb 0.48 dropped `providerId` from the thread execution-options response, so every probe fell back to the project-default model chain instead of the thread's model (a thread on **acp-omp** got a probe on **codex**, which died "could not find the Codex CLI"). The probe now pairs that response's model with the source thread's own providerId.
+
+#### Cards and chips
+
+- **Threads running background work stay in Working.** A thread whose turn ended while a background agent, background command, or workflow run is still going used to show as Idle. It now stays in Working until that work lands, and the idle sweep leaves it alone.
+
+#### The thread pane
+
 - **Answering a pending question in the thread pane shows one form again.** bb 0.48.0's parity work made the host banner render inside the pane's embedded chat, so the pane's own question card duplicated it, and answering one left the other stale. The card is gone: the host banner owns the surface, and the host persists partial answers itself.
 - **The thread pane's "Recent decisions" card is gone.** The transcript has carried every answered question since bb 0.47.0 (and the plugin-form "Answered" rows since 0.48.0, get-bb/bb#4463), so the card was a second, weaker copy rebuilt by text-parsing the raw event log. The transcript's own answered rows are the record.
 - **Clicking a file-change row's name in the pane now opens the thread in the main view.** The path segment was colored like the main view's clickable file title but did nothing, because the plugin path supplies no title-action resolver; the pane claims the click and maximizes, where the host resolver opens the diff.
