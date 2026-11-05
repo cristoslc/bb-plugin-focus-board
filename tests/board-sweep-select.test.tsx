@@ -172,9 +172,9 @@ describe("the sweep pill is eligibility plus count", () => {
     });
     expect(document.querySelector("[data-sweep-button]")).toBeNull();
     const section = document.querySelector('section[data-column-id="done"]');
-    const header = section?.querySelector(":scope > header");
-    if (!(header instanceof HTMLElement)) throw new Error("missing lane header");
-    fireEvent.click(header);
+    const trigger = section?.querySelector("header button[data-lane-menu-trigger]");
+    if (!(trigger instanceof HTMLElement)) throw new Error("missing lane menu trigger");
+    fireEvent.click(trigger);
     fireEvent.click(
       screen.getByRole("menuitem", { name: "Sweep this lane…" }) as HTMLElement,
     );

@@ -94,6 +94,7 @@ export function MenuPopoverEntry({
   onRun,
   danger,
   dividerAbove,
+  checked,
 }: {
   label: string;
   icon: string;
@@ -101,11 +102,19 @@ export function MenuPopoverEntry({
   /** Destructive or state-arming entries draw in the danger tone. */
   danger?: boolean;
   dividerAbove?: boolean;
+  /**
+   * The checked-state idiom of the toolbar's option menus (the leading Check
+   * on a selected row), as a menu row's own mark: present → the row renders
+   * role="menuitemradio" with aria-checked, and the active row carries the
+   * Check. Absent → a plain action row, exactly as before.
+   */
+  checked?: boolean;
 }) {
   return (
     <button
       type="button"
-      role="menuitem"
+      role={checked === undefined ? "menuitem" : "menuitemradio"}
+      aria-checked={checked === undefined ? undefined : checked}
       onClick={onRun}
       className={cn(
         "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-accent",
@@ -115,6 +124,9 @@ export function MenuPopoverEntry({
     >
       <Icon name={icon} className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
       {label}
+      {checked === true ? (
+        <Icon name="Check" className="ml-auto size-3 shrink-0 text-muted-foreground" aria-hidden />
+      ) : null}
     </button>
   );
 }

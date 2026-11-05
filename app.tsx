@@ -183,11 +183,15 @@ import {
   cardTransportStoredValue,
   parseLaneDirectionStored,
   laneDirectionStoredValue,
+  LANE_ORDER_DIRECTIONS_KEY,
+  parseLaneOrderDirections,
+  laneOrderDirectionsStoredValue,
   parseMotionSettings,
   motionPacingStoredValue,
   motionSettingsStoredValues,
   type CardTransportPref,
   type LaneDirectionPref,
+  type LaneOrderDirection,
   type MotionPref,
   type MotionPacing,
   type MotionSettings,
@@ -1061,10 +1065,6 @@ function BoardPage({ subPath }: { subPath: string }) {
     },
     [],
   );
-  useCrossWindowStorage([
-    { key: COLLAPSED_GROUPS_KEY, onRemoteChange: hydrateCollapsedGroups },
-    { key: WALLPAPER_KEY, onRemoteChange: hydrateWallpaper },
-  ]);
   // Appearance tab: the board lane direction's read. Vertical keeps today's
   // column board; horizontal reads every lane as a row (issue #153). Backed
   // by the same tolerant store; the choice hands straight to the Board.
@@ -1075,6 +1075,42 @@ function BoardPage({ subPath }: { subPath: string }) {
     setLaneDirection(value);
     writeStored(LANE_DIRECTION_KEY, laneDirectionStoredValue(value));
   }, []);
+  // Per-lane sort direction (the lane menu's sort pair): a columnRankKey →
+  // "oldest-first" map, localStorage-backed like every other view preference.
+  // The default (key absent) is the board's standing newest-first read; the
+  // menu writes one key per pick, so the map stays operator-sized.
+  const [laneOrderDirections, setLaneOrderDirections] = useState<
+    Readonly<Record<string, LaneOrderDirection>>
+  >(() => parseLaneOrderDirections(readStoredText(LANE_ORDER_DIRECTIONS_KEY, "")));
+  const hydrateLaneOrderDirections = useCallback(() => {
+    setLaneOrderDirections(parseLaneOrderDirections(readStoredText(LANE_ORDER_DIRECTIONS_KEY, "")));
+  }, []);
+  const persistLaneOrderDirection = useCallback(
+    (columnKey: string, direction: LaneOrderDirection | null) => {
+      // Optimistic: the pair's pick re-orders the lane at once, and the
+      // stored write persists it. The menu's row state and the board's sort
+      // engine read the same state object, so they cannot drift apart.
+      setLaneOrderDirections((prev) => {
+        const next = { ...prev };
+        if (direction === null) {
+          if (Object.hasOwn(next, columnKey)) delete next[columnKey];
+        } else {
+          next[columnKey] = direction;
+        }
+        writeStored(
+          LANE_ORDER_DIRECTIONS_KEY,
+          laneOrderDirectionsStoredValue(next),
+        );
+        return next;
+      });
+    },
+    [],
+  );
+  useCrossWindowStorage([
+    { key: COLLAPSED_GROUPS_KEY, onRemoteChange: hydrateCollapsedGroups },
+    { key: WALLPAPER_KEY, onRemoteChange: hydrateWallpaper },
+    { key: LANE_ORDER_DIRECTIONS_KEY, onRemoteChange: hydrateLaneOrderDirections },
+  ]);
   // Scheme read for the wallpaper's dark variant: the hook lives with the
   // media-query hooks and flips live (a change listener, no reload).
   const darkScheme = usePrefersDarkScheme();
@@ -1748,6 +1784,7 @@ function BoardPage({ subPath }: { subPath: string }) {
     return assembleBoard(searched, groupBy, groupContext, EMPTY_FROZEN_COLUMNS, doneIds, Date.now(), {
       nestingEnabled: nestChildren,
       ranks,
+      laneOrderDirections,
       doneTimes,
       attentionFreeze: compileAttentionFreezes([
         ...(paneCapture !== null && paneCapture.view === groupBy ? [paneCapture] : []),
@@ -1755,7 +1792,7 @@ function BoardPage({ subPath }: { subPath: string }) {
       ]),
       errorAcks: errorAckIds,
     });
-  }, [isParentGroupBy, searched, groupBy, groupContext, doneIds, nestChildren, ranks, doneTimes, paneCapture, errorAckIds, hoverRebuildEpoch]);
+  }, [isParentGroupBy, searched, groupBy, groupContext, doneIds, nestChildren, ranks, laneOrderDirections, doneTimes, paneCapture, errorAckIds, hoverRebuildEpoch]);
   const columns = assembly?.columns ?? [];
   // The map that actually renders as nested rows (nesting rules applied, so a
   // promoted, un-nested, or cross-axis child is absent — expanding the card
@@ -3700,6 +3737,11 @@ function BoardPage({ subPath }: { subPath: string }) {
                   refetchRanks();
                 });
             }}
+            // The lane menu's sort pair: one key per pick, persisted with the
+            // other view preferences and synced to another window's write
+            // through the storage event the useCrossWindowStorage hook reads.
+            laneOrderDirections={laneOrderDirections}
+            onLaneOrderDirection={persistLaneOrderDirection}
             menuActionsFor={menuActionsFor}
             reveal={revealRequest}
           />

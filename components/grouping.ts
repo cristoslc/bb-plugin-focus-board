@@ -1,5 +1,6 @@
 import type { PluginSidebarProject, PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import type { TicketRef } from "../lib/tickets";
+import type { LaneOrderDirection } from "./preferences";
 import {
   columnRankKey,
   compareByRank,
@@ -478,6 +479,26 @@ export function derivedCompare(
   return b.updatedAt - a.updatedAt;
 }
 
+/**
+ * The board's derived order under a lane's stored direction. Absent (the
+ * default) is the standing newest-first order; "oldest-first" runs the same
+ * pinned-lead shape the other way, so a lane's ascending read never demotes
+ * a pinned card below an unpinned one — the direction flips the recency
+ * dimension only, never lane membership (the lane menu's sort pair is the
+ * amendment of the per-lane menu ruling).
+ */
+export function derivedCompareForDirection(
+  direction: LaneOrderDirection | undefined,
+): (a: PluginSidebarThread, b: PluginSidebarThread) => number {
+  if (direction === undefined) return derivedCompare;
+  return (a: PluginSidebarThread, b: PluginSidebarThread): number => {
+    const aPinned = a.isPinned ? 0 : 1;
+    const bPinned = b.isPinned ? 0 : 1;
+    if (aPinned !== bPinned) return aPinned - bPinned;
+    return a.updatedAt - b.updatedAt;
+  };
+}
+
 function sorted(
   threads: readonly PluginSidebarThread[],
   order: ColumnOrder = [],
@@ -630,6 +651,14 @@ export function buildColumns(
    * into its state column (or nests quiet) instead of Needs you.
    */
   errorAcks: ReadonlySet<string> = new Set(),
+  /**
+   * Per-lane sort direction (the lane menu's sort pair): a columnRankKey →
+   * "oldest-first" map. Absent = the standing newest-first read. A stored
+   * hand-order still leads — the direction runs the recency compare, which
+   * is the unranked tail's order under a rank and the whole lane's order
+   * without one.
+   */
+  laneOrderDirections: Readonly<Record<string, LaneOrderDirection>> = {},
 ): BoardColumn[] {
   // Threads marked Done form their own column, always farthest right on the
   // Attention board and present (dimmed) on every other grouping.
@@ -681,11 +710,18 @@ export function buildColumns(
       if (keyDiff !== 0) return keyDiff;
       return a[1].label.localeCompare(b[1].label);
     })
-    .map(([id, bucket]) => ({
-      id,
-      label: bucket.label,
-      threads: sorted(bucket.threads, orderForColumn(ranks, columnRankKey(groupBy, id))),
-    }));
+    .map(([id, bucket]) => {
+      const rankKey = columnRankKey(groupBy, id);
+      return {
+        id,
+        label: bucket.label,
+        threads: sorted(
+          bucket.threads,
+          orderForColumn(ranks, rankKey),
+          derivedCompareForDirection(laneOrderDirections[rankKey]),
+        ),
+      };
+    });
 
   // "Working" never leaves the attention board: a board whose every thread
   // has gone idle still carries the lane, empty, where the UI reads
@@ -707,7 +743,11 @@ export function buildColumns(
     columns.unshift({
       id: "pinned",
       label: "Pinned",
-      threads: sorted(pinned, orderForColumn(ranks, columnRankKey(groupBy, "pinned"))),
+      threads: sorted(
+        pinned,
+        orderForColumn(ranks, columnRankKey(groupBy, "pinned")),
+        derivedCompareForDirection(laneOrderDirections[columnRankKey(groupBy, "pinned")]),
+      ),
     });
   }
 
@@ -722,7 +762,11 @@ export function buildColumns(
     columns.push({
       id: "done",
       label: "Done",
-      threads: sorted(done, orderForColumn(ranks, columnRankKey(groupBy, "done"))),
+      threads: sorted(
+        done,
+        orderForColumn(ranks, columnRankKey(groupBy, "done")),
+        derivedCompareForDirection(laneOrderDirections["done"]),
+      ),
     });
   }
   // A grouping with no buckets at all still shows the flat column.

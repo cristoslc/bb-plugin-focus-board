@@ -769,3 +769,44 @@ export function wallpaperStoredValue(settings: WallpaperSettings): string {
   const layer = parseWallpaperLayer(settings.global) ?? null;
   return JSON.stringify({ version: 1, global: layer });
 }
+
+/**
+ * Per-lane sort direction (the lane menu's sort pair): a columnRankKey →
+ * direction map. The default is the board's standing newest-first order; only
+ * the flipped value is stored, so the map stays tiny and an absent key reads
+ * as the default rather than as stale state.
+ */
+export const LANE_ORDER_DIRECTIONS_KEY = "focus-board:laneOrderDirections";
+
+export type LaneOrderDirection = "oldest-first";
+
+const LANE_ORDER_DIRECTIONS: readonly LaneOrderDirection[] = ["oldest-first"];
+
+export function parseLaneOrderDirections(
+  raw: string | null,
+): Readonly<Record<string, LaneOrderDirection>> {
+  if (raw === null || raw === "") return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const out: Record<string, LaneOrderDirection> = {};
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      // A "__proto__" or empty name is never a column key the board writes
+      // (the rank store's guard rejects both), so a stored one is foreign
+      // data: skip it rather than mint a preference the board cannot read.
+      if (key === "" || key === "__proto__") continue;
+      if (typeof value !== "string") continue;
+      if (!(LANE_ORDER_DIRECTIONS as readonly string[]).includes(value)) continue;
+      out[key] = value as LaneOrderDirection;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function laneOrderDirectionsStoredValue(
+  directions: Readonly<Record<string, LaneOrderDirection>>,
+): string {
+  return JSON.stringify({ ...directions });
+}

@@ -47,24 +47,25 @@ await page.waitForSelector("[data-thread-card]", { timeout: 30_000 });
 await new Promise((r) => setTimeout(r, 800));
 
 // Frame 1: the ranked lane's header — badge gone (its aria-label was the
-// old marker), the ordered state itself still on the section.
+// old marker), the ordered state itself still on the section, and the
+// 3-dot trigger left of the label.
 const headerRead = await page.evaluate(() => {
   const section = document.querySelector('section[data-column-id="unread"]');
   const header = section?.querySelector(":scope > header");
+  const trigger = header?.querySelector("button[data-lane-menu-trigger]");
   const badge = document.querySelector('[aria-label="Ordered by you, not by recency"]');
-  const badges = document.querySelectorAll("svg").length;
   return {
     ordered: section?.getAttribute("data-column-ordered"),
-    headerLabel: header?.getAttribute("aria-label") ?? null,
+    triggerLabel: trigger?.getAttribute("aria-label") ?? null,
+    triggerLeftOfLabel: trigger?.nextElementSibling?.tagName === "H3",
     oldBadgeGone: badge === null,
-    glyphCount: badges,
   };
 });
 
 await page.screenshot({ path: `${OUT}lane-header-badge-gone.png` });
 
-// Frame 2: the menu the header click opens.
-await page.click('section[data-column-id="unread"] > header');
+// Frame 2: the menu the 3-dot trigger opens.
+await page.click('section[data-column-id="unread"] header button[data-lane-menu-trigger]');
 await page.waitForSelector('[role="menu"][aria-label="Lane actions"]', { timeout: 5_000 });
 const menuRead = await page.evaluate(() => {
   const menu = document.querySelector('[role="menu"][aria-label="Lane actions"]');
@@ -72,6 +73,8 @@ const menuRead = await page.evaluate(() => {
     open: menu !== null,
     sortState: menu?.querySelector("[data-lane-sort-state]")?.getAttribute("data-lane-sort-state") ?? null,
     sortText: menu?.querySelector("[data-lane-sort-state]")?.textContent?.trim() ?? null,
+    directionChecked:
+      menu?.querySelector('[role="menuitemradio"][aria-checked="true"]')?.textContent?.trim() ?? null,
     removeEntry: [...(menu?.querySelectorAll("button") ?? [])].some(
       (button) => button.textContent?.trim() === "Remove custom order",
     ),

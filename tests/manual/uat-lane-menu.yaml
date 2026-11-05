@@ -37,7 +37,7 @@ steps:
       - rpc_not_called: rank_clear
 
   - id: the-header-tap-opens-the-menu-and-names-the-recency-order
-    title: Tapping an unranked lane header opens the menu naming recency, newest first
+    title: Tapping the lane's 3-dot trigger opens the menu naming recency, newest first
     goto: "?groupBy=status"
     click_aria: "Unread lane actions"
     assert:
@@ -105,3 +105,16 @@ steps:
           armed: true
           pill: "0 → Read"
           cancel: true
+
+  - id: the-sort-pair-carries-real-directions
+    title: The menu's sort pair shows the standing direction checked, and the pick writes it
+    goto: "?groupBy=status"
+    gestures:
+      - click_aria: "Unread lane actions"
+      - click_aria: "Oldest first"
+      - click_aria: "Unread lane actions"
+    assert:
+      - lane_sweep:
+          column: unread
+          menuOpen: true
+          menuOldestChecked: true
