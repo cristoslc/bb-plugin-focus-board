@@ -3,8 +3,24 @@
 Commissioned by the Focus Board orchestrator (thr_maufmdmr5q): "the board is
 sluggish, especially at load." This document is the load-time lane's measured
 baseline — the harness that produced it, the numbers, and the commands to
-reproduce. The strategy memo follows it as a separate doc
-(`docs/plans/perf-strategy-2026-11-05.md`) once child commissions are shaped.
+reproduce. The strategy memo follows it in
+(`docs/plans/perf-strategy-2026-11-05.md`), and this doc's delta table at the
+end records every re-baseline the lane takes (per the law: after every
+orchestrator merge, before crediting or debiting any child's change).
+
+## Re-baseline delta table (the living section)
+
+Each row is one orchestrator merge, the lane's full-battery run on the new
+head, and what moved. Cell format: `median [min/max]` ms; the reference
+numbers beside each row are the previous row's cell state.
+
+| Head | What landed | Modeled fan-in ∆ | Notable stage moves | Evidence |
+|---|---|---|---|---|
+| 391a2c0 (base) | Phase 1 merged (tooling only) | `100/300/500 = 421/692/1077` | none — matches the pre-merge series | `load-bench-2026-11-05T03-39-33-858Z.json` |
+| 3a67cbe + #376 at 4b4c5ac (current) | **Child A PR #377**: the four `*_list` handlers + done walk parallelized (`readBounded`, cap 16, server.ts); the harness model + budgets moved to the parallel shape in the same PR. #376 (button placement, another lane) merged alongside — its client-side surface shows no move above noise | **28/52/77** (modeled fan-in collapsed 15x at 500; credited to Child A: the same head's client profile moved within noise, #376 touches no load stage) | client profile unchanged within noise (firstCard 189/269/312 vs 186-303 band; settleTail 397/435/499 vs 397-513 band); modeled `mountToFirstCard` drifted down 112/181/231 (the fan-in's scans no longer contend with the board render) | `load-bench-2026-11-05T04-16-00-974Z.json` |
+
+The next lane target stands in these numbers: the client-profile
+`settleTail` (397/435/499ms of post-paint mutation) — Child B's commission.
 
 ## What measures load
 
