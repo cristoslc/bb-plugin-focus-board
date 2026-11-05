@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-04T08:49:04.324Z by `npm run uat`._
+_Generated 2026-11-05T05:54:22.062Z by `npm run uat`._
 
 ## gesture-fuzz
 
-Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-fuzz.yaml` · theme dark
+Source: `tests/manual/uat-fuzz.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
