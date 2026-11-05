@@ -2,7 +2,9 @@
 // system.aiServices (the thread-title selection bb routes its own title
 // generation through), threads.{promptHistory,spawn,get,timeline,delete,stop},
 // threads.defaultExecutionOptions (the thread-model probe's model source),
-// and plugins.callRpc (the cross-plugin bridge focus-board rides on).
+// environments.get (the environment-read host call behind the thread-model
+// row's readiness verdict, issue #378), and plugins.callRpc (the
+// cross-plugin bridge focus-board rides on).
 import type { FakePluginHost } from "@get-bb/plugin-sdk/testing";
 import { createFakePluginHost } from "@get-bb/plugin-sdk/testing";
 import plugin from "../../server";
@@ -42,6 +44,13 @@ export type AutotitleSetupOptions = {
   executionOptions?: unknown;
   /** threads.get result for the source thread; defaults to a proj/env row. */
   threadRow?: unknown;
+  /**
+   * bb.sdk.environments.get result (issue #378's readiness read). Default:
+   * a ready environment row, so the legacy "ids exist" tests keep passing.
+   */
+  environment?: unknown;
+  /** The message environments.get rejects with (the inconclusive read). */
+  environmentError?: string;
   /** Status sequence threads.get returns for the probe thread after spawn; the last one repeats. Default ["idle"] (settles on the first poll). */
   probeStatuses?: string[];
   /** threads.timeline result for the probe thread. Default: one assistant row with the canned title. */
@@ -79,6 +88,12 @@ const DEFAULT_SOURCE_ROW = {
   environmentId: "env_1",
   status: "idle",
   visibility: "visible",
+};
+const DEFAULT_ENVIRONMENT_ROW = {
+  id: "env_1",
+  status: "ready",
+  hostId: "host_1",
+  path: "/workspace",
 };
 const DEFAULT_TIMELINE = {
   rows: [
@@ -186,6 +201,14 @@ export async function setup(
         stop: async ({ threadId }: { threadId: string }) => {
           stopped.push(threadId);
           return { ok: true };
+        },
+      },
+      environments: {
+        get: async () => {
+          if (opts.environmentError !== undefined) {
+            throw new Error(opts.environmentError);
+          }
+          return opts.environment ?? DEFAULT_ENVIRONMENT_ROW;
         },
       },
       plugins: {

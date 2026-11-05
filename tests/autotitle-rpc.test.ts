@@ -355,6 +355,25 @@ describe("thread_autotitle via the thread's own model (hidden probe thread)", ()
     ).rejects.toThrow(/no .*reply|no .*title/i);
     expect(deletedProbes()).toHaveLength(1);
   });
+
+  it("refuses with the named environment blocker before any spawn (issue #378)", async () => {
+    // The defensive hard-line under the menu's gate: bb's raw
+    // `HTTP 409: Environment unavailable` must not be reachable from the
+    // modal's advertised row when the environment is torn down.
+    const { callRpc, lastSpawn, deletedProbes } = await setup({
+      environment: {
+        id: "env_1",
+        status: "destroyed",
+        hostId: "host_1",
+        path: null,
+      },
+    });
+    await expect(
+      callRpc("thread_autotitle", { threadId: "thr_x", useThreadModel: true }),
+    ).rejects.toThrow(/destroyed/);
+    expect(lastSpawn()).toBeNull();
+    expect(deletedProbes()).toHaveLength(0);
+  });
 });
 
 describe("thread-model spawn fallback chain", () => {
@@ -546,6 +565,91 @@ describe("thread_autotitle_services thread-model availability", () => {
   it("reports unavailable when the thread has no project to spawn the probe into", async () => {
     const { callRpc } = await setup({
       threadRow: { id: "thr_x", projectId: null, environmentId: null, status: "idle" },
+    });
+    const out = (await callRpc("thread_autotitle_services", {
+      threadId: "thr_x",
+    })) as { threadModel: { available: boolean; reason: string | null } };
+    expect(out.threadModel.available).toBe(false);
+    expect(out.threadModel.reason).not.toBeNull();
+  });
+
+  // Issue #378: the environment must be spawnable, not merely an id. bb's
+  // spawn into a torn-down environment answers raw
+  // `HTTP 409: Environment unavailable`, so the services menu has to read
+  // the environment row itself and read every non-ready verdict from it.
+  it("consults the environment row behind the verdict", async () => {
+    const { callRpc, harness } = await setup({});
+    (await callRpc("thread_autotitle_services", { threadId: "thr_x" })) as {
+      threadModel: { available: boolean; reason: string | null };
+    };
+    expect(harness.sdk.callsTo("environments.get")).toHaveLength(1);
+  });
+
+  it("reports the destroyed environment unavailable, naming it", async () => {
+    // Live symptom (thr_dkfhriuxc6, env torn down): the old gate said
+    // available:true here and the pick failed with the raw 409.
+    const { callRpc, harness } = await setup({
+      environment: {
+        id: "env_1",
+        status: "destroyed",
+        hostId: "host_1",
+        path: null,
+      },
+    });
+    const out = (await callRpc("thread_autotitle_services", {
+      threadId: "thr_x",
+    })) as { threadModel: { available: boolean; reason: string | null } };
+    expect(out.threadModel.available).toBe(false);
+    expect(out.threadModel.reason).toMatch(/destroyed/i);
+    expect(harness.sdk.callsTo("environments.get")).toHaveLength(1);
+  });
+
+  it("reports an errored environment unavailable, naming the state", async () => {
+    const { callRpc } = await setup({
+      environment: {
+        id: "env_1",
+        status: "error",
+        hostId: "host_1",
+        path: "/workspace",
+      },
+    });
+    const out = (await callRpc("thread_autotitle_services", {
+      threadId: "thr_x",
+    })) as { threadModel: { available: boolean; reason: string | null } };
+    expect(out.threadModel.available).toBe(false);
+    expect(out.threadModel.reason).toMatch(/error state/i);
+  });
+
+  it("reports an environment still provisioning unavailable", async () => {
+    const { callRpc } = await setup({
+      environment: {
+        id: "env_1",
+        status: "provisioning",
+        hostId: "host_1",
+        path: null,
+      },
+    });
+    const out = (await callRpc("thread_autotitle_services", {
+      threadId: "thr_x",
+    })) as { threadModel: { available: boolean; reason: string | null } };
+    expect(out.threadModel.available).toBe(false);
+    expect(out.threadModel.reason).toMatch(/provisioning/i);
+  });
+
+  it("blocks the row when the environment read fails, never advertising on an inconclusive probe", async () => {
+    const { callRpc } = await setup({
+      environmentError: "HTTP 404: Environment not found",
+    });
+    const out = (await callRpc("thread_autotitle_services", {
+      threadId: "thr_x",
+    })) as { threadModel: { available: boolean; reason: string | null } };
+    expect(out.threadModel.available).toBe(false);
+    expect(out.threadModel.reason).toContain("HTTP 404: Environment not found");
+  });
+
+  it("blocks the row when the environment row carries no usable status", async () => {
+    const { callRpc } = await setup({
+      environment: { id: "env_1", hostId: "host_1", path: "/workspace" },
     });
     const out = (await callRpc("thread_autotitle_services", {
       threadId: "thr_x",

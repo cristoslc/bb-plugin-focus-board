@@ -300,6 +300,24 @@ describe("fallback modal thread-model row", () => {
     expect(row.disabled).toBe(true);
     expect(screen.getByText(/no resolved model/i)).toBeTruthy();
   });
+
+  it("renders the environment blocker the server names on the row (issue #378)", async () => {
+    // The server's environment-read gate (issue #378) is what stops the
+    // row from being offered on a torn-down environment; the modal's job
+    // is to surface that blocker text rather than a clickable ✨ row that
+    // would 409.
+    renderWithModal({
+      threadModel: {
+        available: false,
+        reason:
+          "This thread's environment is destroyed, so a title probe cannot spawn in it",
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /auto-rename/i }));
+    const row = await screen.findByRole("button", { name: /active model/i });
+    expect(row.disabled).toBe(true);
+    expect(screen.getByText(/environment is destroyed/)).toBeTruthy();
+  });
 });
 
 describe("bridge capability in the fallback modal", () => {

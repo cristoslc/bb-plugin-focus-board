@@ -8,6 +8,9 @@ import { describe, expect, it } from "vitest";
 import {
   assistantTextFromTimeline,
   buildAutotitleProbePrompt,
+  environmentNotSpawnableReason,
+  environmentReadFailureReason,
+  environmentStatusMissingReason,
   firstUserPromptFromTimeline,
   probeSettled,
   type AutotitleTimelineRow,
@@ -133,5 +136,52 @@ describe("firstUserPromptFromTimeline", () => {
         { kind: "system", text: "system rows say nothing" },
       ]),
     ).toBeNull();
+  });
+});
+
+describe("environment readiness refusal wording (issue #378)", () => {
+  // The fallback modal serves these strings as the thread-model row's
+  // blocker text; each must name the actual blocker bb read off the row.
+  it("names the destroyed environment as the blocker", () => {
+    expect(environmentNotSpawnableReason("destroyed")).toBe(
+      "This thread's environment is destroyed, so a title probe cannot spawn in it",
+    );
+  });
+
+  it("names the error state and provisioning as not yet spawnable", () => {
+    expect(environmentNotSpawnableReason("error")).toBe(
+      "This thread's environment is in the error state, so a title probe cannot spawn in it",
+    );
+    expect(environmentNotSpawnableReason("provisioning")).toBe(
+      "This thread's environment is still provisioning, so a title probe cannot spawn in it yet",
+    );
+    expect(environmentNotSpawnableReason("creating")).toBe(
+      "This thread's environment is still creating, so a title probe cannot spawn in it yet",
+    );
+  });
+
+  it("quotes an unrecognized status instead of guessing it ready", () => {
+    expect(environmentNotSpawnableReason("retiring")).toBe(
+      'This thread\'s environment is "retiring", not ready to spawn a title probe into',
+    );
+  });
+
+  it("carries the read's own failure into an inconclusive verdict", () => {
+    expect(
+      environmentReadFailureReason(new Error("HTTP 404: Environment not found")),
+    ).toBe(
+      "This thread's environment could not be read to verify a title probe spawn: HTTP 404: Environment not found",
+    );
+    expect(
+      environmentReadFailureReason("no host connection"),
+    ).toBe(
+      "This thread's environment could not be read to verify a title probe spawn: no host connection",
+    );
+  });
+
+  it("gives the shapeless row its own inconclusive wording", () => {
+    expect(environmentStatusMissingReason()).toBe(
+      "This thread's environment row carries no status, so a title probe spawn could not be verified",
+    );
   });
 });

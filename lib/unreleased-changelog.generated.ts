@@ -17,6 +17,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "children": []
   },
   {
+    "text": "**Magic rename's thread-model row is blocked when the thread's environment cannot run it.** The fallback menu now reads the environment row itself instead of trusting that the ids exist, so a destroyed, errored, or still-provisioning environment renders the row disabled with its actual state named, rather than a ✨ ready marker whose pick failed with bb's raw \"HTTP 409: Environment unavailable\".",
+    "children": []
+  },
+  {
     "text": "**Threads running background work stay in Working.** A thread whose turn ended while a background agent, background command, or workflow run is still going used to show as Idle. It now stays in Working until that work lands, and the idle sweep leaves it alone.",
     "children": []
   },
