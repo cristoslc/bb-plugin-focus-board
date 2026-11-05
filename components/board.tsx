@@ -3097,7 +3097,18 @@ export function Board({
                         // never open a menu over the card being dragged.
                         if (touchDragArmed()) return;
                         event.stopPropagation();
-                        setLaneMenu({ columnId: column.id, x: event.clientX, y: event.clientY });
+                        // Anchored, not pointer-following: the menu drops
+                        // under the name+caret pair, left-aligned with it
+                        // (the View dropdown's geometry — the operator's
+                        // "not offset" pass), whatever pixel the click
+                        // landed on. The shell's own viewport clamp keeps
+                        // the far-right lanes on screen.
+                        const box = event.currentTarget.getBoundingClientRect();
+                        setLaneMenu({
+                          columnId: column.id,
+                          x: box.left,
+                          y: box.bottom + 4,
+                        });
                       }}
                       className="flex min-w-0 items-center gap-0.5 truncate rounded-sm text-[11px] font-medium transition-colors hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
