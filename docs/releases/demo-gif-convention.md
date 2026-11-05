@@ -92,6 +92,8 @@ The backfill's per-bullet decisions live here so the record survives the pull re
 | 1.6.0 | A rank drag in one window survives another window's drop | demonstrated | two-window driver |
 | 1.6.0 | A wallpaper chosen in one window survives the second window's dim change | demonstrated | two-window driver (the wallpaper document is already cross-window) |
 | 1.7.0 | Hiding idle children no longer buries a busy grandchild | demonstrated | `?idlebusy=1` |
+| 1.7.0 | The wallpaper crop tunes over the image itself | demonstrated | `?wallpaper=photo` — the harness's committed, generated photo fixture (`generate-wallpaper-photo.mjs` → `assets/wallpaper-photo.png`) |
+| 1.7.0 | The wallpaper frames the window, not the board's viewport | demonstrated | the same `?wallpaper=photo` fixture |
 | 1.7.1 | A family's fold and idle filter follow you to every window and machine | demonstrated | two-window driver |
 | 1.7.3 | A child in a different group than its parent shows twice | demonstrated | `?dualgroups=1` |
 | 1.7.3 | A pinned member keeps its group's dashed frame | demonstrated | `?pinnedgroup=1` |
@@ -126,8 +128,6 @@ Still skipped, with the reason:
 | 1.7.0 | A burst of realtime signals refetches the board once | Refetch pacing; no on-screen state. |
 | 1.7.0 | A state change repaints only the changed cards | Render count; identical pixels. |
 | 1.7.0 | Opening a thread on a big board repaints one card | Render count; identical pixels. |
-| 1.7.0 | The wallpaper crop tunes over the image itself | Needs a seeded photo wallpaper; the harness has bundled gradients only. |
-| 1.7.0 | The wallpaper frames the window, not the board's viewport | Same photo seed. |
 | 1.7.0 | A phone's pane header sizes the done checkbox to its thumb | A target-size measurement; a still. |
 | 1.7.0 | The New Thread dialog's header controls no longer touch | 16px of spacing; a still. |
 | 1.7.0 | `bb focus-board done list` survives a deleted index entry | A CLI, not the board; the harness renders no terminal. |
