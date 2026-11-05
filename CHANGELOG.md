@@ -17,6 +17,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - **Remove custom order erases the lane's stored hand-order in one click.** The lane reads recency again over the new `rank_clear` write, which the host and the screenshot harness serve through one shared op.
   - **Sweep this lane arms the sweep from the menu.** With manual sweeping in the menu, the broom pill shows up only on a lane that has eligible cards to sweep, with the count beside it; a lane with nothing to sweep rests it.
 
+#### Cards and chips
+
+- **The load-time dissolve no longer plays: the board's mounting echo lands its cards in place.** The relocations a load's own data makes during the first instants after paint (the done projection, feature-group boxes coalescing) used to arm card transports whose teardown kept the board repainting a few hundred ms after it looked loaded. The lanes land exactly where they would have; every later gesture or realtime move still plays.
+
 ### Fixed
 
 ## [1.7.7] - 2026-11-05

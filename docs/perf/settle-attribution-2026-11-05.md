@@ -190,3 +190,48 @@ The after-battery, re-taken on the branch's final (rebased) head
   its client settleTails 398/431/488 where the re-baseline reads 397/435/499 —
   all inside the standing budgets with zero violations
   (`load-bench-2026-11-05T05-18-03-580Z.json`, the PR's bench evidence).
+
+## The Gate T after-run (the mount-age guard; the tail's end is the chip wave)
+
+The lane approved Gate T, and this section is its attribution of record. The
+mechanism, as landed: the board's lane-diff layout effect stamps
+`mountSeedAtRef` with `Date.now()` at its FIRST lane map, and a diff within
+`LOAD_TRANSPORT_MOUNT_GUARD_MS` (700ms, documented beside the planner in
+`components/card-transport.ts`) applies the move's final layout directly — no
+ghost, no arrival, no phase timers. Every post-window move arms byte-identically.
+The guard's clock is `Date.now()` deliberately: the repo's suites fake Date, so
+tests walk past the window with the same fake clock the phase timers ride.
+
+The after-battery, re-taken on the guard with Gate C standing
+(`docs/perf/settle-attribution-2026-11-05T17-13-12-329Z.json`):
+
+| Scale | settleTail before (47ffa8b, both gates standing) | settleTail after (guard landed) | tail's last mutation |
+|---|---|---|---|
+| 100 | 398 (397/402/404 runs) | 108 / 107 / 123 | one chip-wave commit, child×22 |
+| 300 | 424 (424/430 runs) | 171 / 167 / 195 | one chip-wave commit, child×22 |
+| 500 | 488 (482/497 runs) | 284 (median; min 243 / max 272 on the bench) | one chip-wave commit, child×22 |
+
+- The tail's end moved onto the chip wave's last mutation, exactly as the
+  approved design predicted: one commit, a single 22-child insert (the chips'
+  status snapshots), no ghost teardown at arm + 320ms behind it.
+- The bench's client medians against the before-bench
+  (`load-bench-2026-11-05T17-00-50-525Z.json` on 47ffa8b, 0 violations):
+  398/424/488 before, 103/160/251 after
+  (`load-bench-2026-11-05T17-14-33-080Z.json`); the modeled profile barely
+  moves (91/122/184). The client-profile `settleTail` budgets lower to
+  340/510/850 (each ≈ 3× its measured median, all six cells green with zero
+  violations at the guard commit).
+- The relocation suites' move: every relocation pin in
+  `tests/board-transport.test.tsx` and `tests/board-transport-zoom.test.tsx`
+  walks its mount past the window (`pastLoadEcho()`) so the suites keep
+  proving the post-window law; the guard's own law test arms a relocation a
+  full window after a suppressed one and pins the dissolve.
+
+The emptied-lane edge the guard's law test surfaced (for the lane's record,
+pre-existing): `buildColumns` keeps the "columns exist only while they hold
+cards" rule (`components/grouping.ts`), so a relocation that EMPTIES its lane
+removes the lane from the render, and the dissolve's out-ghost has no lane to
+weave into. Proven pre-existing on 47ffa8b with a scratch (one card relocating,
+lane emptied: no ghost rendered, `phase: null`, the layout still landed). The
+guard did not introduce it; the guard's law test is merely the first to shape
+it. Gesture transports on a lane that keeps residents are untouched.
