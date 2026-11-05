@@ -358,6 +358,79 @@ describe("thread_autotitle via the thread's own model (hidden probe thread)", ()
 });
 
 describe("thread-model spawn fallback chain", () => {
+  it("pairs the 0.48 model-only execution response with the source thread's own providerId", async () => {
+    // bb 0.48.x dropped providerId from threads.defaultExecutionOptions: it
+    // returns exactly the resolved execution — {model, permissionMode,
+    // reasoningLevel, serviceTier, source} — so the old "providerId AND
+    // model" check never ran and every probe fell to the inherit chain,
+    // generating on the PROJECT'S default model (or failing on projects
+    // whose default cannot run, e.g. a Codex CLI missing on the machine).
+    // The thread's own providerId rides the source thread row instead.
+    const { callRpc, lastSpawn, lastServiceCall, deletedProbes } = await setup({
+      executionOptions: {
+        model: "cove/vision:heavy",
+        permissionMode: "full",
+        reasoningLevel: "medium",
+        serviceTier: "default",
+        source: "client/turn/requested",
+      },
+      threadRow: {
+        id: "thr_x",
+        projectId: "proj_1",
+        environmentId: "env_1",
+        providerId: "acp-omp",
+        status: "idle",
+        visibility: "visible",
+      },
+    });
+    const out = (await callRpc("thread_autotitle", {
+      threadId: "thr_x",
+      useThreadModel: true,
+    })) as { title: string };
+    expect(out).toEqual({ title: "Login redirect loop fix" });
+    const spawn = lastSpawn() as Record<string, unknown> | null;
+    expect(spawn).not.toBeNull();
+    expect(spawn!["providerId"]).toBe("acp-omp");
+    expect(spawn!["model"]).toBe("cove/vision:heavy");
+    expect(spawn!["executionInputSources"]).toEqual({
+      providerId: "explicit",
+      model: "explicit",
+    });
+    expect(lastServiceCall()).toBeNull();
+    expect(deletedProbes()).toHaveLength(1);
+  });
+
+  it("falls back to the inherit chain when the model-only response lacks a provider on both the response and the source row", async () => {
+    // A model id bb serves without a resolvable provider anywhere: the
+    // probe cannot pin a pair, so it degrades to the inherit chain (still
+    // generative) instead of refusing.
+    const { callRpc, lastSpawn } = await setup({
+      executionOptions: {
+        model: "cove/vision:heavy",
+        permissionMode: "full",
+        reasoningLevel: "medium",
+        serviceTier: "default",
+        source: "client/turn/requested",
+      },
+      threadRow: {
+        id: "thr_x",
+        projectId: "proj_1",
+        environmentId: "env_1",
+        status: "idle",
+        visibility: "visible",
+      },
+    });
+    const out = (await callRpc("thread_autotitle", {
+      threadId: "thr_x",
+      useThreadModel: true,
+    })) as { title: string };
+    expect(out).toEqual({ title: "Login redirect loop fix" });
+    const spawn = lastSpawn() as Record<string, unknown> | null;
+    expect(spawn).not.toBeNull();
+    expect(spawn && "providerId" in spawn).toBe(false);
+    expect(spawn && "model" in spawn).toBe(false);
+  });
+
   it("spawns by inheriting bb's default chain when no pair resolves, even with a provider on record", async () => {
     // A provider-only clone lets bb resolve the model against the
     // provider's own catalog default. On this machine that catalog default

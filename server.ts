@@ -1823,6 +1823,17 @@ export default async function plugin(bb: BbPluginApi) {
   type ProbeSourceRow = {
     projectId?: unknown;
     environmentId?: unknown;
+    /**
+     * The source thread's OWN provider (bb's thread rows carry it). bb
+     * 0.48.x dropped providerId from threads.defaultExecutionOptions — that
+     * response is exactly the resolved execution ({model, permissionMode,
+     * reasoningLevel, serviceTier, source}) — so the pair's provider half
+     * comes from the row. Verified live: every thread's response carries
+     * only the provider-scoped model id ("cove/vision:heavy" on an
+     * acp-omp thread), and the plugin's old providerId+model check never
+     * fired, sending every probe to the inherit chain instead.
+     */
+    providerId?: unknown;
   };
 
   async function probeSpawnPlan(
@@ -1834,16 +1845,25 @@ export default async function plugin(bb: BbPluginApi) {
     // The single source-row fetch per probe invocation: every tier returns
     // it alongside the plan so callers validate/spawn from this one read.
     const source = (await bb.sdk.threads.get({ threadId })) as unknown as ProbeSourceRow;
+    // The provider half: older bb served providerId/model together in this
+    // response (honor that shape first); 0.48.x responses carry only the
+    // model, so the source thread row supplies the provider.
+    const providerId =
+      typeof execution?.providerId === "string"
+        ? execution.providerId
+        : typeof source?.providerId === "string"
+          ? source.providerId
+          : null;
     if (
       execution !== null &&
-      typeof execution.providerId === "string" &&
+      providerId !== null &&
       typeof execution.model === "string"
     ) {
       return {
         plan: {
           spawnable: true,
           kind: "pair",
-          providerId: execution.providerId,
+          providerId,
           model: execution.model,
         },
         source,
