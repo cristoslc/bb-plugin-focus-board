@@ -121,3 +121,35 @@ export function assistantTextFromTimeline(
 export function probeSettled(status: string): boolean {
   return status === "idle" || status === "error";
 }
+
+/**
+ * The refusal wordings for the thread-model row's environment-readiness
+ * gate (issue #378): bb's spawn into a torn-down environment answers raw
+ * `HTTP 409: Environment unavailable`, and the fallback modal serves the
+ * `thread_autotitle_services` reason as the row's blocker text — so every
+ * verdict must name the actual blocker, and an inconclusive probe must
+ * block the row rather than ever read as available. Pure, so the wording
+ * is pinned without a host. bb's environment statuses: ready | error |
+ * creating | provisioning | destroyed.
+ */
+export function environmentNotSpawnableReason(status: string): string {
+  switch (status) {
+    case "destroyed":
+      return "This thread's environment is destroyed, so a title probe cannot spawn in it";
+    case "error":
+      return "This thread's environment is in the error state, so a title probe cannot spawn in it";
+    case "creating":
+    case "provisioning":
+      return `This thread's environment is still ${status}, so a title probe cannot spawn in it yet`;
+    default:
+      return `This thread's environment is "${status}", not ready to spawn a title probe into`;
+  }
+}
+
+export function environmentReadFailureReason(error: unknown): string {
+  return `This thread's environment could not be read to verify a title probe spawn: ${error instanceof Error ? error.message : String(error)}`;
+}
+
+export function environmentStatusMissingReason(): string {
+  return "This thread's environment row carries no status, so a title probe spawn could not be verified";
+}

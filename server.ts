@@ -122,6 +122,9 @@ import {
 import {
   assistantTextFromTimeline,
   buildAutotitleProbePrompt,
+  environmentNotSpawnableReason,
+  environmentReadFailureReason,
+  environmentStatusMissingReason,
   firstUserPromptFileFromTimeline,
   firstUserPromptFromTimeline,
   probeSettled,
@@ -2016,6 +2019,36 @@ export default async function plugin(bb: BbPluginApi) {
     return promptTextFromHistory(history);
   }
 
+  /**
+   * The environment-read host call behind the thread-model row's
+   * availability (issue #378): bb's spawn reusing a torn-down environment
+   * is the call that answers raw `HTTP 409: Environment unavailable`, so
+   * the verdict must read the environment row itself, never the ids'
+   * existence. Only bb's `ready` status admits the row, and a failed or
+   * shapeless read blocks it with the actual failure named
+   * (lib/autotitle-thread-model owns the wording) — it under-signals,
+   * never over-signals.
+   */
+  async function environmentSpawnReadiness(
+    environmentId: string,
+  ): Promise<{ ok: true } | { ok: false; reason: string }> {
+    let environment: { status?: unknown } | null;
+    try {
+      environment = (await bb.sdk.environments.get({
+        environmentId,
+      })) as unknown as { status?: unknown } | null;
+    } catch (error: unknown) {
+      return { ok: false, reason: environmentReadFailureReason(error) };
+    }
+    const status =
+      typeof environment?.status === "string" ? environment.status : null;
+    if (status === null) {
+      return { ok: false, reason: environmentStatusMissingReason() };
+    }
+    if (status === "ready") return { ok: true };
+    return { ok: false, reason: environmentNotSpawnableReason(status) };
+  }
+
   /** Can this thread's own model generate a title? Used by the fallback modal's menu. */
   async function threadModelAvailability(
     threadId: string,
@@ -2035,6 +2068,12 @@ export default async function plugin(bb: BbPluginApi) {
           reason: "This thread has no environment to spawn a title probe into",
         };
       }
+      // Issue #378: the ids above say the environment exists; only the
+      // environment row says it is spawnable. Without this read the modal
+      // advertised the row on torn-down environments and the pick answered
+      // bb's raw `HTTP 409: Environment unavailable`.
+      const readiness = await environmentSpawnReadiness(source.environmentId);
+      if (!readiness.ok) return { available: false, reason: readiness.reason };
       return { available: true, reason: null };
     } catch (error: unknown) {
       return {
@@ -2065,6 +2104,14 @@ export default async function plugin(bb: BbPluginApi) {
       throw new Error(
         `thread_autotitle: thread ${threadId} has no environment to spawn a title probe into`,
       );
+    }
+    // The menu's readiness gate holds on the probe path too (issue #378):
+    // refusing here keeps bb's raw spawn error (`HTTP 409: Environment
+    // unavailable`) unreachable from a row the ✨ modal advertised, so the
+    // modal names the environment's actual blocker instead.
+    const readiness = await environmentSpawnReadiness(source.environmentId);
+    if (!readiness.ok) {
+      throw new Error(`thread_autotitle: ${readiness.reason}`);
     }
     const threadPrompt = await threadOriginatingPrompt(threadId);
     if (threadPrompt === null) {
