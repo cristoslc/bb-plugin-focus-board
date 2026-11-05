@@ -17,7 +17,11 @@
  * the live server calls, not a re-spelled copy — the list-model copy drifted
  * once already and the suite caught it.
  */
-import { applyRankMoveFractions, type FractionRankStore } from "../../lib/rank-fractions";
+import {
+  applyRankClearFractions,
+  applyRankMoveFractions,
+  type FractionRankStore,
+} from "../../lib/rank-fractions";
 
 export interface HostGroups {
   /** groupId → its name stamp. */
@@ -62,7 +66,8 @@ export type HostOp =
   | { kind: "group_create"; group: { id: string; name: string; createdAt: string } }
   | { kind: "group_rename"; groupId: string; name: string }
   | { kind: "group_set"; threadId: string; groupId: string | null }
-  | { kind: "rank_move"; args: RankMoveArgs };
+  | { kind: "rank_move"; args: RankMoveArgs }
+  | { kind: "rank_clear"; columnKey: string };
 
 /** The realtime signal the real server publishes after a host write. */
 export interface HostSignal {
@@ -188,6 +193,18 @@ export function applyHostOp(state: HostState, op: HostOp): HostOpResult {
         state: { ...state, ranks: result.next },
         signal: { channel: "rank-changed", payload: { columnKey: op.args.columnKey } },
         order: result.order,
+      };
+    }
+    case "rank_clear": {
+      // The shared clear op, the real server's own function — one copy of
+      // the semantics, as with the move op above. An absent column clears
+      // nothing: state unchanged (the signal rides only a real clear).
+      const result = applyRankClearFractions(state.ranks, op.columnKey);
+      if (!result.cleared) return { state, signal: null };
+      return {
+        state: { ...state, ranks: result.next },
+        signal: { channel: "rank-changed", payload: { columnKey: op.columnKey } },
+        order: [],
       };
     }
     default: {

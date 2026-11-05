@@ -91,15 +91,30 @@ describe("sweep pill copy", () => {
     expect(sweepButton().textContent).toBe("1");
   });
 
-  it("unarmed with nothing eligible, the pill is the broom alone", () => {
+  it("unarmed with nothing eligible, the lane shows no pill at all", () => {
+    // The 2026-11-05 ruling retired the icon-only zero-propose broom: a
+    // lane with nothing eligible hides the pill, and manual sweeping enters
+    // from the lane header's menu rather than a glyph that proposed
+    // nothing. The unarmed-with-count copy stays the law (tested above).
+    const doneNoCandidates = thread({ id: "thr_no_sweep", status: "idle" });
     render(
       <Board
         {...baseProps({
+          columns: buildColumns(
+            [doneNoCandidates],
+            "status",
+            context,
+            new Map(),
+            new Set(["thr_no_sweep"]),
+            NOW,
+            {},
+          ),
+          doneIds: new Set(["thr_no_sweep"]),
           sweepCandidatesFor: () => [],
         })}
       />,
     );
-    expect(sweepButton().textContent).toBe("");
+    expect(document.querySelector("[data-sweep-button]")).toBeNull();
   });
 
   it("the broom is the pill's only glyph while unarmed", () => {
@@ -193,11 +208,13 @@ describe("sweep pill copy", () => {
     expect(sweepButton().textContent).toBe("1 → Read");
   });
 
-  it("manual arms show the broom alone while unarmed, even with cards in the lane", () => {
-    // 2026-10-03 arming decision: Pinned, Unread, and the fresher idle
-    // buckets arm with nothing selected, so their unarmed pill proposes no
-    // count — the lane size already sits in the column header, and the
-    // sweep is built by clicking cards, not by bulk pre-selection.
+  it("a manual arm with no eligible cards shows no pill; the menu is the door", () => {
+    // History: the 2026-10-03 arming decision made Pinned, Unread, and the
+    // fresher idle arms manual-only (arm empty, build by clicking cards),
+    // and their unarmed pill was then icon-only. The 2026-11-05 ruling went
+    // the rest of the way: with nothing eligible to propose, the pill rests
+    // entirely and the lane header's menu carries the manual entry (ruling
+    // dl-20261105T165850-324f).
     render(
       <Board
         {...baseProps({
@@ -215,7 +232,7 @@ describe("sweep pill copy", () => {
         })}
       />,
     );
-    expect(sweepButton().textContent).toBe("");
+    expect(document.querySelector("[data-sweep-button]")).toBeNull();
   });
 });
 

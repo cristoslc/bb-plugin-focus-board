@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 // Manual sweep selection. Sweep mode is something the operator enters and
-// curates: the sweep button is always present on a sweepable column (icon
-// only when nothing is past threshold), clicking a card in sweep mode
-// toggles it in or out of the selection instead of opening the pane, and a
-// thread that may not join a sweep (live children) refuses loudly instead
-// of silently doing nothing. Card clicks inside the armed column must not
-// disarm the mode — only clicking away does.
+// curates: since the 2026-11-05 ruling, a sweepable column with nothing
+// eligible shows no pill at all and the lane header's menu carries the
+// manual entry; with an eligible count the pill is the door, clicking a card
+// in sweep mode toggles it in or out of the selection instead of opening the
+// pane, and a thread that may not join a sweep (live children) refuses
+// loudly instead of silently doing nothing. Card clicks inside the armed
+// column must not disarm the mode — only clicking away does.
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Board, useSweepClickAway } from "../components/board";
 import { buildColumns } from "../components/grouping";
@@ -158,15 +159,25 @@ describe("selection never reorders the column", () => {
   });
 });
 
-describe("the sweep button is always available", () => {
-  it("renders icon-only when nothing is past the threshold, and arms on click", () => {
+describe("the sweep pill is eligibility plus count", () => {
+  it("with nothing eligible the pill rests; the lane menu arms the mode", () => {
+    // The 2026-11-05 ruling: a sweepable lane with no eligible cards shows
+    // no pill — an icon-only broom with no count promised a bulk action the
+    // lane had nothing for. Manual sweeping moved into the lane header's
+    // menu, which arms the same gesture the old icon did.
     const onSweepArm = vi.fn();
     renderBoard([doneThread("thr_d1")], {
       sweepCandidatesFor: () => [],
       onSweepArm,
     });
-    expect(sweepButton().textContent).toBe("");
-    fireEvent.click(sweepButton());
+    expect(document.querySelector("[data-sweep-button]")).toBeNull();
+    const section = document.querySelector('section[data-column-id="done"]');
+    const header = section?.querySelector(":scope > header");
+    if (!(header instanceof HTMLElement)) throw new Error("missing lane header");
+    fireEvent.click(header);
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Sweep this lane…" }) as HTMLElement,
+    );
     expect(onSweepArm).toHaveBeenCalledWith("done");
   });
 

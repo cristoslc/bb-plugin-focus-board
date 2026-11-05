@@ -5,6 +5,7 @@
 // tests/rank-fractions.test.ts; this file pins the module itself.
 import { describe, expect, it } from "vitest";
 import {
+  applyRankClearFractions,
   applyRankMoveFractions,
   fractionRowFromStore,
   fractionsAfterMove,
@@ -308,5 +309,18 @@ describe("the board's existing comparator consumes the derived projection unchan
         unitIds: ["b", "c"],
       }),
     ).toThrow(/not part of the unit/);
+  });
+
+  it("applyRankClearFractions deletes the column's key outright, and no-ops on a clean store", () => {
+    const store: FractionRankStore = { pinned: seeded, "status:unread": { x: 0.5 } };
+    const result = applyRankClearFractions(store, "pinned");
+    expect(result.cleared).toBe(true);
+    expect(result.next["pinned"]).toBeUndefined();
+    // The other column survives whole.
+    expect(result.next["status:unread"]).toEqual({ x: 0.5 });
+    // Clearing again is a no-op: no write, no rank-changed publish.
+    const again = applyRankClearFractions(result.next, "pinned");
+    expect(again.cleared).toBe(false);
+    expect(again.next).toBe(result.next);
   });
 });

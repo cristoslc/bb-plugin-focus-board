@@ -12,6 +12,7 @@
  */
 import { useSyncExternalStore, type ReactNode } from "react";
 import {
+  applyRankClearFractions,
   applyRankMoveFractions,
   type FractionColumn,
   ordersFromFractionStore,
@@ -346,6 +347,14 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
       });
       fakeRanks = result.next;
       return { columnKey, order: result.order };
+    }
+    case "rank_clear": {
+      const { columnKey } = args as { columnKey: string };
+      // The shared clear op — the same function the real server runs, so
+      // this arm cannot drift into its own re-spelling of the semantics.
+      const result = applyRankClearFractions(fakeRanks, columnKey);
+      fakeRanks = result.next;
+      return { columnKey, order: [] };
     }
     case "groups_list":
       return {

@@ -44,6 +44,7 @@ const validInputs: Record<Method, unknown> = {
     toEnd: false,
     visibleIds: ["thr_x"],
   },
+  rank_clear: { columnKey: "status:unread" },
   link_list: null,
   link_set: {
     threadId: "thr_x",
@@ -237,6 +238,16 @@ describe("rpc hardening end-to-end (through the fake host)", () => {
       }),
     ).rejects.toThrow();
     // And the store is untouched by the refused write.
+    expect((await rpc.callRpc("rank_list", null)) as { orders: unknown }).toEqual({
+      orders: {},
+    });
+  });
+
+  it("rank_clear refuses the same __proto__ columnKey", async () => {
+    const rpc = await setup();
+    await expect(
+      rpc.callRpc("rank_clear", { columnKey: "__proto__" }),
+    ).rejects.toThrow();
     expect((await rpc.callRpc("rank_list", null)) as { orders: unknown }).toEqual({
       orders: {},
     });

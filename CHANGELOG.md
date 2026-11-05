@@ -9,6 +9,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+#### The board's lanes
+
+- **Clicking a lane header opens that lane's own menu, and the tiny hand-order badge is gone.** The badge's question rides in the menu now, and so do a lane's clear and sweep entries.
+  - **The menu names the lane's order.** What the lane is ordered by today and its direction show on every lane: your drag order, top of the lane first, or recency, newest first.
+  - **Remove custom order erases the lane's stored hand-order in one click.** The lane reads recency again over the new `rank_clear` write, which the host and the screenshot harness serve through one shared op.
+  - **Sweep this lane arms the sweep from the menu.** With manual sweeping in the menu, the broom pill shows up only on a lane that has eligible cards to sweep, with the count beside it; a lane with nothing to sweep rests it.
+
 ### Fixed
 
 ## [1.7.7] - 2026-11-05

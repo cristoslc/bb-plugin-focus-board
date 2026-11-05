@@ -1853,6 +1853,41 @@ const pageParentRowSweep = (rowId) => {
   };
 };
 
+/**
+ * The Focus board's column sweep: read one lane header's pill the same way
+ * the row probe reads a rail's (the ruling's eligibility-plus-count law:
+ * `present: false` asserts a sweepable lane with no pill at all, when a
+ * zero-eligible lane used to carry the icon-only broom). `menu` reports the
+ * lane menu's open state so a suite can prove the tap path; `entry` reports
+ * whether the menu offers Sweep this lane.
+ */
+const pageColumnSweep = (columnId) => {
+  const section = document.querySelector(`section[data-column-id="${columnId}"]`);
+  if (!section) return { ok: false, reason: `no lane ${columnId}` };
+  const header = section.querySelector(":scope > header");
+  if (!header) return { ok: false, reason: `no header in ${columnId}` };
+  const pill = header.querySelector("[data-sweep-button]");
+  const board = document.querySelector("[data-columns-board]") ?? document;
+  const highlighted = [...(board.querySelectorAll("[data-sweep-highlighted]") ?? [])].map(
+    (el) => el.getAttribute("data-thread-card"),
+  );
+  const menu = document.querySelector('[role="menu"][aria-label="Lane actions"]');
+  return {
+    ok: true,
+    present: pill !== null,
+    label: header.textContent?.trim() ?? "",
+    pill: pill?.textContent?.trim() ?? "",
+    armed: pill?.getAttribute("aria-pressed") === "true",
+    cancel: header.querySelector("[data-sweep-cancel]") !== null,
+    highlighted,
+    headerLabel: header.getAttribute("aria-label") ?? null,
+    menuOpen: menu !== null,
+    menuEntry: menu?.textContent?.includes("Sweep this lane") ?? false,
+    menuRemove: menu?.textContent?.includes("Remove custom order") ?? false,
+    menuSort: menu?.querySelector("[data-lane-sort-state]")?.getAttribute("data-lane-sort-state") ?? null,
+  };
+};
+
 /** Click the Parent view's sweep pill on one row (arm or confirm, per state):
  *  the same gesture an operator makes, keyed by row id so the suite need not
  *  know the pill's count-bearing aria-label. */
@@ -2622,6 +2657,89 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
           ? `spread ${JSON.stringify(got)}`
           : `spread ${JSON.stringify(got)} misses ${JSON.stringify(Object.fromEntries(missing))}`,
       );
+    }
+    if (rule.lane_sweep !== undefined) {
+      // The Focus board's lane header pill and the lane menu it shares its
+      // header with (one probe reads both, so a suite can assert the ruling
+      // in one row: the pill rests on a zero-eligible lane and the menu
+      // carries the manual entry).
+      const want = rule.lane_sweep;
+      const got = await page.evaluate(pageColumnSweep, want.column);
+      if (!got.ok) {
+        expect(`lane sweep (${want.column})`, false, got.reason);
+      } else {
+        if (want.present !== undefined) {
+          expect(
+            `lane ${want.column} sweep pill ${want.present ? "present" : "absent"}`,
+            got.present === want.present,
+            `pill ${want.present ? "present" : "absent"} (header reads ${JSON.stringify(got.label)})`,
+          );
+        }
+        if (want.count !== undefined) {
+          expect(
+            `lane ${want.column} pill reads ${want.count}`,
+            got.pill.startsWith(String(want.count)),
+            `pill reads ${JSON.stringify(got.pill)}`,
+          );
+        }
+        if (want.pill !== undefined) {
+          const re = new RegExp(want.pill);
+          expect(
+            `lane ${want.column} pill matches ${want.pill}`,
+            re.test(got.pill),
+            `pill reads ${JSON.stringify(got.pill)}`,
+          );
+        }
+        if (want.armed !== undefined) {
+          expect(
+            `lane ${want.column} ${want.armed ? "armed" : "not armed"}`,
+            got.armed === want.armed,
+            got.armed ? "armed" : "not armed",
+          );
+        }
+        if (want.cancel !== undefined) {
+          expect(
+            `lane ${want.column} ${want.cancel ? "offers" : "hides"} the sweep exit`,
+            got.cancel === want.cancel,
+            got.cancel ? "exit button present" : "no exit button",
+          );
+        }
+        if (want.headerLabel !== undefined) {
+          expect(
+            `lane ${want.column} header label is ${JSON.stringify(want.headerLabel)}`,
+            got.headerLabel === want.headerLabel,
+            `header label reads ${JSON.stringify(got.headerLabel)}`,
+          );
+        }
+        if (want.menuOpen !== undefined) {
+          expect(
+            `lane ${want.column} menu ${want.menuOpen ? "open" : "closed"}`,
+            got.menuOpen === want.menuOpen,
+            got.menuOpen ? "menu open" : "no menu",
+          );
+        }
+        if (want.menuEntry !== undefined) {
+          expect(
+            `lane ${want.column} menu ${want.menuEntry ? "offers" : "hides"} Sweep this lane`,
+            got.menuEntry === want.menuEntry,
+            got.menuEntry ? "sweep entry present" : "no sweep entry",
+          );
+        }
+        if (want.menuRemove !== undefined) {
+          expect(
+            `lane ${want.column} menu ${want.menuRemove ? "offers" : "hides"} Remove custom order`,
+            got.menuRemove === want.menuRemove,
+            got.menuRemove ? "remove entry present" : "no remove entry",
+          );
+        }
+        if (want.menuSort !== undefined) {
+          expect(
+            `lane ${want.column} menu sort state is ${want.menuSort}`,
+            got.menuSort === want.menuSort,
+            `sort state reads ${JSON.stringify(got.menuSort)}`,
+          );
+        }
+      }
     }
     if (rule.sweep_banner !== undefined) {
       const want = rule.sweep_banner;
