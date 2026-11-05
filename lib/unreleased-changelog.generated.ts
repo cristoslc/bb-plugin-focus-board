@@ -5,6 +5,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "children": []
   },
   {
+    "text": "**The thread pane focuses the message composer when it opens or switches threads.** The pane passes the SDK's `focusRequest` with a counter that bumps on open and on switch, so a keyboard-first operator can type without clicking into the box first. Same-thread refreshes leave the counter alone.",
+    "children": []
+  },
+  {
     "text": "**Threads running background work stay in Working.** A thread whose turn ended while a background agent, background command, or workflow run is still going used to show as Idle. It now stays in Working until that work lands, and the idle sweep leaves it alone.",
     "children": []
   },

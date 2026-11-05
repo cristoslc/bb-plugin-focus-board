@@ -1696,7 +1696,7 @@ function MockFileChangeTitle(): ReactNode {
   );
 }
 
-function MockChat({ threadId }: { threadId: string }): ReactNode {  const messages = CONVERSATIONS[threadId] ?? CONVERSATIONS.default;
+function MockChat({ threadId, focusRequest }: { threadId: string; focusRequest?: number }): ReactNode {  const messages = CONVERSATIONS[threadId] ?? CONVERSATIONS.default;
   const bubble = (role: "user" | "agent", content: ReactNode, key: string): ReactNode => (
     <div
       key={key}
@@ -1736,6 +1736,8 @@ function MockChat({ threadId }: { threadId: string }): ReactNode {  const messag
       </div>
       {QUEUED_SEND_FIXTURE ? <MockQueuedSendRow /> : null}
       <div
+        data-pane-mock-composer=""
+        data-pane-mock-composer-focus={focusRequest === undefined ? undefined : focusRequest > 0 ? "1" : "0"}
         style={{
           display: "flex",
           alignItems: "center",
@@ -1746,6 +1748,8 @@ function MockChat({ threadId }: { threadId: string }): ReactNode {  const messag
           padding: "8px 10px",
           color: "var(--muted-foreground)",
           fontSize: 12.5,
+          outline: (focusRequest ?? 0) > 0 ? "2px solid var(--ring)" : undefined,
+          outlineOffset: "1px",
         }}
       >
         <span style={{ flex: 1 }}>Reply to thread…</span>
@@ -1769,8 +1773,11 @@ function MockChat({ threadId }: { threadId: string }): ReactNode {  const messag
   );
 }
 
-export function ThreadChat(props: { threadId: string; variant?: string; layout?: string }): ReactNode {
-  return <MockChat threadId={props.threadId} />;
+// The mock ThreadChat mirrors the SDK's focusRequest prop (the audit's Gap
+// 8 frames): any positive counter is "the composer is focused now", painted
+// as a ring on the mock composer so a frame can show the bump.
+export function ThreadChat(props: { threadId: string; variant?: string; layout?: string; focusRequest?: number }): ReactNode {
+  return <MockChat threadId={props.threadId} focusRequest={props.focusRequest} />;
 }
 
 /*

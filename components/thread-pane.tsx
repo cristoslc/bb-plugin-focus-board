@@ -478,6 +478,19 @@ export function ThreadPane({
   escapeSuppressed = false,
   referenceMentions,
 }: ThreadPaneProps) {
+  // Gap 8 (the pane-parity audit): the pane never asked the composer to
+  // focus, so a keyboard-first operator clicked into it on every open and
+  // every thread switch. ThreadChat bumps focus on a counter; the pane owns
+  // it — 1 on open (the pane mounts when a thread opens), +1 per switch
+  // (opening a different thread re-renders this component in place, so the
+  // reset is derived during that render, no post-commit bump), and a
+  // same-thread re-render leaves the counter alone.
+  const [composerFocusRequest, setComposerFocusRequest] = useState(1);
+  const [lastThreadId, setLastThreadId] = useState(thread.id);
+  if (lastThreadId !== thread.id) {
+    setLastThreadId(thread.id);
+    setComposerFocusRequest((current) => current + 1);
+  }
   const [width, setWidth] = useState(readStoredPaneWidth);
   const windowCompact = useIsCompactViewport();
   // A squeezed panel on a desktop window: the compact media query never
@@ -1165,7 +1178,12 @@ export function ThreadPane({
         onClickCapture={onChatClickCapture}
         onKeyDownCapture={onChatKeyDownCapture}
       >
-        <ThreadChat threadId={thread.id} variant="compact" layout="contained" />
+        <ThreadChat
+          threadId={thread.id}
+          variant="compact"
+          layout="contained"
+          focusRequest={composerFocusRequest}
+        />
       </div>
       {/* bb's embedded chat shows no project/checkout context on a pane
           container; when its row is genuinely absent from the chat DOM this
