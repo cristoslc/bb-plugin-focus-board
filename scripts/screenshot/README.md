@@ -47,6 +47,15 @@ host app involved.
   toggling the `dark` class per pass: board with the thread pane open
   (1920x1080), plus board and thread pane at phone size (390x844) —
   `name-dark.png` / `name-light.png` files.
+- `clip-pane.mjs` — generic pane clipper for one-off pane frames (the
+  2026-11-04 pane-parity cleanup PR's before/after shots): boots nothing
+  itself; run the vite harness first, then
+  `node scripts/screenshot/clip-pane.mjs <stem> [THREAD_ID=<id>] [QUERY=<fixture>]`
+  to open the named thread's pane on the harness and capture the pane's
+  aside as `<OUT_DIR>/<stem>.png`. `QUERY= pendingQuestion=1` mounts the
+  pending user_question fixture for the pane-gap frames; `?queuedSend=1`
+  remains MockQueuedSendRow's own flag. Honors `CHROME_PATH`, `HARNESS_URL`,
+  and `OUT_DIR`.
 - `repro-markread-mobile.mjs` — one-shot headless repro for the mobile
   thread-actions bug (#14): opens a thread pane at phone size (390x844),
   dumps the pane header's control list to

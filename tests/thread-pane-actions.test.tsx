@@ -21,10 +21,6 @@ vi.mock("@get-bb/plugin-sdk/app", () => ({
   useSettings: () => ({ values: undefined, isLoading: false }),
 }));
 
-vi.mock("../components/pending-interaction-card", () => ({
-  PendingInteractionCard: (): ReactNode => null,
-}));
-
 vi.mock("../components/decided-questions-card", () => ({
   DecidedQuestionsCard: (): ReactNode => null,
 }));

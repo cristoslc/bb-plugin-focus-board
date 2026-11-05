@@ -693,7 +693,36 @@ const mockSdk = {
       return { ok: true as const, archivedThreadIds: [threadId] };
     },
     interactions: {
-      list: async () => [],
+      // ?pendingQuestion=1 mounts a host-faithful pending user_question row
+      // so the pane's above-chat cards can be shot: the pane-parity audit's
+      // Gap 1 frames (the PendingInteractionCard form on the pane, gone from
+      // the pane once the host banner owns the surface).
+      list: async () =>
+        PENDING_QUESTION_FIXTURE
+          ? [
+              {
+                id: "int_probe_pending",
+                status: "pending",
+                createdAt: Date.now(),
+                payload: {
+                  kind: "user_question",
+                  questions: [
+                    {
+                      id: "probe_q1",
+                      prompt: "Which surface owns the pending question form?",
+                      shortLabel: "Surface",
+                      multiSelect: false,
+                      options: [
+                        { value: "host-banner", label: "The host banner" },
+                        { value: "pane-card", label: "The plugin card" },
+                      ],
+                    },
+                  ],
+                },
+                origin: { kind: "provider" },
+              },
+            ]
+          : [],
       respond: async () => ({}),
       cancel: async () => ({}),
     },
@@ -1535,6 +1564,15 @@ function inlineMarkup(text: string): ReactNode {
  */
 const QUEUED_SEND_FIXTURE =
   typeof window !== "undefined" && new URLSearchParams(window.location.search).has("queuedSend");
+
+/**
+ * Does this harness run carry the pending-question fixture? Captured at
+ * module load like QUEUED_SEND_FIXTURE; `?pendingQuestion=1` mounts one
+ * pending provider user_question row for the pane-gap screenshot frames.
+ */
+const PENDING_QUESTION_FIXTURE =
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).has("pendingQuestion");
 
 /**
  * A host-faithful queued-message row, pinned to bb's own QueuedMessagesList

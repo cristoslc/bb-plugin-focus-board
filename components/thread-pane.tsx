@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { describeWakeAt } from "@/lib/snooze";
 import type { SnoozeMenuAction } from "@/lib/snooze";
-import { PendingInteractionCard } from "@/components/pending-interaction-card";
 import { DecidedQuestionsCard } from "@/components/decided-questions-card";
 import {
   isExternalHref,
@@ -1150,11 +1149,6 @@ export function ThreadPane({
           <Icon name="X" className="size-4" />
         </Button>
       </header>
-      {/* The host's embedded ThreadChat renders no pending-interaction UI
-          (only the main thread view does), so a question asked while this
-          pane is open would block the tool call until timeout. This card
-          renders the host's question form in the pane instead. */}
-      <PendingInteractionCard threadId={thread.id} onOpenInMainView={onMaximize} />
       {/* The host transcript drops every trace of an answered AskUserQuestion
           (suppressed tool call, hidden delivered result, answers never stored
           on the interaction row), so this card rebuilds recent decisions from

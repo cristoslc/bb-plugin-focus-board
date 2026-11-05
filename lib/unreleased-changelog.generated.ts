@@ -11,5 +11,9 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
   {
     "text": "**Magic rename's \"use the thread's active model\" probe generates on that model again.** bb 0.48 dropped `providerId` from the thread execution-options response, so every probe fell back to the project-default model chain instead of the thread's model (a thread on **acp-omp** got a probe on **codex**, which died \"could not find the Codex CLI\"). The probe now pairs that response's model with the source thread's own providerId.",
     "children": []
+  },
+  {
+    "text": "**Answering a pending question in the thread pane shows one form again.** bb 0.48.0's parity work made the host banner render inside the pane's embedded chat, so the pane's own question card duplicated it, and answering one left the other stale. The card is gone: the host banner owns the surface, and the host persists partial answers itself.",
+    "children": []
   }
 ];
