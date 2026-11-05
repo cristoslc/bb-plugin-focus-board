@@ -121,11 +121,14 @@ export function assignBurstsToCommits(bursts, commits, slackMs = BURST_ASSIGN_SL
 }
 
 /** One commit's driver key: the rpc method whose END mark sits inside the
- *  commit's render window [prevT - slack, t + slack] (that resolution's
- *  setStates caused the commit), nearest to the window's middle; null when
- *  no rpc resolution is anywhere near — a timer- or effect-driven commit. */
+ *  commit's render window ("prevT − slop" through "t + slack": that
+ *  resolution's setStates caused the commit — a render pass for commit k
+ *  starts after commit k−1's hook, so an end mark at or before prevT belongs
+ *  to the previous commit, however long the pass ran), nearest to the
+ *  window's middle; null when no rpc resolution is anywhere near — a timer-
+ *  or effect-driven commit. */
 export function driverKeyForCommit(commit, rpcRuns, slackMs = DRIVER_RPC_SLACK_MS) {
-  const windowStart = (commit.prevT ?? 0) - slackMs;
+  const windowStart = (commit.prevT ?? 0) - 2;
   const windowEnd = commit.t + slackMs;
   const inside = rpcRuns.filter((run) => run.end >= windowStart && run.end <= windowEnd);
   if (inside.length === 0) return null;

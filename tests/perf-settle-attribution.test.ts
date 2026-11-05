@@ -118,6 +118,15 @@ describe("driverKeyForCommit", () => {
     ];
     expect(driverKeyForCommit({ prevT: 95, t: 125 }, runs)).toBe("b_list");
   });
+
+  it("never keys an end mark that already belonged to the previous commit", () => {
+    // A timer-adjacent commit whose renders ran (233..429) must not adopt an
+    // rpc end that preceded its render window (226 ≤ prevT): that end keyed
+    // the previous commit already.
+    expect(driverKeyForCommit({ prevT: 233, t: 429 }, [
+      { method: "tracker_status", start: 210, end: 226 },
+    ])).toBeNull();
+  });
 });
 
 describe("driversFromTimeline", () => {
@@ -126,7 +135,7 @@ describe("driversFromTimeline", () => {
     { idx: 1, t: 320, prevT: 100, names: ["App×1", "ThreadCard×2", "Toolbar×1"] },
   ];
   const rpcRuns = [
-    { method: "link_list", start: 10, end: 40 },
+    { method: "link_list", start: 10, end: 55 },
     { method: "tracker_status", start: 300, end: 318 },
   ];
   const bursts = [

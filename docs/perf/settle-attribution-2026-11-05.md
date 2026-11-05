@@ -167,24 +167,26 @@ as today. Poll intervals, focus catch-ups, timeout and failure laws are
 byte-identical; a ref-set clear is not a landing, so the load's own key churn
 rides the gate whole; a failed fetch never counts as landed.
 
-The after-battery (`docs/perf/settle-attribution-2026-11-05T05-02-25-626Z.json`,
-same tree minus C, three runs per scale):
+The after-battery, re-taken on the branch's final (rebased) head
+(`docs/perf/settle-attribution-2026-11-05T05-17-10-060Z.json`):
 
-| Scale | settleTail before | settleTail after | chip calls fired at |
+| Scale | settleTail before (re-baseline) | settleTail after | chip calls fired at (idle) |
 |---|---|---|---|
-| 100 | 399 / 396 / 399 | 402 / 401 / 401 | +121 / +135 (idle) |
-| 300 | 431 / 430 / 430 | 431 / 428 / 429 | +192 / +224 (idle) |
-| 500 | 491 / 490 / 486 | 491 / 498 / 498 | +314 / +364 (idle) |
+| 100 | 397 | 400 / 401 / 402 | validate +115..143, status +129..157 |
+| 300 | 435 | 430 / 432 / 433 | validate +176..179, status +209..309 |
+| 500 | 499 | 483 / 494 / 484 | validate +269..324, status +350..392 |
 
 - The settle number did not move, as predicted: the transports' ghost removals
   still end the tail at every scale (Gate T's hold stands).
 - The chip wave DID move: `tracker_validate` / `tracker_status` now fire at the
-  browser's idle callbacks (+121..+364 by scale; the 400ms ceiling is only the
-  bound Chrome never reached on this machine) and land at +201..+375, instead
-  of the pre-gate wall of +113..+278 — the load window now carries no
-  un-idle-scheduled decoration fetch at all.
+  browser's idle callbacks (the validate calls at +115..+324 by scale, the
+  status calls at +129..+392; the 400ms ceiling is only the bound Chrome never
+  reached on this machine) and land right behind them, instead of the pre-gate
+  wall of +113..+278 — the load window now carries no unscheduled decoration
+  fetch at all.
 - The same change under the modeled profile does not move that profile's
-  settleTail either: the after-run's modeled cells (95/119/183) match the
-  lane's re-baseline (91/112/175, `load-bench-2026-11-05T04-16-00-974Z.json`)
-  within jitter, and the whole `--assert` battery passes with the standing
-  budgets (`load-bench-2026-11-05T05-03-40-945Z.json`, zero violations).
+  settleTail either: the branch's `--assert` battery re-taken on the final
+  head reads modeLed 94/112/185 where the lane's re-baseline reads 91/112/175,
+  its client settleTails 398/431/488 where the re-baseline reads 397/435/499 —
+  all inside the standing budgets with zero violations
+  (`load-bench-2026-11-05T05-18-03-580Z.json`, the PR's bench evidence).
