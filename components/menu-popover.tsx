@@ -1,15 +1,15 @@
-import { type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 
 /**
- * The fixed-position right-click menu shell: a click-away backdrop, a
- * viewport-clamped popover, and the header line naming what the menu acts
- * on. Entry buttons are the caller's children — the shell knows nothing
- * about actions (thread cards, group boxes, and future menus can render
- * whatever rows they own). The anchor wrapper stays with the caller, so
- * each surface keeps its own propagation stop (a nested card's menu must
- * never also open its ancestor's).
+ * The board's one popover base: an anchored, clamped, click-away-and-Escape
+ * dismissable shell that the context menus (thread cards, group boxes, lanes)
+ * AND the toolbar's dropdown chips render through — one dismissal grammar, one
+ * edge look, one hover contract (components/board-toolbar.tsx migrated onto
+ * this shell; the operator's "share a common base" pass on the lane-menu
+ * ruling). Position is the caller's: a context menu passes the pointer's
+ * point, an anchored dropdown passes its trigger's box.
  */
 export function MenuPopover({
   open,
@@ -17,24 +17,51 @@ export function MenuPopover({
   label,
   title,
   children,
+  maxHeight,
+  className,
+  role,
+  onEscape,
 }: {
   /**
-   * The pointer position the menu opens at, or null (closed). State held
-   * by the caller — several surfaces can render at once and the caller
+   * The pointer or anchor position the menu opens at, or null (closed). State
+   * held by the caller — several surfaces can render at once and the caller
    * decides which (if any) one is open.
    */
   open: { x: number; y: number } | null;
-  /** Close on backdrop click, backdrop right-click, or after any entry ran. */
+  /** Close on backdrop click, backdrop right-click, Escape, or after any entry ran. */
   onClose: () => void;
   /** The popover's accessible name, e.g. "Thread actions" / "Group actions". */
   label: string;
-  /** The header line naming what the menu acts on (the thread or group). */
-  title: ReactNode;
   children: ReactNode;
+  /**
+   * The header line naming what the menu acts on (the thread or group).
+   * Optional: the option-list dropdowns render rows with no header line.
+   */
+  title?: ReactNode;
+  /**
+   * The shell's height cap in px, for callers whose rows must not grow with
+   * the window (the dropdown chips' rows cap at 320). Default: whatever
+   * height the window leaves, minus its edges.
+   */
+  maxHeight?: number;
+  /** Extra classes on the shell (a wider min-width, for the option lists). */
+  className?: string;
+  /**
+   * The shell's ARIA role, default "menu". The dropdown chips pass none:
+   * their option list carries the listbox semantics exactly as it always did.
+   */
+  role?: string;
+  /**
+   * Called for Escape BEFORE the shell closes; return false to claim the key
+   * (the chips' two-stage semantics: a typed filter wipes first, a create
+   * field cancels itself). Unclaimed Escape closes through onClose.
+   */
+  onEscape?: (event: KeyboardEvent) => boolean;
 }) {
   if (open === null) return null;
   return (
     <>
+      <ShellEscape onClose={onClose} onEscape={onEscape} />
       <div
         className="fixed inset-0 z-40"
         onClick={onClose}
@@ -45,20 +72,23 @@ export function MenuPopover({
         aria-hidden
       />
       <div
-        role="menu"
+        role={role ?? "menu"}
         aria-label={label}
         // Raised above the card surface: cards draw `bg-card` at half-
         // strength borders, the menu draws the popover surface at full-
         // strength under the elevated shadow, and its header rule bounds
         // the menu as a menu rather than one more card.
-        className="fixed z-50 min-w-44 rounded-md border border-border bg-popover p-1 shadow-lg"
+        className={cn(
+          "fixed z-50 min-w-44 rounded-md border border-border bg-popover p-1 shadow-lg",
+          className,
+        )}
         style={{
           left: open.x,
           top: open.y,
           // Whatever height the window leaves (minus its edges), not a
           // fixed pixel cap: a tall window shows a long menu whole, a
           // short one scrolls (the ref clamp below keeps it on screen).
-          maxHeight: window.innerHeight - 16,
+          maxHeight: maxHeight ?? window.innerHeight - 16,
           overflowY: "auto",
         }}
         ref={(node) => {
@@ -70,16 +100,41 @@ export function MenuPopover({
           if (clampedY !== node.offsetTop) node.style.top = `${Math.max(8, clampedY)}px`;
         }}
       >
-        <div
-          aria-hidden
-          className="max-w-64 truncate border-b border-border px-2 pb-1.5 pt-1.5 text-[11px] font-medium text-muted-foreground"
-        >
-          {title}
-        </div>
+        {title === undefined ? null : (
+          <div
+            aria-hidden
+            className="max-w-64 truncate border-b border-border px-2 pb-1.5 pt-1.5 text-[11px] font-medium text-muted-foreground"
+          >
+            {title}
+          </div>
+        )}
         {children}
       </div>
     </>
   );
+}
+
+/** Escape owns the dismissal at the window: the shell's keys reach the base
+ *  wherever focus sits (the chip's search input included), and every caller's
+ *  claiming hook runs first. Mounted while open; capture so a keydown an
+ *  inner field stops at bubble phase still reaches here first. */
+function ShellEscape({
+  onClose,
+  onEscape,
+}: {
+  onClose: () => void;
+  onEscape?: (event: KeyboardEvent) => boolean;
+}) {
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (onEscape !== undefined && !onEscape(event)) return;
+      onClose();
+    };
+    window.addEventListener("keydown", onKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", onKeyDown, { capture: true });
+  }, [onClose, onEscape]);
+  return null;
 }
 
 /**

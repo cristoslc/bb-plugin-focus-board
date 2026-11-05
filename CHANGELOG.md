@@ -11,7 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 #### The board's lanes
 
-- **A lane's name and caret open that lane's own menu, and the tiny hand-order badge is gone.** The caret rides right of every lane name, before the count (the toolbar's dropdown idiom), and the whole name+caret pair is the target; the badge's question rides in the menu with the lane's clear and sweep entries.
+- **A lane's name and caret open that lane's own menu, and the tiny hand-order badge is gone.** The caret rides right of every lane name, before the count (the toolbar's dropdown idiom), the whole name+caret pair is the target, and the shared popover shell's Escape closes the menu like every dropdown on the board.
   - **The menu names the lane's order, and sorting has real actions.** The sort row reads your drag order or recency, and the direction pair (Newest first, Oldest first, the checked one active) re-orders the lane when picked, so ascending vs descending applies even on the recency dimension alone.
   - **The direction choice persists per lane.** Oldest-first stores per lane (newest-first is the standing default), rides the board's other localStorage preferences with cross-window sync, and the nested family rows follow their lane's direction too; a stored hand-order still leads, with the direction governing its unranked tail.
   - **Remove custom order erases the lane's stored hand-order in one click.** The lane reads recency again over the new `rank_clear` write, which the host and the screenshot harness serve through one shared op.

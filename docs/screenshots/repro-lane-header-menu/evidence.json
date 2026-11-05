@@ -16,6 +16,10 @@
     "removeEntry": true,
     "sweepEntry": true
   },
+  "hoverAndEscape": {
+    "hoverClass": true,
+    "escapeCloses": true
+  },
   "pills": {
     "unread": null,
     "done": "2"

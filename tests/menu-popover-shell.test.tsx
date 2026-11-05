@@ -56,3 +56,56 @@ describe("menu shell stands apart from cards", () => {
     expect(header.className).toContain("border-b");
   });
 });
+
+describe("menu shell behavior", () => {
+  it("Escape closes the shell", () => {
+    let closed = 0;
+    render(
+      <MenuPopover open={{ x: 20, y: 20 }} onClose={() => { closed += 1; }} label="Thread actions">
+        <button type="button" role="menuitem">Entry</button>
+      </MenuPopover>,
+    );
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(closed).toBe(1);
+  });
+
+  it("a claimed Escape (the caller's own two-stage semantics) does not close the shell", () => {
+    // The dropdown chips' contract: the first Escape acts inside the caller
+    // (the chip wipes a typed filter; its create field cancels itself) and
+    // the shell's close only comes from the caller's own hand.
+    let closed = 0;
+    render(
+      <MenuPopover
+        open={{ x: 20, y: 20 }}
+        onClose={() => { closed += 1; }}
+        label="Thread actions"
+        onEscape={() => false}
+      >
+        <button type="button" role="menuitem">Entry</button>
+      </MenuPopover>,
+    );
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(closed).toBe(0);
+  });
+
+  it("a title is optional: the option-list popups render rows with no header line", () => {
+    setViewport(800);
+    render(
+      <MenuPopover open={{ x: 20, y: 20 }} onClose={() => {}} label="View options">
+        <button type="button" role="option">Focus</button>
+      </MenuPopover>,
+    );
+    expect(document.querySelector(".border-b")).toBeNull();
+  });
+
+  it("the shell caps its height at the caller's rows cap when one is given", () => {
+    setViewport(800);
+    render(
+      <MenuPopover open={{ x: 20, y: 20 }} onClose={() => {}} label="View options" maxHeight={320}>
+        <button type="button" role="option">Focus</button>
+      </MenuPopover>,
+    );
+    const menu = screen.getByRole("menu");
+    expect(menu.style.maxHeight).toBe("320px");
+  });
+});

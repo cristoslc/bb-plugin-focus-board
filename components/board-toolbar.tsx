@@ -4,6 +4,7 @@ import type { PluginSidebarProject } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { MenuPopover } from "./menu-popover";
 import type { DropdownOption } from "./dropdown-search";
 import {
   filterDropdownOptions,
@@ -121,6 +122,10 @@ function MultiSelectDropdown({
 }: MultiSelectDropdownProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // The popup's anchor, captured from the trigger's box at open (the shell
+  // drops left-aligned 4px below it, the dropdown geometry; a state, so the
+  // shell's clamp re-reads a stable point instead of a mid-render box).
+  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
   const containerId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listboxId = `${containerId}-listbox`;
@@ -155,21 +160,13 @@ function MultiSelectDropdown({
   const close = () => {
     setOpen(false);
     setQuery("");
+    setAnchor(null);
     triggerRef.current?.focus();
   };
   return (
     <div
       className="relative flex"
       id={containerId}
-      onKeyDown={(event) => {
-        // Only claim Escape while the menu is open; otherwise let it reach
-        // bb (closing the panel) as it did before.
-        if (!open || event.key !== "Escape") return;
-        event.stopPropagation();
-        // First Escape wipes a typed filter, second closes the menu.
-        if (query !== "") setQuery("");
-        else close();
-      }}
     >
       <button
         ref={triggerRef}
@@ -177,7 +174,19 @@ function MultiSelectDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={modeChip ? label : undefined}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          if (open) {
+            close();
+            return;
+          }
+          // The anchor is the trigger's own box: the popup drops
+          // left-aligned 4px below it (the shell's geometry), captured at
+          // open so a re-render cannot re-read a mid-transition box.
+          const box = triggerRef.current?.getBoundingClientRect();
+          if (box === undefined) return;
+          setOpen(true);
+          setAnchor({ x: box.left, y: box.bottom + 4 });
+        }}
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-foreground",
           "hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -200,10 +209,37 @@ function MultiSelectDropdown({
         )}
         <Icon name="ChevronDown" className="size-3 text-muted-foreground" aria-hidden />
       </button>
-      {open ? (
-        <>
-          <div className="fixed inset-0 z-40" onClick={close} aria-hidden />
-          <div className="absolute left-0 top-9 z-50 max-h-80 min-w-56 overflow-y-auto rounded-md border border-border bg-popover p-1 shadow-md">
+      <MenuPopover
+        open={anchor}
+        onClose={close}
+        label={label}
+        // The rows list keeps its listbox semantics; the shell is the same
+        // popup base the context menus ride (one dismissal grammar: click
+        // away, Escape — wiped query first, claimed here — and the trigger's
+        // own toggle).
+        role="presentation"
+        maxHeight={320}
+        className="min-w-56"
+        onEscape={(event) => {
+          // A footer field owns its Escape when the key landed in it (the
+          // create field aborts itself; the shell's close must not fire
+          // behind it — its own stopPropagation cannot reach this
+          // capture-phase hook, so the footer's own region is the claim).
+          const target = event.target;
+          if (
+            target instanceof Element &&
+            target.closest("[data-dropdown-footer]") !== null
+          ) {
+            return false;
+          }
+          // First Escape wipes a typed filter, second closes the menu.
+          if (query !== "") {
+            setQuery("");
+            return false;
+          }
+          return true;
+        }}
+      >
             {/* Search bar: long option lists only. Sticky so it stays put
                 while the rows scroll, like bb's model picker. */}
             {searchable ? (
@@ -360,7 +396,9 @@ function MultiSelectDropdown({
               </div>
             ) : null}
             {footer !== undefined ? (
-              <div className="mt-1 border-t border-border pt-1">{footer}</div>
+              <div className="mt-1 border-t border-border pt-1" data-dropdown-footer="">
+                {footer}
+              </div>
             ) : null}
             {onClear !== undefined && selected.size > 0 ? (
               <div className="mt-1 border-t border-border pt-1">
@@ -377,9 +415,7 @@ function MultiSelectDropdown({
                 </button>
               </div>
             ) : null}
-          </div>
-        </>
-      ) : null}
+      </MenuPopover>
     </div>
   );
 }
