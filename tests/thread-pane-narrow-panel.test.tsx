@@ -33,10 +33,6 @@ vi.mock("@get-bb/plugin-sdk/app", () => ({
   useSettings: () => ({ values: undefined, isLoading: false }),
 }));
 
-vi.mock("../components/decided-questions-card", () => ({
-  DecidedQuestionsCard: () => null,
-}));
-
 /** ResizeObserver stub: records each (callback, target) pair; the test
  *  fires callbacks by hand. jsdom has no ResizeObserver at all. */
 class StubResizeObserver {

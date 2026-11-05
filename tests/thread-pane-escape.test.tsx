@@ -22,10 +22,6 @@ vi.mock("@get-bb/plugin-sdk/app", () => ({
   useSettings: () => ({ values: undefined, isLoading: false }),
 }));
 
-vi.mock("../components/decided-questions-card", () => ({
-  DecidedQuestionsCard: (): ReactNode => null,
-}));
-
 const noop = () => {};
 
 beforeEach(() => {

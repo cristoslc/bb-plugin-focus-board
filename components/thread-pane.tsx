@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { describeWakeAt } from "@/lib/snooze";
 import type { SnoozeMenuAction } from "@/lib/snooze";
-import { DecidedQuestionsCard } from "@/components/decided-questions-card";
 import {
   isExternalHref,
   workspacePathFromHref,
@@ -1149,11 +1148,6 @@ export function ThreadPane({
           <Icon name="X" className="size-4" />
         </Button>
       </header>
-      {/* The host transcript drops every trace of an answered AskUserQuestion
-          (suppressed tool call, hidden delivered result, answers never stored
-          on the interaction row), so this card rebuilds recent decisions from
-          the raw event log. */}
-      <DecidedQuestionsCard threadId={thread.id} />
       {/* The host's embedded ThreadChat lives here. bb scopes our plugin
           stylesheet with `:where([data-bb-plugin="focus-board"],
           [data-bb-plugin-root]:not([data-bb-plugin]))` and appends it after

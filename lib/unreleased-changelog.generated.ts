@@ -15,5 +15,9 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
   {
     "text": "**Answering a pending question in the thread pane shows one form again.** bb 0.48.0's parity work made the host banner render inside the pane's embedded chat, so the pane's own question card duplicated it, and answering one left the other stale. The card is gone: the host banner owns the surface, and the host persists partial answers itself.",
     "children": []
+  },
+  {
+    "text": "**The thread pane's \"Recent decisions\" card is gone.** The transcript has carried every answered question since bb 0.47.0 (and the plugin-form \"Answered\" rows since 0.48.0, get-bb/bb#4463), so the card was a second, weaker copy rebuilt by text-parsing the raw event log. The transcript's own answered rows are the record.",
+    "children": []
   }
 ];
