@@ -83,6 +83,60 @@ const MOCK_PLUGIN_ID = "focus-board";
 let mockSubPath = "";
 let mockRoot: ReturnType<typeof createRoot> | null = null;
 
+// ── Load-path instrumentation (bench-only, inert) ─────────────────────────
+// `__perfMarks` is one monotonic (performance.now) timeline the load bench
+// (scripts/perf/load-bench.mjs) reads after load. Every mark below is
+// pushed unconditionally: a plain array write has no observable effect on a
+// board run, so UAT suites and screenshots carry zero cost — the bench is
+// the only reader.
+const perfMarks: { label: string; t: number }[] = [];
+const pushPerfMark = (label: string): void => {
+  perfMarks.push({ label, t: performance.now() });
+};
+pushPerfMark("fb:mock-sdk-eval");
+(globalThis as unknown as { __perfMarks: typeof perfMarks }).__perfMarks = perfMarks;
+
+// The bench's staged-load knobs, each defaulting to EXACTLY today's
+// behavior: no parameter, no mark-affecting, no timing change.
+//
+// - `?sidebarDelay=<ms>` models the host's async first sidebar fetch: the
+//   mock initially answers `loading` (the app's own loading view), then
+//   flips ready after the delay. Absent → the sidebar is ready at the first
+//   read, like every UAT suite has always seen.
+// - `?rpcLatency=<ms>` models the plugin bridge's per-RPC round trip.
+// - `?metaScanMs=<ms>` models the production server's per-thread metadata
+//   scan inside the list handlers (the serial getPluginMetadata hops the
+//   real server pays): it widens ONLY the modeled *_list calls to the
+//   serial-scan wall the production shape costs. Absent → 0, so the mock
+//   stays the instant in-memory reader.
+const PAGE_PARAMS = new URLSearchParams(window.location.search);
+const SIDEBAR_DELAY_MS = Math.max(0, Number(PAGE_PARAMS.get("sidebarDelay") ?? "0") || 0);
+const RPC_LATENCY_MS = Math.max(0, Number(PAGE_PARAMS.get("rpcLatency") ?? "0") || 0);
+const META_SCAN_MS = Math.max(0, Number(PAGE_PARAMS.get("metaScanMs") ?? "0") || 0);
+const perfSleep = (ms: number): Promise<void> =>
+  ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
+
+/**
+ * The modeled production scan wall for one list call, in ms. The shape this
+ * models is the REAL server's (server.ts): the four per-thread state lists
+ * scan the thread list and await one `getPluginMetadata` hop per row
+ * serially, and done_list walks its done-index KV then reads per done id.
+ * When a child moves one of these handlers to a batched / server-side read,
+ * the modeled cost for THAT handler must move to the new shape in the same
+ * pull request — the model is the mock's stand-in for the handler's real
+ * wall-time shape, not a permanent accusation.
+ */
+function modeledScanDelayMs(method: string, threadCount: number): number {
+  if (META_SCAN_MS <= 0) return 0;
+  if (method === "link_list" || method === "pin_parks_list" || method === "error_acks_list" || method === "snooze_list") {
+    return threadCount * META_SCAN_MS;
+  }
+  if (method === "done_list") {
+    return simDoneIds.size * META_SCAN_MS;
+  }
+  return 0;
+}
+
 function mockRender(): void {
   const Component = registeredNavPanel.component;
   const rootElement = document.getElementById("root");
@@ -210,6 +264,19 @@ export function experimental_useSidebarThreads(): unknown {
     },
     () => simThreadsRevision,
   );
+  // The staged host fetch (`?sidebarDelay=`): "loading" until the timer
+  // flips the store ready, exactly the shape the app's own loading view
+  // renders against. Rev 0 with no threads is the loading read; the flip
+  // bumps the revision and re-renders the board with thread data.
+  if (!sidebarReady) {
+    return {
+      status: "loading",
+      threads: SIDEBAR_LOADING_THREADS,
+      projects: SIDEBAR_LOADING_PROJECTS,
+      sections: SIM_SECTIONS,
+      experimental_archived: null,
+    };
+  }
   return {
     status: "ready",
     // The live array, not the constant: setPinned rewrites it, and the app's
@@ -220,6 +287,45 @@ export function experimental_useSidebarThreads(): unknown {
     sections: SIM_SECTIONS,
     experimental_archived: null,
   };
+}
+
+/**
+ * The simulated sidebar's readiness, and the one-time `fb-sidebar-ready`
+ * mark: the load bench's stage fence between "the host has not answered
+ * with threads yet" and "the board's own render is driving". Fires on the
+ * first ready read in the default (immediate) mode and at the flip in the
+ * staged mode; the once-flag keeps repeated hook reads from double-marking.
+ */
+let sidebarReady = SIDEBAR_DELAY_MS <= 0;
+let sidebarReadyAnnounced = false;
+/** Stable identity empties for the staged loading answer: a fresh literal per
+ *  render would churn every memo chain keyed on the sidebar arrays' identity
+ *  (a render loop with unstable effects), so the staged loading read shares
+ *  one immutable pair. */
+const SIDEBAR_LOADING_THREADS: readonly SimThread[] = [];
+const SIDEBAR_LOADING_PROJECTS: readonly SimProject[] = [];
+function announceSidebarReady(): void {
+  if (sidebarReadyAnnounced) return;
+  sidebarReadyAnnounced = true;
+  pushPerfMark("fb-sidebar-ready");
+}
+/**
+ * The mark's actual firing points: in the immediate mode at module init (the
+ * sidebar's data IS ready when this module has evaluated), and at the flip's
+ * completion in the staged mode, where threadsWait prices the modeled host
+ * fetch. Never at a hook read: a render-time read precedes the first commit
+ * and would price a negative wait — the unconditional module-init announce
+ * this block once had did exactly that in the staged mode too.
+ */
+if (SIDEBAR_DELAY_MS > 0) {
+  setTimeout(() => {
+    sidebarReady = true;
+    simThreadsRevision += 1;
+    for (const listener of sidebarListenerSet) listener();
+    announceSidebarReady();
+  }, SIDEBAR_DELAY_MS);
+} else {
+  announceSidebarReady();
 }
 
 /** A copy the mock actions can rewrite; the constant stays pristine. In
@@ -295,6 +401,7 @@ const FAIL_AUTOTITLE_KINDS = new Set(
     .map((kind) => kind.trim())
     .filter(Boolean),
 );
+
 let simThreads: readonly SimThread[] = EMPTY_MODE
   ? []
   : [
@@ -898,9 +1005,7 @@ function adoptHostOp(op: HostOp): void {
   pushThreadUpdate,
 };
 
-const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
-  uatCalls.push({ method, args });
-  simRpcLog.push(method);
+const simRpcBase = async (method: string, args?: unknown): Promise<unknown> => {
   if (method === "done_list") {
     return { doneIds: [...simDoneIds], records: structuredClone(SIM_DONE_RECORDS) };
   }
@@ -1167,6 +1272,27 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     return structuredClone(simFamilyState);
   }
   return {};
+};
+
+/**
+ * The instrumented call the app consumes: the sim's answer, wrapped in the
+ * bench's marks (one start + one end per call) and the staged-load knobs'
+ * modeled cost. The modeled production scan rides BEFORE the resolution so
+ * the call's wall mirrors the real handler's serial shape; throws keep
+ * their end mark via the finally, so a rejected mount call is never an
+ * unclosed fan-in pair.
+ */
+const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
+  uatCalls.push({ method, args });
+  simRpcLog.push(method);
+  pushPerfMark(`fb-rpc-start:${method}`);
+  try {
+    const result = await simRpcBase(method, args);
+    await perfSleep(RPC_LATENCY_MS + modeledScanDelayMs(method, simThreads.length));
+    return result;
+  } finally {
+    pushPerfMark(`fb-rpc-end:${method}`);
+  }
 };
 
 // Module-level singleton: app.tsx's mount effect depends on the rpc object

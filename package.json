@@ -12,6 +12,7 @@
     "uat": "node scripts/uat/run.mjs",
     "release-shots": "node scripts/uat/release-shots.mjs",
     "release-safety": "node scripts/release-safety.mjs",
+    "perf:load": "node scripts/perf/load-bench.mjs",
     "typecheck": "tsc --noEmit",
     "gates": "node scripts/security-gates.mjs"
   },

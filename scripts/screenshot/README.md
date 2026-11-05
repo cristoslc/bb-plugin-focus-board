@@ -24,7 +24,17 @@ host app involved.
   collapsed-families list, `?collapsedGroups=` folds feature-group boxes,
   `?laneDirection=horizontal`, `?wallpaper=<preset>` for a bundled
   wallpaper) and mounts the registered panel component through the mock
-  router.
+  router. Its `benchMark()` helper pushes the load bench's entry marks
+  (`fb:app-imported` once the import graph evaluates, `fb:mount-called`
+  after the seeds) onto the mock SDK's `__perfMarks` timeline.
+- `mock-sdk.tsx` — also carries the load bench's staged-load knobs
+  (`?sidebarDelay=`, `?rpcLatency=`, `?metaScanMs=`), all defaulting to
+  exactly today's behavior; `scripts/perf/load-bench.mjs` is their only
+  reader. The bench and its baseline live in
+  `docs/plans/perf-baseline-2026-11-05.md`. A console-arg-dumping
+  single-load diag probe (`scripts/perf/load-probe.mjs`) drives one staged
+  load of this harness and prints every console payload for attribution
+  (it found the staged-mode render loop's cause during the bench's build).
 - `index.html` — defines bb's built-in theme tokens (extracted from the bb
   app bundle): the dark set on `html.dark`, a light set on `html:not(.dark)`,
   plus a minimal preflight (the plugin's compiled CSS ships without one

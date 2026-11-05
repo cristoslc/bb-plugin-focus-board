@@ -4,6 +4,22 @@
  */
 import "../../dist/app.css";
 import "../../app";
+
+/**
+ * The load bench's entry marks, pushed onto the same timeline the mock SDK
+ * maintains (`__perfMarks`): main.tsx's statements run once the harness's
+ * whole import graph (mock SDK included) has evaluated, so this fences the
+ * module-graph cost from React's first commit. Loud when the store is
+ * missing: a broken instrument must fail the bench, not vanish politely.
+ */
+function benchMark(label: string): void {
+  const store = (globalThis as unknown as { __perfMarks?: unknown }).__perfMarks;
+  if (!Array.isArray(store)) {
+    throw new Error("harness: the mock SDK's perf mark store is missing — cannot time the load");
+  }
+  (store as { label: string; t: number }[]).push({ label, t: performance.now() });
+}
+benchMark("fb:app-imported");
 import {
   mountRegisteredConfigSection,
   mountRegisteredPanel,
@@ -155,6 +171,9 @@ if (familyStateSeed !== null) {
 // `?page=configuration` mounts the registered settings section bare (the
 // harness has no host plugin-detail page) instead of the board panel, so
 // the headless verify can drive the mirrored Appearance controls.
+// The mount-called mark fences the entry's seeding work from React's first
+// commit (the load bench reads it as "harness work done, React is driving").
+benchMark("fb:mount-called");
 if (params.get("page") === "configuration") {
   mountRegisteredConfigSection();
 } else {
