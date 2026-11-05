@@ -150,6 +150,23 @@ export function transportPhasePlan(variant: TransportVariantId): TransportPhaseP
 }
 
 /**
+ * The load-echo mount guard (issue #373): no transport play arms within this
+ * window of the board's FIRST lane-map seed. The mounting board's own data
+ * (the done projection, the feature-group boxes) lands right behind the first
+ * render and relocates cards across lanes; those echoes used to arm zoom
+ * plays ~100ms after paint, and the plays' ghost teardown's remove timer then
+ * ended the load's settle tail at arm + 320ms. Within the window a diff that
+ * would arm a play applies the move's final layout directly instead — the
+ * lanes land exactly where the play would have left them, with no ghost, no
+ * arrival, and no phase timers. Every later move arms byte-identically: a
+ * gesture, a realtime push, any post-window state change. Small on purpose:
+ * the echo completes well inside it at every board size, an operator gesture
+ * cannot land this early, and a realtime push in the first instants after
+ * open lands in place — the final state identical, the dissolve withheld.
+ */
+export const LOAD_TRANSPORT_MOUNT_GUARD_MS = 700;
+
+/**
  * A transport's stock milliseconds under the pacing preference: the one
  * scaling seam for every transport clock, so the phase timers, the WAAPI
  * durations, and the glint field's phase all stretch by the same factor.

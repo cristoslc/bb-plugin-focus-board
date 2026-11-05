@@ -14,6 +14,7 @@ import type { GroupBoxMap } from "../components/group-boxes";
 import {
   TRANSPORT_ZOOM_IN_MS,
   TRANSPORT_ZOOM_OUT_MS,
+  LOAD_TRANSPORT_MOUNT_GUARD_MS,
 } from "../components/card-transport";
 import { thread } from "./thread-fixture";
 
@@ -21,6 +22,19 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
 });
+
+/**
+ * The load-echo mount guard (issue #373): the board arms no transport play
+ * within LOAD_TRANSPORT_MOUNT_GUARD_MS of its first lane-map seed. The
+ * relocation pins walk their mounts past the window with the same fake clock
+ * the phase timers ride, so the law these suites prove stays the post-window
+ * one: every move after the load echo plays.
+ */
+async function pastLoadEcho(): Promise<void> {
+  await act(async () => {
+    vi.advanceTimersByTime(LOAD_TRANSPORT_MOUNT_GUARD_MS + 50);
+  });
+}
 
 const NOW = 10_000_000;
 const context = { projects: [], providers: [] };
@@ -71,6 +85,9 @@ describe("a card relocating under the zoom variant", () => {
     vi.useFakeTimers();
     const { before, after } = moveScenario();
     const { rerender } = render(<Board {...boardProps(before)} />);
+    // Past the load-echo window (issue #373): this pin relocates a card
+    // deliberately, so the pin proves the zoom law post-window.
+    await pastLoadEcho();
     rerender(<Board {...boardProps(after)} />);
     // A tick past the plan's clock-zero collapse: the dissolve holds its
     // ghost slot open through a 400ms wipe BEFORE collapsing; the zoom's
@@ -102,6 +119,7 @@ describe("a card relocating under the zoom variant", () => {
     vi.useFakeTimers();
     const { before, after } = moveScenario();
     const { rerender } = render(<Board {...boardProps(before)} />);
+    await pastLoadEcho();
     rerender(<Board {...boardProps(after)} />);
     expect(document.querySelectorAll("[data-transport-sparks]")).toHaveLength(0);
     expect(document.querySelectorAll("[data-transport-spark]")).toHaveLength(0);
@@ -111,6 +129,7 @@ describe("a card relocating under the zoom variant", () => {
     vi.useFakeTimers();
     const { before, after } = moveScenario();
     const { rerender } = render(<Board {...boardProps(before)} />);
+    await pastLoadEcho();
     rerender(<Board {...boardProps(after)} />);
     // The remove clock (the shrink's end) is the clocks' shared tail: one
     // advance past it clears BOTH sides — the growth clock equals it and the
@@ -145,6 +164,7 @@ describe("a box run under the zoom variant", () => {
       ["thr_m2", box],
     ]);
     const { rerender } = render(<Board {...boardProps(before, { groupBoxOf })} />);
+    await pastLoadEcho();
     rerender(<Board {...boardProps(after, { groupBoxOf })} />);
     // A tick past clock zero: the zoom's slot close is already running (the
     // dissolve would still hold "wiping-out" here until its wipe finishes).
@@ -188,6 +208,7 @@ describe("the zoom keeps the planner's guardrails", () => {
       thread({ id: `thr_${index}`, isPinned: true, pinnedAt: 1, pinSortKey: index, updatedAt: NOW - index - 1 }),
     );
     const { rerender } = render(<Board {...boardProps(before)} />);
+    await pastLoadEcho();
     rerender(<Board {...boardProps(after)} />);
     expect(document.querySelector("[data-transport-out]")).toBeNull();
     expect(document.querySelector("[data-transport-arrival]")).toBeNull();
@@ -203,6 +224,7 @@ describe("the zoom keeps the planner's guardrails", () => {
     try {
       const { before, after } = moveScenario();
       const { rerender } = render(<Board {...boardProps(before)} />);
+      await pastLoadEcho();
       rerender(<Board {...boardProps(after)} />);
       // The arriving card is never hidden behind static styles: it is a
       // plain visible card in its lane's flow from the first commit (no

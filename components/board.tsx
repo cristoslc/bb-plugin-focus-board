@@ -115,6 +115,7 @@ import {
   type TransportPlay,
   type TransportSpark,
   type TransportVariantId,
+  LOAD_TRANSPORT_MOUNT_GUARD_MS,
 } from "./card-transport";
 import type { LaneOrderDirection, MotionPacing } from "./preferences";
 
@@ -979,6 +980,11 @@ export function Board({
   // planner's rules — vanish, brand-new, multiplicity, the batch cap — live
   // in components/card-transport.ts.
   const [transports, setTransports] = useState<readonly TransportPlay[]>([]);
+  // The load-echo guard's clock (issue #373): when the board's lane-diff
+  // effect seeded its first lane map. The window from this stamp is where the
+  // mount echo's own relocations land in place instead of arming plays — the
+  // rule and its constant live beside the planner (components/card-transport.ts).
+  const mountSeedAtRef = useRef<number | null>(null);
   // Reduced motion: the phases still run (the layout choreography — ghost
   // collapse, slot handoff — stays correct for the user reading the board),
   // but no wipe keyframes start and the arriving card never hides behind
@@ -1097,7 +1103,26 @@ export function Board({
     prevRunUnitsRef.current = runUnitsNext;
     prevColumnsRef.current = columns;
     prevThreadsRef.current = threadsById;
-    if (groupByChanged || prev === null) return;
+    if (prev === null) {
+      // The board's first lane-map seed: the mount echo's window measures from
+      // here (components/card-transport.ts LOAD_TRANSPORT_MOUNT_GUARD_MS).
+      mountSeedAtRef.current = Date.now();
+      return;
+    }
+    if (groupByChanged) return;
+    if (Date.now() - (mountSeedAtRef.current ?? 0) <= LOAD_TRANSPORT_MOUNT_GUARD_MS) {
+      // The load-echo guard (issue #373): the mount echo's own lane changes —
+      // the done projection landing, a feature-group box coalescing its
+      // members — used to arm zoom plays ~100ms after paint, and the ghost
+      // teardown's remove timer then ended the settle tail at arm + 320ms:
+      // the board "looks loaded but keeps repainting". Within the window a
+      // diff that would arm a play applies the move's FINAL layout directly
+      // instead — the snapshots above already carry it, so the lanes land
+      // exactly where they would have, with no ghost, no arrival, and no
+      // phase timers. Every later move — a gesture, a realtime push, any
+      // post-window state change — arms exactly as today.
+      return;
+    }
     if (cardTransport === "none") {
       // Instant relocation: the planner never runs. The snapshots re-seed so
       // re-enabling the transporter starts a fresh baseline instead of

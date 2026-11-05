@@ -9,5 +9,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
       "**Sweep this lane arms the sweep from the menu.** With manual sweeping in the menu, the broom pill shows up only on a lane that has eligible cards to sweep, with the count beside it; a lane with nothing to sweep rests it."
     ],
     "group": "The board's lanes"
+  },
+  {
+    "text": "**The load-time dissolve no longer plays: the board's mounting echo lands its cards in place.** The relocations a load's own data makes during the first instants after paint (the done projection, feature-group boxes coalescing) used to arm card transports whose teardown kept the board repainting a few hundred ms after it looked loaded. The lanes land exactly where they would have; every later gesture or realtime move still plays.",
+    "children": [],
+    "group": "Cards and chips"
   }
 ];
