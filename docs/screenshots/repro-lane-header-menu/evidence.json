@@ -21,7 +21,7 @@
     "done": "2"
   },
   "consoleErrors": [
-    "[console.error] Failed to load resource: the server responded with a status of 404 (Not Found)",
-    "[404] http://localhost:5231/favicon.ico"
+    "[404] http://localhost:5231/favicon.ico",
+    "[console.error] Failed to load resource: the server responded with a status of 404 (Not Found)"
   ]
 }

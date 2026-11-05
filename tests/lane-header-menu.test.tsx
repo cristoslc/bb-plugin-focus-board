@@ -204,6 +204,20 @@ describe("lane header: the per-lane menu", () => {
     expect(oldest.getAttribute("aria-checked")).toBe("true");
   });
 
+  it("the menu anchors under its trigger, the way the View dropdown does", () => {
+    renderBoard(twoUnread, { onLaneOrderDirection: vi.fn() });
+    const trigger = laneMenuTrigger("unread");
+    // jsdom rects are 0x0; give the name+caret pair a real box so the
+    // anchor math is honest.
+    trigger.getBoundingClientRect = () =>
+      ({ left: 200, top: 50, right: 260, bottom: 70, width: 60, height: 20 }) as DOMRect;
+    fireEvent.click(trigger);
+    const menu = screen.getByRole("menu", { name: "Lane actions" });
+    // Left-aligned with the trigger's left edge, a dropdown's 4px below it.
+    expect(menu.style.left).toBe("200px");
+    expect(menu.style.top).toBe("74px");
+  });
+
   it("Remove custom order performs the clear write and closes the menu", () => {
     const onRankClear = vi.fn();
     const rankStore: RankStore = { "status:unread": ["thr_u2"] };
