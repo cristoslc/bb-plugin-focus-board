@@ -1696,7 +1696,8 @@ function MockFileChangeTitle(): ReactNode {
   );
 }
 
-function MockChat({ threadId, focusRequest }: { threadId: string; focusRequest?: number }): ReactNode {  const messages = CONVERSATIONS[threadId] ?? CONVERSATIONS.default;
+function MockChat({ threadId, focusRequest }: { threadId: string; focusRequest?: number }): ReactNode {
+  const messages = CONVERSATIONS[threadId] ?? CONVERSATIONS.default;
   const bubble = (role: "user" | "agent", content: ReactNode, key: string): ReactNode => (
     <div
       key={key}
