@@ -132,13 +132,24 @@ const perfSleep = (ms: number): Promise<void> =>
  * `N * META_SCAN_MS` is gone; a future reshape (batched / server-side
  * read) updates the modeled cost for THAT handler in the same pull
  * request — the model is the mock's stand-in for the handler's real
- * wall-time shape, not a permanent accusation.
+ * wall-time shape, not a permanent accusation. The batched reshape HAS
+ * arrived for the board's mount read as `board_state_get` (one shared
+ * scan serving every list at once): its cost branch above is exactly one
+ * list walk's wall, and the per-list branches STAY for the signal-path
+ * refetches and the client's fallback, which still run those calls.
  */
 /** Mirrors server.ts's LIST_READ_CONCURRENCY. */
 const LIST_READ_CONCURRENCY = 16;
 
 function modeledScanDelayMs(method: string, threadCount: number): number {
   if (META_SCAN_MS <= 0) return 0;
+  // The mount aggregate (server.ts's board_state_get): ONE shared scan —
+  // one threads.list plus ONE getPluginMetadata hop per live row whose
+  // record carries every board-state key at once — so its modeled wall is
+  // one round trip plus the SAME chunk walls a single list walk pays.
+  if (method === "board_state_get") {
+    return Math.ceil(threadCount / LIST_READ_CONCURRENCY) * META_SCAN_MS;
+  }
   if (method === "link_list" || method === "pin_parks_list" || method === "error_acks_list" || method === "snooze_list") {
     return Math.ceil(threadCount / LIST_READ_CONCURRENCY) * META_SCAN_MS;
   }
@@ -1161,6 +1172,42 @@ function adoptHostOp(op: HostOp): void {
 };
 
 const simRpcBase = async (method: string, args?: unknown): Promise<unknown> => {
+  // The mount aggregate (server.ts board_state_get): ONE answer carrying
+  // every board-state list the mount refetches immediately, composed from
+  // the same simulated stores the per-method branches below each read —
+  // the aggregate mount path and the per-list fallback path both read this
+  // fixture, so a shape that drifts between the two trips either side.
+  if (method === "board_state_get") {
+    return {
+      done: { doneIds: [...simDoneIds], records: structuredClone(SIM_DONE_RECORDS) },
+      links: { links: structuredClone(simLinks) },
+      parks: { parks: {} },
+      acks: { ackIds: [], records: {} },
+      snoozes: (() => {
+        // The same answer snooze_list serves below (the overview board
+        // carries one sleeping card so the dimmed card and its chip render
+        // without a set gesture).
+        if (!OVERVIEW_MODE) return { snoozes: {} };
+        const setAt = new Date(Date.now()).toISOString();
+        const wakeAt = new Date(Date.now() + 18 * 60 * 60 * 1000).toISOString();
+        return { snoozes: { thr_ov_snooze_card: { wakeAt, setAt } } };
+      })(),
+      ranks: { orders: structuredClone(ordersFromFractionStore(simRanks)) },
+      groups: {
+        groups: simGroupRegistry,
+        memberships: structuredClone(simGroupAssignments),
+      },
+      familyState: {
+        collapsedFamilies: [...simFamilyState.collapsedFamilies],
+        hideIdleChildren: [...simFamilyState.hideIdleChildren],
+      },
+      sweep: {
+        // Resolved ms, mirroring the real server: defaults are 2 days per arm.
+        doneArchiveMs: 2 * DAY_MS,
+        idleArchiveMs: 2 * DAY_MS,
+      },
+    };
+  }
   if (method === "done_list") {
     return { doneIds: [...simDoneIds], records: structuredClone(SIM_DONE_RECORDS) };
   }

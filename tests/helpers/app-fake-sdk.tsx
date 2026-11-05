@@ -285,6 +285,17 @@ let fakeFamilyState: { collapsedFamilies: string[]; hideIdleChildren: string[] }
 };
 let familyStateWriteFailure: string | null = null;
 
+// The mount aggregate's availability (server.ts board_state_get): when armed,
+// the fake rejects the aggregate exactly like an old host serving a half
+// build — the method unregistered — so the app's per-list mount fallback is
+// testable. Null (the default) serves.
+let boardStateUnavailable: string | null = null;
+
+/** Reject every board_state_get with `message` until cleared (null = serve). */
+export function stubBoardStateUnavailable(message: string | null): void {
+  boardStateUnavailable = message;
+}
+
 /** Seed the fake family-state server row (call in beforeEach to reset it). */
 export function seedFakeFamilyState(state: {
   collapsedFamilies?: string[];
@@ -312,6 +323,31 @@ export function stubFamilyStateWriteFailure(message: string | null): void {
 
 const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   rpcCalls.push({ method, args });
+  if (method === "board_state_get") {
+    if (boardStateUnavailable !== null) throw new Error(boardStateUnavailable);
+    // The mount aggregate (server.ts board_state_get): ONE composed answer
+    // serving the same stores the per-list cases below each read, so the
+    // aggregate mount path and the per-list fallback path prove against one
+    // fixture. error_acks_list has no store here and stays unserved (the
+    // real host's fake-less ack row is an empty list either way).
+    return {
+      done: { doneIds: [], records: {} },
+      links: { links: {} },
+      parks: { parks: {} },
+      acks: { ackIds: [], records: {} },
+      snoozes: { snoozes: {} },
+      ranks: { orders: structuredClone(ordersFromFractionStore(fakeRanks)) },
+      groups: {
+        groups: structuredClone(fakeGroups),
+        memberships: structuredClone(fakeGroupMemberships),
+      },
+      familyState: {
+        collapsedFamilies: [...fakeFamilyState.collapsedFamilies],
+        hideIdleChildren: [...fakeFamilyState.hideIdleChildren],
+      },
+      sweep: { doneArchiveMs: 172800000, idleArchiveMs: 172800000 },
+    };
+  }
   switch (method) {
     case "done_list":
       return { doneIds: [], records: {} };

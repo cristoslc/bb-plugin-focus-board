@@ -152,8 +152,13 @@ describe("family-state localStorage migration", () => {
 
   it("a fresh install migrates nothing and writes nothing", async () => {
     await mountBoard();
+    // The mount read rides the board_state_get aggregate (whose
+    // familyState arm is this hydration); the per-list family_state_list
+    // call now only fires on the signal path or the aggregate's fallback,
+    // so the fresh install's "first server read" assertion names the
+    // aggregate.
     await waitFor(() =>
-      expect(fakeRpcCalls().some((call) => call.method === "family_state_list")).toBe(true),
+      expect(fakeRpcCalls().some((call) => call.method === "board_state_get")).toBe(true),
     );
     expect(fakeRpcCalls().some((call) => call.method === "family_state_merge")).toBe(false);
     expect(expectsCollapsed("thr_folda")).toBe(false);

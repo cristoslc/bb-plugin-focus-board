@@ -176,16 +176,95 @@ const EXTERNAL_LINK_RECORD = z.object({
 
 const LINK_RECORD_SCHEMA = z.union([GITHUB_LINK_RECORD, EXTERNAL_LINK_RECORD]);
 
+/**
+ * The mount lists' exact output payloads, each named once and referenced by
+ * its own method AND by `board_state_get` (the mount aggregate): compose the
+ * same objects, never re-spell a copy, so the aggregate's answer cannot drift
+ * from the per-list read it wraps.
+ */
+const DONE_LIST_SCHEMA = z.object({
+  doneIds: z.array(z.string()),
+  records: z.record(
+    z.string(),
+    z.object({ doneAt: z.string().optional(), keep: z.boolean().optional() }),
+  ),
+});
+const LINK_LIST_SCHEMA = z.object({
+  links: z.record(z.string(), z.array(LINK_RECORD_SCHEMA)),
+});
+const PIN_PARKS_LIST_SCHEMA = z.object({
+  parks: z.record(z.string(), z.object({ parkedAt: z.string() })),
+});
+const ERROR_ACKS_LIST_SCHEMA = z.object({
+  ackIds: z.array(z.string()),
+  records: z.record(z.string(), z.object({ ackedAt: z.string() })),
+});
+const SNOOZE_LIST_SCHEMA = z.object({
+  snoozes: z.record(
+    z.string(),
+    z.object({ wakeAt: z.string(), setAt: z.string() }),
+  ),
+});
+const SWEEP_CONFIG_SCHEMA = z.object({
+  doneArchiveMs: z.number().int().min(1),
+  idleArchiveMs: z.number().int().min(1),
+});
+const RANK_LIST_SCHEMA = z.object({
+  orders: z.record(z.string(), z.array(z.string())),
+});
+const GROUPS_LIST_SCHEMA = z.object({
+  groups: z.record(
+    z.string(),
+    z.object({ name: z.string(), createdAt: z.string() }),
+  ),
+  /** Live thread id → groupId; archived members report through GC only. */
+  memberships: z.record(z.string(), z.string()),
+});
+const FAMILY_STATE_LIST_SCHEMA = z.object({
+  collapsedFamilies: z.array(z.string()),
+  hideIdleChildren: z.array(z.string()),
+});
+
+/**
+ * `board_state_get`'s whole payload: the mount aggregate the board's fan-in
+ * reads in ONE call. Each sub-key is the SAME schema its per-list method
+ * serves (the lists above), never a re-spelled copy; the nine per-list
+ * methods themselves stay on the contract untouched for the signal-path
+ * refetches and for the client's fallback when this aggregate is rejected.
+ */
+const BOARD_STATE_SCHEMA = z.object({
+  done: DONE_LIST_SCHEMA,
+  links: LINK_LIST_SCHEMA,
+  parks: PIN_PARKS_LIST_SCHEMA,
+  acks: ERROR_ACKS_LIST_SCHEMA,
+  snoozes: SNOOZE_LIST_SCHEMA,
+  ranks: RANK_LIST_SCHEMA,
+  groups: GROUPS_LIST_SCHEMA,
+  familyState: FAMILY_STATE_LIST_SCHEMA,
+  sweep: SWEEP_CONFIG_SCHEMA,
+});
+
+export type BoardStatePayload = z.infer<typeof BOARD_STATE_SCHEMA>;
+
 export const rpcContract = defineRpcContract({
+  /**
+   * The board mount's state read in ONE call (docs/plans/perf-strategy-
+   * 2026-11-05.md, queue item 3): one `threads.list({})` scan shared by
+   * every list that needs one plus ONE `getPluginMetadata` hop per live
+   * row — the hop's record carries every per-thread key, so the bounded
+   * chunk walls (issue #369) extract all nine payloads at once instead of
+   * five walks each hopping per key. Every sub-payload is exactly the
+   * per-list method's answer below; the per-list methods stay on the
+   * contract for the signal-path refetches and for the client's fallback
+   * when this aggregate is rejected (an old host serving a half build).
+   */
+  board_state_get: {
+    input: z.null(),
+    output: BOARD_STATE_SCHEMA,
+  },
   done_list: {
     input: z.null(),
-    output: z.object({
-      doneIds: z.array(z.string()),
-      records: z.record(
-        z.string(),
-        z.object({ doneAt: z.string().optional(), keep: z.boolean().optional() }),
-      ),
-    }),
+    output: DONE_LIST_SCHEMA,
   },
   done_set: {
     input: z.object({ threadId: z.string().min(1), done: z.boolean() }),
@@ -201,7 +280,7 @@ export const rpcContract = defineRpcContract({
    */
   link_list: {
     input: z.null(),
-    output: z.object({ links: z.record(z.string(), z.array(LINK_RECORD_SCHEMA)) }),
+    output: LINK_LIST_SCHEMA,
   },
   link_set: {
     input: z
@@ -270,9 +349,7 @@ export const rpcContract = defineRpcContract({
   // restores) lives with the sidebar-action caller, where the writes stream.
   pin_parks_list: {
     input: z.null(),
-    output: z.object({
-      parks: z.record(z.string(), z.object({ parkedAt: z.string() })),
-    }),
+    output: PIN_PARKS_LIST_SCHEMA,
   },
   pin_park_set: {
     input: z.object({ threadId: z.string().min(1), parked: z.boolean() }),
@@ -288,10 +365,7 @@ export const rpcContract = defineRpcContract({
    */
   error_acks_list: {
     input: z.null(),
-    output: z.object({
-      ackIds: z.array(z.string()),
-      records: z.record(z.string(), z.object({ ackedAt: z.string() })),
-    }),
+    output: ERROR_ACKS_LIST_SCHEMA,
   },
   error_ack_set: {
     input: z.object({ threadId: z.string().min(1), acked: z.boolean() }),
@@ -305,12 +379,7 @@ export const rpcContract = defineRpcContract({
    */
   snooze_list: {
     input: z.null(),
-    output: z.object({
-      snoozes: z.record(
-        z.string(),
-        z.object({ wakeAt: z.string(), setAt: z.string() }),
-      ),
-    }),
+    output: SNOOZE_LIST_SCHEMA,
   },
   // (Re-)snooze a thread until `wakeAt` (epoch-parseable; past times are
   // rejected by the handler — the contract cannot inject `now`).
@@ -476,10 +545,7 @@ export const rpcContract = defineRpcContract({
      * settings (lib/duration owns the conversion). The board stays
      * unit-ignorant; the CLI reads the raw settings for display.
      */
-    output: z.object({
-      doneArchiveMs: z.number().int().min(1),
-      idleArchiveMs: z.number().int().min(1),
-    }),
+    output: SWEEP_CONFIG_SCHEMA,
   },
   sweep_keep_set: {
     input: z.object({ threadId: z.string().min(1), keep: z.boolean() }),
@@ -507,7 +573,7 @@ export const rpcContract = defineRpcContract({
 
   rank_list: {
     input: z.null(),
-    output: z.object({ orders: z.record(z.string(), z.array(z.string())) }),
+    output: RANK_LIST_SCHEMA,
   },
   /**
    * A single move, not a whole-column write: two boards open on the same
@@ -554,14 +620,7 @@ export const rpcContract = defineRpcContract({
    */
   groups_list: {
     input: z.null(),
-    output: z.object({
-      groups: z.record(
-        z.string(),
-        z.object({ name: z.string(), createdAt: z.string() }),
-      ),
-      /** Live thread id → groupId; archived members report through GC only. */
-      memberships: z.record(z.string(), z.string()),
-    }),
+    output: GROUPS_LIST_SCHEMA,
   },
   group_create: {
     input: z.object({ name: z.string().min(1).max(200) }),
@@ -610,10 +669,7 @@ export const rpcContract = defineRpcContract({
    */
   family_state_list: {
     input: z.null(),
-    output: z.object({
-      collapsedFamilies: z.array(z.string()),
-      hideIdleChildren: z.array(z.string()),
-    }),
+    output: FAMILY_STATE_LIST_SCHEMA,
   },
   /**
    * One deliberate toggle: add or remove one id in one of the two sets. A
@@ -2245,6 +2301,107 @@ export default async function plugin(bb: BbPluginApi) {
   };
 
   bb.rpc.register(rpcContract, {
+    board_state_get: async () => {
+      // The board mount's state read, ONE call: the composition of the nine
+      // per-list payloads below. The legacy-done import runs first — the
+      // same one-time guard listDoneRecords pays inside done_list as today,
+      // in the same position (before every metadata read), so a done write
+      // this read races can never be resurrected by a later import.
+      await importLegacyDone();
+      // One `threads.list({})` scan shared by every list that needs one,
+      // then ONE `getPluginMetadata` hop per live row: the hop's record
+      // carries every per-thread key, so readBounded's chunk walls (issue
+      // #369, the same bounded shape each per-list walk pays) extract all
+      // the per-thread payloads at once.
+      const rows = await bb.sdk.threads.list({});
+      const namespaces = await readBounded(rows, async (row) => {
+        const namespace = await bb.sdk.threads.getPluginMetadata({
+          threadId: row.id,
+        });
+        return namespace as Record<string, JsonValue>;
+      });
+      const doneIds: string[] = [];
+      const doneRecords: Record<string, { doneAt?: string; keep?: boolean }> = {};
+      const links: Record<string, ThreadLink[]> = {};
+      const parks: Record<string, PinParkRecord> = {};
+      const ackRecords: Record<string, ErrorAckRecord> = {};
+      const snoozes: Record<string, SnoozeRecord> = {};
+      const memberships: Record<string, string> = {};
+      const groupStore = await readGroupsStore();
+      for (let index = 0; index < rows.length; index += 1) {
+        const threadId = rows[index].id;
+        const namespace = namespaces[index];
+        // Each per-thread arm below composes the exact per-list method's
+        // fold: the same parser, the same present-or-absent rule.
+        // done_list's arm: a thread carrying a done record is on the list.
+        const done = parseDoneRecord(namespace[DONE_METADATA_KEY]);
+        if (done !== null) {
+          doneIds.push(threadId);
+          doneRecords[threadId] = done;
+        }
+        // link_list's arm: the live list only, and a present-but-empty
+        // array carries no chip to drive.
+        const threadLinks = parseLinkedIssues(namespace[LINK_METADATA_KEY]);
+        if (threadLinks !== null && threadLinks.length > 0) {
+          links[threadId] = threadLinks;
+        }
+        // pin_parks_list's arm.
+        const park = parsePinParkRecord(namespace[PIN_PARK_METADATA_KEY]);
+        if (park !== null) parks[threadId] = park;
+        // error_acks_list's arm.
+        const ack = parseErrorAckRecord(namespace[ERROR_ACK_METADATA_KEY]);
+        if (ack !== null) ackRecords[threadId] = ack;
+        // snooze_list's arm.
+        const snooze = parseSnoozeRecord(namespace[SNOOZE_METADATA_KEY]);
+        if (snooze !== null) snoozes[threadId] = snooze;
+        // groups_list's membership arm, the same orphan rule: a record
+        // pointing at a group the registry lost is skipped, never boxed
+        // with a nameless label.
+        const member = parseGroupMember(namespace[GROUP_METADATA_KEY]);
+        if (member !== null && groupStore[member.groupId] !== undefined) {
+          memberships[threadId] = member.groupId;
+        }
+      }
+      // done_list's kept-merge, verbatim: keep flags for threads never
+      // marked Done still ride to the client — the sweep's per-arm kept()
+      // lookups read this one merged map.
+      const kept = await readKept();
+      for (const id of Object.keys(kept)) {
+        if (doneRecords[id] === undefined) doneRecords[id] = { keep: true };
+        else doneRecords[id] = { ...doneRecords[id], keep: true };
+      }
+      // The three board-global stores and the sweep thresholds ride the
+      // same answer (rank_list / groups_list's registry /
+      // family_state_list / sweep_config_get's arms). `sweep`'s values
+      // re-derive sweep_config_get's own settings-to-ms mapping — that
+      // handler must stay byte-identical, so the equality is pinned by the
+      // board-state conjunction test instead of by extraction.
+      const [rankStore, familyStore, sweepValues] = await Promise.all([
+        readRanks(),
+        readFamilyState(),
+        settings.get(),
+      ]);
+      return {
+        done: { doneIds: doneIds.sort(), records: doneRecords },
+        links: { links },
+        parks: { parks },
+        acks: { ackIds: Object.keys(ackRecords).sort(), records: ackRecords },
+        snoozes: { snoozes },
+        ranks: { orders: ordersFromFractionStore(rankStore) },
+        groups: { groups: groupsRowFromStore(groupStore), memberships },
+        familyState: familyStateRowFromStore(familyStore),
+        sweep: {
+          doneArchiveMs: archiveThresholdMs(
+            sweepValues.doneArchiveValue,
+            ARCHIVE_UNIT_SCHEMA.parse(sweepValues.doneArchiveUnit),
+          ),
+          idleArchiveMs: archiveThresholdMs(
+            sweepValues.idleArchiveValue,
+            ARCHIVE_UNIT_SCHEMA.parse(sweepValues.idleArchiveUnit),
+          ),
+        },
+      };
+    },
     pulse_rates: async () => {
       // The call IS the sampler's demand signal (issue #279): it opens the
       // lease that lets the sampler read a thread's context at all, so a board

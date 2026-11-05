@@ -106,21 +106,16 @@ const BUDGETS_BY_STAGE = {
 };
 
 /**
- * The mount fan-in's required calls: the nine plugin-server lists every
- * board mount refetches immediately, plus the working-dot pulse mount poll.
+ * The mount fan-in's required calls: the ONE aggregate read the mount issues
+ * for its whole board state — done + keeps, pin parks, sweep config, links,
+ * error acks, snoozes, ranks, groups, family state (server.ts's
+ * `board_state_get`, the per-list fan-in's batched reshape) — plus the
+ * working-dot pulse mount poll, which stays its own load-independent call.
  * A load run whose marks close fewer pairs than these names is an
  * INCOMPLETE run — it exits loud rather than becoming a fast sample.
  */
 const REQUIRED_MOUNT_RPCS = [
-  "done_list",
-  "pin_parks_list",
-  "sweep_config_get",
-  "link_list",
-  "error_acks_list",
-  "snooze_list",
-  "rank_list",
-  "groups_list",
-  "family_state_list",
+  "board_state_get",
   "pulse_rates",
 ];
 

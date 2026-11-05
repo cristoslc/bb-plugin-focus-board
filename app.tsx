@@ -23,7 +23,7 @@ import {
 import type { JsonValue } from "@get-bb/plugin-sdk";
 import { installHostLinkGlue } from "./components/host-link-glue";
 import { FocusBoardAppIcon } from "./components/ui/icon";
-import type { rpcContract } from "./server";
+import type { rpcContract, BoardStatePayload } from "./server";
 import { Board } from "./components/board";
 import { BoardToolbar } from "./components/board-toolbar";
 import { useBoardPanRouter } from "./components/board-pan";
@@ -469,9 +469,12 @@ function BoardPage({ subPath }: { subPath: string }) {
     doneArchiveMs: DEFAULT_DONE_ARCHIVE_MS,
     idleArchiveMs: DEFAULT_IDLE_ARCHIVE_MS,
   });
-  // Refetch units: the exact bodies the mount effect and the realtime
-  // signals both consume, named so the realtime coalescer (below) can run
-  // each once per pass.
+  // Refetch units: the exact bodies the realtime signal path consumes (and
+  // the mount's fallback here below), named so the realtime coalescer
+  // (below) can run each once per pass. The MOUNT read itself goes through
+  // the one `board_state_get` aggregate (after refetchFamilyState, the
+  // last unit's definition); an aggregate the host does not answer falls
+  // back to exactly these units' nine calls.
   const refetchDoneState = useCallback(() => {
     rpc.call("done_list").then(
       (result) => {
@@ -507,16 +510,12 @@ function BoardPage({ subPath }: { subPath: string }) {
       () => {}, // Acks are optional state; the board works without them.
     );
   }, [rpc, setErrorAckIds]);
-  useEffect(() => {
-    refetchDoneState();
-    refetchLinks();
-    refetchErrorAcks();
-  }, [refetchDoneState, refetchLinks, refetchErrorAcks]);
   // The realtime coalescer (issue #186): one shared debounce over every
   // refetch-carrying signal, so a burst of signals — one write echoed
   // across channels, or several writes landing together — produces one
-  // refetch pass, not one per signal. The mount refetches above stay
-  // immediate; only the signal path waits the quiet window.
+  // refetch pass, not one per signal. The mount's aggregate read (below,
+  // after refetchFamilyState) stays immediate, and so does its fallback;
+  // only the signal path waits the quiet window.
   const refetchScheduler = useMemo(() => createRefetchScheduler(REFETCH_COALESCE_MS), []);
   useEffect(() => refetchScheduler.dispose, [refetchScheduler]);
   useRealtime("done-changed", () => {
@@ -570,9 +569,6 @@ function BoardPage({ subPath }: { subPath: string }) {
       () => {}, // Snoozing is optional state; the board works without it.
     );
   }, [rpc]);
-  useEffect(() => {
-    refetchSnoozes();
-  }, [refetchSnoozes]);
   useRealtime("snooze-changed", () => {
     refetchScheduler.schedule("snoozes", refetchSnoozes);
   });
@@ -650,9 +646,6 @@ function BoardPage({ subPath }: { subPath: string }) {
       () => {}, // Ranking is optional state; the board works without it.
     );
   }, [rpc]);
-  useEffect(() => {
-    refetchRanks();
-  }, [refetchRanks]);
   useRealtime("rank-changed", () => {
     refetchScheduler.schedule("ranks", refetchRanks);
   });
@@ -672,9 +665,6 @@ function BoardPage({ subPath }: { subPath: string }) {
       () => {}, // Groups are optional state; the board works without them.
     );
   }, [rpc]);
-  useEffect(() => {
-    refetchGroups();
-  }, [refetchGroups]);
   useRealtime("group-changed", () => {
     refetchScheduler.schedule("groups", refetchGroups);
   });
@@ -893,8 +883,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Collapsed family cards and the idle-children filter are deliberate-toggle
   // sets that now live on the bb server (one plugin KV row, lib/family-state),
   // not in browser localStorage: the same fold and hide read on every window
-  // AND every machine. Both start empty and hydrate from `family_state_list`
-  // just below; each set only ever records deliberate toggles, so an id absent
+  // AND every machine. Both start empty and hydrate from the mount's
+  // board_state_get aggregate (or the family_state_list refetch the signal
+  // path carries); each set only ever records deliberate toggles, so an id
+  // absent
   // from it renders expanded / not hidden.
   const [collapsedFamilies, setCollapsedFamilies] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -909,77 +901,159 @@ function BoardPage({ subPath }: { subPath: string }) {
     null,
   );
   // Flips true once the first server read (or its migration) has settled, so
-  // the one-time localStorage migration below runs exactly once per mount.
+  // the one-time localStorage migration in the hydrate arm below runs exactly
+  // once per mount.
   const familyStateHydratedRef = useRef(false);
+  // The family-state payload's application arm, ONE spelling both reads
+  // consume: the `family_state_list` refetch below (the signal path), and
+  // the mount aggregate's dispatch (whose fallback reaches this unit). The
+  // body is the refetch arm verbatim.
+  const hydrateFamilyState = useCallback(
+    (result: unknown) => {
+      // Guarded, not trusted: the zod contract says both arrays are there,
+      // but a host running a different plugin build could answer without
+      // them, and an unvalidated `undefined` would throw during the read
+      // (the rank refetch's same guard).
+      const raw = result as { collapsedFamilies?: unknown; hideIdleChildren?: unknown };
+      const server: FamilyStateStore = {
+        collapsedFamilies: Array.isArray(raw.collapsedFamilies)
+          ? raw.collapsedFamilies.filter((id): id is string => typeof id === "string")
+          : [],
+        hideIdleChildren: Array.isArray(raw.hideIdleChildren)
+          ? raw.hideIdleChildren.filter((id): id is string => typeof id === "string")
+          : [],
+      };
+      const firstRead = !familyStateHydratedRef.current;
+      familyStateHydratedRef.current = true;
+      if (firstRead) {
+        // One-time migration: the server row is the truth from here on. If
+        // it is empty and localStorage still holds folds (an operator
+        // upgrading from the localStorage era), union them in; only a
+        // successful write retires the legacy keys, so a failed migration
+        // keeps the folds on screen and retries on the next load.
+        const localCollapsed = parseCollapsedFamiliesStored(
+          readStoredText(COLLAPSED_FAMILIES_KEY, ""),
+        );
+        const localHideIdle = parseHideIdleChildrenStored(
+          readStoredText(HIDE_IDLE_CHILDREN_KEY, ""),
+        );
+        const migration = familyStateMigration(server, {
+          collapsedFamilies: [...localCollapsed],
+          hideIdleChildren: [...localHideIdle],
+        });
+        if (migration !== null) {
+          rpc
+            .call("family_state_merge", {
+              collapsedFamilies: [...migration.collapsedFamilies],
+              hideIdleChildren: [...migration.hideIdleChildren],
+            })
+            .then(
+              (merged) => {
+                setCollapsedFamilies(new Set(merged.collapsedFamilies));
+                setHideIdleFamilies(new Set(merged.hideIdleChildren));
+                clearStored(COLLAPSED_FAMILIES_KEY);
+                clearStored(HIDE_IDLE_CHILDREN_KEY);
+              },
+              () => {
+                // The migration write failed: keep the folds on screen and
+                // leave the legacy keys in place so the next load retries.
+                setCollapsedFamilies(new Set(migration.collapsedFamilies));
+                setHideIdleFamilies(new Set(migration.hideIdleChildren));
+              },
+            );
+          return;
+        }
+        // Server authoritative (or nothing to migrate): retire the keys.
+        clearStored(COLLAPSED_FAMILIES_KEY);
+        clearStored(HIDE_IDLE_CHILDREN_KEY);
+      }
+      setCollapsedFamilies(new Set(server.collapsedFamilies));
+      setHideIdleFamilies(new Set(server.hideIdleChildren));
+    },
+    [rpc, setCollapsedFamilies, setHideIdleFamilies],
+  );
   const refetchFamilyState = useCallback(() => {
     rpc.call("family_state_list").then(
-      (result) => {
-        // Guarded, not trusted: the zod contract says both arrays are there,
-        // but a host running a different plugin build could answer without
-        // them, and an unvalidated `undefined` would throw during the read
-        // (the rank refetch's same guard).
-        const raw = result as { collapsedFamilies?: unknown; hideIdleChildren?: unknown };
-        const server: FamilyStateStore = {
-          collapsedFamilies: Array.isArray(raw.collapsedFamilies)
-            ? raw.collapsedFamilies.filter((id): id is string => typeof id === "string")
-            : [],
-          hideIdleChildren: Array.isArray(raw.hideIdleChildren)
-            ? raw.hideIdleChildren.filter((id): id is string => typeof id === "string")
-            : [],
-        };
-        const firstRead = !familyStateHydratedRef.current;
-        familyStateHydratedRef.current = true;
-        if (firstRead) {
-          // One-time migration: the server row is the truth from here on. If
-          // it is empty and localStorage still holds folds (an operator
-          // upgrading from the localStorage era), union them in; only a
-          // successful write retires the legacy keys, so a failed migration
-          // keeps the folds on screen and retries on the next load.
-          const localCollapsed = parseCollapsedFamiliesStored(
-            readStoredText(COLLAPSED_FAMILIES_KEY, ""),
-          );
-          const localHideIdle = parseHideIdleChildrenStored(
-            readStoredText(HIDE_IDLE_CHILDREN_KEY, ""),
-          );
-          const migration = familyStateMigration(server, {
-            collapsedFamilies: [...localCollapsed],
-            hideIdleChildren: [...localHideIdle],
-          });
-          if (migration !== null) {
-            rpc
-              .call("family_state_merge", {
-                collapsedFamilies: [...migration.collapsedFamilies],
-                hideIdleChildren: [...migration.hideIdleChildren],
-              })
-              .then(
-                (merged) => {
-                  setCollapsedFamilies(new Set(merged.collapsedFamilies));
-                  setHideIdleFamilies(new Set(merged.hideIdleChildren));
-                  clearStored(COLLAPSED_FAMILIES_KEY);
-                  clearStored(HIDE_IDLE_CHILDREN_KEY);
-                },
-                () => {
-                  // The migration write failed: keep the folds on screen and
-                  // leave the legacy keys in place so the next load retries.
-                  setCollapsedFamilies(new Set(migration.collapsedFamilies));
-                  setHideIdleFamilies(new Set(migration.hideIdleChildren));
-                },
-              );
-            return;
-          }
-          // Server authoritative (or nothing to migrate): retire the keys.
-          clearStored(COLLAPSED_FAMILIES_KEY);
-          clearStored(HIDE_IDLE_CHILDREN_KEY);
-        }
-        setCollapsedFamilies(new Set(server.collapsedFamilies));
-        setHideIdleFamilies(new Set(server.hideIdleChildren));
-      },
+      (result) => hydrateFamilyState(result),
       () => {}, // Family fold state is optional; the board works without it.
     );
-  }, [rpc]);
+  }, [rpc, hydrateFamilyState]);
+  // The mount's state read (docs/plans/perf-strategy-2026-11-05.md, queue
+  // item 3): ONE `board_state_get` aggregate serves what the mount's nine
+  // immediate per-list calls each read — done + keeps, pin parks, sweep
+  // config, links, error acks, snoozes, ranks, groups, family state — and
+  // its arrival dispatches the exact setters each refetch unit has above.
+  // The per-list methods stay for the realtime signal path, which keeps
+  // refetching exactly the unit that changed, and for the fallback here:
+  // an aggregate REJECTED (an old host serving a half build — the method
+  // unregistered) issues the exact nine per-list mount calls, each carrying
+  // its own optional-state rejection semantics unchanged. The pulse mount
+  // poll is NOT part of the aggregate: its cadence and its demand lease
+  // (issue #279) are load-independent and stay in usePulseRates, which
+  // fires its own first poll at mount.
   useEffect(() => {
-    refetchFamilyState();
-  }, [refetchFamilyState]);
+    let disposed = false;
+    rpc.call("board_state_get", null).then(
+      (state: BoardStatePayload) => {
+        if (disposed) return;
+        setDoneIds(new Set(state.done.doneIds));
+        setDoneExtras(recordsAsExtras(state.done.records));
+        setParkIds(new Set(Object.keys(state.parks.parks)));
+        setSweepConfig({
+          doneArchiveMs: state.sweep.doneArchiveMs,
+          idleArchiveMs: state.sweep.idleArchiveMs,
+        });
+        setLinksByThread(linksFromRpc(state.links));
+        setErrorAckIds(new Set(state.acks.ackIds));
+        setSnoozeRecords(state.snoozes.snoozes);
+        // Guarded, not trusted, like the refetch's same arm: the zod
+        // contract says `orders` is there, but a host running a different
+        // plugin build could answer without it.
+        const orders = (state.ranks as { orders?: unknown }).orders;
+        if (orders !== undefined && orders !== null && typeof orders === "object") {
+          setRanks(orders as RankStore);
+        }
+        setGroupRegistry(state.groups.groups);
+        setGroupAssignments(state.groups.memberships);
+        hydrateFamilyState(state.familyState);
+      },
+      () => {
+        // The fallback: the exact nine per-list mount calls today's code
+        // carries, one refetch unit per mount read.
+        if (disposed) return;
+        refetchDoneState();
+        refetchLinks();
+        refetchErrorAcks();
+        refetchSnoozes();
+        refetchRanks();
+        refetchGroups();
+        refetchFamilyState();
+      },
+    );
+    return () => {
+      disposed = true;
+    };
+  }, [
+    rpc,
+    linksFromRpc,
+    hydrateFamilyState,
+    refetchDoneState,
+    refetchLinks,
+    refetchErrorAcks,
+    refetchSnoozes,
+    refetchRanks,
+    refetchGroups,
+    refetchFamilyState,
+    setDoneIds,
+    setDoneExtras,
+    setParkIds,
+    setSweepConfig,
+    setErrorAckIds,
+    setSnoozeRecords,
+    setRanks,
+    setGroupRegistry,
+    setGroupAssignments,
+  ]);
   // A fold or hide written by any surface (another window, another machine,
   // the migration above) converges here through the coalesced refetch.
   useRealtime("family-state-changed", () => {
