@@ -586,6 +586,19 @@ export function ThreadPane({
         referenceMentions.onOpen(reference);
         return;
       }
+      // A file-change row's title claims its click the only way the pane
+      // can (pane-parity audit Gap 4): the host renders the path segment
+      // with the timeline's file accent — the one class, besides the unread
+      // divider's header, that the title view uses — and the plugin path
+      // passes no title-action resolver, so the click is a colored dead
+      // spot. Open the thread in the main view (maximize), where the host
+      // resolver opens the file's diff.
+      if (target.closest("span.text-timeline-accent") !== null) {
+        event.preventDefault();
+        event.stopPropagation();
+        onMaximize();
+        return;
+      }
       // Explicit markdown links win; code spans are only claimed when no
       // anchor is involved.
       const anchor = target.closest("a[href]");
@@ -610,7 +623,7 @@ export function ThreadPane({
       event.stopPropagation();
       openWorkspacePreview(path);
     },
-    [openWorkspacePreview, referenceMentions],
+    [openWorkspacePreview, onMaximize, referenceMentions],
   );
 
   const endDrag = useCallback((event: PointerEvent) => {

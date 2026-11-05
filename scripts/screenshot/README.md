@@ -78,6 +78,16 @@ host app involved.
   `docs/screenshots/repro-context-row-0-48-1/` (two shots). Set `THREAD_ID`
   to a board card's thread with a project + checkout environment; honors
   `BB_APP`, `CHROME_PATH`, and `OUT_DIR`.
+- `repro-file-change-title.mjs` — runtime probe for the file-change title
+  click (the pane-parity audit's Gap 4) against the LIVE bb app: opens the
+  named thread's pane, wheels to the bottom, then walks the transcript one
+  tick at a time to where a `span.text-timeline-accent` file-accent title
+  mounts, clicks it, and reports whether the pane left for the main view.
+  On the pre-fix served build the click is a dead spot; after the fix lands
+  and the main checkout rebuilds, the same run is the fallback's live proof.
+  Artifacts land in `docs/screenshots/repro-file-change-title/`. Set
+  `THREAD_ID` to a board card whose transcript carries file-change rows;
+  honors `BB_APP`, `CHROME_PATH`, and `OUT_DIR`.
 - `repro-pending-question-double.mjs` — runtime probe for the pane-parity
   audit's Gap 1 against the LIVE bb app: with one thread's turn blocked on a
   pending question, it captures the pane (plugin card + host banner = the

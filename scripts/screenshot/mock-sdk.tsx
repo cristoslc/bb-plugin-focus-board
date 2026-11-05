@@ -1663,8 +1663,40 @@ function MockQueuedSendRow(): ReactNode {
   );
 }
 
-function MockChat({ threadId }: { threadId: string }): ReactNode {
-  const messages = CONVERSATIONS[threadId] ?? CONVERSATIONS.default;
+/**
+ * Does this harness run carry the file-change-title fixture? Captured at
+ * module load like QUEUED_SEND_FIXTURE; `?fileChange=1` renders one
+ * host-faithful file-change row title (the file-accent path segment inside
+ * TimelineTitleView's tooltip wrapper, as bb 0.48.1 renders it in the pane
+ * with no title-action resolver) for the pane-gap frames.
+ */
+const FILE_CHANGE_FIXTURE =
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).has("fileChange");
+
+/**
+ * A host-faithful file-change row title (the pane-parity audit's Gap 4
+ * frames): the path segment is a plain span with the timeline's file accent
+ * class inside the title view's tooltip wrapper — the dead-click shape the
+ * pane had before it claimed the click for the maximize fallback.
+ */
+function MockFileChangeTitle(): ReactNode {
+  return (
+    <div
+      data-timeline-row-id="row_file_change_1"
+      className="flex items-center gap-2 px-3 py-1 text-sm leading-5"
+    >
+      <span className="shrink-0 whitespace-pre text-muted-foreground">Updated</span>
+      <span title="docs/erd.mmd" className="min-w-0 max-w-full overflow-hidden whitespace-nowrap">
+        <span className="min-w-0 truncate whitespace-pre text-timeline-accent">
+          docs/erd.mmd
+        </span>
+      </span>
+    </div>
+  );
+}
+
+function MockChat({ threadId }: { threadId: string }): ReactNode {  const messages = CONVERSATIONS[threadId] ?? CONVERSATIONS.default;
   const bubble = (role: "user" | "agent", content: ReactNode, key: string): ReactNode => (
     <div
       key={key}
@@ -1700,6 +1732,7 @@ function MockChat({ threadId }: { threadId: string }): ReactNode {
           Today
         </div>
         {messages.map((message, index) => bubble(message.role, inlineMarkup(message.text), String(index)))}
+        {FILE_CHANGE_FIXTURE ? <MockFileChangeTitle /> : null}
       </div>
       {QUEUED_SEND_FIXTURE ? <MockQueuedSendRow /> : null}
       <div

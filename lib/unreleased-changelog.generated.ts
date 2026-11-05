@@ -19,5 +19,9 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
   {
     "text": "**The thread pane's \"Recent decisions\" card is gone.** The transcript has carried every answered question since bb 0.47.0 (and the plugin-form \"Answered\" rows since 0.48.0, get-bb/bb#4463), so the card was a second, weaker copy rebuilt by text-parsing the raw event log. The transcript's own answered rows are the record.",
     "children": []
+  },
+  {
+    "text": "**Clicking a file-change row's name in the pane now opens the thread in the main view.** The path segment was colored like the main view's clickable file title but did nothing, because the plugin path supplies no title-action resolver; the pane claims the click and maximizes, where the host resolver opens the diff.",
+    "children": []
   }
 ];

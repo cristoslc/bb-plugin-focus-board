@@ -17,6 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Magic rename's "use the thread's active model" probe generates on that model again.** bb 0.48 dropped `providerId` from the thread execution-options response, so every probe fell back to the project-default model chain instead of the thread's model (a thread on **acp-omp** got a probe on **codex**, which died "could not find the Codex CLI"). The probe now pairs that response's model with the source thread's own providerId.
 - **Answering a pending question in the thread pane shows one form again.** bb 0.48.0's parity work made the host banner render inside the pane's embedded chat, so the pane's own question card duplicated it, and answering one left the other stale. The card is gone: the host banner owns the surface, and the host persists partial answers itself.
 - **The thread pane's "Recent decisions" card is gone.** The transcript has carried every answered question since bb 0.47.0 (and the plugin-form "Answered" rows since 0.48.0, get-bb/bb#4463), so the card was a second, weaker copy rebuilt by text-parsing the raw event log. The transcript's own answered rows are the record.
+- **Clicking a file-change row's name in the pane now opens the thread in the main view.** The path segment was colored like the main view's clickable file title but did nothing, because the plugin path supplies no title-action resolver; the pane claims the click and maximizes, where the host resolver opens the diff.
 
 ## [1.7.6] - 2026-11-04
 
