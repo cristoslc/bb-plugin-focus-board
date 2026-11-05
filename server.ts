@@ -758,6 +758,38 @@ export function keptFromRow(row: unknown): KeepStore | null {
   return Object.fromEntries(entries.map(([id]) => [id, true as const]));
 }
 
+/**
+ * How many per-thread metadata reads the list walks may hold in flight at
+ * once (issue #369): the reads are independent, so each walk issues them
+ * `LIST_READ_CONCURRENCY` at a time through a chunked `Promise.all` and
+ * pays ceil(N/16) chunk walls instead of N awaited hops, while the cap
+ * keeps a 5000-thread workspace from stampeding the bridge with
+ * unbounded parallelism. scripts/screenshot/mock-sdk.tsx models this same
+ * constant — move the two together.
+ */
+const LIST_READ_CONCURRENCY = 16;
+
+/**
+ * Same reads, same per-item results, same input order — only the wall
+ * changes. Each chunk of `LIST_READ_CONCURRENCY` reads runs concurrently
+ * inside one `Promise.all`; the NEXT chunk starts only after the current
+ * one settles, which is what bounds the bridge to 16 concurrent hops. One
+ * rejected read rejects the whole walk (the serial loop stopped at its
+ * first failure too), so a genuine infrastructure failure stays loud.
+ */
+async function readBounded<T, R>(
+  items: readonly T[],
+  read: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array<R>(items.length);
+  for (let start = 0; start < items.length; start += LIST_READ_CONCURRENCY) {
+    const chunk = items.slice(start, start + LIST_READ_CONCURRENCY);
+    const settled = await Promise.all(chunk.map(read));
+    results.splice(start, chunk.length, ...settled);
+  }
+  return results;
+}
+
 export default async function plugin(bb: BbPluginApi) {
   bb.log.info("loaded");
 
@@ -1477,13 +1509,14 @@ export default async function plugin(bb: BbPluginApi) {
   }> {
     await importLegacyDone();
     const live = await bb.sdk.threads.list({});
+    const reads = await readBounded(live, (thread) => readDoneRecord(thread.id));
     const doneIds: string[] = [];
     const records: Record<string, { doneAt?: string; keep?: boolean }> = {};
-    for (const thread of live) {
-      const record = await readDoneRecord(thread.id);
+    for (let index = 0; index < reads.length; index += 1) {
+      const record = reads[index];
       if (record !== null) {
-        doneIds.push(thread.id);
-        records[thread.id] = record;
+        doneIds.push(live[index].id);
+        records[live[index].id] = record;
       }
     }
     return { doneIds: doneIds.sort(), records };
@@ -2246,10 +2279,11 @@ export default async function plugin(bb: BbPluginApi) {
       // The live list only, like pin_parks_list: a link on an archived
       // thread has no chip to drive (the card is not on the board).
       const rows = await bb.sdk.threads.list({});
+      const reads = await readBounded(rows, (row) => readLinkedIssues(row.id));
       const links: Record<string, ThreadLink[]> = {};
-      for (const row of rows) {
-        const record = await readLinkedIssues(row.id);
-        if (record !== null && record.length > 0) links[row.id] = record;
+      for (let index = 0; index < reads.length; index += 1) {
+        const record = reads[index];
+        if (record !== null && record.length > 0) links[rows[index].id] = record;
       }
       return { links };
     },
@@ -2297,10 +2331,11 @@ export default async function plugin(bb: BbPluginApi) {
       // un-archiving returns the thread through done state, not a pin — and
       // the SDK scan the done CLI lacks is not needed here.
       const rows = await bb.sdk.threads.list({});
+      const reads = await readBounded(rows, (row) => readPinParkRecord(row.id));
       const parks: Record<string, PinParkRecord> = {};
-      for (const row of rows) {
-        const record = await readPinParkRecord(row.id);
-        if (record !== null) parks[row.id] = record;
+      for (let index = 0; index < reads.length; index += 1) {
+        const record = reads[index];
+        if (record !== null) parks[rows[index].id] = record;
       }
       return { parks };
     },
@@ -2315,10 +2350,11 @@ export default async function plugin(bb: BbPluginApi) {
       // still errored; the client's stale sweep drops it after any turn
       // that leaves the error status, so a later error is never masked.
       const rows = await bb.sdk.threads.list({});
+      const reads = await readBounded(rows, (row) => readErrorAckRecord(row.id));
       const records: Record<string, ErrorAckRecord> = {};
-      for (const row of rows) {
-        const record = await readErrorAckRecord(row.id);
-        if (record !== null) records[row.id] = record;
+      for (let index = 0; index < reads.length; index += 1) {
+        const record = reads[index];
+        if (record !== null) records[rows[index].id] = record;
       }
       return { ackIds: Object.keys(records).sort(), records };
     },
@@ -2332,10 +2368,11 @@ export default async function plugin(bb: BbPluginApi) {
       // archived thread has no board consumer (snoozed cards never leave
       // their column), and the wake scan below reads the same list.
       const rows = await bb.sdk.threads.list({});
+      const reads = await readBounded(rows, (row) => readSnoozeRecord(row.id));
       const snoozes: Record<string, SnoozeRecord> = {};
-      for (const row of rows) {
-        const record = await readSnoozeRecord(row.id);
-        if (record !== null) snoozes[row.id] = record;
+      for (let index = 0; index < reads.length; index += 1) {
+        const record = reads[index];
+        if (record !== null) snoozes[rows[index].id] = record;
       }
       return { snoozes };
     },
