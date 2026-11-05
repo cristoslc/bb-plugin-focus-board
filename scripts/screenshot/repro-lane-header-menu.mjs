@@ -100,6 +100,7 @@ const hoverRead = await page.evaluate(() => {
   );
   return {
     hoverClass: trigger?.className.includes("hover:bg-accent") ?? false,
+    cursor: trigger === null ? null : getComputedStyle(trigger).cursor,
     escapeCloses: false,
   };
 });

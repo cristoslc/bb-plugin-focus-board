@@ -3110,7 +3110,7 @@ export function Board({
                           y: box.bottom + 4,
                         });
                       }}
-                      className="flex min-w-0 items-center gap-0.5 truncate rounded-sm px-1 py-0.5 text-[11px] font-medium transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="flex min-w-0 cursor-pointer items-center gap-0.5 truncate rounded-sm px-1 py-0.5 text-[11px] font-medium transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <span className="truncate">{column.label}</span>
                       <Icon
