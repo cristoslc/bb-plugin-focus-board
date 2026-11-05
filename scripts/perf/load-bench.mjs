@@ -87,9 +87,15 @@ const MODELED_KNOBS = "sidebarDelay=200&rpcLatency=8&metaScanMs=1.5";
  */
 const BUDGETS_BY_STAGE = {
   client: {
-    100: { appEval: 3000, firstCommit: 1500, mountToFirstCard: 900, fanInWindow: 300, settleTail: 1200 },
-    300: { appEval: 3000, firstCommit: 1500, mountToFirstCard: 2000, fanInWindow: 300, settleTail: 1500 },
-    500: { appEval: 3000, firstCommit: 1500, mountToFirstCard: 3000, fanInWindow: 300, settleTail: 2000 },
+    // The load-echo mount guard (issue #373): the settle tail's end moved off
+    // the mount-echo play's ghost teardown (its remove timer ended the tail
+    // at arm + 320ms: 398/424/488 measured on 47ffa8b) onto the chip wave's
+    // last mutation: 108/171/284 median with the guard landed. Each budget ≈
+    // 3× its measured median, never above the pre-guard budget it replaces,
+    // so a transport play arming at load trips the budget again.
+    100: { appEval: 3000, firstCommit: 1500, mountToFirstCard: 900, fanInWindow: 300, settleTail: 340 },
+    300: { appEval: 3000, firstCommit: 1500, mountToFirstCard: 2000, fanInWindow: 300, settleTail: 510 },
+    500: { appEval: 3000, firstCommit: 1500, mountToFirstCard: 3000, fanInWindow: 300, settleTail: 850 },
   },
   modeled: {
     // fanInWindow recalibrated for the bounded parallel scan (issue #369):
