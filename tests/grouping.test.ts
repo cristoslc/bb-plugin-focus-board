@@ -60,6 +60,22 @@ describe("threadState", () => {
     expect(threadState(thread({ isUnread: true }))).toBe("unread");
     expect(threadState(thread({}))).toBe("idle");
   });
+
+  it("treats an idle turn with background work in flight as working", () => {
+    // The provider ends its turn as soon as it launches detached work, so
+    // bb reports "idle" while a background agent, command, or workflow runs.
+    const quiet = { workflows: 0, backgroundAgents: 0, backgroundCommands: 0, planMode: 0, goals: 0 };
+    for (const busy of [{ backgroundAgents: 1 }, { backgroundCommands: 2 }, { workflows: 1 }]) {
+      const activity = { ...quiet, ...busy };
+      expect(threadState(thread({ activity }))).toBe("working");
+      // Still running, so it outranks unread...
+      expect(threadState(thread({ activity, isUnread: true }))).toBe("working");
+      // ...but a wait on the operator still outranks working.
+      expect(threadState(thread({ activity, hasPendingInteraction: true }))).toBe("attention");
+    }
+    // Plan mode and goals are not detached work: the thread stays idle.
+    expect(threadState(thread({ activity: { ...quiet, planMode: 1, goals: 1 } }))).toBe("idle");
+  });
 });
 
 describe("filterThreads", () => {

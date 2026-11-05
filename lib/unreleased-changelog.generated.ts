@@ -3,5 +3,9 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
   {
     "text": "**The New project affordance becomes an icon-only button beside the composer's project picker.** The same create-and-select flow, now a compact folder-plus button at the picker's row instead of a footer bar, per the operator's shape ruling. When bb ships the forwarded `createProject` capability (get-bb/bb#7015), the flow moves into the picker's dropdown unchanged.",
     "children": []
+  },
+  {
+    "text": "**Threads running background work stay in Working.** A thread whose turn ended while a background agent, background command, or workflow run is still going used to show as Idle. It now stays in Working until that work lands, and the idle sweep leaves it alone.",
+    "children": []
   }
 ];

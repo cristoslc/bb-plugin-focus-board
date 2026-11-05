@@ -81,6 +81,18 @@ export interface GroupingContext {
   groupNames?: ReadonlyMap<string, string>;
 }
 
+/**
+ * True while the thread has detached work in flight: a background agent, a
+ * background command, or a workflow run. The provider ends its turn as soon
+ * as it launches such work, so bb reports the thread "idle" even though it
+ * will wake itself when the work lands; `activity` is the host's live count.
+ */
+export function hasBackgroundWork(thread: Pick<PluginSidebarThread, "activity">): boolean {
+  const activity = thread.activity;
+  if (activity === undefined || activity === null) return false;
+  return activity.backgroundAgents > 0 || activity.backgroundCommands > 0 || activity.workflows > 0;
+}
+
 export function threadState(
   thread: PluginSidebarThread,
   errorAcks?: ReadonlySet<string>,
@@ -114,7 +126,8 @@ export function threadState(
     thread.status === "active" ||
     thread.status === "starting" ||
     thread.status === "stopping" ||
-    thread.status === "pending"
+    thread.status === "pending" ||
+    hasBackgroundWork(thread)
   ) {
     return "working";
   }
