@@ -105,9 +105,10 @@ pushPerfMark("fb:mock-sdk-eval");
 //   read, like every UAT suite has always seen.
 // - `?rpcLatency=<ms>` models the plugin bridge's per-RPC round trip.
 // - `?metaScanMs=<ms>` models the production server's per-thread metadata
-//   scan inside the list handlers (the serial getPluginMetadata hops the
+//   scan inside the list handlers (the getPluginMetadata hops the
 //   real server pays): it widens ONLY the modeled *_list calls to the
-//   serial-scan wall the production shape costs. Absent → 0, so the mock
+//   parallel-scan wall the production shape costs (16 concurrent reads —
+//   see modeledScanDelayMs below). Absent → 0, so the mock
 //   stays the instant in-memory reader.
 const PAGE_PARAMS = new URLSearchParams(window.location.search);
 const SIDEBAR_DELAY_MS = Math.max(0, Number(PAGE_PARAMS.get("sidebarDelay") ?? "0") || 0);
@@ -119,20 +120,27 @@ const perfSleep = (ms: number): Promise<void> =>
 /**
  * The modeled production scan wall for one list call, in ms. The shape this
  * models is the REAL server's (server.ts): the four per-thread state lists
- * scan the thread list and await one `getPluginMetadata` hop per row
- * serially, and done_list walks its done-index KV then reads per done id.
- * When a child moves one of these handlers to a batched / server-side read,
- * the modeled cost for THAT handler must move to the new shape in the same
- * pull request — the model is the mock's stand-in for the handler's real
+ * scan the thread list and read one `getPluginMetadata` hop per row, and
+ * done_list reads per done id. Since the bounded parallel fan-out
+ * (LIST_READ_CONCURRENCY in server.ts, issue #369) those reads run 16 at a
+ * time in chunked `Promise.all`s: a handler's wall is
+ * `ceil(N / LIST_READ_CONCURRENCY) * META_SCAN_MS` — one hop per chunk
+ * (N=500 → 32 chunk walls ≈ 48ms), not N serial hops. The serial shape's
+ * `N * META_SCAN_MS` is gone; a future reshape (batched / server-side
+ * read) updates the modeled cost for THAT handler in the same pull
+ * request — the model is the mock's stand-in for the handler's real
  * wall-time shape, not a permanent accusation.
  */
+/** Mirrors server.ts's LIST_READ_CONCURRENCY. */
+const LIST_READ_CONCURRENCY = 16;
+
 function modeledScanDelayMs(method: string, threadCount: number): number {
   if (META_SCAN_MS <= 0) return 0;
   if (method === "link_list" || method === "pin_parks_list" || method === "error_acks_list" || method === "snooze_list") {
-    return threadCount * META_SCAN_MS;
+    return Math.ceil(threadCount / LIST_READ_CONCURRENCY) * META_SCAN_MS;
   }
   if (method === "done_list") {
-    return simDoneIds.size * META_SCAN_MS;
+    return Math.ceil(simDoneIds.size / LIST_READ_CONCURRENCY) * META_SCAN_MS;
   }
   return 0;
 }
@@ -1278,7 +1286,8 @@ const simRpcBase = async (method: string, args?: unknown): Promise<unknown> => {
  * The instrumented call the app consumes: the sim's answer, wrapped in the
  * bench's marks (one start + one end per call) and the staged-load knobs'
  * modeled cost. The modeled production scan rides BEFORE the resolution so
- * the call's wall mirrors the real handler's serial shape; throws keep
+ * the call's wall mirrors the real handler's bounded-parallel shape
+ * (modeledScanDelayMs); throws keep
  * their end mark via the finally, so a rejected mount call is never an
  * unclosed fan-in pair.
  */

@@ -18,10 +18,11 @@
  *   React mount, the memo chains, the card DOM) with an instant sidebar and
  *   instant RPCs.
  * - `modeled`: the host fetches its sidebar before the board renders, and
- *   each modeled `*_list` RPC costs the bridge round trip plus the serial
- *   per-thread metadata scan the REAL server shape pays (server.ts's list
- *   handlers). This is the profile a load fix must improve on the harness:
- *   it carries the production shape's serial-scan term, priced at the
+ *   each modeled `*_list` RPC costs the bridge round trip plus the bounded
+ *   parallel per-thread metadata scan the REAL server shape pays (16
+ *   concurrent reads: ceil(N/16) chunk walls — server.ts's list handlers,
+ *   issue #369). This is the profile a load fix must improve on the
+ *   harness: it carries the production shape's scan term, priced at the
  *   MODELED_KNOBS constant below.
  *
  * The modeled numbers are synthetic by construction (no bb account, no
@@ -91,9 +92,16 @@ const BUDGETS_BY_STAGE = {
     500: { appEval: 3000, firstCommit: 1500, mountToFirstCard: 3000, fanInWindow: 300, settleTail: 2000 },
   },
   modeled: {
-    100: { threadsWait: 1800, mountToFirstCard: 1500, fanInWindow: 800, settleTail: 1800 },
-    300: { threadsWait: 1800, mountToFirstCard: 4000, fanInWindow: 3300, settleTail: 1800 },
-    500: { threadsWait: 1800, mountToFirstCard: 6000, fanInWindow: 5400, settleTail: 2400 },
+    // fanInWindow recalibrated for the bounded parallel scan (issue #369):
+    // the serial shape's 800/3300/5400 priced N×metaScanMs walls; the
+    // parallel shape pays ceil(N/16) chunk walls, measured on the landed
+    // head at 29/53/78ms median — each budget ≈ 3× its measured median,
+    // never above healthy jitter (max run 126ms at 500), always deep under
+    // the serial shape it replaced. A re-serializing regression trips both
+    // this budget and the per-run structural allowance below it.
+    100: { threadsWait: 1800, mountToFirstCard: 1500, fanInWindow: 150, settleTail: 1800 },
+    300: { threadsWait: 1800, mountToFirstCard: 4000, fanInWindow: 200, settleTail: 1800 },
+    500: { threadsWait: 1800, mountToFirstCard: 6000, fanInWindow: 300, settleTail: 2400 },
   },
 };
 
