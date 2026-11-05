@@ -37,7 +37,7 @@ Each gap: what the primary surface shows, what the pane does today, the impact, 
 - **Primary surface:** the main view computes an `unreadDividerState` (placement plus auto-scroll) and honors the experiments "unread threads open at the NEW divider" (bb CHANGELOG.md, 0.47.0, App) and "NEW divider before final assistant message: a thread that finished while you were away opens at its answer instead of its first tool call" (bb CHANGELOG.md, 0.48.0, New experiments; experiment flag `unreadDividerAtAnswer`, `apps/app/src/views/thread-detail/ThreadDetailView.tsx:387-398`, passed at `:1739-1740`).
 - **Pane today:** the plugin path hardcodes `unreadDividerAutoScroll: false` and `unreadDividerPlacement: null` (`apps/app/src/components/plugin/PluginThreadChat.tsx:339-340`), and the SDK's `ThreadChatProps` exposes no way to change it (`packages/plugin-sdk/src/app-contract.ts:4614-4645`). The pane always lands at the bottom with no marker of what is new.
 - **Impact:** reopening a pane on a thread that finished while away shows the answer with no divider saying where "new" begins — the main view's reading-position affordance is silently absent on the board.
-- **Approach:** needs upstream — either the host stops overriding the divider for plugin panels, or the SDK exposes the two props. File a bb feature request citing the 0.48.0 experiment; until then nothing to ship here.
+- **Approach:** needs upstream — either the host stops overriding the divider for plugin panels, or the SDK exposes the two props. Filed as [get-bb/bb#7091](https://github.com/get-bb/bb/issues/7091), with gaps 6, 7, and 9; until then nothing to ship here.
 - **Cost:** L (upstream-dependent).
 
 ### Gap 4 — File-change row titles are dead clicks in the pane
@@ -61,7 +61,7 @@ Each gap: what the primary surface shows, what the pane does today, the impact, 
 - **Primary surface:** the page presentation mounts `ThreadTableOfContents` beside the transcript, with navigation-to-row (`ThreadScreen.tsx:623-637`, page case only).
 - **Pane today:** the panel presentation renders no TOC (`ThreadScreen.tsx:643-653`), and the SDK exposes none.
 - **Impact:** long transcripts in the pane have no jump navigation; the operator scrolls or uses find.
-- **Approach:** upstream — ask for the TOC in panel presentations or an SDK surface; an in-pane re-implementation would duplicate host UI the pane just finished deleting.
+- **Approach:** upstream — asked for in [get-bb/bb#7091](https://github.com/get-bb/bb/issues/7091), with gaps 3, 7, and 9; an in-pane re-implementation would duplicate host UI the pane just finished deleting.
 - **Cost:** L (upstream-dependent).
 
 ### Gap 7 — Thread context card slots do not render in the pane
@@ -69,7 +69,7 @@ Each gap: what the primary surface shows, what the pane does today, the impact, 
 - **Primary surface:** 0.48.1 added the thread context card behind an early-adopter experiment (bb commit #6529 "Add the thread context card behind an early-adopter experiment", 2026-10-29), a plugin-slot surface (rows and sections) mounted beside the page transcript (`apps/app/src/components/plugin/PluginThreadContextCard.tsx:37-63,104+`; `ThreadScreen.tsx:625` mounts it on page, `:645` wraps panels in `WithoutThreadContextCard`).
 - **Pane today:** panels explicitly exclude the card, and the SDK exposes no slot for it.
 - **Impact:** plugins that add context-card rows show them in the main view only; the pane is a second-class transcript for that new surface.
-- **Approach:** upstream; track it so the pane is not forgotten when the experiment graduates.
+- **Approach:** upstream — tracked as [get-bb/bb#7091](https://github.com/get-bb/bb/issues/7091), with gaps 3, 6, and 9, so the pane is not forgotten when the experiment graduates.
 - **Cost:** L (upstream-dependent).
 
 ### Gap 8 — The pane never focuses the composer
@@ -85,7 +85,7 @@ Each gap: what the primary surface shows, what the pane does today, the impact, 
 - **Primary surface:** the composer host options `onOpenThreadInfo` and `onCreateNewThreadInEnvironment` gate those entries (`ThreadScreen.tsx:578-579`, `ThreadScreenComposerHost` at `:112-120`); the main view supplies both.
 - **Pane today:** `PluginThreadChat` supplies neither (`apps/app/src/components/plugin/PluginThreadChat.tsx:311-319` sets only checkout, chrome, focus, context environment, and permission policy), so the entries are hidden. The board's own actions menu has "New child thread…" (`components/thread-pane.tsx:1051-1060`) but no thread-Info path short of maximizing.
 - **Impact:** the operator cannot open thread Info (context window detail, automations, storage) or spawn a thread in this environment without leaving the pane.
-- **Approach:** maximize-and-open fallback via the pane's existing actions menu; or upstream to default the entries in panels.
+- **Approach:** maximize-and-open fallback via the pane's existing actions menu; or upstream to default the entries in panels — asked for in [get-bb/bb#7091](https://github.com/get-bb/bb/issues/7091), with gaps 3, 6, and 7.
 - **Cost:** S.
 
 ### Gap 10 — Stale compensations: three pane mechanisms whose premises predate 0.48.x
@@ -131,7 +131,7 @@ The pane embeds the host's full chat; these hold on 0.48.1 without plugin-side w
 4. **Gap 10 — stale compensations (S each).** Three mechanisms of unverified code against a rewritten host; one probe each, then delete or date-stamp. Pairs naturally with 1–3 in one cleanup cut.
 5. **Gap 8 — composer focus (S).** Small quality-of-life win, fully in-repo.
 6. **Gap 5 — message actions (S in-repo half).** Ship the board's own actions if wanted; file the upstream ask for other plugins' actions alongside Gap 3's.
-7. **Gaps 3, 6, 7, 9 — the upstream batch (M/L).** One bb feature request covering the plugin-panel overrides (`unreadDividerPlacement`/`unreadDividerAutoScroll`, `onTitleAction`, `includePluginMessageActions`, TOC, context card, composer menu entries) is worth more than four separate asks; none blocks the in-repo work above.
+7. **Gaps 3, 6, 7, 9 — the upstream batch (M/L).** One bb feature request covering the plugin-panel overrides (`unreadDividerPlacement`/`unreadDividerAutoScroll`, TOC, context card, composer menu entries) is worth more than four separate asks; filed as [get-bb/bb#7091](https://github.com/get-bb/bb/issues/7091), covering exactly gaps 3, 6, 7, and 9; none blocks the in-repo work above.
 
 ## Method note
 
