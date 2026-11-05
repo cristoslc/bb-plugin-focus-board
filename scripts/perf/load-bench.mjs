@@ -92,16 +92,22 @@ const BUDGETS_BY_STAGE = {
     500: { appEval: 3000, firstCommit: 1500, mountToFirstCard: 3000, fanInWindow: 300, settleTail: 2000 },
   },
   modeled: {
-    // fanInWindow recalibrated for the bounded parallel scan (issue #369):
-    // the serial shape's 800/3300/5400 priced N×metaScanMs walls; the
-    // parallel shape pays ceil(N/16) chunk walls, measured on the landed
-    // head at 29/53/78ms median — each budget ≈ 3× its measured median,
-    // never above healthy jitter (max run 126ms at 500), always deep under
-    // the serial shape it replaced. A re-serializing regression trips both
-    // this budget and the per-run structural allowance below it.
-    100: { threadsWait: 1800, mountToFirstCard: 1500, fanInWindow: 150, settleTail: 1800 },
-    300: { threadsWait: 1800, mountToFirstCard: 4000, fanInWindow: 200, settleTail: 1800 },
-    500: { threadsWait: 1800, mountToFirstCard: 6000, fanInWindow: 300, settleTail: 2400 },
+    // fanInWindow recalibrated for the bounded parallel scan (issue #369);
+    // then re-anchored for the aggregate mount read (board_state_get,
+    // #373): the modeled fan-in now prices ONE shared scan — one round
+    // trip plus ceil(N/16) chunk walls, the same wall ONE list walk pays —
+    // measured on the landed head at 27.1/53/77ms median (before the
+    // aggregate, same tree: 28.2/52.5/77.5; the parallel per-list walls
+    // already set the window at one walk's wall, so the wall-shaped change
+    // is inside the profile's run-to-run spread and the adopted win here
+    // is the unpriced server-side scan duplication + trip count). Each
+    // budget ≈ 3× its measured median, never above healthy jitter (max run
+    // 78.2ms at 500), always deep under the serial shape any regression
+    // would rediscover. A re-serializing regression trips both this
+    // budget and the per-run structural allowance below it.
+    100: { threadsWait: 1800, mountToFirstCard: 1500, fanInWindow: 80, settleTail: 1800 },
+    300: { threadsWait: 1800, mountToFirstCard: 4000, fanInWindow: 160, settleTail: 1800 },
+    500: { threadsWait: 1800, mountToFirstCard: 6000, fanInWindow: 230, settleTail: 2400 },
   },
 };
 
