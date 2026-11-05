@@ -3078,30 +3078,39 @@ export function Board({
                 }}
               >
                 <span className="flex min-w-0 items-center gap-0.5">
-                  {/* The lane menu's trigger, the card's own ⋯ idiom and seat:
-                      an explicit affordance left of the label (operator
-                      amendment to the per-lane menu ruling) — the bare header
-                      is a drop surface, never a menu trigger. */}
-                  <button
-                    type="button"
-                    data-lane-menu-trigger=""
-                    aria-haspopup="menu"
-                    aria-label={`${column.label} lane actions`}
-                    onClick={(event) => {
-                      // A lift armed by the touch pickup owns its gesture
-                      // outright (issue #336): a click arriving under it — a
-                      // stray tap on the second finger, for one — can never
-                      // open a menu over the card being dragged.
-                      if (touchDragArmed()) return;
-                      event.stopPropagation();
-                      setLaneMenu({ columnId: column.id, x: event.clientX, y: event.clientY });
-                    }}
-                    className="inline-flex size-4 shrink-0 items-center justify-center rounded-sm text-muted-foreground/70 transition-colors hover:bg-accent/60 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <Icon name="MoreHorizontal" className="size-3" aria-hidden />
-                  </button>
+                  {/* The lane menu's target: the whole name+caret pair, the
+                      toolbar's dropdown idiom (a ChevronDown after the name)
+                      rather than a dot glyph — the operator's second pass on
+                      the per-lane menu ruling. The bare header around it is
+                      a drop surface, never a trigger. */}
                   <h3 className="min-w-0 truncate text-[11px] font-medium text-muted-foreground">
-                    {column.label}
+                    <button
+                      type="button"
+                      data-lane-menu-trigger=""
+                      aria-haspopup="menu"
+                      aria-expanded={laneMenu?.columnId === column.id}
+                      aria-label={`${column.label} lane actions`}
+                      onClick={(event) => {
+                        // A lift armed by the touch pickup owns its gesture
+                        // outright (issue #336): a click arriving under it —
+                        // a stray tap on the second finger, for one — can
+                        // never open a menu over the card being dragged.
+                        if (touchDragArmed()) return;
+                        event.stopPropagation();
+                        setLaneMenu({ columnId: column.id, x: event.clientX, y: event.clientY });
+                      }}
+                      className="flex min-w-0 items-center gap-0.5 truncate rounded-sm text-[11px] font-medium transition-colors hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <span className="truncate">{column.label}</span>
+                      <Icon
+                        name="ChevronDown"
+                        className={cn(
+                          "size-3 shrink-0 text-muted-foreground/60 transition-transform",
+                          laneMenu?.columnId === column.id && "rotate-180",
+                        )}
+                        aria-hidden
+                      />
+                    </button>
                   </h3>
                 </span>
                 <span className="text-[11px] tabular-nums text-muted-foreground/60">

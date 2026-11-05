@@ -48,7 +48,7 @@ await new Promise((r) => setTimeout(r, 800));
 
 // Frame 1: the ranked lane's header — badge gone (its aria-label was the
 // old marker), the ordered state itself still on the section, and the
-// 3-dot trigger left of the label.
+// caret riding the lane's name (the toolbar's dropdown idiom).
 const headerRead = await page.evaluate(() => {
   const section = document.querySelector('section[data-column-id="unread"]');
   const header = section?.querySelector(":scope > header");
@@ -57,14 +57,15 @@ const headerRead = await page.evaluate(() => {
   return {
     ordered: section?.getAttribute("data-column-ordered"),
     triggerLabel: trigger?.getAttribute("aria-label") ?? null,
-    triggerLeftOfLabel: trigger?.nextElementSibling?.tagName === "H3",
+    triggerInName: trigger?.closest("h3") !== null,
+    triggerExpanded: trigger?.getAttribute("aria-expanded") ?? null,
     oldBadgeGone: badge === null,
   };
 });
 
 await page.screenshot({ path: `${OUT}lane-header-badge-gone.png` });
 
-// Frame 2: the menu the 3-dot trigger opens.
+// Frame 2: the menu the name+caret target opens.
 await page.click('section[data-column-id="unread"] header button[data-lane-menu-trigger]');
 await page.waitForSelector('[role="menu"][aria-label="Lane actions"]', { timeout: 5_000 });
 const menuRead = await page.evaluate(() => {
