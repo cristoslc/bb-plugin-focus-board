@@ -9,8 +9,7 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "children": []
   },
   {
-    "text": "**Magic rename's \"use the thread's active model\" probe generates on that model again.** bb 0.48 dropped `providerId` from the thread execution-options response, so every probe fell back to the project-default model chain — failing outright on projects whose remembered default cannot run (a thread on **acp-omp** probed on **codex**, which died \"could not find the Codex CLI\"). The probe now pairs that response's model with the source thread's own providerId.",
-    "children": []
+    "text": "**Magic rename's \"use the thread's active model\" probe generates on that model again.** bb 0.48 dropped `providerId` from the thread execution-options response, so every probe fell back to the project-default model chain instead of the thread's model (a thread on **acp-omp** got a probe on **codex**, which died \"could not find the Codex CLI\"). The probe now pairs that response's model with the source thread's own providerId.",
     "children": []
   }
 ];
