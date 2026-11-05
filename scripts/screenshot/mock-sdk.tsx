@@ -24,6 +24,9 @@ import { DAY_MS } from "../../lib/duration";
 // the same function the writing window applied (scripts/screenshot/host-state.ts).
 import { applyHostOp, type HostOp, type HostSignal, type HostState } from "./host-state";
 import { createHostLog, hostLogPrefix } from "./host-log";
+import { Icon as SharedIcon } from "../../components/ui/icon";
+
+const Icon = SharedIcon;
 
 export const registeredNavPanel: {
   path?: string;
@@ -691,7 +694,31 @@ const mockSdk = {
     },
   },
   hosts: {
-    list: async () => [{ id: "host_local", name: "MacBook Pro", lifecycle: { phase: "active" } }],
+    // The fields the plugin's create flows read: the dialog's picked-folder
+    // create (lib/project-create-flow) filters on a connected persistent
+    // host, the toolbar's name-create on an active lifecycle.
+    list: async () => [
+      {
+        id: "host_local",
+        name: "MacBook Pro",
+        lifecycle: { phase: "active" },
+        status: "connected",
+        type: "persistent",
+      },
+    ],
+    // bb's native folder picker, mocked: a fixed picked folder by default so
+    // the dialog's typical-flow create can be driven end to end and
+    // screenshotted without an OS dialog. `?folderPick=cancel` (null path —
+    // the operator's cancel answer) and `?folderPick=unavailable` (a refused
+    // picker — the dialog's name-field fallback with the reason) cover the
+    // other two answers the flow must survive.
+    pickFolder: async () => {
+      const mode = new URLSearchParams(window.location.search).get("folderPick");
+      uatCalls.push({ method: "hosts.pickFolder", args: { mode } });
+      if (mode === "cancel") return { path: null };
+      if (mode === "unavailable") throw new Error("the client's folder picker is not available here");
+      return { path: "/Users/cristos/code/auth-rework-fixture" };
+    },
   },
   plugins: {
     // The settings modal's Behavior tab writes the plugin's declarative
@@ -718,11 +745,14 @@ const mockSdk = {
     // filter share this create path. The mock mirrors the host's contract:
     // the created project comes back so the dialog can seed its composer's
     // picker with it, a blank or duplicate name refuses with the reason, and
-    // the sidebar wakes so the board's filter lists the new project.
-    create: async (args: { name: string }) => {
+    // the sidebar wakes so the board's filter lists the new project. The
+    // picked-folder flow's create carries the full local_path source; the
+    // mock records that shape too (the probe asserts it) and derives the
+    // slug either way.
+    create: async (args: { name: string; source?: { type: string; hostId: string; path: string } }) => {
       const name = (args?.name ?? "").trim();
       if (name === "") throw new Error("Project name is required.");
-      uatCalls.push({ method: "projects.create", args: { name } });
+      uatCalls.push({ method: "projects.create", args });
       const duplicate = simProjects.find(
         (project) => project.name.toLowerCase() === name.toLowerCase(),
       );
@@ -749,27 +779,115 @@ export function useSdk(): unknown {
 }
 
 /**
- * A stub new-thread composer: the real one is bb's host compose surface,
- * which the harness has no host for. Renders a marker the pane/board shots
- * can show and a button that fires onSubmit with a minimal request, the
- * same recording contract the modal's unit-test stub uses. The mock SDK
- * must track every specifier app.tsx imports from '@get-bb/plugin-sdk/app'
- * or the harness fails to boot (it did: the ✨ child-thread composer import
- * was missing here and the harness rendered an empty root).
+ * A replica of bb's host composer for the harness: the real one is bb's
+ * bundled NewThreadComposer (its DOM lives in bb's own renderer), which the
+ * harness has no host for. The replica keeps the structure the New project
+ * button's work needs evidence about: the promptbox (the rounded "Ask
+ * anything." area with its model row and send button — the send button keeps
+ * the old mock's recording contract, firing onSubmit with a minimal request)
+ * and, under it, the pickers row bb's shared compose component renders as
+ * `data-new-thread-footer` with its class recipe and the three pickers ("No
+ * project ⌄" on the left; ⌄-pickers "Default" and the accent-colored "Full
+ * Access" on the right, the operator's screenshot's row). The row's classes
+ * are bb's own; where bb's narrow variants sit on classes the plugin's
+ * compiled CSS does not carry (`max-md:gap-1`, `max-md:mt-0` — a mock that
+ * invents utilities gets silent no-ops), the replica leaves them off: the
+ * row's narrow padding shifts a hair, never the geometry the placement
+ * proof asserts.
+ *
+ * The mock SDK must track every specifier app.tsx imports from
+ * '@get-bb/plugin-sdk/app' or the harness fails to boot (it did: the ✨
+ * child-thread composer import was missing here and the harness rendered an
+ * empty root).
  */
 export function experimental_NewThreadComposer(props: Record<string, unknown>): ReactNode {
+  // The seeded project's own name when the dialog seeds one (the created
+  // project's id after a picked-folder create), else bb's projectless
+  // "No project" — the picker's label, so the harness can prove the
+  // spawn-project selection the modal's seed drives.
+  const seededName =
+    typeof props.defaultProjectId === "string"
+      ? (simProjects.find((project) => project.id === props.defaultProjectId)?.name ?? "No project")
+      : "No project";
   return (
-    <button
-      type="button"
-      data-mock-composer=""
-      onClick={() => {
-        const submit = props.onSubmit as ((request: unknown) => void) | undefined;
-        void submit?.({ projectId: "proj_1", input: [] });
-      }}
-      style={{ padding: "4px 8px", fontSize: 12 }}
-    >
-      Mock composer
-    </button>
+    <div data-app-composer="" data-promptbox-shell="" className="w-full flex flex-col">
+      <div className="rounded-lg border border-border" style={{ background: "var(--card)" }}>
+        <div style={{ padding: "12px 14px 3px", fontSize: 13, color: "var(--muted-foreground)" }}>
+          Ask anything.
+        </div>
+        <div className="flex items-center justify-between px-1.5" style={{ paddingBottom: 6 }}>
+          <button
+            type="button"
+            data-mock-composer=""
+            onClick={() => {
+              const submit = props.onSubmit as ((request: unknown) => void) | undefined;
+              void submit?.({ projectId: "proj_1", input: [] });
+            }}
+            className="inline-flex h-7 items-center gap-1.5 rounded-md px-1.5 text-sm"
+            style={{ color: "var(--muted-foreground)" }}
+          >
+            <Icon name="Plus" className="size-4" aria-hidden />
+            <span>
+              Standard Medium
+            </span>
+            <Icon name="ChevronDown" className="size-3.5" aria-hidden />
+          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              className="inline-flex h-7 items-center justify-center rounded-md"
+              style={{ color: "var(--muted-foreground)", padding: "0 4px" }}
+            >
+              <Icon name="Mic" className="size-4" aria-hidden />
+            </button>
+            <button
+              type="button"
+              className="inline-flex size-7 items-center justify-center rounded-md"
+              style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}
+            >
+              <Icon name="ArrowUp" className="size-4" aria-hidden />
+            </button>
+          </div>
+        </div>
+      </div>
+      <div
+        data-new-thread-footer=""
+        className="mt-1 flex select-none items-center justify-between gap-2 px-3.5 max-md:px-1"
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-1">
+          <button
+            type="button"
+            data-mock-project-picker=""
+            className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md px-1.5 text-sm"
+            style={{ color: "var(--muted-foreground)" }}
+          >
+            <Icon name="Folder" className="size-4" aria-hidden />
+            <span>{seededName}</span>
+            <Icon name="ChevronDown" className="size-3.5" aria-hidden />
+          </button>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            data-mock-environment-picker=""
+            className="inline-flex h-7 items-center gap-1 rounded-md px-1 text-sm"
+            style={{ color: "var(--muted-foreground)" }}
+          >
+            <span>Default</span>
+            <Icon name="ChevronDown" className="size-3" aria-hidden />
+          </button>
+          <button
+            type="button"
+            data-mock-permission-picker=""
+            className="inline-flex h-7 items-center gap-1 rounded-md px-1 text-sm"
+            style={{ color: "var(--primary)" }}
+          >
+            <span>Full Access</span>
+            <Icon name="ChevronDown" className="size-3" aria-hidden />
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

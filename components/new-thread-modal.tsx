@@ -1,18 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   experimental_NewThreadComposer as NewThreadComposer,
   useSdk,
 } from "@get-bb/plugin-sdk/app";
 import type { NewThreadRequest } from "@get-bb/plugin-sdk/app";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useFooterRowAnchor } from "@/components/use-footer-row-anchor";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
+import {
+  NEW_PROJECT_BUTTON_HEIGHT,
+  NEW_PROJECT_BUTTON_WIDTH,
+  composeFooterRowPlacement,
+  measureFooterRowAnchor,
+  type FooterRowPlacement,
+} from "@/lib/composer-row-anchor";
 import type { ThreadPaneThread } from "@/components/thread-pane";
 
 /**
@@ -41,6 +43,17 @@ export interface SpawnedThread {
  * (the board nests it under its parent card). The dialog titles itself and
  * names the parent so the operator can see what will nest where.
  */
+
+/**
+ * The picker flow's refusal words: the picker's own case, stated so the
+ * dialog's inline line reads why the folder picker did not open and what
+ * to do instead — the name field the flow fell back to.
+ */
+function pickerUnavailableMessage(error: unknown): string {
+  const reason = error instanceof Error ? error.message : String(error);
+  return `Folder picker unavailable: ${reason}. Name the project instead.`;
+}
+
 export function NewThreadModal({
   open,
   onOpenChange,
@@ -58,6 +71,7 @@ export function NewThreadModal({
   rememberProjectId,
   rememberEnvironment,
   onCreateProject,
+  onCreateProjectFromPicker,
   onSpawned,
 }: {
   open: boolean;
@@ -143,10 +157,22 @@ export function NewThreadModal({
    * stub flows) renders no option — the composer works exactly as before.
    * The picker's dropdown itself is host-owned and the plugin-facing
    * composer drops bb's `createProject` capability (get-bb/bb#7015), so the
-   * option lives as a small icon-only button beside the composer's project
-   * picker, swapped for an inline name field when armed.
+   * option lives as a small icon-only button ON the composer's pickers
+   * row's line — at the row's left edge, beside the project picker —
+   * swapped for an inline name field when armed.
    */
   onCreateProject?: (name: string) => Promise<{ id: string }>;
+  /**
+   * The SAME button's typical-flow hand-off (the operator's ruling: the
+   * button follows bb's typical new-project flow): the app runs bb's
+   * native folder picker on the board's single connected persistent host
+   * and creates from the picked folder (lib/project-create-flow) — absent
+   * (untestable host topologies, the tests' stub flows) the button's click
+   * arms the inline name field directly, the shipped fallback flow.
+   * `{ id: null }` means the operator cancelled the native pick: nothing
+   * is created and the dialog rests, bb's own answer to a null pick.
+   */
+  onCreateProjectFromPicker?: () => Promise<{ id: string | null }>;
   onSpawned: (thread: SpawnedThread) => void;
 }) {
   const sdk = useSdk();
@@ -161,6 +187,21 @@ export function NewThreadModal({
   const [createPending, setCreatePending] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
+  // The typical flow's pick: while the native folder picker is on screen
+  // (the app side runs bb's hosts.pickFolder) the affordance disables —
+  // bb's isCreating slot does the same for its own pick.
+  const [pickingPending, setPickingPending] = useState(false);
+  // The host composer's pickers row, measured for the floating New project
+  // button (components/use-footer-row-anchor): desktop viewports place the
+  // button on the row's line, out of flow; compact viewports and any
+  // unmeasurable row keep the stacked shape. The anchor follows the dialog
+  // being open — closed mounts no composer, so the anchor rests at null.
+  const { setWrapperElement, placement: footerRowPlacement } =
+    useFooterRowAnchor(open && onCreateProject !== undefined);
+  // The resting button floats only when the row is anchored to. While the
+  // name field is armed the button is swapped for the field either way.
+  const floatingOption =
+    onCreateProject !== undefined && !creatingProject && footerRowPlacement !== null;
   useEffect(() => {
     if (!open) {
       setSpawnFailed(false);
@@ -169,8 +210,48 @@ export function NewThreadModal({
       setCreatePending(false);
       setCreateError(null);
       setCreatedProjectId(null);
+      setPickingPending(false);
     }
   }, [open]);
+
+  // The button's click: the typical flow (the native folder picker, the
+  // project named after the picked folder) when the app hands the picker
+  // off; otherwise the inline name field. A refused pick — the picker
+  // unavailable on this client, or the picked path naming no project
+  // directory — arms the name field with the reason shown (each error's
+  // own words: the field flow's failures read "Create failed: …", the
+  // picker's read the picker's case). A cancelled pick (null) rests the
+  // dialog untouched, bb's own answer to a null pick.
+  const startCreateProject = useCallback(() => {
+    if (onCreateProjectFromPicker === undefined || pickingPending) {
+      if (!pickingPending) setCreatingProject(true);
+      return;
+    }
+    setPickingPending(true);
+    setCreateError(null);
+    let pending: Promise<{ id: string | null }>;
+    try {
+      pending = onCreateProjectFromPicker();
+    } catch (error) {
+      setPickingPending(false);
+      setCreatingProject(true);
+      setCreateError(pickerUnavailableMessage(error));
+      return;
+    }
+    void Promise.resolve(pending).then(
+      (result) => {
+        setPickingPending(false);
+        if (result.id === null) return;
+        setCreatedProjectId(result.id);
+        setCreateError(null);
+      },
+      (error: unknown) => {
+        setPickingPending(false);
+        setCreatingProject(true);
+        setCreateError(pickerUnavailableMessage(error));
+      },
+    );
+  }, [onCreateProjectFromPicker, pickingPending]);
 
   // The create write mirrors the group dialog's rename handling: the write
   // starts in the tick it fires, a success closes the field and selects the
@@ -186,7 +267,7 @@ export function NewThreadModal({
       pending = onCreateProject(name);
     } catch (error) {
       setCreatePending(false);
-      setCreateError(error instanceof Error ? error.message : String(error));
+      setCreateError(`Create failed: ${error instanceof Error ? error.message : String(error)}`);
       return;
     }
     void Promise.resolve(pending).then(
@@ -198,7 +279,7 @@ export function NewThreadModal({
       },
       (error: unknown) => {
         setCreatePending(false);
-        setCreateError(error instanceof Error ? error.message : String(error));
+        setCreateError(`Create failed: ${error instanceof Error ? error.message : String(error)}`);
       },
     );
   }, [newProjectName, createPending, onCreateProject]);
@@ -322,15 +403,48 @@ export function NewThreadModal({
         overflow risk the old max-h-[70vh] guard chased does not warrant
         resurrecting the clipper; the host keeps its own internal editor
         scroll. */}
-        <NewThreadComposer
-          defaultProjectId={createdProjectId ?? defaultProjectId}
-          {...(defaultEnvironment !== undefined ? { defaultEnvironment } : {})}
-          {...(defaultProviderId !== undefined ? { defaultProviderId } : {})}
-          {...(defaultModel !== undefined ? { defaultModel } : {})}
-          focusRequest={focusRequest}
-          onSubmit={handleSubmit}
-        />
-        {onCreateProject !== undefined ? (
+        {/* The composer wrapper is the plugin's own (bb's DOM is only read,
+        never written): it carries `relative` so the floating New project
+        button (below, when the pickers row is anchored) absolute-positions
+        against it, and so lib/composer-row-anchor's offsets and the row's
+        ResizeObserver have a stable containing element. The
+        data-composer-wrap attribute is the wrapper's stable handle — the
+        tests' stub rows resolve their mock offsetParent by it and the
+        browser probe locates the measured geometry on it. */}
+        <div ref={setWrapperElement} className="relative" data-composer-wrap="">
+          <NewThreadComposer
+            defaultProjectId={createdProjectId ?? defaultProjectId}
+            {...(defaultEnvironment !== undefined ? { defaultEnvironment } : {})}
+            {...(defaultProviderId !== undefined ? { defaultProviderId } : {})}
+            {...(defaultModel !== undefined ? { defaultModel } : {})}
+            focusRequest={focusRequest}
+            onSubmit={handleSubmit}
+          />
+          {floatingOption ? (
+            // On the pickers row's line (lib/composer-row-anchor): the
+            // measured placement puts this button's right edge at the row's
+            // content start — exactly where the project picker's click area
+            // begins — and centers it on the row's line. Out of flow, so
+            // the dialog below the composer holds nothing (the dead band's
+            // source): the dialog ends at the composer plus its own padding.
+            <button
+              type="button"
+              data-new-project-option=""
+              aria-label="New project"
+              title="New project"
+              onClick={startCreateProject}
+              disabled={pickingPending}
+              className="absolute inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              style={{
+                top: footerRowPlacement!.top,
+                left: footerRowPlacement!.left,
+              }}
+            >
+              <Icon name="FolderPlus" className="size-4" aria-hidden />
+            </button>
+          ) : null}
+        </div>
+        {onCreateProject !== undefined && !floatingOption ? (
           <div data-new-project-footer="" className="mt-1 flex flex-col items-start gap-0.5">
             {creatingProject ? (
               <div className="flex items-center gap-1 px-1 py-1">
@@ -380,19 +494,20 @@ export function NewThreadModal({
                 </button>
               </div>
             ) : (
-              // Icon-only, tucked tight under the composer's bottom-left where
-              // the project picker sits (its row's first control): the closest
-              // a plugin can get to the main view's in-dropdown "New project"
-              // entry while the host bridge drops the createProject capability
-              // (get-bb/bb#7015). A small button, not a footer bar, so the row
-              // it joins reads as the picker's.
+              // The stacked fallback (compact viewports, unmeasurable rows,
+              // the tests' stub composers): the same icon-only button in
+              // flow under the composer's bottom-left where the project
+              // picker's row sits, the shape the option shipped in before
+              // the row anchor existed. Same click: the picker flow where
+              // the app hands it off, the name field otherwise.
               <button
                 type="button"
                 data-new-project-option=""
                 aria-label="New project"
                 title="New project"
-                onClick={() => setCreatingProject(true)}
-                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={startCreateProject}
+                disabled={pickingPending}
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               >
                 <Icon name="FolderPlus" className="size-4" aria-hidden />
               </button>
@@ -403,7 +518,7 @@ export function NewThreadModal({
                 data-new-project-error=""
                 className="px-1 text-xs text-destructive"
               >
-                Create failed: {createError}
+                {createError}
               </p>
             )}
           </div>

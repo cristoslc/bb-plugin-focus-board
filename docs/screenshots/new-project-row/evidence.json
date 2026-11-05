@@ -1,0 +1,267 @@
+{
+  "wideDark": {
+    "option": {
+      "box": {
+        "left": 267,
+        "top": 479.28125,
+        "right": 295,
+        "bottom": 507.28125,
+        "width": 28,
+        "height": 28
+      },
+      "ariaLabel": "New project",
+      "isInsideWrapper": true
+    },
+    "row": {
+      "box": {
+        "left": 281,
+        "top": 479.28125,
+        "right": 999,
+        "bottom": 507.28125,
+        "width": 718,
+        "height": 28
+      },
+      "contentStart": 295,
+      "paddingLeft": 14
+    },
+    "pickers": [
+      {
+        "name": "data-mock-project-picker",
+        "box": {
+          "left": 295,
+          "top": 479.28125,
+          "right": 412.359375,
+          "bottom": 507.28125,
+          "width": 117.359375,
+          "height": 28
+        },
+        "hitIsInsidePicker": true
+      },
+      {
+        "name": "data-mock-environment-picker",
+        "box": {
+          "left": 817.109375,
+          "top": 479.28125,
+          "right": 884.734375,
+          "bottom": 507.28125,
+          "width": 67.625,
+          "height": 28
+        },
+        "hitIsInsidePicker": true
+      },
+      {
+        "name": "data-mock-permission-picker",
+        "box": {
+          "left": 892.734375,
+          "top": 479.28125,
+          "right": 985,
+          "bottom": 507.28125,
+          "width": 92.265625,
+          "height": 28
+        },
+        "hitIsInsidePicker": true
+      }
+    ],
+    "optionHitIsSelf": true,
+    "flowFooterAbsentAtRest": true,
+    "dialog": {
+      "box": {
+        "left": 256,
+        "top": 327.71875,
+        "right": 1024,
+        "bottom": 532.28125,
+        "width": 768,
+        "height": 204.5625
+      },
+      "computedPaddingBottom": 24
+    },
+    "overlaps_": [
+      false,
+      false,
+      false
+    ]
+  },
+  "wideDarkAfterPick": {
+    "option": {
+      "box": {
+        "left": 267,
+        "top": 479.28125,
+        "right": 295,
+        "bottom": 507.28125,
+        "width": 28,
+        "height": 28
+      },
+      "ariaLabel": "New project",
+      "isInsideWrapper": true
+    },
+    "row": {
+      "box": {
+        "left": 281,
+        "top": 479.28125,
+        "right": 999,
+        "bottom": 507.28125,
+        "width": 718,
+        "height": 28
+      },
+      "contentStart": 295,
+      "paddingLeft": 14
+    },
+    "pickers": [
+      {
+        "name": "data-mock-project-picker",
+        "box": {
+          "left": 295,
+          "top": 479.28125,
+          "right": 467.046875,
+          "bottom": 507.28125,
+          "width": 172.046875,
+          "height": 28
+        },
+        "hitIsInsidePicker": true
+      },
+      {
+        "name": "data-mock-environment-picker",
+        "box": {
+          "left": 817.109375,
+          "top": 479.28125,
+          "right": 884.734375,
+          "bottom": 507.28125,
+          "width": 67.625,
+          "height": 28
+        },
+        "hitIsInsidePicker": true
+      },
+      {
+        "name": "data-mock-permission-picker",
+        "box": {
+          "left": 892.734375,
+          "top": 479.28125,
+          "right": 985,
+          "bottom": 507.28125,
+          "width": 92.265625,
+          "height": 28
+        },
+        "hitIsInsidePicker": true
+      }
+    ],
+    "optionHitIsSelf": true,
+    "flowFooterAbsentAtRest": true,
+    "dialog": {
+      "box": {
+        "left": 256,
+        "top": 327.71875,
+        "right": 1024,
+        "bottom": 532.28125,
+        "width": 768,
+        "height": 204.5625
+      },
+      "computedPaddingBottom": 24
+    },
+    "overlaps_": [
+      false,
+      false,
+      false
+    ]
+  },
+  "wideLight": {
+    "option": {
+      "box": {
+        "left": 267,
+        "top": 479.28125,
+        "right": 295,
+        "bottom": 507.28125,
+        "width": 28,
+        "height": 28
+      },
+      "ariaLabel": "New project",
+      "isInsideWrapper": true
+    },
+    "row": {
+      "box": {
+        "left": 281,
+        "top": 479.28125,
+        "right": 999,
+        "bottom": 507.28125,
+        "width": 718,
+        "height": 28
+      },
+      "contentStart": 295,
+      "paddingLeft": 14
+    },
+    "pickers": [
+      {
+        "name": "data-mock-project-picker",
+        "box": {
+          "left": 295,
+          "top": 479.28125,
+          "right": 412.359375,
+          "bottom": 507.28125,
+          "width": 117.359375,
+          "height": 28
+        },
+        "hitIsInsidePicker": true
+      },
+      {
+        "name": "data-mock-environment-picker",
+        "box": {
+          "left": 817.109375,
+          "top": 479.28125,
+          "right": 884.734375,
+          "bottom": 507.28125,
+          "width": 67.625,
+          "height": 28
+        },
+        "hitIsInsidePicker": true
+      },
+      {
+        "name": "data-mock-permission-picker",
+        "box": {
+          "left": 892.734375,
+          "top": 479.28125,
+          "right": 985,
+          "bottom": 507.28125,
+          "width": 92.265625,
+          "height": 28
+        },
+        "hitIsInsidePicker": true
+      }
+    ],
+    "optionHitIsSelf": true,
+    "flowFooterAbsentAtRest": true,
+    "dialog": {
+      "box": {
+        "left": 256,
+        "top": 327.71875,
+        "right": 1024,
+        "bottom": 532.28125,
+        "width": 768,
+        "height": 204.5625
+      },
+      "computedPaddingBottom": 24
+    },
+    "overlaps_": [
+      false,
+      false,
+      false
+    ]
+  },
+  "narrow": {
+    "dark": {
+      "optionPresent": true,
+      "inFlowFooterPresent": true,
+      "optionInFooter": true,
+      "optionHasInlinePlacement": false,
+      "rowPresent": true
+    },
+    "light": {
+      "optionPresent": true,
+      "inFlowFooterPresent": true
+    }
+  },
+  "flowAfterCreate": {
+    "pickerLabel": "auth-rework-fixture",
+    "footerAbsentAfterCreate": true,
+    "folder": "/Users/cristos/code/auth-rework-fixture"
+  },
+  "failures": []
+}

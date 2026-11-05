@@ -9,7 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **The New project affordance becomes an icon-only button beside the composer's project picker.** The same create-and-select flow, now a compact folder-plus button at the picker's row instead of a footer bar, per the operator's shape ruling. When bb ships the forwarded `createProject` capability (get-bb/bb#7015), the flow moves into the picker's dropdown unchanged.
+- **The New project button sits on the New Thread dialog's project row, and its create follows bb's typical flow.** The folder-plus button now anchors at the pickers row's open left edge, where the stacked shape left an empty band. Its click runs bb's typical create: the native folder picker names the project (boards the picker cannot be asked on fall back to the inline name field, with the reason shown).
 
 ### Fixed
 
