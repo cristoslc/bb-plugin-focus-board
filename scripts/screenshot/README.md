@@ -47,6 +47,55 @@ host app involved.
   toggling the `dark` class per pass: board with the thread pane open
   (1920x1080), plus board and thread pane at phone size (390x844) —
   `name-dark.png` / `name-light.png` files.
+- `clip-pane.mjs` — generic pane clipper for one-off pane frames (the
+  2026-11-04 pane-parity cleanup PR's before/after shots): run the vite
+  harness first, then
+  `node scripts/screenshot/clip-pane.mjs <stem> [THREAD_ID=<id>] [QUERY=<fixture>]`
+  to open the named thread's pane on the harness and capture the pane's
+  aside as `<OUT_DIR>/<stem>.png`. `QUERY=pendingQuestion=1` mounts the
+  pending user_question fixture for the pane-gap frames; `?queuedSend=1`
+  remains MockQueuedSendRow's own flag. Honors `CHROME_PATH`, `HARNESS_URL`,
+  and `OUT_DIR`.
+- `repro-touch-reveal-cascade.mjs` — runtime re-verification of the queued-send
+  touch-reveal overrides (#296/#297) against the LIVE bb app (the
+  pane-parity audit's Gap 10, 2026-11-04; bb 0.48.1): stages nothing itself —
+  call it after `bb thread queue create <threadId> "probe"` — then emulates a
+  touch phone, opens the pane, expands the queued drawer, measures the row's
+  "…" control (tappable with the overrides), strips the hover:none reveal
+  rules from the served plugin-scoped sheet, and re-measures (untappable
+  without them), proving the collision premise still holds on 0.48.1. Exits 1
+  unless the pair reads exactly that. Artifacts land in
+  `docs/screenshots/repro-touch-reveal-cascade/`. Delete the queued row
+  (`bb thread queue delete`) after. Run the vite harness NOT needed; this
+  drives bb, so set `BB_APP` and `THREAD_ID`; honors `CHROME_PATH` and
+  `OUT_DIR`.
+- `repro-context-row-0-48-1.mjs` — runtime re-verification of the pane's
+  composer-context fallback (the pane-parity audit's Gap 10, 2026-11-04; bb
+  0.48.1): drives the live bb app in a desktop and a touch-phone viewport,
+  opens one thread's pane at rest, and reports the host composer footer's
+  mount state, its chips' paint reach (the app's own paint walk), and the
+  pane's fallback row. Artifacts land in
+  `docs/screenshots/repro-context-row-0-48-1/` (two shots). Set `THREAD_ID`
+  to a board card's thread with a project + checkout environment; honors
+  `BB_APP`, `CHROME_PATH`, and `OUT_DIR`.
+- `repro-file-change-title.mjs` — runtime probe for the file-change title
+  click (the pane-parity audit's Gap 4) against the LIVE bb app: opens the
+  named thread's pane, wheels to the bottom, then walks the transcript one
+  tick at a time to where a `span.text-timeline-accent` file-accent title
+  mounts, clicks it, and reports whether the pane left for the main view.
+  On the pre-fix served build the click is a dead spot; after the fix lands
+  and the main checkout rebuilds, the same run is the fallback's live proof.
+  Artifacts land in `docs/screenshots/repro-file-change-title/`. Set
+  `THREAD_ID` to a board card whose transcript carries file-change rows;
+  honors `BB_APP`, `CHROME_PATH`, and `OUT_DIR`.
+- `repro-pending-question-double.mjs` — runtime probe for the pane-parity
+  audit's Gap 1 against the LIVE bb app: with one thread's turn blocked on a
+  pending question, it captures the pane (plugin card + host banner = the
+  duplicate), then answers through the host banner and re-checks the plugin
+  card for the stale state. Needs a provider whose agent tool set carries a
+  real AskUserQuestion (the operator's install currently has none connected;
+  the script exits 1 with its readings until one is staged). Set `THREAD_ID`
+  to the blocked thread; honors `BB_APP`, `CHROME_PATH`, and `OUT_DIR`.
 - `repro-markread-mobile.mjs` — one-shot headless repro for the mobile
   thread-actions bug (#14): opens a thread pane at phone size (390x844),
   dumps the pane header's control list to

@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -12,6 +13,7 @@ import {
   useRpc,
   useSdk,
   useSettings,
+  type ThreadChatMessageAction,
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
@@ -19,8 +21,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { describeWakeAt } from "@/lib/snooze";
 import type { SnoozeMenuAction } from "@/lib/snooze";
-import { PendingInteractionCard } from "@/components/pending-interaction-card";
-import { DecidedQuestionsCard } from "@/components/decided-questions-card";
 import {
   isExternalHref,
   workspacePathFromHref,
@@ -38,10 +38,6 @@ import {
 } from "@/components/decorate-reference-mentions";
 import type { rpcContract } from "@/server";
 import { useIsCompactViewport } from "@/components/ui/hooks/use-compact-viewport";
-import {
-  createChatClickJumpGuard,
-  type ChatClickJumpGuard,
-} from "@/components/chat-jump-guard";
 import { attachScrollDebug } from "@/components/scroll-debug";
 import { AutotitleFallbackModal } from "@/components/autotitle-fallback-modal";
 import { WorkspaceOpenMenu, OPEN_LABEL_MIN_PANE_WIDTH } from "@/components/workspace-open-menu";
@@ -484,6 +480,41 @@ export function ThreadPane({
   escapeSuppressed = false,
   referenceMentions,
 }: ThreadPaneProps) {
+  // Gap 8 (the pane-parity audit): the pane never asked the composer to
+  // focus, so a keyboard-first operator clicked into it on every open and
+  // every thread switch. ThreadChat bumps focus on a counter; the pane owns
+  // it — 1 on open (the pane mounts when a thread opens), +1 per switch
+  // (opening a different thread re-renders this component in place, so the
+  // reset is derived during that render, no post-commit bump), and a
+  // same-thread re-render leaves the counter alone.
+  const [composerFocusRequest, setComposerFocusRequest] = useState(1);
+  const [lastThreadId, setLastThreadId] = useState(thread.id);
+  if (lastThreadId !== thread.id) {
+    setLastThreadId(thread.id);
+    setComposerFocusRequest((current) => current + 1);
+  }
+  // Gap 5 (the pane-parity audit): the board's own per-message actions for
+  // the embedded chat. The host excludes other plugins' actions from plugin
+  // panels (upstream); these two are the pane's own.
+  const messageActions = useMemo<readonly ThreadChatMessageAction[]>(
+    () => [
+      {
+        id: "copy-message",
+        title: "Copy message",
+        icon: "Copy",
+        run: (message) => navigator.clipboard.writeText(message.text),
+      },
+      {
+        id: "open-in-main-view",
+        title: "Open in main view",
+        icon: "Maximize2",
+        run: () => {
+          onMaximize();
+        },
+      },
+    ],
+    [onMaximize],
+  );
   const [width, setWidth] = useState(readStoredPaneWidth);
   const windowCompact = useIsCompactViewport();
   // A squeezed panel on a desktop window: the compact media query never
@@ -592,6 +623,19 @@ export function ThreadPane({
         referenceMentions.onOpen(reference);
         return;
       }
+      // A file-change row's title claims its click the only way the pane
+      // can (pane-parity audit Gap 4): the host renders the path segment
+      // with the timeline's file accent — the one class, besides the unread
+      // divider's header, that the title view uses — and the plugin path
+      // passes no title-action resolver, so the click is a colored dead
+      // spot. Open the thread in the main view (maximize), where the host
+      // resolver opens the file's diff.
+      if (target.closest("span.text-timeline-accent") !== null) {
+        event.preventDefault();
+        event.stopPropagation();
+        onMaximize();
+        return;
+      }
       // Explicit markdown links win; code spans are only claimed when no
       // anchor is involved.
       const anchor = target.closest("a[href]");
@@ -616,7 +660,7 @@ export function ThreadPane({
       event.stopPropagation();
       openWorkspacePreview(path);
     },
-    [openWorkspacePreview, referenceMentions],
+    [openWorkspacePreview, onMaximize, referenceMentions],
   );
 
   const endDrag = useCallback((event: PointerEvent) => {
@@ -740,12 +784,11 @@ export function ThreadPane({
   // coalesced to one scan per frame. The environment id scopes the
   // verdict cache (the same relative path exists in one workspace but
   // not another) and is resolved once per thread.
-  // bb's page-shell scroll manager behind the embedded ThreadChat has a
-  // pending-capture bug that can clamp the transcript to the bottom right
-  // after a click while it is scrolled up ("chat jumps up a half-page").
-  // The SDK offers no access to that manager's state, so the pane arms a
-  // defensive revert guard on chat clicks until bb ships the fix (see
-  // docs/chat-click-jump-2026-09-29.md, where this module is covered too).
+  // bb's page-shell scroll rewrite (bb #5951, one owner of the reading
+  // position, shipped in 0.48.0) removed the pending-capture arithmetic the
+  // old "chat jumps up a half-page" bug ran on (docs/chat-click-jump-2026-
+  // 09-29.md holds the verdict history and the probe), so the pane no longer
+  // carries the defensive revert guard it once armed here.
   const chatBodyRef = useRef<HTMLDivElement>(null);
   // The embedded ThreadChat's composer footer carries the project/checkout
   // chips but COLLAPSES to height 0 whenever the composer sits unexpanded,
@@ -753,14 +796,6 @@ export function ThreadPane({
   // chat DOM (attributes included: the collapse is an attribute flip) and
   // fall back to our own project + checkout line when nothing shows there.
   const contextRowMissing = usePaneContextRowMissing(chatBodyRef, thread.id);
-  const chatJumpGuardRef = useRef<ChatClickJumpGuard | null>(null);
-  const onChatBodyClickCapture = useCallback(
-    (event: MouseEvent<HTMLDivElement>) => {
-      chatJumpGuardRef.current?.onChatClickCapture(event);
-      onChatClickCapture(event);
-    },
-    [onChatClickCapture],
-  );
 
   // The repainted host mention elements (role=button) and the painted chips
   // are keyboard-operable: Enter or Space on a focused chip routes the same
@@ -778,15 +813,6 @@ export function ThreadPane({
     },
     [referenceMentions],
   );
-  useEffect(() => {
-    const guard = createChatClickJumpGuard(() => chatBodyRef.current);
-    chatJumpGuardRef.current = guard;
-    return () => {
-      guard.dispose();
-      if (chatJumpGuardRef.current === guard) chatJumpGuardRef.current = null;
-    };
-  }, []);
-
   // Developer-only scroll instrumentation (setting "Developer: instrument
   // pane chat scrolling (debug)"), shipped off everywhere and enabled
   // through the config panel in a developer environment. This is the
@@ -1150,37 +1176,48 @@ export function ThreadPane({
           <Icon name="X" className="size-4" />
         </Button>
       </header>
-      {/* The host's embedded ThreadChat renders no pending-interaction UI
-          (only the main thread view does), so a question asked while this
-          pane is open would block the tool call until timeout. This card
-          renders the host's question form in the pane instead. */}
-      <PendingInteractionCard threadId={thread.id} onOpenInMainView={onMaximize} />
-      {/* The host transcript drops every trace of an answered AskUserQuestion
-          (suppressed tool call, hidden delivered result, answers never stored
-          on the interaction row), so this card rebuilds recent decisions from
-          the raw event log. */}
-      <DecidedQuestionsCard threadId={thread.id} />
       {/* The host's embedded ThreadChat lives here. bb scopes our plugin
           stylesheet with `:where([data-bb-plugin="focus-board"],
           [data-bb-plugin-root]:not([data-bb-plugin]))` and appends it after
           bb's global utilities, so our own scoped `.pointer-events-none` and
           `.opacity-0` outrank the host's `[@media(hover:none)]` touch reveal
-          on any host element inside this root. The queued-message row's
-          actions control is the case that bites: on a phone it stays
-          `opacity:0` and `pointer-events:none`, so the row's "…" is invisible
-          and Send is unreachable. Emitting the host's own touch utilities
-          from this subtree carries them into our scoped sheet, where they win
-          by order and restore the host control exactly as bb's own thread
-          page renders it. The host class names are mirrored on purpose; the
-          durable fix belongs to bb's plugin CSS scoping (issue #296). */}
+          on any host element inside this root (the scoping mechanism is
+          unchanged in bb 0.48.1: packages/plugin-build scopePluginUtilities).
+          The queued-message row's actions control is the case that bites: on
+          a phone it stays `opacity:0` and `pointer-events:none`, so the
+          row's "…" is invisible and Send is unreachable. Emitting the host's
+          own touch utilities from this subtree carries them into our scoped
+          sheet, where they win by order and restore the host control exactly
+          as bb's own thread page renders it. The host class names are echoed
+          on purpose; the durable fix belongs to bb's plugin CSS scoping
+          (issue #296). Re-verified against bb 0.48.1 on 2026-11-04 (the
+          pane-parity audit's Gap 10): stripping these utilities from the
+          served plugin sheet in the live app leaves the queued row's
+          "…" untappable (pointer-events none), so they still earn their
+          place; scripts/screenshot/repro-touch-reveal-cascade.mjs. */}
       <div
         ref={chatBodyRef}
         data-pane-chat-body=""
         className="min-h-0 flex-1 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
-        onClickCapture={onChatBodyClickCapture}
+        onClickCapture={onChatClickCapture}
         onKeyDownCapture={onChatKeyDownCapture}
       >
-        <ThreadChat threadId={thread.id} variant="compact" layout="contained" />
+        {/* The host renders plugin panels' chats with
+            includePluginMessageActions: false, so it excludes every plugin's
+            message and selection actions there (the pane-parity audit's Gap
+            5; relaxing that needs the upstream batch). The SDK accepts the
+            consumer's own per-message actions, and the board passes its two:
+            copy the message's text, and open the thread in the main view,
+            where the pane's boundary surfaces (tabs, the diff) live. A
+            rejected clipboard write is contained and logged by the host's
+            action runner, which is the surface's own error lane. */}
+        <ThreadChat
+          threadId={thread.id}
+          variant="compact"
+          layout="contained"
+          focusRequest={composerFocusRequest}
+          messageActions={messageActions}
+        />
       </div>
       {/* bb's embedded chat shows no project/checkout context on a pane
           container; when its row is genuinely absent from the chat DOM this

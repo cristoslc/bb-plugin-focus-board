@@ -6,15 +6,16 @@ import { cn } from "@/lib/utils";
 // Why this exists: bb's own thread page passes both an `environmentSummary`
 // and a `compactEnvironmentSummary` to its promptbox, and on a narrow
 // container the promptbox renders only the compact one. The embedded
-// `ThreadChat` the SDK hands plugin panels never receives a compact
-// summary at all (host bundle 0.46.1, PluginThreadChat). Worse, the pane's
-// composer footer — where the chips paint — COLLAPSES to height 0 whenever
-// the composer sits unexpanded (attribute `data-follow-up-composer-footer-visible`
-// + a 180ms CSS transition, overflow hidden), while the chips stay mounted
-// and their rects keep measuring. Presence proves nothing; the probe
-// therefore follows the paint: a matched chip counts only when no ancestor
-// displays it away or clips its box out of view. Details of the host side
-// live in docs/composer-context-collapse-2026-10-16.md.
+// `ThreadChat` the SDK hands plugin panels receives no
+// `compactEnvironmentSummary`, and bb 0.48.1 (re-verified 2026-11-04 live,
+// pane-parity audit Gap 10; scripts/screenshot/repro-context-row-0-48-1.mjs)
+// still paints none of the context at rest in a pane, in a changed shape:
+// the desktop footer is mounted but collapsed to height 0 (the chips stay
+// mounted and their rects keep measuring, exactly the 0.46.1 trap), and a
+// touch pane's footer is unmounted outright. Presence proves nothing; the
+// probe therefore follows the paint: a matched chip counts only when no
+// ancestor displays it away or clips its box out of view. The 0.46.x
+// details live in docs/composer-context-collapse-2026-10-16.md.
 
 function rectOf(el: Element): { x: number; y: number; width: number; height: number } {
   const rect = el.getBoundingClientRect();

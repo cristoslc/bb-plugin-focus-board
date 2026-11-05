@@ -38,14 +38,6 @@ vi.mock("../components/autotitle-fallback-modal", () => ({
 	AutotitleFallbackModal: (): ReactNode => null,
 }));
 
-vi.mock("../components/pending-interaction-card", () => ({
-	PendingInteractionCard: (): ReactNode => null,
-}));
-
-vi.mock("../components/decided-questions-card", () => ({
-	DecidedQuestionsCard: (): ReactNode => null,
-}));
-
 afterEach(cleanup);
 
 function defaultRpc(method: string): unknown {

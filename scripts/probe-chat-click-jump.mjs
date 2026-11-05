@@ -17,10 +17,11 @@
 // evidence trail: it names the affected host module/function.
 import puppeteer from "puppeteer-core";
 
-const APP = process.env.BB_APP ?? "http://127.0.0.1:38886/";
+const APP = process.env.BB_APP ?? "http://127.0.0.1:38886/plugins/focus-board/board";
+const THREAD_ID = process.env.THREAD_ID ?? "";
 const TITLE = process.env.THREAD_TITLE ?? "";
-if (!TITLE) {
-  console.error("Set THREAD_TITLE to a long-transcript board card title substring.");
+if (!TITLE && !THREAD_ID) {
+  console.error("Set THREAD_ID (board card id) or THREAD_TITLE (a long-transcript card's title substring).");
   process.exit(1);
 }
 
@@ -33,22 +34,32 @@ const browser = await puppeteer.launch({
 const page = await browser.newPage();
 page.on("error", (e) => console.log("[page error]", String(e).slice(0, 300)));
 await page.goto(APP, { waitUntil: "networkidle2", timeout: 30000 });
-await new Promise((r) => setTimeout(r, 3000));
+await new Promise((r) => setTimeout(r, 4000));
 
-await page.evaluate(() => {
-  [...document.querySelectorAll("button")].find((el) => (el.textContent ?? "").trim() === "Focus Board")?.click();
-});
-await new Promise((r) => setTimeout(r, 2500));
-
-const card = await page.evaluate((title) => {
+const card = await page.evaluate((search) => {
   const cards = [...document.querySelectorAll("[data-thread-card]")];
-  const target = cards.find((e) => (e.textContent ?? "").includes(title));
+  const target = search.id
+    ? document.querySelector(`[data-thread-card="${search.id}"]`) ??
+      [...document.querySelectorAll("[data-thread-card]")].find((e) => (e.textContent ?? "").includes(search.title))
+    : cards.find((e) => (e.textContent ?? "").includes(search.title));
+  if (!target) return null;
+  target.scrollIntoView({ block: "center", inline: "center" });
+  return (target.textContent ?? "").slice(0, 60);
+}, { id: THREAD_ID, title: TITLE });
+if (!card) { console.error("card not found:", THREAD_ID || TITLE); await browser.close(); process.exit(1); }
+console.log("opening card:", card);
+// Let the scrollIntoView settle before reading the now-viewport-local rect.
+await new Promise((r) => setTimeout(r, 800));
+const cardBox = await page.evaluate((search) => {
+  const target = search.id
+    ? document.querySelector(`[data-thread-card="${search.id}"]`)
+    : null;
   if (!target) return null;
   const r = target.getBoundingClientRect();
   return { x: r.x + r.width / 2, y: r.y + Math.min(r.height / 2, 30) };
-}, TITLE);
-if (!card) { console.error("card not found:", TITLE); await browser.close(); process.exit(1); }
-await page.mouse.click(card.x, card.y);
+}, { id: THREAD_ID, title: TITLE });
+if (!cardBox) { console.error("card vanished after scrollIntoView"); await browser.close(); process.exit(1); }
+await page.mouse.click(cardBox.x, cardBox.y);
 await new Promise((r) => setTimeout(r, 5000));
 
 const ok = await page.evaluate(() => {
@@ -86,18 +97,39 @@ const rect = await page.evaluate(() => {
 });
 const before = await page.evaluate(() => Math.round(window.__el.scrollTop));
 
-// 1. wheel up ~half a viewport
+// 1. wheel up in several ticks. Each wheel past the top sentinel can arm the
+//    older-rows preload and leave a pending capture; later ticks refresh the
+//    capture's scrollTop while its scrollHeight goes stale — the natural
+//    trigger from docs/chat-click-jump-2026-09-29.md (runs nat1–nat4).
+const ticks = Number(process.env.WHEEL_TICKS ?? 6);
 await page.mouse.move(rect.x + rect.w / 2, rect.y + rect.h / 2);
-await page.mouse.wheel({ deltaY: -Math.round(rect.h / 2) });
+for (let i = 0; i < ticks; i++) {
+  await page.mouse.wheel({ deltaY: -800 });
+  await new Promise((r) => setTimeout(r, 350));
+}
 await new Promise((r) => setTimeout(r, 1000));
 const mid = await page.evaluate(() => Math.round(window.__el.scrollTop));
-console.log("scrolled up: %d -> %d (of max %s)", before, mid, JSON.stringify(await page.evaluate(() => Math.round(window.__el.scrollHeight - window.__el.clientHeight))));
+const max = await page.evaluate(() => Math.round(window.__el.scrollHeight - window.__el.clientHeight));
+console.log("scrolled up: %d -> %d (of max %d)", before, mid, max);
 
-// 2. click in the transcript near the bottom, above the composer
-await page.mouse.click(rect.x + rect.w / 2, rect.y + rect.h - 25);
-await new Promise((r) => setTimeout(r, 2000));
-const after = await page.evaluate(() => Math.round(window.__el.scrollTop));
-console.log("after click: %d (jumped %s)", after, after - mid === 0 ? "0px" : (after - mid > 0 ? "+" : "") + (after - mid) + "px DOWN to the bottom");
+// 2. click in the transcript: near the bottom above the composer, then two
+//    more positions. Each click's commit can consume a stale capture.
+const tops = [];
+for (const [step, fromBottom] of [[0, 25], [1, Math.round(rect.h / 3)], [2, 25]]) {
+  if (step === 1) {
+    // Another wheel between clicks: a capture armed by the first click's
+    // transaction stays pending until a later commit consumes it.
+    await page.mouse.wheel({ deltaY: -400 });
+    await new Promise((r) => setTimeout(r, 800));
+  }
+  await page.mouse.click(rect.x + rect.w / 2, rect.y + rect.h - fromBottom);
+  await new Promise((r) => setTimeout(r, 2000));
+  const top = await page.evaluate(() => Math.round(window.__el.scrollTop));
+  tops.push(top);
+  const delta = top - mid;
+  console.log("after click %d: %d (moved %spx)", step + 1, top, delta > 0 ? `+${delta} DOWN` : delta);
+}
+const after = tops[tops.length - 1];
 
 const bug = await page.evaluate(() => window.__bug ?? null);
 if (bug) {

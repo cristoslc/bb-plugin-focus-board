@@ -31,14 +31,6 @@ vi.mock("@get-bb/plugin-sdk/app", () => ({
   useSettings: () => ({ values: undefined, isLoading: false }),
 }));
 
-vi.mock("../components/pending-interaction-card", () => ({
-  PendingInteractionCard: () => null,
-}));
-
-vi.mock("../components/decided-questions-card", () => ({
-  DecidedQuestionsCard: () => null,
-}));
-
 function renderPane() {
   return render(
     createElement(

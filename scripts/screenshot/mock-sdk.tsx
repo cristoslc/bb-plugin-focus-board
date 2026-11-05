@@ -693,7 +693,36 @@ const mockSdk = {
       return { ok: true as const, archivedThreadIds: [threadId] };
     },
     interactions: {
-      list: async () => [],
+      // ?pendingQuestion=1 mounts a host-faithful pending user_question row
+      // so the pane's above-chat cards can be shot: the pane-parity audit's
+      // Gap 1 frames (the PendingInteractionCard form on the pane, gone from
+      // the pane once the host banner owns the surface).
+      list: async () =>
+        PENDING_QUESTION_FIXTURE
+          ? [
+              {
+                id: "int_probe_pending",
+                status: "pending",
+                createdAt: Date.now(),
+                payload: {
+                  kind: "user_question",
+                  questions: [
+                    {
+                      id: "probe_q1",
+                      prompt: "Which surface owns the pending question form?",
+                      shortLabel: "Surface",
+                      multiSelect: false,
+                      options: [
+                        { value: "host-banner", label: "The host banner" },
+                        { value: "pane-card", label: "The plugin card" },
+                      ],
+                    },
+                  ],
+                },
+                origin: { kind: "provider" },
+              },
+            ]
+          : [],
       respond: async () => ({}),
       cancel: async () => ({}),
     },
@@ -1537,6 +1566,15 @@ const QUEUED_SEND_FIXTURE =
   typeof window !== "undefined" && new URLSearchParams(window.location.search).has("queuedSend");
 
 /**
+ * Does this harness run carry the pending-question fixture? Captured at
+ * module load like QUEUED_SEND_FIXTURE; `?pendingQuestion=1` mounts one
+ * pending provider user_question row for the pane-gap screenshot frames.
+ */
+const PENDING_QUESTION_FIXTURE =
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).has("pendingQuestion");
+
+/**
  * A host-faithful queued-message row, pinned to bb's own QueuedMessagesList
  * markup and classes (issue #296). The point is the classes: bb's row control
  * is `opacity-0 pointer-events-none` at rest and leans on the host's
@@ -1625,7 +1663,40 @@ function MockQueuedSendRow(): ReactNode {
   );
 }
 
-function MockChat({ threadId }: { threadId: string }): ReactNode {
+/**
+ * Does this harness run carry the file-change-title fixture? Captured at
+ * module load like QUEUED_SEND_FIXTURE; `?fileChange=1` renders one
+ * host-faithful file-change row title (the file-accent path segment inside
+ * TimelineTitleView's tooltip wrapper, as bb 0.48.1 renders it in the pane
+ * with no title-action resolver) for the pane-gap frames.
+ */
+const FILE_CHANGE_FIXTURE =
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).has("fileChange");
+
+/**
+ * A host-faithful file-change row title (the pane-parity audit's Gap 4
+ * frames): the path segment is a plain span with the timeline's file accent
+ * class inside the title view's tooltip wrapper — the dead-click shape the
+ * pane had before it claimed the click for the maximize fallback.
+ */
+function MockFileChangeTitle(): ReactNode {
+  return (
+    <div
+      data-timeline-row-id="row_file_change_1"
+      className="flex items-center gap-2 px-3 py-1 text-sm leading-5"
+    >
+      <span className="shrink-0 whitespace-pre text-muted-foreground">Updated</span>
+      <span title="docs/erd.mmd" className="min-w-0 max-w-full overflow-hidden whitespace-nowrap">
+        <span className="min-w-0 truncate whitespace-pre text-timeline-accent">
+          docs/erd.mmd
+        </span>
+      </span>
+    </div>
+  );
+}
+
+function MockChat({ threadId, focusRequest }: { threadId: string; focusRequest?: number }): ReactNode {
   const messages = CONVERSATIONS[threadId] ?? CONVERSATIONS.default;
   const bubble = (role: "user" | "agent", content: ReactNode, key: string): ReactNode => (
     <div
@@ -1662,9 +1733,12 @@ function MockChat({ threadId }: { threadId: string }): ReactNode {
           Today
         </div>
         {messages.map((message, index) => bubble(message.role, inlineMarkup(message.text), String(index)))}
+        {FILE_CHANGE_FIXTURE ? <MockFileChangeTitle /> : null}
       </div>
       {QUEUED_SEND_FIXTURE ? <MockQueuedSendRow /> : null}
       <div
+        data-pane-mock-composer=""
+        data-pane-mock-composer-focus={focusRequest === undefined ? undefined : focusRequest > 0 ? "1" : "0"}
         style={{
           display: "flex",
           alignItems: "center",
@@ -1675,6 +1749,8 @@ function MockChat({ threadId }: { threadId: string }): ReactNode {
           padding: "8px 10px",
           color: "var(--muted-foreground)",
           fontSize: 12.5,
+          outline: (focusRequest ?? 0) > 0 ? "2px solid var(--ring)" : undefined,
+          outlineOffset: "1px",
         }}
       >
         <span style={{ flex: 1 }}>Reply to thread…</span>
@@ -1698,8 +1774,11 @@ function MockChat({ threadId }: { threadId: string }): ReactNode {
   );
 }
 
-export function ThreadChat(props: { threadId: string; variant?: string; layout?: string }): ReactNode {
-  return <MockChat threadId={props.threadId} />;
+// The mock ThreadChat mirrors the SDK's focusRequest prop (the audit's Gap
+// 8 frames): any positive counter is "the composer is focused now", painted
+// as a ring on the mock composer so a frame can show the bump.
+export function ThreadChat(props: { threadId: string; variant?: string; layout?: string; focusRequest?: number }): ReactNode {
+  return <MockChat threadId={props.threadId} focusRequest={props.focusRequest} />;
 }
 
 /*

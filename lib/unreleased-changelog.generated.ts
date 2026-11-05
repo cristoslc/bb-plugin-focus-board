@@ -5,11 +5,31 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "children": []
   },
   {
+    "text": "**The thread pane focuses the message composer when it opens or switches threads.** The pane passes the SDK's `focusRequest` with a counter that bumps on open and on switch, so a keyboard-first operator can type without clicking into the box first. Same-thread refreshes leave the counter alone.",
+    "children": []
+  },
+  {
+    "text": "**Message rows in the pane gain the board's two actions: Copy message and Open in main view.** The host keeps other plugins' actions out of plugin panels (upstream), and the pane previously passed none of its own; both actions now ride the embedded chat's per-message bar.",
+    "children": []
+  },
+  {
     "text": "**Threads running background work stay in Working.** A thread whose turn ended while a background agent, background command, or workflow run is still going used to show as Idle. It now stays in Working until that work lands, and the idle sweep leaves it alone.",
     "children": []
   },
   {
     "text": "**Magic rename's \"use the thread's active model\" probe generates on that model again.** bb 0.48 dropped `providerId` from the thread execution-options response, so every probe fell back to the project-default model chain instead of the thread's model (a thread on **acp-omp** got a probe on **codex**, which died \"could not find the Codex CLI\"). The probe now pairs that response's model with the source thread's own providerId.",
+    "children": []
+  },
+  {
+    "text": "**Answering a pending question in the thread pane shows one form again.** bb 0.48.0's parity work made the host banner render inside the pane's embedded chat, so the pane's own question card duplicated it, and answering one left the other stale. The card is gone: the host banner owns the surface, and the host persists partial answers itself.",
+    "children": []
+  },
+  {
+    "text": "**The thread pane's \"Recent decisions\" card is gone.** The transcript has carried every answered question since bb 0.47.0 (and the plugin-form \"Answered\" rows since 0.48.0, get-bb/bb#4463), so the card was a second, weaker copy rebuilt by text-parsing the raw event log. The transcript's own answered rows are the record.",
+    "children": []
+  },
+  {
+    "text": "**Clicking a file-change row's name in the pane now opens the thread in the main view.** The path segment was colored like the main view's clickable file title but did nothing, because the plugin path supplies no title-action resolver; the pane claims the click and maximizes, where the host resolver opens the diff.",
     "children": []
   }
 ];
