@@ -13,6 +13,7 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { findTicketRefs, forgejoItemBase, resolveRepoSlug } from "./lib/tickets";
+import { scheduleIdleCallback } from "./lib/idle-callback";
 import {
   cardTicketRefs,
   linkedRefKeys,
@@ -412,6 +413,11 @@ function BoardPage({ subPath }: { subPath: string }) {
   // the ticket-aware search callback (ticketRefsFor, below) can read it: the
   // chip rule gates text refs identically in render and in search.
   const [validatedHrefs, setValidatedHrefs] = useState<ReadonlySet<string>>(new Set());
+  // Whether a tracker_validate verdict set has landed at least once (the
+  // tracker_validate effect's idle gate): before the first landing the fetch
+  // rides the idle seam's ceiling; after it, key changes fetch immediately.
+  // The ref's reads sit in the effect it gates, so identity never matters.
+  const validatedHrefsLandedRef = useRef(false);
   // The RPC contract's link records tolerate a legacy GitHub record without
   // its tracker tag; parse normalizes each thread's array into ThreadLink[]
   // (and fails loud on anything malformed, never coerces).
@@ -2072,23 +2078,43 @@ function BoardPage({ subPath }: { subPath: string }) {
       setValidatedHrefs(new Set());
       return;
     }
+    // The load's first validation rides idle (issue #373's attribution — the
+    // validate landing was the post-paint churn's visible companion to the
+    // status fetch): before the FIRST verdict set has landed, the fetch
+    // schedules through the idle seam and its hard fallback ceiling; once a
+    // verdict set has landed, a key change fetches immediately. A clear (the
+    // empty key) is not a landing, so the load's own key churn rides the gate
+    // whole; a failed validate never counts as landed, so the next trigger
+    // still retries.
     let cancelled = false;
     const urls = textRefHrefsKey.split(",");
-    rpc.call("tracker_validate", { urls }).then(
-      (result) => {
-        if (cancelled) return;
-        setValidatedHrefs(
-          new Set(
-            Object.entries(result.results)
-              .filter(([, verdict]) => verdict.confirmed)
-              .map(([url]) => url),
-          ),
-        );
-      },
-      () => {}, // Validation optional; an empty set just holds text chips back.
-    );
+    const pendingCancels = new Set<() => void>();
+    const fetchValidate = () => {
+      rpc.call("tracker_validate", { urls }).then(
+        (result) => {
+          if (cancelled) return;
+          validatedHrefsLandedRef.current = true;
+          setValidatedHrefs(
+            new Set(
+              Object.entries(result.results)
+                .filter(([, verdict]) => verdict.confirmed)
+                .map(([url]) => url),
+            ),
+          );
+        },
+        () => {}, // Validation optional; an empty set just holds text chips back.
+      );
+    };
+    if (validatedHrefsLandedRef.current) {
+      fetchValidate();
+    } else {
+      const cancel = scheduleIdleCallback(fetchValidate);
+      pendingCancels.add(cancel);
+    }
     return () => {
       cancelled = true;
+      for (const cancel of pendingCancels) cancel();
+      pendingCancels.clear();
     };
   }, [rpc, textRefHrefsKey]);
   // Live tracker status for ticket chips. Batched: one RPC per visible-ref
