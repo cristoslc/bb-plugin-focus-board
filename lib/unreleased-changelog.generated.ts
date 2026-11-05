@@ -7,5 +7,9 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
   {
     "text": "**Threads running background work stay in Working.** A thread whose turn ended while a background agent, background command, or workflow run is still going used to show as Idle. It now stays in Working until that work lands, and the idle sweep leaves it alone.",
     "children": []
+  },
+  {
+    "text": "**Magic rename's \"use the thread's active model\" probe generates on that model again.** bb 0.48 dropped `providerId` from the thread execution-options response, so every probe fell back to the project-default model chain instead of the thread's model (a thread on **acp-omp** got a probe on **codex**, which died \"could not find the Codex CLI\"). The probe now pairs that response's model with the source thread's own providerId.",
+    "children": []
   }
 ];
