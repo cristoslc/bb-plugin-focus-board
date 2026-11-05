@@ -1414,6 +1414,13 @@ const simRpcBase = async (method: string, args?: unknown): Promise<unknown> => {
     });
     return { columnKey, order: result.order };
   }
+  if (method === "rank_clear") {
+    // The lane-header menu's remove-custom-order write, through the same
+    // shared op the server runs (applyRankClearFractions).
+    const { columnKey } = args as { columnKey: string };
+    commitHostOp({ kind: "rank_clear", columnKey });
+    return { columnKey, order: [] };
+  }
   if (method === "family_state_list") {
     return {
       collapsedFamilies: [...simFamilyState.collapsedFamilies],

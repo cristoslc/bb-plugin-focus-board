@@ -488,3 +488,41 @@ export function applyRankMoveFractions(
     unchanged: before.join("\u0000") === after.join("\u0000"),
   };
 }
+
+export type RankClearResult = Readonly<{
+  /** The store after the clear; identical object when there was nothing to clear. */
+  next: FractionRankStore;
+  /** True when the column held a stored order and the write (plus its
+   *  rank-changed publish) should happen. */
+  cleared: boolean;
+}>;
+
+/**
+ * One `rank_clear` gesture: the column's whole stored hand-order goes away,
+ * the column reads recency again. Deleting the KEY (not writing an empty
+ * map) keeps the store's "absent = never ranked" reading exact — a column
+ * that never came back keeps no dead entry in the row. Clearing a column
+ * that has no stored order changes nothing (`cleared: false`, no write, no
+ * rank-changed publish). Shared by the real `rank_clear` handler, the app
+ * fake host, and the screenshot harness, one semantics for all three (the
+ * same one-copy law `applyRankMoveFractions` carries).
+ */
+export function applyRankClearFractions(
+  store: FractionRankStore,
+  columnKey: string,
+): RankClearResult {
+  if (store[columnKey] === undefined) {
+    return { next: store, cleared: false };
+  }
+  const next: Record<string, FractionColumn> = {};
+  for (const [key, value] of Object.entries(store)) {
+    if (key === columnKey) continue;
+    Object.defineProperty(next, key, {
+      value,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+  }
+  return { next, cleared: true };
+}

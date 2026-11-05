@@ -1,0 +1,107 @@
+# Operator-assisted E2E: the per-lane header menu (ruling dl-20261105T165850-324f).
+#
+# The ruling in three moves: the retired hand-order badge (its sort state
+# moved into the menu), the menu itself (clicking a lane header offers the
+# lane's order, a remove-custom-order clear, and the sweep entry), and the
+# sweep pill becoming eligibility-plus-count — a sweepable lane with nothing
+# eligible shows no pill, and manual sweeping enters from the menu.
+#
+# The whole suite runs on the touch device (390x844, hasTouch), so the tap
+# path and the pan-sharing law are both pinned where the operator lives: a
+# slide STARTING on a lane header must stay a pan (the header is a pan
+# origin, so the menu must not swallow it), and a tap must open the menu.
+#
+# Run: npm run uat -- tests/manual/uat-lane-menu.yaml
+suite: lane-header-menu
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5221
+defaults:
+  groupBy: status
+  theme: dark
+  viewport: { width: 390, height: 844, hasTouch: true, isMobile: true }
+shots: true
+
+steps:
+  - id: slide-from-the-header-pans-and-never-opens-the-menu
+    title: A slide that starts on a lane header is a pan, not a menu
+    # The Pinned lane sits far left and is on screen at a phone viewport, the
+    # origin every pan step in the touch suites uses.
+    goto: "?groupBy=status"
+    touch_pan: { from: { laneHeader: pinned }, dx: -200, dy: 0 }
+    assert:
+      - touch_origin: { column: pinned }
+      - touch_scroll: { target: board, axis: x, min: 40, direction: positive }
+      - no_native_drag: true
+      - lane_sweep: { column: pinned, menuOpen: false, headerLabel: "Pinned lane actions" }
+      - rpc_not_called: rank_clear
+
+  - id: the-header-tap-opens-the-menu-and-names-the-recency-order
+    title: Tapping an unranked lane header opens the menu naming recency, newest first
+    goto: "?groupBy=status"
+    click_aria: "Unread lane actions"
+    assert:
+      - lane_sweep:
+          column: unread
+          menuOpen: true
+          menuSort: recency
+          menuEntry: true
+          menuRemove: false
+
+  - id: an-ordered-lane-names-its-hand-order-and-offers-the-clear
+    title: A ranked lane's menu names the hand order and offers Remove custom order
+    goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_review_pr\"]}"
+    click_aria: "Unread lane actions"
+    assert:
+      - lane_sweep:
+          column: unread
+          menuOpen: true
+          menuSort: yours
+          menuRemove: true
+
+  - id: remove-custom-order-writes-rank-clear-and-the-lane-reads-recency
+    title: Remove custom order erases the stored order over rank_clear
+    goto: "?groupBy=status&ranks={\"status:unread\":[\"thr_review_pr\"]}"
+    gestures:
+      - click_aria: "Unread lane actions"
+      - click_aria: "Remove custom order"
+    assert:
+      - rpc_called_method: rank_clear
+      - column_ordered: { column: unread, ordered: false }
+      - lane_sweep: { column: unread, menuOpen: false }
+      # The stored truth: the column's key is GONE from the rank row, not an
+      # empty list; nothing else was seeded, so the whole row is empty.
+      - store: {}
+
+  - id: an-eligible-lane-keeps-the-pill-with-its-count
+    title: The Done lane (done 9-13 days ago, past the 2-day arm) keeps its pill and count
+    goto: "?groupBy=status"
+    assert:
+      # Two eligible: the third done card (thr_proj_done) renders inside its
+      # live family's projection in the Done column, so the column's own
+      # sweepable members are the two standalone cards.
+      - lane_sweep: { column: done, present: true, count: 2 }
+
+  - id: a-zero-eligible-sweepable-lane-shows-no-pill
+    title: The Unread lane (a manual arm with nothing eligible) carries no broom pill
+    goto: "?groupBy=status"
+    assert:
+      - lane_sweep: { column: unread, present: false }
+      # The sweepable one is the case the ruling changed: its manual arm has
+      # no eligible cards, so the broom rests and the menu arms the sweep.
+
+  - id: the-menu-arms-the-sweep-without-a-pill
+    title: Sweep this lane arms the zero-eligible lane the way the old pill did
+    goto: "?groupBy=status"
+    gestures:
+      - click_aria: "Unread lane actions"
+      - click_aria: "Sweep this lane…"
+    assert:
+      # Armed on a manual arm with nothing eligible: the pill re-homes with
+      # its armed state (empty selection, confirm refused) and the exit.
+      - lane_sweep:
+          column: unread
+          present: true
+          armed: true
+          pill: "0 → Read"
+          cancel: true

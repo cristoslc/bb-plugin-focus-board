@@ -3679,6 +3679,27 @@ function BoardPage({ subPath }: { subPath: string }) {
                   refetchRanks();
                 });
             }}
+            // The lane menu's remove-custom-order write: the optimistic drop
+            // of the column's key (the lane reads recency at once), then
+            // rank_clear on the host and the rank-changed echo confirms. A
+            // rejected clear settles the stored order back on the refetch.
+            onRankClear={(columnKey, visibleIds) => {
+              releaseAttentionFor(new Set(visibleIds));
+              setRankSaveError(null);
+              setRanks((prev) => {
+                const next = { ...prev };
+                if (Object.hasOwn(next, columnKey)) delete next[columnKey];
+                return next;
+              });
+              rpc
+                .call("rank_clear", { columnKey })
+                .catch((error: unknown) => {
+                  setRankSaveError(
+                    error instanceof Error ? error.message : "the host rejected the clear.",
+                  );
+                  refetchRanks();
+                });
+            }}
             menuActionsFor={menuActionsFor}
             reveal={revealRequest}
           />

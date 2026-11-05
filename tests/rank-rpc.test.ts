@@ -1,6 +1,9 @@
-// rank_list / rank_move over the plugin KV store. The pure order mechanics
-// live in tests/rank.test.ts; this file pins the RPC surface, the storage
-// round trip, and the publish that keeps other boards in sync.
+/**
+ * rank_list / rank_move / rank_clear over the plugin KV store. The pure
+ * order mechanics live in tests/rank.test.ts; this file pins the RPC
+ * surface, the storage round trip, and the publish that keeps other boards
+ * in sync.
+ */
 import { describe, expect, it } from "vitest";
 import { setup } from "./helpers/done-fake-host";
 import { RANK_KV_KEY } from "../lib/rank";
@@ -179,6 +182,45 @@ describe("rank_move", () => {
   it("refuses an empty column key rather than writing a junk column", async () => {
     const rpc = await setup();
     await expect(move(rpc, "", "thr_a", null)).rejects.toThrow();
+  });
+});
+
+describe("rank_clear", () => {
+  it("erases the column's whole stored order, other columns keep theirs", async () => {
+    const rpc = await setup();
+    await move(rpc, "status:unread", "thr_a", null);
+    await move(rpc, "status:unread", "thr_b", null);
+    await move(rpc, "pinned", "thr_p", null);
+    const result = (await rpc.callRpc("rank_clear", {
+      columnKey: "status:unread",
+    })) as { columnKey: string; order: string[] };
+    expect(result).toEqual({ columnKey: "status:unread", order: [] });
+    expect((await list(rpc)).orders).toEqual({ pinned: ["thr_p"] });
+    // The KV row drops the KEY outright ("absent = never ranked"), not an
+    // empty list (an empty list is still presence, and conversion churn).
+    const row = (await rpc.kv.get(RANK_KV_KEY)) as Record<string, unknown>;
+    expect(row["status:unread"]).toBeUndefined();
+  });
+
+  it("publishes rank-changed when it clears, and nothing when the column was clean", async () => {
+    const rpc = await setup();
+    await move(rpc, "status:unread", "thr_a", null);
+    const signalCount = rpc.harness.inspection.realtimeSignals.length;
+    await rpc.callRpc("rank_clear", { columnKey: "status:unread" });
+    expect(rpc.harness.inspection.realtimeSignals.length).toBe(signalCount + 1);
+    expect(rpc.harness.inspection.realtimeSignals).toContainEqual({
+      channel: "rank-changed",
+      payload: { columnKey: "status:unread" },
+    });
+    // A clean column: no write, no publish, no refetch storm across boards.
+    const afterClean = rpc.harness.inspection.realtimeSignals.length;
+    await rpc.callRpc("rank_clear", { columnKey: "status:unread" });
+    expect(rpc.harness.inspection.realtimeSignals.length).toBe(afterClean);
+  });
+
+  it("refuses an empty column key like every rank write", async () => {
+    const rpc = await setup();
+    await expect(rpc.callRpc("rank_clear", { columnKey: "" })).rejects.toThrow();
   });
 });
 

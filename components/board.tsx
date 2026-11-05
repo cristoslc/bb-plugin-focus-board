@@ -35,7 +35,7 @@ import {
 } from "./dot-grid";
 import { useDotPulseStyles } from "./dot-pulse";
 import { pulsePeriodMs } from "../lib/pulse-rate";
-import { MenuPopover } from "./menu-popover";
+import { MenuPopover, MenuPopoverEntry } from "./menu-popover";
 import type { ThreadLink } from "../lib/link-metadata";
 import { groupBoxMenuActions } from "../lib/group-metadata";
 import { containerSlideY, containerSlideX, dropZoneForPoint, listScrollX, listScrollY } from "./board-scroll";
@@ -446,6 +446,14 @@ interface BoardProps {
     unitIds?: readonly string[],
   ) => void;
   /**
+   * Erase a column's whole stored hand-order: the lane reads recency again.
+   * The lane-header menu's remove-custom-order write. `columnKey` is the
+   * same key `onRankMove` writes under; `visibleIds` is the column's
+   * displayed order at the click, so the caller can release the pins of
+   * every card that is about to move back under recency.
+   */
+  onRankClear?: (columnKey: string, visibleIds: readonly string[]) => void;
+  /**
    * Drop a card ONTO a card: make the dropped thread a child of the target.
    * The write goes to the caller (the RPC lives app-side); the board has
    * already refused the illegal edges — a drop onto itself or onto the
@@ -669,6 +677,7 @@ export function Board({
   onClosePane,
   rankStore,
   onRankMove,
+  onRankClear,
   onAttentionEnter,
   onAttentionLeave,
   onReparent,
@@ -1593,6 +1602,15 @@ export function Board({
     setGroupMenu(null);
     setGroupMenuUngroupArmed(false);
   };
+  // The lane header's click menu: which lane and where the pointer landed.
+  // One menu open at a time — the same shape the group menu holds, and the
+  // reason the close is an unconditional null (any second open replaces it).
+  const [laneMenu, setLaneMenu] = useState<{
+    columnId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const closeLaneMenu = () => setLaneMenu(null);
   /** The group box whose own surface (not a member card) a drag hovers: the drop-to-join promise. */
   const [joinHoverId, setJoinHoverId] = useState<string | null>(null);
   const renameCommittedRef = useRef(false);
@@ -3021,6 +3039,21 @@ export function Board({
                   }
                   // Same-lane top-level: a deliberate no-op.
                 }}
+                onClick={(event) => {
+                  // The lane menu's trigger: the whole header strip is the
+                  // click surface, and it owns the menu because the pill and
+                  // hide buttons stop their own clicks (and a drag release
+                  // on the header fires no click at all). The guard refuses
+                  // one window: a lift armed by the touch pickup owns its
+                  // gesture outright (issue #336), so a click arriving under
+                  // it — a stray tap on the second finger, for one — can
+                  // never open a menu over the card being dragged.
+                  if (touchDragArmed()) return;
+                  event.stopPropagation();
+                  setLaneMenu({ columnId: column.id, x: event.clientX, y: event.clientY });
+                }}
+                aria-haspopup="menu"
+                aria-label={`${column.label} lane actions`}
               >
                 <h3 className="truncate text-[11px] font-medium text-muted-foreground">
                   {column.label}
@@ -3028,33 +3061,31 @@ export function Board({
                 <span className="text-[11px] tabular-nums text-muted-foreground/60">
                   {column.threads.length}
                 </span>
-                {/* A hand-ordered lane says so, so a card sitting out of recency
-                    order does not read as a bug. */}
-                {isOrdered ? (
-                  <span
-                    title="This column is in your order, not by recency"
-                    aria-label="Ordered by you, not by recency"
-                    className="inline-flex items-center text-muted-foreground/50"
-                  >
-                    <Icon name="SortingOneNine" className="size-3" aria-hidden />
-                  </span>
-                ) : null}
                 {(sweepActive && sweepKind !== null) || hideLaneHere ? (
                   <span className="ml-auto flex items-center gap-0.5">
                     {sweepActive && sweepKind !== null ? (
                       <>
-                        <SweepButton
-                          eligibleCount={eligible.length}
-                          isArmed={isArmed}
-                          run={
-                            runHere === null
-                              ? null
-                              : { done: runHere.done, total: runHere.total }
-                          }
-                          destination={sweepDestination(column.id) ?? "archive"}
-                          onArm={() => onSweepArm?.(column.id)}
-                          onConfirm={() => onSweepConfirm?.(column.id)}
-                        />
+                        {/* The pill is eligibility plus count (ruling
+                            dl-20261105T165850-324f): with nothing to propose,
+                            a sweepable lane shows no pill — its manual
+                            sweep mode enters from the lane menu instead.
+                            Armed mode, a running sweep, or any eligible card
+                            keeps it, so a gesture already in flight is
+                            never strand-able. */}
+                        {(isArmed || runHere !== null || eligible.length > 0) ? (
+                          <SweepButton
+                            eligibleCount={eligible.length}
+                            isArmed={isArmed}
+                            run={
+                              runHere === null
+                                ? null
+                                : { done: runHere.done, total: runHere.total }
+                            }
+                            destination={sweepDestination(column.id) ?? "archive"}
+                            onArm={() => onSweepArm?.(column.id)}
+                            onConfirm={() => onSweepConfirm?.(column.id)}
+                          />
+                        ) : null}
                         {isArmed || runHere !== null ? (
                           <SweepCancelButton
                             running={runHere !== null}
@@ -5006,6 +5037,70 @@ export function Board({
           ))}
         </MenuPopover>
       ) : null}
+      {laneMenu !== null
+        ? (() => {
+            // Everything the rows need reads the column the menu names,
+            // recomputed here so a lane whose state changed since the click
+            // (the ranking write refetched while the menu held) shows its
+            // CURRENT truth, not the open-time snapshot.
+            const laneMenuColumn = columns.find((c) => c.id === laneMenu.columnId);
+            const laneMenuRankKey = columnRankKey(groupBy, laneMenu.columnId);
+            const laneMenuOrdered = ranking && columnIsRanked(rankStore ?? {}, laneMenuRankKey);
+            const laneMenuSweepKind = sweepActive ? sweepColumnKind(laneMenu.columnId) : null;
+            const laneMenuRunning =
+              sweepRun !== null && sweepRun.columnId === laneMenu.columnId;
+            const laneMenuArmed = armedColumnId === laneMenu.columnId;
+            const laneMenuRemoveVisible = laneMenuOrdered && onRankClear !== undefined;
+            return (
+              <MenuPopover
+                open={{ x: laneMenu.x, y: laneMenu.y }}
+                onClose={closeLaneMenu}
+                label="Lane actions"
+                title={laneMenuColumn?.label ?? laneMenu.columnId}
+              >
+                {/* The sort state the old marker carried, as its own
+                    non-action row: what the lane is ordered by today and
+                    which way the order runs (ruling dl-20261105T165850-324f). */}
+                <div
+                  data-lane-sort-state={laneMenuOrdered ? "yours" : "recency"}
+                  className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground"
+                >
+                  <Icon name="Sort" className="size-3.5 shrink-0" aria-hidden />
+                  <span>
+                    {laneMenuOrdered
+                      ? "Order: your order — arranged by hand, top of the lane first"
+                      : "Order: by recency — newest first"}
+                  </span>
+                </div>
+                {laneMenuRemoveVisible ? (
+                  <MenuPopoverEntry
+                    label="Remove custom order"
+                    icon="RotateCcw"
+                    dividerAbove
+                    onRun={() => {
+                      const visibleIds = (laneMenuColumn?.threads ?? []).map(
+                        (candidate) => candidate.id,
+                      );
+                      closeLaneMenu();
+                      onRankClear?.(laneMenuRankKey, visibleIds);
+                    }}
+                  />
+                ) : null}
+                {laneMenuSweepKind !== null && !laneMenuArmed && !laneMenuRunning ? (
+                  <MenuPopoverEntry
+                    label="Sweep this lane…"
+                    icon="Broom"
+                    dividerAbove={!laneMenuRemoveVisible}
+                    onRun={() => {
+                      closeLaneMenu();
+                      onSweepArm?.(laneMenu.columnId);
+                    }}
+                  />
+                ) : null}
+              </MenuPopover>
+            );
+          })()
+        : null}
     </div>
   );
 }

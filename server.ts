@@ -85,6 +85,7 @@ import {
 } from "./lib/family-state";
 import { RANK_KV_KEY } from "./lib/rank";
 import {
+  applyRankClearFractions,
   applyRankMoveFractions,
   fractionRowFromStore,
   ordersFromFractionStore,
@@ -545,6 +546,17 @@ export const rpcContract = defineRpcContract({
        */
       unitIds: z.array(z.string().min(1)).optional(),
     }),
+    output: z.object({ columnKey: COLUMN_KEY_SCHEMA, order: z.array(z.string()) }),
+  },
+
+  /**
+   * One lane's whole stored hand-order, erased: the lane reads recency
+   * again. The lane-header menu's remove-custom-order write. Clearing a
+   * column that holds no stored order is a no-op (nothing written, no
+   * rank-changed published), so a stale second window can never re-erase.
+   */
+  rank_clear: {
+    input: z.object({ columnKey: COLUMN_KEY_SCHEMA }),
     output: z.object({ columnKey: COLUMN_KEY_SCHEMA, order: z.array(z.string()) }),
   },
 
@@ -2711,6 +2723,20 @@ export default async function plugin(bb: BbPluginApi) {
           bb.realtime.publish(RANK_CHANGED, { columnKey });
         }
         return { columnKey, order: result.order };
+      }),
+    rank_clear: ({ columnKey }) =>
+      withKvWriteLock(async () => {
+        const store = await readRanks();
+        // The shared clear op, the same function the app fake and the
+        // screenshot harness serve the write with. Absent key = nothing to
+        // clear: no write, no rank-changed publish, the caller's optimistic
+        // state (also a no-op there) simply agrees.
+        const result = applyRankClearFractions(store, columnKey);
+        if (result.cleared) {
+          await writeRanks(result.next);
+          bb.realtime.publish(RANK_CHANGED, { columnKey });
+        }
+        return { columnKey, order: [] };
       }),
     groups_list: async () => {
       // Live rows only, like the other list scans: an archived member has
