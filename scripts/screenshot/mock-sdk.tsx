@@ -19,6 +19,7 @@ import {
 // Pure constants only — lib/sweep would drag components/grouping into the
 // mock, whose SDK-app import this file itself stands in for (cycle).
 import { DAY_MS } from "../../lib/duration";
+import { environmentNotSpawnableReason } from "../../lib/autotitle-thread-model";
 // The host row's write semantics, shared with the second window
 // (`?sharedHost=<token>`) and with the unit tests, so a received write applies
 // the same function the writing window applied (scripts/screenshot/host-state.ts).
@@ -400,6 +401,11 @@ const ORCH_MODE = new URLSearchParams(window.location.search).get("orchestrator"
 // - `?dualgroups=1`: a pinned parent whose child sits in another group.
 // - `?pinnedgroup=1`: a feature group whose only member is pinned.
 const IDLE_BUSY_MODE = new URLSearchParams(window.location.search).get("idlebusy") === "1";
+// `?envgate=1`: the thread-model row's environment gate (v1.7.7's demo
+// fixture) — the row-blocked availability a destroyed environment produces,
+// with the gate's own refusal wording imported verbatim so the filmed row
+// cannot drift from the shipped helper.
+const ENVGATE_MODE = new URLSearchParams(window.location.search).get("envgate") === "1";
 const DUAL_GROUPS_MODE = new URLSearchParams(window.location.search).get("dualgroups") === "1";
 const PINNED_GROUP_MODE = new URLSearchParams(window.location.search).get("pinnedgroup") === "1";
 // `?failautotitle=` (comma list): autotitle call kinds that fail ONCE, then
@@ -1375,7 +1381,9 @@ const simRpcBase = async (method: string, args?: unknown): Promise<unknown> => {
         { pluginId: "sim-nobridge", serviceId: "x", displayName: "Simulated unbridged service", ready: true, message: null, bridge: false, bridgeReason: "sim-nobridge does not expose the complete bridge focus-board calls (only plugins implementing one can serve the ✨)" },
         { pluginId: "sim-offline", serviceId: "down", displayName: "Simulated offline service", ready: false, message: "Simulated sign-in needed", bridge: false, bridgeReason: null },
       ],
-      threadModel: { available: true, reason: null },
+      threadModel: ENVGATE_MODE
+        ? { available: false, reason: environmentNotSpawnableReason("destroyed") }
+        : { available: true, reason: null },
     };
   }
   if (method === "workspace_files_exist") {

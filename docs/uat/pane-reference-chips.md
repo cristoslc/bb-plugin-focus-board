@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-05T04:33:28.645Z by `npm run uat`._
+_Generated 2026-11-05T08:44:42.913Z by `npm run uat`._
 
 ## pane-reference-chips
 
-Source: `tests/manual/uat-pane-reference-chips.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-pane-reference-chips.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

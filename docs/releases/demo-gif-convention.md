@@ -106,6 +106,11 @@ The backfill's per-bullet decisions live here so the record survives the pull re
 | 1.7.4 | A lane with nothing to its right stops trapping the slide | demonstrated | CDP touch from the board's far right; the slide hands outward |
 | 1.7.5 | Dragging a card against a board edge now pans the board | demonstrated | the demo board's own nine-lane overflow, staged with the uat-drag-autoscroll suite's park-and-drop gesture; the park holds on dragover-only frames because a CDP mousemove per frame throttles the loop to a third of its pace |
 | 1.7.6 | The New Thread dialog gains New project | demonstrated | the mock SDK's `projects.create` fixture (appends to the sim sidebar and wakes it); the dialog's create is filmed and the created project is read back in the Project filter, because the composer's picker is host chrome the harness cannot render |
+| 1.7.7 | The pane focuses the message composer on open and switch | demonstrated | the mock composer's focusRequest ring (the pane-parity audit's Gap 8 frames), filmed on an opened pane and through a thread switch |
+| 1.7.7 | The New project button sits on the project row's line; the create follows bb's typical flow | demonstrated | v1.7.6's `projects.create` fixture plus the mock's `pickFolder` hand-off (the default pick names the folder, the create carries `local_path`, and the Project filter reads the project back) |
+| 1.7.7 | Magic rename's thread-model row blocks when the environment cannot run it | demonstrated | `?envgate=1` (this release's fixture): the availability answer a destroyed environment produces, served with the gate's own refusal wording imported verbatim |
+| 1.7.7 | Magic rename's model probe generates on the thread's model again | demonstrated | the `?failautotitle=plain` walk into the "Use the thread's active model" pick |
+| 1.7.7 | Threads running background work stay in Working | demonstrated | a two-thread turn-end patch over the harness's `pushThreadUpdate`, both cards in the Working lane when the updates land |
 
 Still skipped, with the reason:
 
@@ -134,6 +139,10 @@ Still skipped, with the reason:
 | 1.7.1 | The pane's queued-message Send button works on a phone | The mock chat cannot queue a message, so the row never renders. |
 | 1.7.2 | A phone stops repainting the whole board when the pane opens | Repaint count; identical pixels. |
 | 1.7.3 | The group picker lists groups alphabetically | Shown inside the group-picker gif rather than a second asset. |
+| 1.7.7 | The message rows' Copy message and Open in main view actions | The per-message action bar is the host chat's chrome; the mock chat renders bubbles only, so the shipped buttons never render there. |
+| 1.7.7 | Answering a pending question in the pane shows one form again | The answer banner is that same host chrome, and the fix itself proves an absence (the pane's own card is removed). |
+| 1.7.7 | Clicking a file-change row's name opens the thread in the main view | The maximize's outcome is host navigation (bb's main view opens the diff); the harness has no host to render it. |
+| 1.7.7 | The thread pane's "Recent decisions" card is gone | Proves an absence; nothing on screen to film. |
 
 ## Checklist for a release producer
 
