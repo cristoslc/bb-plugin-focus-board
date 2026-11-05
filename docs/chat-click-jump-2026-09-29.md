@@ -276,3 +276,31 @@ Guard commits: `915c85c` (settle-listener suppression, superseded) and
 `e58b232` + `ee6fbc9` (pointerdown-capture baseline; the working form;
 dev merge `2ec8ef8`, suite 660 green). Issue for the host defect:
 get-bb/bb#4793.
+
+## Update 2026-11-04 — the guard retires; the mechanism is gone from 0.48.1
+
+The pane-parity audit's Gap 10 sweep probed the guard's premise against the
+installed bb 0.48.1 and retired the guard (the pane-parity cleanup PR,
+audit Gap 10). Three lines of evidence:
+
+- **Upstream closed the defect.** get-bb/bb#4793 closed on 2026-10-06, and
+  bb #5951 ("Give the timeline's reading position one owner so scrolling
+  stops jumping", 2026-10-22, in 0.48.0) rewrote the shell around
+  `ScrollPositionKeeper`: the pending-capture no-dependency layout effect
+  and its `scrollTop + (scrollHeight − capture.scrollHeight)` arithmetic
+  have no counterpart in the 0.48.1 shell source, which restores by DOM row
+  (`find(rowId) + offsetWithinRow`) — the anchor-by-DOM-node fix this doc's
+  "Suggested upstream fixes" named.
+- **The natural-gesture repro no longer reproduces.** The updated
+  `scripts/probe-chat-click-jump.mjs` (board URL direct, card by thread id,
+  six wheel-up ticks to arm the older-rows preload, then three transcript
+  clicks) ran five times clean against the live 0.48.1 app on two
+  long-transcript threads (7895px and 2216px scrollers): the reader moves
+  only by its own wheel deltas, no click re-pins or displaces, and no
+  out-of-range `scrollTop` write was captured.
+- **The guard is no longer shipped**: `components/chat-jump-guard.ts` and
+  `tests/chat-jump-guard.test.ts` are deleted, and the pane's chat
+  click-capture forwards only its own link/decoration handling. The jump
+  probe stays as the regression check; if a yank ever reappears against a
+  future bb, re-run it before reaching for a plugin-side guard again.
+

@@ -36,10 +36,6 @@ import {
 } from "@/components/decorate-reference-mentions";
 import type { rpcContract } from "@/server";
 import { useIsCompactViewport } from "@/components/ui/hooks/use-compact-viewport";
-import {
-  createChatClickJumpGuard,
-  type ChatClickJumpGuard,
-} from "@/components/chat-jump-guard";
 import { attachScrollDebug } from "@/components/scroll-debug";
 import { AutotitleFallbackModal } from "@/components/autotitle-fallback-modal";
 import { WorkspaceOpenMenu, OPEN_LABEL_MIN_PANE_WIDTH } from "@/components/workspace-open-menu";
@@ -738,12 +734,11 @@ export function ThreadPane({
   // coalesced to one scan per frame. The environment id scopes the
   // verdict cache (the same relative path exists in one workspace but
   // not another) and is resolved once per thread.
-  // bb's page-shell scroll manager behind the embedded ThreadChat has a
-  // pending-capture bug that can clamp the transcript to the bottom right
-  // after a click while it is scrolled up ("chat jumps up a half-page").
-  // The SDK offers no access to that manager's state, so the pane arms a
-  // defensive revert guard on chat clicks until bb ships the fix (see
-  // docs/chat-click-jump-2026-09-29.md, where this module is covered too).
+  // bb's page-shell scroll rewrite (bb #5951, one owner of the reading
+  // position, shipped in 0.48.0) removed the pending-capture arithmetic the
+  // old "chat jumps up a half-page" bug ran on (docs/chat-click-jump-2026-
+  // 09-29.md holds the verdict history and the probe), so the pane no longer
+  // carries the defensive revert guard it once armed here.
   const chatBodyRef = useRef<HTMLDivElement>(null);
   // The embedded ThreadChat's composer footer carries the project/checkout
   // chips but COLLAPSES to height 0 whenever the composer sits unexpanded,
@@ -751,14 +746,6 @@ export function ThreadPane({
   // chat DOM (attributes included: the collapse is an attribute flip) and
   // fall back to our own project + checkout line when nothing shows there.
   const contextRowMissing = usePaneContextRowMissing(chatBodyRef, thread.id);
-  const chatJumpGuardRef = useRef<ChatClickJumpGuard | null>(null);
-  const onChatBodyClickCapture = useCallback(
-    (event: MouseEvent<HTMLDivElement>) => {
-      chatJumpGuardRef.current?.onChatClickCapture(event);
-      onChatClickCapture(event);
-    },
-    [onChatClickCapture],
-  );
 
   // The repainted host mention elements (role=button) and the painted chips
   // are keyboard-operable: Enter or Space on a focused chip routes the same
@@ -776,15 +763,6 @@ export function ThreadPane({
     },
     [referenceMentions],
   );
-  useEffect(() => {
-    const guard = createChatClickJumpGuard(() => chatBodyRef.current);
-    chatJumpGuardRef.current = guard;
-    return () => {
-      guard.dispose();
-      if (chatJumpGuardRef.current === guard) chatJumpGuardRef.current = null;
-    };
-  }, []);
-
   // Developer-only scroll instrumentation (setting "Developer: instrument
   // pane chat scrolling (debug)"), shipped off everywhere and enabled
   // through the config panel in a developer environment. This is the
@@ -1153,19 +1131,25 @@ export function ThreadPane({
           [data-bb-plugin-root]:not([data-bb-plugin]))` and appends it after
           bb's global utilities, so our own scoped `.pointer-events-none` and
           `.opacity-0` outrank the host's `[@media(hover:none)]` touch reveal
-          on any host element inside this root. The queued-message row's
-          actions control is the case that bites: on a phone it stays
-          `opacity:0` and `pointer-events:none`, so the row's "…" is invisible
-          and Send is unreachable. Emitting the host's own touch utilities
-          from this subtree carries them into our scoped sheet, where they win
-          by order and restore the host control exactly as bb's own thread
-          page renders it. The host class names are mirrored on purpose; the
-          durable fix belongs to bb's plugin CSS scoping (issue #296). */}
+          on any host element inside this root (the scoping mechanism is
+          unchanged in bb 0.48.1: packages/plugin-build scopePluginUtilities).
+          The queued-message row's actions control is the case that bites: on
+          a phone it stays `opacity:0` and `pointer-events:none`, so the
+          row's "…" is invisible and Send is unreachable. Emitting the host's
+          own touch utilities from this subtree carries them into our scoped
+          sheet, where they win by order and restore the host control exactly
+          as bb's own thread page renders it. The host class names are echoed
+          on purpose; the durable fix belongs to bb's plugin CSS scoping
+          (issue #296). Re-verified against bb 0.48.1 on 2026-11-04 (the
+          pane-parity audit's Gap 10): stripping these utilities from the
+          served plugin sheet in the live app leaves the queued row's
+          "…" untappable (pointer-events none), so they still earn their
+          place; scripts/screenshot/repro-touch-reveal-cascade.mjs. */}
       <div
         ref={chatBodyRef}
         data-pane-chat-body=""
         className="min-h-0 flex-1 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"
-        onClickCapture={onChatBodyClickCapture}
+        onClickCapture={onChatClickCapture}
         onKeyDownCapture={onChatKeyDownCapture}
       >
         <ThreadChat threadId={thread.id} variant="compact" layout="contained" />
