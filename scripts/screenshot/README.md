@@ -141,6 +141,24 @@ host app involved.
   per width). Run the vite harness first; honors `CHROME_PATH`, `HARNESS_URL`,
   and `OUT_DIR`.
 
+- `repro-new-project-row.mjs` — one-shot headless repro/verification for the
+  New Thread dialog's New project button (the row-anchor placement and the
+  typical folder-picker flow): opens the dialog against the mock composer's
+  structural replica of bb's pickers row (`data-new-thread-footer`), audits
+  the floating button's geometry (its right edge on the row's content start,
+  centered on the row's line), walks the pointer boundary with
+  `document.elementFromPoint` over each of the row's three pickers and the
+  button, checks no in-flow footer remains at rest (the dead band gone),
+  drives the typical create through `?folderPick=` (the mock's fixed pick →
+  the typical `local_path` create payload → the picker reads the created
+  project), and captures the dialog in both themes (wide) and the compact
+  drawer (narrow) plus the two other pick answers (cancel, unavailable).
+  Exits non-zero on any violation. Artifacts land in
+  `docs/screenshots/new-project-row/` (four dialog frames, two pick-answer
+  frames, one created-project frame, `evidence.json`). Run the vite harness
+  first (same as above); honors the same `CHROME_PATH`, `HARNESS_URL`, and
+  `OUT_DIR` overrides.
+
 - `repro-orchestrator-grandchildren.mjs` — one-shot headless repro for the
   "grandchildren don't pop out" report (2026-10-22): loads the orchestrator
   fixture (`?orchestrator=1`, a root with nine lieutenants and 77

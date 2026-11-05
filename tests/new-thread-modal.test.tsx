@@ -40,22 +40,68 @@ const SPAWNED = {
 let lastComposerProps: Record<string, unknown> | null = null;
 let lastSubmitPromise: Promise<void> | null = null;
 
+// The measured-placement tests push a fake footer-row geometry in here; the
+// stub composer then renders bb's own pickers-row hook
+// (`data-new-thread-footer`, the element lib/composer-row-anchor anchors to)
+// carrying those offsets. Null (the default) keeps the row out — the shape
+// every other test exercises, which is also the stacked-fallback contract.
+const stubRow = vi.hoisted(() => ({
+  geometry: null as
+    | { offsetTop: number; offsetLeft: number; offsetHeight: number; paddingLeft: number }
+    | null,
+}));
+
 vi.mock("@get-bb/plugin-sdk/app", () => ({
   // A stub composer: records the props it was seeded with and offers a
   // button that fires onSubmit, the way the host composer would on submit.
+  // When a footer-row geometry is armed, it also renders bb's pickers-row
+  // hook element the way the real host does, with the offsets predefined
+  // (jsdom has no layout); the ref writes them before the modal's layout
+  // measurement runs, so the modal's anchor sees a measurable row.
   experimental_NewThreadComposer: (props: Record<string, unknown>): ReactNode => {
     lastComposerProps = props;
     return createElement(
-      "button",
-      {
-        type: "button",
-        onClick: () => {
-          lastSubmitPromise = Promise.resolve(
-            (props.onSubmit as (request: NewThreadRequest) => Promise<void>)(REQUEST),
-          );
+      "div",
+      null,
+      createElement(
+        "button",
+        {
+          type: "button",
+          onClick: () => {
+            lastSubmitPromise = Promise.resolve(
+              (props.onSubmit as (request: NewThreadRequest) => Promise<void>)(REQUEST),
+            );
+          },
         },
-      },
-      "Stub composer submit",
+        "Stub composer submit",
+      ),
+      stubRow.geometry === null ? null : createElement("div", {
+        "data-new-thread-footer": "",
+        className: "mt-1 flex select-none items-center justify-between gap-2 px-3.5",
+        style: { paddingLeft: stubRow.geometry.paddingLeft },
+        ref: (el: HTMLDivElement | null) => {
+          if (el === null || stubRow.geometry === null) return;
+          Object.defineProperty(el, "offsetParent", {
+            configurable: true,
+            // The modal's own wrapper is the row's real offset parent
+            // (`relative`); the stub resolves it the same way the probe
+            // does in the browser harness.
+            value: el.closest('[data-composer-wrap=""]'),
+          });
+          Object.defineProperty(el, "offsetTop", {
+            configurable: true,
+            value: stubRow.geometry.offsetTop,
+          });
+          Object.defineProperty(el, "offsetLeft", {
+            configurable: true,
+            value: stubRow.geometry.offsetLeft,
+          });
+          Object.defineProperty(el, "offsetHeight", {
+            configurable: true,
+            value: stubRow.geometry.offsetHeight,
+          });
+        },
+      }),
     );
   },
   useSdk: () => ({ threads: { spawn } }),
@@ -73,6 +119,7 @@ beforeEach(() => {
   createProject.mockResolvedValue({ id: "proj_new", name: "Fresh project" });
   lastComposerProps = null;
   lastSubmitPromise = null;
+  stubRow.geometry = null;
 });
 
 afterEach(cleanup);
@@ -93,6 +140,7 @@ function renderModal(
     rememberProjectId,
     rememberEnvironment,
     onCreateProject,
+    onCreateProjectFromPicker,
   }: {
     open?: boolean;
     defaultProjectId?: string;
@@ -108,6 +156,7 @@ function renderModal(
     rememberProjectId?: ReturnType<typeof vi.fn>;
     rememberEnvironment?: ReturnType<typeof vi.fn>;
     onCreateProject?: ReturnType<typeof vi.fn>;
+    onCreateProjectFromPicker?: ReturnType<typeof vi.fn>;
   } = {},
 ) {
   return render(
@@ -127,6 +176,9 @@ function renderModal(
       ...(rememberProjectId !== undefined ? { rememberProjectId } : {}),
       ...(rememberEnvironment !== undefined ? { rememberEnvironment } : {}),
       ...(onCreateProject !== undefined ? { onCreateProject } : {}),
+      ...(onCreateProjectFromPicker !== undefined
+        ? { onCreateProjectFromPicker }
+        : {}),
       // A child preset cannot follow to the main view; the app passes the
       // handler only for root threads, mirrored here by the flag.
       onMaximize: withMaximize ? onMaximize : undefined,
@@ -425,7 +477,7 @@ describe("the New project option (issue #355)", () => {
   const newProjectOption = () => document.querySelector('[data-new-project-option=""]');
   const newProjectError = () => document.querySelector('[data-new-project-error=""]');
 
-  it("renders the New project option below the composer when the app provides the create hand-off", () => {
+  it("renders the New project option stacked below the composer when the host's pickers row is not measurable (the stub shape and the fallback)", () => {
     renderModal({ onCreateProject: createProject });
     const option = newProjectOption()! as HTMLButtonElement;
     expect(option).not.toBeNull();
@@ -433,8 +485,11 @@ describe("the New project option (issue #355)", () => {
     // the accessible name carries the words.
     expect(option.getAttribute("aria-label")).toBe("New project");
     expect(option.textContent).toBe("");
-    // Placement: after the composer in the dialog's reading order, tucked at
-    // the composer's bottom edge where the project picker's row sits.
+    // Placement: after the composer in the dialog's reading order, in the
+    // in-flow footer the stacked shape renders. With a measurable host row
+    // the button floats ON the row's line instead (the row-placement block
+    // below); jsdom's stub composer has no measurable row, so the fallback
+    // is what this shape sees.
     const composer = document.querySelector(
       'button[type="button"]:not([aria-label="Close"]):not([aria-label="Maximize new thread"]):not([aria-label="New project"])',
     );
@@ -562,5 +617,182 @@ describe("the New project option (issue #355)", () => {
     expect(lastComposerProps?.defaultProjectId).toBe("proj_seed");
     // And the option is resting again, not the name field.
     expect(newProjectOption()).not.toBeNull();
+  });
+});
+
+// The row-anchor placement (the row fix): with the host's pickers row
+// measurable, the New project button floats ON the row's line instead of
+// stacking below the composer. The numbers mirror the real dialog's
+// wrapper-relative geometry: the row sits 350px down the wrapper, its
+// content starts at the row's 14px padding (`px-3.5`), so the button's
+// right edge lands at 350/14 and its left at −14 — protruding into the
+// dialog's padding band exactly as the operator's arrow pointed.
+describe("the New project option's row placement", () => {
+  const newProjectOption = () => document.querySelector('[data-new-project-option=""]');
+
+  function stubCompactViewport(compact: boolean): void {
+    vi.stubGlobal(
+      "matchMedia",
+      (query: string) =>
+        ({
+          matches: compact && query.includes("max-width: 767px"),
+          media: query,
+          onchange: null,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          addListener: () => {},
+          removeListener: () => {},
+          dispatchEvent: () => false,
+        }) as unknown as MediaQueryList,
+    );
+  }
+
+  it("floats onto the pickers row's line: right edge at the row's content start, centered on the row, no in-flow footer left behind", () => {
+    stubRow.geometry = { offsetTop: 350, offsetLeft: 0, offsetHeight: 28, paddingLeft: 14 };
+    renderModal({ onCreateProject: createProject });
+    const option = newProjectOption()! as HTMLButtonElement;
+    expect(option.getAttribute("aria-label")).toBe("New project");
+    // The measured placement: centered on the row's line...
+    expect(option.style.top).toBe("350px");
+    // ...and the RIGHT edge exactly at the row's content start — the
+    // boundary the first picker's click area begins at (the jsdom half of
+    // the pointer-events audit; the browser probe walks the same boundary
+    // with elementFromPoint).
+    expect(option.style.left).toBe("-14px");
+    expect(parseFloat(option.style.left) + 28).toBe(
+      (stubRow.geometry.offsetLeft) + stubRow.geometry.paddingLeft,
+    );
+    // The button lives INSIDE the composer wrapper (the stub composer's
+    // parent), not in a flow footer after it.
+    expect(option.parentElement!.querySelector('[data-new-thread-footer=""]')).not.toBeNull();
+    // No in-flow footer at rest: the dead band's extra content is gone —
+    // the dialog ends at the composer plus its own padding.
+    expect(document.querySelector('[data-new-project-footer=""]')).toBeNull();
+  });
+
+  it("activating the floating option swaps it for the inline field below the composer, and escaping returns it to the row", () => {
+    stubRow.geometry = { offsetTop: 350, offsetLeft: 0, offsetHeight: 28, paddingLeft: 14 };
+    renderModal({ onCreateProject: createProject });
+    const option = newProjectOption()! as HTMLButtonElement;
+    expect(option.style.left).toBe("-14px");
+    fireEvent.click(option);
+    // The resting floating button is gone; the field takes the flow slot.
+    expect(newProjectOption()).toBeNull();
+    expect(document.querySelector('[data-new-project-footer=""]')).not.toBeNull();
+    expect(screen.getByLabelText("New project name")).toBeTruthy();
+    fireEvent.keyDown(screen.getByLabelText("New project name"), { key: "Escape" });
+    // Back onto the row with the same measured placement.
+    const restored = newProjectOption()! as HTMLButtonElement;
+    expect(restored.style.top).toBe("350px");
+    expect(restored.style.left).toBe("-14px");
+    expect(document.querySelector('[data-new-project-footer=""]')).toBeNull();
+  });
+
+  it("at a compact viewport (the drawer shell) the option keeps the stacked shape even with a measurable row", async () => {
+    stubRow.geometry = { offsetTop: 350, offsetLeft: 0, offsetHeight: 28, paddingLeft: 14 };
+    stubCompactViewport(true);
+    renderModal({ onCreateProject: createProject });
+    // The compact drawer realizes its content two frames after opening
+    // (components/ui/responsive-overlay's mount-motion optimization), so
+    // the row of interest exists a beat late.
+    await waitFor(() => {
+      expect(newProjectOption()).not.toBeNull();
+    });
+    const option = newProjectOption()! as HTMLButtonElement;
+    // In flow, inside the footer block — the picker row's left edge leaves
+    // no room for a 28px button in the drawer's 16px padding, so nothing
+    // floats there.
+    expect(option.style.left).toBe("");
+    expect(option.style.top).toBe("");
+    const footer = document.querySelector('[data-new-project-footer=""]');
+    expect(footer).not.toBeNull();
+    expect(footer!.contains(option)).toBe(true);
+    vi.unstubAllGlobals();
+  });
+});
+
+// The button's click follows bb's typical new-project flow when the app
+// hands the folder picker off (lib/project-create-flow): the native pick,
+// the create carried by it, the seed selecting the created project. A
+// cancelled pick rests; a refused pick arms the inline name field with the
+// reason. The blocks above (no picker prop at all) pin the fallback flow's
+// shape; this block pins the picker hand-off.
+describe("the New project option's typical flow (the folder picker hand-off)", () => {
+  const newProjectOption = () => document.querySelector('[data-new-project-option=""]');
+  const newProjectError = () => document.querySelector('[data-new-project-error=""]');
+
+  it("clicking the option runs the picker flow: the create happens in the app's hand-off, the seed selects the created project, and the name field never opens", async () => {
+    const fromPicker = vi.fn().mockResolvedValue({ id: "proj_from_folder" });
+    renderModal({ onCreateProject: createProject, onCreateProjectFromPicker: fromPicker });
+    fireEvent.click(newProjectOption()!);
+    await waitFor(() => {
+      expect(fromPicker).toHaveBeenCalledTimes(1);
+    });
+    // The field flow never opened (no inline name field, no field write).
+    expect(createProject).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText("New project name")).toBeNull();
+    // The created project is the composer's seed, like the field flow's
+    // success — the picker's spawn lands there.
+    await waitFor(() => {
+      expect(lastComposerProps?.defaultProjectId).toBe("proj_from_folder");
+    });
+    // And the dialog rests on the option.
+    expect(newProjectOption()).not.toBeNull();
+    expect(newProjectError()).toBeNull();
+  });
+
+  it("a cancelled pick (null id) rests the dialog: no field, the seed untouched", async () => {
+    const fromPicker = vi.fn().mockResolvedValue({ id: null });
+    renderModal({
+      onCreateProject: createProject,
+      onCreateProjectFromPicker: fromPicker,
+      defaultProjectId: "proj_seed",
+    });
+    fireEvent.click(newProjectOption()!);
+    await waitFor(() => {
+      expect(fromPicker).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(newProjectOption()).not.toBeNull();
+    });
+    expect(screen.queryByLabelText("New project name")).toBeNull();
+    // The seed the app handed in still stands.
+    expect(lastComposerProps?.defaultProjectId).toBe("proj_seed");
+    expect(createProject).not.toHaveBeenCalled();
+  });
+
+  it("a refused pick arms the name field with the picker's reason stated for the picker's case", async () => {
+    const fromPicker = vi
+      .fn()
+      .mockRejectedValue(new Error("No connected host to pick a project folder on."));
+    renderModal({ onCreateProject: createProject, onCreateProjectFromPicker: fromPicker });
+    fireEvent.click(newProjectOption()!);
+    await waitFor(() => {
+      expect(newProjectError()).not.toBeNull();
+    });
+    // The inline line names the picker's case, not a create write's.
+    expect(newProjectError()!.textContent).toContain("Folder picker unavailable");
+    expect(newProjectError()!.textContent).toContain("No connected host to pick a project folder on.");
+    // The field is armed for the operator to name instead.
+    expect(screen.getByLabelText("New project name")).toBeTruthy();
+    expect(createProject).not.toHaveBeenCalled();
+  });
+
+  it("while a pick pends, the affordance disables (the native dialog owns the screen)", async () => {
+    let release: (value: { id: string | null }) => void = () => {};
+    const fromPicker = vi.fn().mockImplementation(
+      () => new Promise<{ id: string | null }>((resolve) => { release = resolve; }),
+    );
+    renderModal({ onCreateProject: createProject, onCreateProjectFromPicker: fromPicker });
+    fireEvent.click(newProjectOption()!);
+    expect(fromPicker).toHaveBeenCalledTimes(1);
+    expect((newProjectOption() as HTMLButtonElement).disabled).toBe(true);
+    release({ id: "proj_from_folder" });
+    await waitFor(() => {
+      expect((newProjectOption() as HTMLButtonElement).disabled).toBe(false);
+    });
+    await waitFor(() => {
+      expect(lastComposerProps?.defaultProjectId).toBe("proj_from_folder");
+    });
   });
 });

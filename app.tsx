@@ -77,6 +77,7 @@ import { planGroupBoxes } from "./components/group-boxes";
 import { applyUnitMoveVisible } from "./lib/rank-unit-move";
 import { doneAtToEpochMs } from "./lib/done-metadata";
 import { projectDisplayName } from "./lib/project-name";
+import { createProjectFromPickedFolder } from "./lib/project-create-flow";
 import { paneContextInfo } from "./lib/pane-context";
 import type { ReferenceMentions } from "./components/decorate-reference-mentions";
 import {
@@ -2651,6 +2652,18 @@ function BoardPage({ subPath }: { subPath: string }) {
     [sdk],
   );
 
+  // The dialog's New project button first follows bb's TYPICAL flow: the
+  // native folder picker on the board's single connected persistent host
+  // (the plugin cannot read bb's own client-host id, so one persistent
+  // host is the only honest pick target — lib/project-create-flow), the
+  // project named after the picked folder. The modal treats { id: null }
+  // as a cancelled pick (rest) and a throw as "picker unavailable": it
+  // arms its inline name field with the reason shown.
+  const pickedFolderCreate = useCallback(
+    () => createProjectFromPickedFolder(sdk),
+    [sdk],
+  );
+
   // One-shot lane-reveal claims (menu moves). Every menu action that
   // relocates a card — Pin/Unpin, Mark Done/Not Done, Mark Read/Unread —
   // moves a card the pane never opened, and the destination lane (Pinned
@@ -3768,6 +3781,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         }
         rememberEnvironment={rememberSpawnEnvironment}
         onCreateProject={createProject}
+        onCreateProjectFromPicker={pickedFolderCreate}
         onSpawned={handleComposerSpawnedThread}
       />
       <SettingsModal
