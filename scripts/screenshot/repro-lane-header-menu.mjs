@@ -85,12 +85,34 @@ const menuRead = await page.evaluate(() => {
   };
 });
 await page.screenshot({ path: `${OUT}lane-menu-open.png` });
-// Close the menu (the backdrop click) so the count frame shows the headers.
+// The hover affordance: the pointer parked on the lane's name+caret pair
+// (the menu closed first — the backdrop click), the chip's bg-accent read.
 await page.mouse.click(640, 500);
 await page.waitForSelector('[role="menu"][aria-label="Lane actions"]', {
   hidden: true,
   timeout: 5_000,
 });
+await page.hover('section[data-column-id="unread"] header button[data-lane-menu-trigger]');
+await new Promise((r) => setTimeout(r, 300));
+const hoverRead = await page.evaluate(() => {
+  const trigger = document.querySelector(
+    'section[data-column-id="unread"] header button[data-lane-menu-trigger]',
+  );
+  return {
+    hoverClass: trigger?.className.includes("hover:bg-accent") ?? false,
+    escapeCloses: false,
+  };
+});
+// The shared shell's Escape: a real Escape key closes the reopened menu.
+await page.click('section[data-column-id="unread"] header button[data-lane-menu-trigger]');
+await page.waitForSelector('[role="menu"][aria-label="Lane actions"]', { timeout: 5_000 });
+await page.keyboard.press("Escape");
+await page.waitForSelector('[role="menu"][aria-label="Lane actions"]', {
+  hidden: true,
+  timeout: 5_000,
+});
+hoverRead.escapeCloses = true;
+await page.screenshot({ path: `${OUT}name-caret-hover.png` });
 
 // Frame 3: the sweep pill's eligibility law, from the same board.
 const pillRead = await page.evaluate(() => {
@@ -126,6 +148,7 @@ const record = {
   url: BASE,
   header: headerRead,
   menu: menuRead,
+  hoverAndEscape: hoverRead,
   pills: pillRead,
   consoleErrors: errors,
 };

@@ -250,6 +250,22 @@ describe("lane header: the per-lane menu", () => {
       armed.remove();
     }
   });
+
+  it("the name+caret pair carries the chip's hover affordance", () => {
+    renderBoard(twoUnread);
+    // The toolbar chips light on hover with bg-accent (components/
+    // board-toolbar.tsx's trigger anatomy); the lane's name is the same kind
+    // of dropdown trigger and must read as one.
+    expect(laneMenuTrigger("unread").className).toContain("hover:bg-accent");
+  });
+
+  it("Escape closes the lane menu, like every dropdown on the board", () => {
+    renderBoard(twoUnread);
+    fireEvent.click(laneMenuTrigger("unread"));
+    expect(screen.getByRole("menu", { name: "Lane actions" })).toBeTruthy();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("menu", { name: "Lane actions" })).toBeNull();
+  });
 });
 
 describe("lane header: the sweep pill is eligibility plus count", () => {
