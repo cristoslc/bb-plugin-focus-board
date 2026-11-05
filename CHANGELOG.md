@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **The New project button sits on the New Thread dialog's project row, and its create follows bb's typical flow.** The folder-plus button now anchors at the pickers row's open left edge, where the stacked shape left an empty band. Its click runs bb's typical create: the native folder picker names the project (boards the picker cannot be asked on fall back to the inline name field, with the reason shown).
 - **The thread pane focuses the message composer when it opens or switches threads.** The pane passes the SDK's `focusRequest` with a counter that bumps on open and on switch, so a keyboard-first operator can type without clicking into the box first. Same-thread refreshes leave the counter alone.
+- **Message rows in the pane gain the board's two actions: Copy message and Open in main view.** The host keeps other plugins' actions out of plugin panels (upstream), and the pane previously passed none of its own; both actions now ride the embedded chat's per-message bar.
 
 ### Fixed
 

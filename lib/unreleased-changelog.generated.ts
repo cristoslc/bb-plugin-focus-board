@@ -9,6 +9,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "children": []
   },
   {
+    "text": "**Message rows in the pane gain the board's two actions: Copy message and Open in main view.** The host keeps other plugins' actions out of plugin panels (upstream), and the pane previously passed none of its own; both actions now ride the embedded chat's per-message bar.",
+    "children": []
+  },
+  {
     "text": "**Threads running background work stay in Working.** A thread whose turn ended while a background agent, background command, or workflow run is still going used to show as Idle. It now stays in Working until that work lands, and the idle sweep leaves it alone.",
     "children": []
   },

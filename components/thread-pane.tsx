@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -12,6 +13,7 @@ import {
   useRpc,
   useSdk,
   useSettings,
+  type ThreadChatMessageAction,
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Icon } from "@/components/ui/icon";
@@ -491,6 +493,28 @@ export function ThreadPane({
     setLastThreadId(thread.id);
     setComposerFocusRequest((current) => current + 1);
   }
+  // Gap 5 (the pane-parity audit): the board's own per-message actions for
+  // the embedded chat. The host excludes other plugins' actions from plugin
+  // panels (upstream); these two are the pane's own.
+  const messageActions = useMemo<readonly ThreadChatMessageAction[]>(
+    () => [
+      {
+        id: "copy-message",
+        title: "Copy message",
+        icon: "Copy",
+        run: (message) => navigator.clipboard.writeText(message.text),
+      },
+      {
+        id: "open-in-main-view",
+        title: "Open in main view",
+        icon: "Maximize2",
+        run: () => {
+          onMaximize();
+        },
+      },
+    ],
+    [onMaximize],
+  );
   const [width, setWidth] = useState(readStoredPaneWidth);
   const windowCompact = useIsCompactViewport();
   // A squeezed panel on a desktop window: the compact media query never
@@ -1178,11 +1202,21 @@ export function ThreadPane({
         onClickCapture={onChatClickCapture}
         onKeyDownCapture={onChatKeyDownCapture}
       >
+        {/* The host renders plugin panels' chats with
+            includePluginMessageActions: false, so it excludes every plugin's
+            message and selection actions there (the pane-parity audit's Gap
+            5; relaxing that needs the upstream batch). The SDK accepts the
+            consumer's own per-message actions, and the board passes its two:
+            copy the message's text, and open the thread in the main view,
+            where the pane's boundary surfaces (tabs, the diff) live. A
+            rejected clipboard write is contained and logged by the host's
+            action runner, which is the surface's own error lane. */}
         <ThreadChat
           threadId={thread.id}
           variant="compact"
           layout="contained"
           focusRequest={composerFocusRequest}
+          messageActions={messageActions}
         />
       </div>
       {/* bb's embedded chat shows no project/checkout context on a pane
