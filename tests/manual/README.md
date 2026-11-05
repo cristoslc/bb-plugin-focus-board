@@ -130,8 +130,8 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
   `parent_row_sweep` equivalent) and the lane menu it shares the header with —
   the menu's open state, its "Sweep this lane…" and "Remove custom order"
   entries, the sort row's state (`yours` for a hand-ordered lane, `recency`
-  otherwise), whether the checked direction is "Oldest first", and the 3-dot
-  trigger's aria-label.
+  otherwise), whether the checked direction is "Oldest first", and the
+  name+caret target's aria-label.
 - `insertion_line` / `no_insertion_line` re-run the hover and then sample the
   rendered pseudo-element, so they see the line React actually committed.
 - Suite-level `defaults.viewport` (`{ width, height }`) overrides the default

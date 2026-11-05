@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-11-05T17:35:00.049Z by `npm run uat`._
+_Generated 2026-11-05T18:22:24.665Z by `npm run uat`._
 
 ## lane-header-menu
 

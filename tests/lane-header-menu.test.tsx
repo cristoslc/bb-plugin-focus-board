@@ -101,18 +101,45 @@ describe("lane header: sort-order marker retired", () => {
 });
 
 describe("lane header: the per-lane menu", () => {
-  it("every lane carries the card idiom's 3-dot trigger, left of its label", () => {
+  it("every lane carries the caret trigger after its name, before the count", () => {
     renderBoard(twoUnread);
     for (const columnId of ["unread", "working"]) {
       const section = document.querySelector(`section[data-column-id="${columnId}"]`);
-      const trigger = section?.querySelector("header button[data-lane-menu-trigger]");
+      const label = section?.querySelector("header h3");
+      const trigger = label?.querySelector("button[data-lane-menu-trigger]");
       expect(trigger).not.toBeNull();
       expect(trigger?.getAttribute("aria-label")).toBe(
         columnId === "unread" ? "Unread lane actions" : "Working lane actions",
       );
-      // Left of the label: the trigger's next element sibling is the heading.
-      expect(trigger?.nextElementSibling?.tagName).toBe("H3");
+      // The caret rides the name (right of it), and the count follows the
+      // name: the label+caret pair is the target, the number is not.
+      const caret = trigger?.querySelector("svg");
+      expect(caret).not.toBeNull();
+      const count = section?.querySelector("header .tabular-nums");
+      expect(count).not.toBeNull();
+      // The number reads after the name in document order.
+      expect(
+        label !== null &&
+          count !== null &&
+          (label.compareDocumentPosition(count as Node) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+      ).toBe(true);
     }
+  });
+
+  it("the whole name+caret pair is the target, and the caret tracks the open menu", () => {
+    renderBoard(twoUnread, { onLaneOrderDirection: vi.fn() });
+    const trigger = laneMenuTrigger("unread");
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    // The label text itself is inside the target: a click that lands on the
+    // name's own glyphs (the caret's neighbor in the same button) opens the
+    // menu exactly as a click on the caret does.
+    expect(screen.getByRole("menu", { name: "Lane actions" })).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Unread lane actions" }).querySelector("svg") as Element,
+    );
+    expect(screen.getByRole("menu", { name: "Lane actions" })).toBeTruthy();
   });
 
   it("opens on the trigger's click and shows the lane's sort state", () => {
