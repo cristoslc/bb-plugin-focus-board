@@ -20,6 +20,14 @@
  *  operator can realistically gesture after the board paints. */
 export const IDLE_CALLBACK_FALLBACK_MS = 400;
 
+/** The mount fan-in's hard ceiling in ms (issue #403): past this time the
+ *  board paints with whatever mount lists have landed, exactly the pre-gate
+ *  behavior, so a hung list can never blank the panel. Small enough that the
+ *  deferred board still beats an operator's first gesture; large enough that
+ *  a modeled drain (the fan-in's parallel burst, tens of ms) beats it
+ *  comfortably — the ceiling is the safety net, never the active path. */
+export const MOUNT_SETTLE_CEILING_MS = 400;
+
 /** Schedule `callback` at idle with the fallback ceiling; returns cancel. */
 export function scheduleIdleCallback(
   callback: () => void,

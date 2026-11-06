@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+#### The board's load
+
+- **The board paints once, settled: the loading view holds until the board's data is in.** The state lists a mount fetches (done marks, pin parks, links, error acks, snoozes, ranks, groups, family folds) land before the first paint, so cards stop shifting into place in the moments after the board looks loaded; a 400ms ceiling paints whatever has arrived if a list hangs.
+
 ### Fixed
 
 ## [1.7.8] - 2026-11-06

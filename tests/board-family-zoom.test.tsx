@@ -235,7 +235,10 @@ describe("card menu Zoom to family (issue #170)", () => {
     await zoomFrom("thr_parent");
     cleanup();
     render(<Component subPath="" />);
-    expect(document.querySelector("[data-parent-board]")).toBeTruthy();
+    // The readiness gate (issue #403) holds the remount's first paint until
+    // the mount fan-in settles; the preserved law is that the state lands:
+    // the scoped view returns from storage (fam2's lane stays absent).
+    await waitFor(() => expect(document.querySelector("[data-parent-board]")).toBeTruthy());
     expect(document.querySelector('[data-lane-id="thr_fam2"]')).toBeNull();
     expect(document.querySelector('[data-lane-id="thr_parent"]')).toBeTruthy();
     expect(document.querySelector('[data-thread-card="thr_child"]')).toBeTruthy();

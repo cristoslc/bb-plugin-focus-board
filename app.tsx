@@ -13,7 +13,7 @@ import {
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { findTicketRefs, forgejoItemBase, resolveRepoSlug } from "./lib/tickets";
-import { scheduleIdleCallback } from "./lib/idle-callback";
+import { MOUNT_SETTLE_CEILING_MS, scheduleIdleCallback } from "./lib/idle-callback";
 import {
   cardTicketRefs,
   linkedRefKeys,
@@ -294,6 +294,29 @@ function browserReachFailure(error: unknown): string {
   }`;
 }
 
+/**
+ * The mount fan-in's nine immediate lists (issue #403): the readiness gate
+ * holds the board's first paint until each has settled — resolved OR
+ * rejected (a rejected optional list is settled: the board works without
+ * it, and the hold never waits for a retry; a HUNG call is the ceiling's
+ * job). Mount-only by construction: the realtime signal path refetches the
+ * same units, but those land after the gate's release and only ever mark
+ * already-tracked keys, so a signal never re-gates the paint.
+ */
+const MOUNT_LIST_KEYS = [
+  "done",
+  "parks",
+  "sweepConfig",
+  "links",
+  "errorAcks",
+  "snoozes",
+  "ranks",
+  "groups",
+  "familyState",
+] as const;
+
+type MountListKey = (typeof MOUNT_LIST_KEYS)[number];
+
 function BoardPage({ subPath }: { subPath: string }) {
   const {
     status: sidebarStatus,
@@ -473,6 +496,35 @@ function BoardPage({ subPath }: { subPath: string }) {
     doneArchiveMs: DEFAULT_DONE_ARCHIVE_MS,
     idleArchiveMs: DEFAULT_IDLE_ARCHIVE_MS,
   });
+  // The readiness gate (issue #403): the board paints once, settled. Each
+  // mount list marks itself when its call settles (ok or error); the ninth
+  // landing — or the ceiling — releases the gate. The fetches fire exactly
+  // as before (the gate holds the RENDER, not the calls): the fan-in runs
+  // during the loading view, so its echo commits land pre-paint.
+  const settledMountListsRef = useRef<Set<MountListKey>>(new Set());
+  const [mountSettled, setMountSettled] = useState(false);
+  const mountSettledRef = useRef(false);
+  const settleMountList = useCallback((key: MountListKey) => {
+    if (mountSettledRef.current) return; // released — the gate never re-arms
+    const settled = settledMountListsRef.current;
+    if (settled.has(key)) return;
+    settled.add(key);
+    if (settled.size === MOUNT_LIST_KEYS.length) {
+      mountSettledRef.current = true;
+      setMountSettled(true);
+    }
+  }, []);
+  // The ceiling (lib/idle-callback.ts MOUNT_SETTLE_CEILING_MS): past it the
+  // board paints with whatever landed — a hung list can never blank the
+  // panel. One shot per mount: cancels on unmount, never re-arms.
+  useEffect(() => {
+    if (mountSettled) return;
+    const timer = window.setTimeout(() => {
+      mountSettledRef.current = true;
+      setMountSettled(true);
+    }, MOUNT_SETTLE_CEILING_MS);
+    return () => window.clearTimeout(timer);
+  }, [mountSettled]);
   // Refetch units: the exact bodies the mount effect and the realtime
   // signals both consume, named so the realtime coalescer (below) can run
   // each once per pass.
@@ -483,13 +535,13 @@ function BoardPage({ subPath }: { subPath: string }) {
         setDoneExtras(recordsAsExtras(result.records));
       },
       () => {}, // Done marking is optional state; the board works without it.
-    );
+    ).finally(() => settleMountList("done"));
     // Parks ride the done refetch: another panel (or the CLI path) may have
     // parked or consumed a pin this panel has not mirrored.
     rpc.call("pin_parks_list").then(
       (result) => setParkIds(new Set(Object.keys(result.parks))),
       () => {}, // Parks gate nothing; an unloadable park list loses no pin.
-    );
+    ).finally(() => settleMountList("parks"));
     rpc.call("sweep_config_get").then(
       (result) =>
         setSweepConfig({
@@ -497,19 +549,19 @@ function BoardPage({ subPath }: { subPath: string }) {
           idleArchiveMs: result.idleArchiveMs,
         }),
       () => {}, // Settings are optional; defaults apply when unreachable.
-    );
+    ).finally(() => settleMountList("sweepConfig"));
   }, [rpc, setDoneIds, setDoneExtras, setParkIds, setSweepConfig]);
   const refetchLinks = useCallback(() => {
     rpc.call("link_list").then(
       (result) => setLinksByThread(linksFromRpc(result)),
       () => {}, // Links are optional state; the board works without them.
-    );
+    ).finally(() => settleMountList("links"));
   }, [rpc, setLinksByThread]);
   const refetchErrorAcks = useCallback(() => {
     rpc.call("error_acks_list").then(
       (result) => setErrorAckIds(new Set(result.ackIds)),
       () => {}, // Acks are optional state; the board works without them.
-    );
+    ).finally(() => settleMountList("errorAcks"));
   }, [rpc, setErrorAckIds]);
   useEffect(() => {
     refetchDoneState();
@@ -572,7 +624,7 @@ function BoardPage({ subPath }: { subPath: string }) {
     rpc.call("snooze_list").then(
       (result) => setSnoozeRecords(result.snoozes),
       () => {}, // Snoozing is optional state; the board works without it.
-    );
+    ).finally(() => settleMountList("snoozes"));
   }, [rpc]);
   useEffect(() => {
     refetchSnoozes();
@@ -652,7 +704,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         }
       },
       () => {}, // Ranking is optional state; the board works without it.
-    );
+    ).finally(() => settleMountList("ranks"));
   }, [rpc]);
   useEffect(() => {
     refetchRanks();
@@ -674,7 +726,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         setGroupAssignments(result.memberships);
       },
       () => {}, // Groups are optional state; the board works without them.
-    );
+    ).finally(() => settleMountList("groups"));
   }, [rpc]);
   useEffect(() => {
     refetchGroups();
@@ -979,7 +1031,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         setHideIdleFamilies(new Set(server.hideIdleChildren));
       },
       () => {}, // Family fold state is optional; the board works without it.
-    );
+    ).finally(() => settleMountList("familyState"));
   }, [rpc]);
   useEffect(() => {
     refetchFamilyState();
@@ -1015,7 +1067,7 @@ function BoardPage({ subPath }: { subPath: string }) {
   // that starts there has no intermediate scroller to catch it, so it used
   // to reach the page instead of panning the board.
   const boardRegionRef = useRef<HTMLDivElement | null>(null);
-  useBoardPanRouter(boardRegionRef);
+  useBoardPanRouter(boardRegionRef, mountSettled);
   // Appearance tab: the card-transport read and the motion override, backed
   // by the same tolerant localStorage stores every other board preference
   // uses. Defaults keep today's board untouched (the dissolve plays; the
@@ -3398,7 +3450,10 @@ function BoardPage({ subPath }: { subPath: string }) {
     [actions, applyUnreadStateEffects, clearParkPin, clearSnooze, doneAgeSource, doneIds, exitPinnedLane, familyIndex, filter, groupAssignments, openNewChildThread, pendingStateClaimsRef, persistFilter, persistGroupBy, releaseAttentionFor, requestReveal, restoreParkedPin, runBrowserReveal, rpc, setBrowserNotice, setDoneExtras, setDoneIds, setGroupDialogFor, setSnoozeDialogFor, snoozedIds, sdk],
   );
 
-  if (sidebarStatus === "loading" && threads.length === 0) {
+  // The readiness gate (issue #403): the loading view holds until the mount
+  // fan-in has settled (or the ceiling fires) — the board's first paint is
+  // the settled board, not a board that re-renders moments later.
+  if (!mountSettled || (sidebarStatus === "loading" && threads.length === 0)) {
     return (
       <div className="p-4">
         <EmptyState>Loading threads…</EmptyState>
