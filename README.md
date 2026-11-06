@@ -11,15 +11,6 @@
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/github/license/cristoslc/bb-plugin-focus-board"></a>
 </p>
 
-<p align="center">
-  <a href="docs/screenshots/board-thread-pane-dark.png">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/board-thread-pane-dark.png">
-      <img src="docs/screenshots/board-thread-pane-light.png" alt="Focus Board with a thread conversation pane open beside it" width="100%">
-    </picture>
-  </a>
-</p>
-
 > [!NOTE]
 > **What is bb?** An open-source, local-first IDE for coding agents — Claude Code, Codex, Cursor, Pi, OpenCode, and more — where work runs in *threads*: live agent conversations you can follow, steer mid-run, or hand off. Focus Board is a bb *plugin* that turns those threads into a kanban board. Learn more at [getbb.app](https://getbb.app) or [github.com/get-bb/bb](https://github.com/get-bb/bb).
 
@@ -51,90 +42,6 @@ Finer behavior notes (hand-ordering rules, Escape handling, pin behavior, pane h
 </p>
 
 <p align="center">
-  <a href="docs/screenshots/overview-groups.png">
-    <img src="docs/screenshots/overview-groups.png" alt="Focus view with an expanded feature group around a parent family, a folded group card, a group of one, two collapsed parents and the Done projection" width="95%">
-  </a>
-  <br>
-  <strong>Feature groups</strong>. Sibling threads share a dashed frame, one frame per lane. Release 1.0 spans Unread, Working and Done; Chat pipeline folds; Triage holds one card.
-</p>
-
-<p align="center">
-  <a href="docs/screenshots/overview-group-highlight.png">
-    <img src="docs/screenshots/overview-group-highlight.png" alt="Clicking a feature group frame lights its footprint in every lane it touches" width="48%">
-  </a>
-  &nbsp;&nbsp;
-  <a href="docs/screenshots/overview-group-dots.png">
-    <img src="docs/screenshots/overview-group-dots.png" alt="A folded group card shows member dots, child dots one size down, grandchild dots at the smallest tier, and the nested count" width="48%">
-  </a>
-  <br>
-  <strong>Group footprint and folded dots</strong>. Clicking a frame lights it in every lane it touches; a folded card keeps its subtree readable at three dot sizes.
-</p>
-
-<p align="center">
-  <a href="docs/screenshots/overview-group-menu.png">
-    <img src="docs/screenshots/overview-group-menu.png" alt="A feature group's context menu with new thread, zoom, rename, collapse and ungroup entries" width="48%">
-  </a>
-  &nbsp;&nbsp;
-  <a href="docs/screenshots/overview-card-menu.png">
-    <img src="docs/screenshots/overview-card-menu.png" alt="A card's context menu with pin, read, done, snooze, change group, zoom to family and lifecycle entries" width="48%">
-  </a>
-  <br>
-  <strong>Menus</strong>. A group frame offers spawn, zoom, rename, fold and ungroup; a card offers pin, read, done, snooze, group, zoom, spawn, keep and archive.
-</p>
-
-<p align="center">
-  <a href="docs/screenshots/overview-group-picker.png">
-    <img src="docs/screenshots/overview-group-picker.png" alt="The group picker with the current group marked, rename and delete controls on a hovered row, and the new-group field" width="48%">
-  </a>
-  &nbsp;&nbsp;
-  <a href="docs/screenshots/overview-group-filter.png">
-    <img src="docs/screenshots/overview-group-filter.png" alt="The Group filter menu listing the board's groups and the No group bucket" width="48%">
-  </a>
-  <br>
-  <strong>Group picker and Group filter</strong>. Assign or create a group from a card; restrict the board to chosen groups, with a No group bucket for unassigned threads.
-</p>
-
-<p align="center">
-  <a href="docs/screenshots/overview-view-menu.png">
-    <img src="docs/screenshots/overview-view-menu.png" alt="The View menu with Focus, Parent thread, Group, Last activity, Project, Provider, Machine and None, plus the Nest child threads toggle" width="48%">
-  </a>
-  &nbsp;&nbsp;
-  <a href="docs/screenshots/overview-done-sweep.png">
-    <img src="docs/screenshots/overview-done-sweep.png" alt="The Done lane armed for a sweep: settled cards tinted, the pill reading 3 to Archive, cancel beside it, and the family projection above" width="48%">
-  </a>
-  <br>
-  <strong>Views and sweep</strong>. Eight ways to bucket the board, and the Done lane armed with its destination named and its settled cards tinted.
-</p>
-
-<p align="center">
-  <a href="docs/screenshots/overview-family-fold.png">
-    <img src="docs/screenshots/overview-family-fold.png" alt="A ten-child family card folded behind a Show all 10 handle, with five whole rows and no clipped card" width="48%">
-  </a>
-  &nbsp;&nbsp;
-  <a href="docs/screenshots/overview-horizontal-wallpaper.png">
-    <img src="docs/screenshots/overview-horizontal-wallpaper.png" alt="Horizontal lane rows over a bundled wallpaper, showing the Appearance choices together" width="48%">
-  </a>
-  <br>
-  <strong>Long families and horizontal lanes</strong>. A family past five rows folds behind Show all N; horizontal lane rows over a bundled wallpaper.
-</p>
-
-<p align="center">
-  <a href="docs/screenshots/overview-parent-view.png">
-    <img src="docs/screenshots/overview-parent-view.png" alt="The Parent view scoped to one family by Zoom to family, with its state lanes, row sweeps and Family chip" width="95%">
-  </a>
-  <br>
-  <strong>Zoom to family</strong>. The Parent view opens scoped to one family: every state lane for that family, its row sweeps, and the Family chip that clears the scope.
-</p>
-
-<p align="center">
-  <a href="docs/screenshots/board-thread-pane-dark.png">
-    <img src="docs/screenshots/board-thread-pane-dark.png" alt="Opening a card slides in a thread pane with the conversation" width="85%">
-  </a>
-  <br>
-  <strong>Thread pane</strong>. Opening a card slides in the conversation alongside the board.
-</p>
-
-<p align="center">
   <a href="docs/screenshots/phone-board-light.png">
     <img src="docs/screenshots/phone-board-light.png" alt="Board on a phone: toolbar stacked vertically, columns scrolling horizontally" width="32%">
   </a>
@@ -146,7 +53,7 @@ Finer behavior notes (hand-ordering rules, Escape handling, pin behavior, pane h
   <strong>Phone</strong>. The toolbar stacks and columns scroll horizontally; the thread pane goes full screen.
 </p>
 
-The full feature outline, including what these images deliberately leave out, lives in [docs/screenshots/overview-coverage.md](docs/screenshots/overview-coverage.md).
+The full feature outline, including what these images deliberately leave out, lives in [docs/screenshots/overview-coverage.md](docs/screenshots/overview-coverage.md); the per-feature stills (group states, menus, picker, filter, view menu, sweep, family fold, wallpaper, Parent view) stay in `docs/screenshots/`.
 
 ## Requirements
 
