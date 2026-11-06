@@ -111,6 +111,9 @@ The backfill's per-bullet decisions live here so the record survives the pull re
 | 1.7.7 | Magic rename's thread-model row blocks when the environment cannot run it | demonstrated | `?envgate=1` (this release's fixture): the availability answer a destroyed environment produces, served with the gate's own refusal wording imported verbatim |
 | 1.7.7 | Magic rename's model probe generates on the thread's model again | demonstrated | the `?failautotitle=plain` walk into the "Use the thread's active model" pick |
 | 1.7.7 | Threads running background work stay in Working | demonstrated | a two-thread turn-end patch over the harness's `pushThreadUpdate`, both cards in the Working lane when the updates land |
+| 1.7.8 | A lane's name and caret open that lane's own menu, and the tiny hand-order badge is gone | demonstrated | the demo board's default lanes; the name+caret pair clicked on the Unread lane, no fixture needed |
+| 1.7.8 | The menu names the lane's order, and sorting has real actions | demonstrated | the opened menu's Oldest first pick re-orders the Unread lane live, and the reopened menu checks the picked side (the persistence facet rides the same clip) |
+| 1.7.8 | The What's-new feed credits contributors | demonstrated | 1.7.7's working-stays bullet carries the bracket note, so the shipped feed stages the attributed read under `lastSeenVersion=0.1.0` |
 
 Still skipped, with the reason:
 
@@ -143,6 +146,7 @@ Still skipped, with the reason:
 | 1.7.7 | Answering a pending question in the pane shows one form again | The answer banner is that same host chrome, and the fix itself proves an absence (the pane's own card is removed). |
 | 1.7.7 | Clicking a file-change row's name opens the thread in the main view | The maximize's outcome is host navigation (bb's main view opens the diff); the harness has no host to render it. |
 | 1.7.7 | The thread pane's "Recent decisions" card is gone | Proves an absence; nothing on screen to film. |
+| 1.7.8 | The load-time dissolve no longer plays: the board's mounting echo lands its cards in place | The fix proves an absence; the board simply stops repainting a few hundred ms after it looks loaded, and no frame distinguishes the landed state. |
 
 ## Checklist for a release producer
 
