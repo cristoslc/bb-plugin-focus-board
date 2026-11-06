@@ -235,6 +235,30 @@ export function stubRankMoveFailure(message: string | null): void {
   rankMoveFailure = message;
 }
 
+// The mount-readiness gate's probes (issue #403): arm ONE method to hang
+// (never settles until released) or to reject, exactly the two shapes the
+// gate must treat differently — a hung call is the ceiling's job, a
+// rejected optional list is settled.
+let hungMethod: string | null = null;
+const hungResolvers: Array<(value: unknown) => void> = [];
+let rejectedMethod: string | null = null;
+
+/** Make every call to `method` hang until `releaseRpcHangs()` (null clears). */
+export function stubRpcHang(method: string | null): void {
+  hungMethod = method;
+}
+
+/** Resolve every hung call with an empty payload (the callers' guards hold). */
+export function releaseRpcHangs(): void {
+  const resolvers = hungResolvers.splice(0, hungResolvers.length);
+  for (const resolve of resolvers) resolve({});
+}
+
+/** Make every call to `method` reject (null clears). */
+export function stubRpcRejection(method: string | null): void {
+  rejectedMethod = method;
+}
+
 /** Every rpc method the app under test called, in order (test introspection). */
 export function fakeRpcCalls(): { method: string; args?: unknown }[] {
   return structuredClone(rpcCalls);
@@ -313,6 +337,14 @@ export function stubFamilyStateWriteFailure(message: string | null): void {
 
 const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   rpcCalls.push({ method, args });
+  if (method === hungMethod) {
+    return new Promise((resolve) => {
+      hungResolvers.push(resolve);
+    });
+  }
+  if (method === rejectedMethod) {
+    throw new Error(`app-fake-sdk: ${method} stubbed to reject`);
+  }
   switch (method) {
     case "done_list":
       return { doneIds: [], records: {} };
