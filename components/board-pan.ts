@@ -91,7 +91,14 @@ export function panAncestorOwnsAxis(
   return false;
 }
 
-export function useBoardPanRouter(regionRef: RefObject<HTMLElement | null>): void {
+export function useBoardPanRouter(
+  regionRef: RefObject<HTMLElement | null>,
+  /** Re-arms the wiring when this flips (the mount readiness gate holds the
+   *  region off the DOM through the loading view; a ref alone never re-triggers
+   *  the effect, and a router that attached against an absent region would
+   *  leave every toolbar pan reaching the page). */
+  regionMounted: boolean = true,
+): void {
   useEffect(() => {
     const region = regionRef.current;
     if (region === null) return;
@@ -184,5 +191,5 @@ export function useBoardPanRouter(regionRef: RefObject<HTMLElement | null>): voi
       region.removeEventListener("touchend", end);
       region.removeEventListener("touchcancel", end);
     };
-  }, [regionRef]);
+  }, [regionRef, regionMounted]);
 }

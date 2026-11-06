@@ -1067,7 +1067,7 @@ function BoardPage({ subPath }: { subPath: string }) {
   // that starts there has no intermediate scroller to catch it, so it used
   // to reach the page instead of panning the board.
   const boardRegionRef = useRef<HTMLDivElement | null>(null);
-  useBoardPanRouter(boardRegionRef);
+  useBoardPanRouter(boardRegionRef, mountSettled);
   // Appearance tab: the card-transport read and the motion override, backed
   // by the same tolerant localStorage stores every other board preference
   // uses. Defaults keep today's board untouched (the dissolve plays; the
