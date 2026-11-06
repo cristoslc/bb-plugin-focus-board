@@ -87,15 +87,14 @@ const MODELED_KNOBS = "sidebarDelay=200&rpcLatency=8&metaScanMs=1.5";
  */
 const BUDGETS_BY_STAGE = {
   client: {
-    // The load-echo mount guard (issue #373): the settle tail's end moved off
-    // the mount-echo play's ghost teardown (its remove timer ended the tail
-    // at arm + 320ms: 398/424/488 measured on 47ffa8b) onto the chip wave's
-    // last mutation: 108/171/284 median with the guard landed. Each budget ≈
-    // 3× its measured median, never above the pre-guard budget it replaces,
-    // so a transport play arming at load trips the budget again.
-    100: { appEval: 3000, firstCommit: 1500, mountToFirstCard: 900, fanInWindow: 300, settleTail: 340 },
-    300: { appEval: 3000, firstCommit: 1500, mountToFirstCard: 2000, fanInWindow: 300, settleTail: 510 },
-    500: { appEval: 3000, firstCommit: 1500, mountToFirstCard: 3000, fanInWindow: 300, settleTail: 850 },
+    // The readiness gate (issue #403): the mount echo commits pre-paint now,
+    // so the settle tail's end is the chips' idle landing: 76/102/179 median
+    // with the gate landed (was 103/160/251 under the mount-age guard).
+    // Each budget ≈ 3× its measured median, never above the pre-gate budget
+    // it replaces, so a post-paint echo re-render trips the budget again.
+    100: { appEval: 3000, firstCommit: 1500, mountToFirstCard: 900, fanInWindow: 300, settleTail: 250 },
+    300: { appEval: 3000, firstCommit: 1500, mountToFirstCard: 2000, fanInWindow: 300, settleTail: 350 },
+    500: { appEval: 3000, firstCommit: 1500, mountToFirstCard: 3000, fanInWindow: 300, settleTail: 600 },
   },
   modeled: {
     // fanInWindow recalibrated for the bounded parallel scan (issue #369):
@@ -105,9 +104,15 @@ const BUDGETS_BY_STAGE = {
     // never above healthy jitter (max run 126ms at 500), always deep under
     // the serial shape it replaced. A re-serializing regression trips both
     // this budget and the per-run structural allowance below it.
-    100: { threadsWait: 1800, mountToFirstCard: 1500, fanInWindow: 150, settleTail: 1800 },
-    300: { threadsWait: 1800, mountToFirstCard: 4000, fanInWindow: 200, settleTail: 1800 },
-    500: { threadsWait: 1800, mountToFirstCard: 6000, fanInWindow: 300, settleTail: 2400 },
+    // mountToFirstCard re-anchored for the readiness gate (issue #403):
+    // the hold waits out the fan-in, measured at 111/181/228ms median with
+    // the gate landed — each budget ≈ 3× its measured median, tightened
+    // from the serial-era cells (1500/4000/6000) that priced a wall the
+    // parallel scan retired. A re-serializing or post-paint-echo regression
+    // trips this budget.
+    100: { threadsWait: 1800, mountToFirstCard: 400, fanInWindow: 150, settleTail: 1800 },
+    300: { threadsWait: 1800, mountToFirstCard: 600, fanInWindow: 200, settleTail: 1800 },
+    500: { threadsWait: 1800, mountToFirstCard: 750, fanInWindow: 300, settleTail: 2400 },
   },
 };
 

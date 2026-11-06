@@ -235,3 +235,68 @@ weave into. Proven pre-existing on 47ffa8b with a scratch (one card relocating,
 lane emptied: no ghost rendered, `phase: null`, the layout still landed). The
 guard did not introduce it; the guard's law test is merely the first to shape
 it. Gesture transports on a lane that keeps residents are untouched.
+
+## The hold after-run (the board paints once, settled; the echo is the paint)
+
+The lane's carrier issue #403 commissioned the two-tier hold: BoardPage renders
+its existing loading view until the mount fan-in has settled, with a hard
+ceiling so a hung list can never blank the panel. The mechanism, as landed: the
+seven mount refetch units chain a settle mark (`settleMountList`) onto each of
+the nine immediate calls — handlers byte-identical, both resolve and rejection
+count as settled, a rejection being settled because the board works without
+every optional list and the hold never waits for a retry — and the ninth
+landing flips `mountSettled`. The fetches fire at the same moment they always
+did (the gate holds the render, not the calls): the fan-in runs during the
+loading view, so its setStates land in the FIRST paint's commit instead of an
+echo after it. The ceiling, `MOUNT_SETTLE_CEILING_MS` (beside
+`lib/idle-callback.ts`'s `IDLE_CALLBACK_FALLBACK_MS`, documented the same way:
+small enough that the deferred board still beats an operator's first gesture,
+large enough that a modeled drain beats it), is a deterministic
+`window.setTimeout` — one shot per mount, canceled on unmount, never re-armed —
+and past it the board paints with whatever landed, exactly the pre-gate
+behavior. The realtime signal path refetches the same units, but those marks
+land after the release and only ever re-mark tracked keys: the gate is
+mount-only. The transports' mount-age guard
+(`components/board.tsx` `mountSeedAtRef` + `LOAD_TRANSPORT_MOUNT_GUARD_MS`) is
+untouched — the echo now happens pre-paint, and the guard stands as the safety
+net it already was.
+
+The after-battery (probe re-taken on the gate;
+`docs/perf/settle-attribution-2026-11-06T15-11-04-930Z.json`, the before-run on
+the same head `docs/perf/settle-attribution-2026-11-06T14-58-15-611Z.json`):
+
+| Scale | settleTail before this head | settleTail after | post-fence drivers after |
+|---|---|---|---|
+| 100 | 110 / 106 / 120 | 69 / 71 / 74 | `tracker_validate` (45 fibers) + a 7-fiber shell commit |
+| 300 | 159 / 154 / 155 | 94 / 91 / 103 | `tracker_validate` + 7-52-fiber shell commits |
+| 500 | 275 / 252 / 276 | 170 / 160 / 139 | `tracker_validate` + 7-52-fiber shell commits |
+
+- The echo commit is GONE from the tail. Before this head the tail's biggest
+  driver was the mount lists' post-paint landing — one commit per run keyed
+  `rpc:done_list` (or `rpc:family_state_list`) re-rendering 905 / 1,966 / 3,034
+  fibers (711 `ThreadCardImpl`s at 500), moving cards between lanes and
+  coalescing group boxes. After the hold, the nine lists' setStates land in the
+  paint itself (the probe's before-fence window — the fence is now the first
+  card, so the paint commit is the settled board), and the post-fence tail
+  carries only the chips' idle landing and single-digit-fiber shell commits.
+- The load bench on the same head: client `settleTail` 101 / 158 / 248 before,
+  76 / 102 / 179 after (`load-bench-2026-11-06T14-57-14-525Z.json` and
+  `load-bench-2026-11-06T15-09-43-559Z.json`); the client `firstCommit` stage
+  is now the loading view's commit (53 / 46 / 50ms, was the full board's
+  163 / 214 / 266), and client `fanInWindow` reads ~0-2ms because the calls no
+  longer queue behind the first big render. The client `settleTail` budgets
+  lower to 250 / 350 / 600 (each ≈ 3× its measured median, never above the
+  budget it replaces).
+- The modeled firstCard's honest price on this head is +3 / +5 / +4ms
+  (`mountToFirstCard` 108 / 176 / 224 → 111 / 181 / 228), not the commission's
+  +30 / 50 / 80 forecast: in the modeled profile the fan-in drains DURING the
+  ~198ms sidebar wait, so the gate is already released when the board's render
+  begins. The modeled `mountToFirstCard` budgets re-anchor to 400 / 600 / 750
+  (each ≈ 3× measured, tightened from the serial-era 1500 / 4000 / 6000 that
+  priced a wall the bounded parallel scan retired). All six cells green with
+  zero violations at the final head (`load-bench-2026-11-06T15-11-57-750Z.json`,
+  the `--assert` battery).
+- The after-report's timer list carries one `setTimeout`(+400ms) entry from the
+  gate's ceiling; that is its SCHEDULE record (the probe logs schedules, never
+  cancels) — the commit census shows no commit at the ceiling's due time, the
+  release having canceled it pre-paint.
