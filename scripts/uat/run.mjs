@@ -4030,8 +4030,17 @@ async function runSuite(file, { port, browser, cell = null }) {
   }
   const hostToken =
     windows === 2 ? `${suiteName}-${Math.random().toString(36).slice(2, 10)}` : null;
-  const mainPage = await browser.newPage();
-  const peerPage = windows === 2 ? await browser.newPage() : null;
+  // A per-suite browser context: every suite's storage dies with its pages.
+  // The battery runs many suites against one origin (localhost:port), and
+  // the default context shares localStorage across all of them, so a
+  // persisted preference written by an early suite (the lane direction was
+  // the first one that reorders a lane) reordered every later suite's
+  // assertions. Two-window suites keep sharing storage WITHIN the suite:
+  // both pages come from this one context, so the storage event between
+  // them still fires.
+  const context = await browser.createBrowserContext();
+  const mainPage = await context.newPage();
+  const peerPage = windows === 2 ? await context.newPage() : null;
   // The page each step drives. `page` is reassigned per step (a step may name
   // the second window), so every gesture helper below follows it.
   let page = mainPage;
@@ -4622,6 +4631,7 @@ async function runSuite(file, { port, browser, cell = null }) {
   } finally {
     await page.close();
     if (peerPage !== null && peerPage !== page) await peerPage.close();
+    await context.close();
     child.kill();
   }
   return report;
