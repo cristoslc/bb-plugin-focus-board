@@ -20,6 +20,10 @@ import { cn } from "@/lib/utils";
  * whether any bullet under it is amber, and the entry header follows the
  * whole group. Without the set (released deltas render whole; no seen
  * ground truth exists), the group keeps the wholesale tint.
+ *
+ * A bullet whose body ends with the bracket contributor note ("[Fix and
+ * tests by @handle]") renders that note as a muted attribution line under
+ * its lead — secondary to the lead and never tinted amber on its own.
  */
 export function WhatsNewFeed({ entries }: { entries: readonly WhatsNewEntry[] }) {
   return (
@@ -86,6 +90,14 @@ export function WhatsNewFeed({ entries }: { entries: readonly WhatsNewEntry[] })
                       return (
                       <li className={itemTone(isUnseen)} key={item.lead}>
                         {item.lead}
+                        {item.contributor && (
+                          <span
+                            className="mt-0.5 block text-[10px] text-muted-foreground"
+                            data-whats-new-contributor
+                          >
+                            {item.contributor}
+                          </span>
+                        )}
                         {item.children && item.children.length > 0 && (
                           <ul
                             className={cn(

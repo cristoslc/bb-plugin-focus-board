@@ -91,7 +91,7 @@ A pull request that changes what a user sees adds bullets to the `[Unreleased]` 
 - Only user-facing behavior earns a bullet. Tests, refactors, docs, and build plumbing do not.
 - File each bullet under the matching subsection: **Added** for new capability, **Changed** for a behavior change, **Fixed** for a bug fix.
 - Write it Slack-punchy: a bold lead that names the feature surface and reads on its own, plus at most two short sentences. Fold same-behavior bullets into one with sub-bullets.
-- Credit adopted external contributions with the author's handle in the bullet's body, in the form `The <fix> and its tests come from @<handle>`: credit lives in the body, never the bold lead, and it goes in at the bullet's first writing, never by re-opening a published `[X.Y.Z]` section.
+- Credit adopted external contributions with a bracket note at the end of the bullet's body, in the form `[Fix and tests by @<handle>]`: the square-bracket group is the bullet body's last element, never in the bold lead, and the What's-new feed parses it and shows the note as an attribution line under the bullet's entry. It goes in at the bullet's first writing, never by re-opening a published `[X.Y.Z]` section.
 - Never edit a published `[X.Y.Z]` section. If a rebase leaves your bullets inside one, move them back into `[Unreleased]`.
 
 The full rules, including the What's-new modal grouping, live in [.agents/agents-md-detail/release.md](.agents/agents-md-detail/release.md). Release pages carry a demo gif under every demonstrable bullet; that rule and its capture tooling are in [docs/releases/demo-gif-convention.md](docs/releases/demo-gif-convention.md).

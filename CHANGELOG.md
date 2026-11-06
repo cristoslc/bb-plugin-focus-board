@@ -21,6 +21,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **The load-time dissolve no longer plays: the board's mounting echo lands its cards in place.** The relocations a load's own data makes during the first instants after paint (the done projection, feature-group boxes coalescing) used to arm card transports whose teardown kept the board repainting a few hundred ms after it looked loaded. The lanes land exactly where they would have; every later gesture or realtime move still plays.
 
+#### The What's-new modal
+
+- **The What's-new feed credits contributors.** A bullet whose body ends with a bracket note, like `[Fix and tests by @handle]`, shows that note as a muted attribution line under its entry; bullets without a note render exactly as before.
+
 ### Fixed
 
 ## [1.7.7] - 2026-11-05
@@ -48,7 +52,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 #### Cards and chips
 
-- **Threads running background work stay in Working.** A thread whose turn ended while a background agent, background command, or workflow run is still going used to show as Idle. It now stays in Working until that work lands, and the idle sweep leaves it alone. The fix and its tests come from @lukehowlett97.
+- **Threads running background work stay in Working.** A thread whose turn ended while a background agent, background command, or workflow run is still going used to show as Idle. It now stays in Working until that work lands, and the idle sweep leaves it alone. [Fix and tests by @lukehowlett97]
 
 #### The thread pane
 

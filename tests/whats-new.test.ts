@@ -21,8 +21,9 @@ import {
 import {
   parseUnreleasedChangelog,
 } from "../lib/unreleased-changelog";
-import { leadFromBullet, parsePublishedChangelog } from "../lib/changelog-markdown";
+import { leadFromBullet, parsePublishedChangelog, contributorNoteFromBullet } from "../lib/changelog-markdown";
 import { UNRELEASED_ITEMS } from "../lib/unreleased-changelog.generated";
+import { renderUnreleasedModule } from "../lib/unreleased-changelog";
 
 const packageVersion = (): string =>
   (JSON.parse(
@@ -372,6 +373,62 @@ describe("WHATS_NEW derives from CHANGELOG.md's published sections", () => {
     expect(leadFromBullet("**Renamed to Focus Board** (#8): package renamed.")).toBe("Renamed to Focus Board: package renamed.");
     // No bold and unbroken sentence: first sentence.
     expect(leadFromBullet("One plain sentence. Then elaboration.")).toBe("One plain sentence.");
+  });
+
+  it("gives an item the contributor behind a trailing bracket group", () => {
+    // The committed 1.7.7 bullet ends with the operator-ruled bracket form;
+    // the builder must surface the note, not strip it.
+    const entry = WHATS_NEW.find((candidate) => candidate.version === "1.7.7");
+    const item = entry?.items.find((candidate) =>
+      candidate.lead.startsWith("Threads running background work stay in Working"),
+    );
+    expect(item?.contributor).toBe("Fix and tests by @lukehowlett97");
+  });
+});
+
+describe("contributorNoteFromBullet", () => {
+  it("extracts a trailing bracket group as the note", () => {
+    expect(
+      contributorNoteFromBullet("**Working stays.** The idle sweep leaves it alone. [Fix and tests by @lukehowlett97]"),
+    ).toBe("Fix and tests by @lukehowlett97");
+  });
+
+  it("a bracket not at the bullet's end is plain text, never a note", () => {
+    expect(contributorNoteFromBullet("**Stays.** The [probe] pairs the model.")).toBeNull();
+    expect(contributorNoteFromBullet("**Links.** See [the docs](https://example.com).")).toBeNull();
+  });
+
+  it("a bullet without a bracket has no note", () => {
+    expect(contributorNoteFromBullet("**Plain.** Ends here.")).toBeNull();
+  });
+
+  it("the lead never carries the note: a trailing bracket does not reach the modal lead", () => {
+    // The bracket note is end-of-body only, so the lead's first-sentence
+    // scrape stays exactly what it was.
+    expect(leadFromBullet("**Working stays.** The idle sweep leaves it alone. [Fix and tests by @dev]")).toBe(
+      "Working stays.",
+    );
+  });
+
+  it("the unreleased renderer carries a bracket note through unchanged", () => {
+    // generate-unreleased.mjs writes whole bullets; the note must survive
+    // the round-trip without stripping or re-wrapping.
+    const rendered = renderUnreleasedModule(
+      "## [Unreleased]\n\n### Fixed\n\n- **X.** Body sentence. [Fix by @dev]\n",
+    );
+    expect(rendered).toContain("[Fix by @dev]");
+  });
+
+  it("the published parser keeps a bullet's trailing note intact in its text", () => {
+    const markdown = [
+      "## [1.0.0] - 2026-01-01",
+      "",
+      "### Fixed",
+      "",
+      "- **Old.** Released work stays out. [Fix by @dev]",
+    ].join("\n");
+    const bullet = parsePublishedChangelog(markdown)[0].subsections[0].bullets[0];
+    expect(bullet.text.endsWith("[Fix by @dev]")).toBe(true);
   });
 });
 
