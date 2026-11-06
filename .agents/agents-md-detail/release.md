@@ -158,7 +158,8 @@ merging into `dev`, releasing, changelog writing, or tagging.
   list, name verbatim: **Card animations**, **Settings**, **Groups and
   family boxes**, **Cards and chips**, **Board layout**, **Touch input**,
   **Search and filters**, **The New thread composer**, **The thread pane**,
-  **Magic rename**, **Context menus**. The list grows
+  **Magic rename**, **The board's lanes**,
+  **Context menus**. The list grows
   only by deliberate spoke edit, and only when a feature family no standing
   name covers will carry multiple bullets; until then a bullet takes its
   nearest standing surface.
