@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-05T17:48:54.144Z by `npm run uat`._
+_Generated 2026-11-06T15:50:32.446Z by `npm run uat`._
 
 ## views-tablet
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_8anu7u4dxz-1/bb-plugin-focus-board/tests/manual/uat-views-tablet.yaml` · theme dark
+Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_4qh62ybyi5-1/bb-plugin-focus-board/tests/manual/uat-views-tablet.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
