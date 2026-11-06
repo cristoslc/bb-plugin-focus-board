@@ -25,7 +25,7 @@ import { UNRELEASED_ITEMS } from "./unreleased-changelog.generated";
 import { DERIVED_WHATS_NEW } from "./whats-new.generated";
 import { contributorNoteFromBullet, leadFromBullet } from "./changelog-markdown";
 
-export const APP_VERSION = "1.7.8";
+export const APP_VERSION = "1.7.9-dev";
 
 export const LAST_SEEN_VERSION_KEY = "focus-board:lastSeenVersion";
 export const LAST_SEEN_UNRELEASED_KEY = "focus-board:lastSeenUnreleased";
