@@ -42,6 +42,15 @@ steps:
       - whats_new: { icon: true, unseen: false, modal: true, tab: "What's new" }
       - text_visible: "Recent changes since you last looked."
 
+  - id: bracket-credit-surfaces-as-attribution
+    title: A bullet's trailing bracket note reads as the contributor attribution
+    # The 1.7.7 background-work bullet ends its body with the ruled
+    # bracket form, and the feed parses that group into the attribution
+    # line under the bullet's lead. The upgrade delta seeded in step 1
+    # reaches back past 1.7.7, so the published entry is on screen here.
+    assert:
+      - text_visible: "Fix and tests by @lukehowlett97"
+
   - id: opening-marks-seen
     title: Having opened the feed once, the pulse clears — the icon is now a gear
     press_escape: true

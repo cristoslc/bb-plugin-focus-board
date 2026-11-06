@@ -14,5 +14,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "text": "**The load-time dissolve no longer plays: the board's mounting echo lands its cards in place.** The relocations a load's own data makes during the first instants after paint (the done projection, feature-group boxes coalescing) used to arm card transports whose teardown kept the board repainting a few hundred ms after it looked loaded. The lanes land exactly where they would have; every later gesture or realtime move still plays.",
     "children": [],
     "group": "Cards and chips"
+  },
+  {
+    "text": "**The What's-new feed credits contributors.** A bullet whose body ends with a bracket note, like `[Fix and tests by @handle]`, shows that note as a muted attribution line under its entry; bullets without a note render exactly as before.",
+    "children": [],
+    "group": "The What's-new modal"
   }
 ];

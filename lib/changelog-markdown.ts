@@ -12,8 +12,10 @@
  * reads the bullet's opening sentence, which by house style begins with the
  * bolded lead span (no markup change, and no fake H4s inside list items to
  * break the Keep-a-Changelog format). `leadFromBullet` is the single seam
- * between the full record and the condensed modal; scripts/generate-
- * whats-new.mjs feeds every published bullet through it (sub-bullets become
+ * between the full record and the condensed modal's lead; the one other
+ * thing the modal reads from the full bullet is its trailing bracket
+ * contributor note (`contributorNoteFromBullet`). scripts/generate-
+ * whats-new.mjs feeds every published bullet through both (sub-bullets become
  * the item's children, condensed the same way), and dev's
  * unreleased group does the same, so the modal is sentence-length
  * everywhere.
@@ -84,6 +86,24 @@ export function leadFromBullet(bullet: string): string {
   item = item.replace(/\s*\(#[^)]*\)/g, "").replace(/\s+/g, " ").trim();
   if (item.length === 0) return "";
   return /[.!?]$/.test(item) ? item : `${item}.`;
+}
+
+/**
+ * The contributor note a bullet ends with, or null when it has none.
+ *
+ * House convention (dl-20261106T055527): a bullet crediting an adopted
+ * external contribution ends with a square-bracket group
+ * ("[Fix and tests by @handle]"). The bracket group must be the bullet's
+ * LAST element — a bracket anywhere earlier is plain text, not a note —
+ * and the returned note is the bracket's content without the brackets,
+ * so the What's-new modal can render it as an attribution line and the
+ * generated modules carry it through unchanged.
+ */
+export function contributorNoteFromBullet(bullet: string): string | null {
+  const match = /\[([^[\]]+)\]$/.exec(bullet.trimEnd());
+  if (match === null) return null;
+  const note = match[1].trim();
+  return note.length > 0 ? note : null;
 }
 
 function firstSentence(bullet: string): string {

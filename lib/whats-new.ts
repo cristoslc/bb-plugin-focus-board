@@ -23,7 +23,7 @@
 
 import { UNRELEASED_ITEMS } from "./unreleased-changelog.generated";
 import { DERIVED_WHATS_NEW } from "./whats-new.generated";
-import { leadFromBullet } from "./changelog-markdown";
+import { contributorNoteFromBullet, leadFromBullet } from "./changelog-markdown";
 
 export const APP_VERSION = "1.7.8-dev";
 
@@ -35,6 +35,12 @@ export interface WhatsNewItem {
   lead: string;
   /** The condensations of the bullet's sub-bullets, when it groups any. */
   children?: readonly string[];
+  /**
+   * The bullet's trailing bracket contributor note, when its body ends with
+   * one ("[Fix and tests by @handle]" renders as an attribution line under
+   * the lead, muted and secondary). Absent for bullets without a note.
+   */
+  contributor?: string;
   /** The `#### <surface>` heading the bullet sat under, when the changelog tagged one. */
   group?: string;
 }
@@ -277,6 +283,7 @@ function unreleasedWhatsNewItems(): readonly WhatsNewItem[] {
   return UNRELEASED_ITEMS.map((item) => ({
     lead: leadFromBullet(item.text),
     children: item.children.map(leadFromBullet).filter(Boolean),
+    contributor: contributorNoteFromBullet(item.text) ?? undefined,
     ...(item.group ? { group: item.group } : {}),
   }));
 }
