@@ -126,6 +126,14 @@ so far. The memo keeps it parked with its evidence; a child may claim it
 ONLY with a design that the attention-freeze and keep-in-view suites prove
 byte-identical.
 
+**UPDATE (2026-11-06, the operator's "make it so")**: the parked item
+OPENED under a different shape — the operator commissioned the two-tier
+paint hold (carrier #403): the board's first paint waits for the mount
+fan-in's readiness (rejected lists settle, hung lists hit a hard ceiling
+and paint as today), so the echo commit never happens and the board
+arrives once, settled. Child D owns it; the veto above still stands
+against progressive rendering and virtualization.
+
 ## What the suite guards meanwhile
 
 - Stage budgets (generous, recalibrated per merge) and the structural
