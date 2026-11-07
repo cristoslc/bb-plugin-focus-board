@@ -1,0 +1,176 @@
+{
+  "generatedAt": "2026-11-07T03:24:04.630Z",
+  "cycles": 5,
+  "settleMs": 300,
+  "cpuThrottle": 8,
+  "cells": [
+    {
+      "viewport": "phone",
+      "scale": 0,
+      "query": "?demo=1",
+      "loadMs": 1194,
+      "cardCount": 74,
+      "opens": {
+        "samples": 5,
+        "latencyMs": 125,
+        "wallMs": 505,
+        "commits": 5,
+        "longTaskCount": 1,
+        "longTaskMs": 106,
+        "longestTaskMs": 106,
+        "dropped": 1,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          167,
+          117,
+          117,
+          100,
+          83
+        ]
+      },
+      "closes": {
+        "samples": 5,
+        "latencyMs": 83,
+        "wallMs": 470,
+        "commits": 3,
+        "longTaskCount": 1,
+        "longTaskMs": 62,
+        "longestTaskMs": 62,
+        "dropped": 1,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          83,
+          83,
+          67,
+          67,
+          50
+        ]
+      },
+      "sheetShape": {
+        "placement": "fixed",
+        "pane": {
+          "x": 0,
+          "y": 0,
+          "w": 390,
+          "h": 844
+        },
+        "coversBoard": true,
+        "cardRendersInstrumented": true
+      },
+      "profileOpen": null,
+      "profileClose": null
+    },
+    {
+      "viewport": "phone",
+      "scale": 300,
+      "query": "?demo=1&scale=300",
+      "loadMs": 3091,
+      "cardCount": 474,
+      "opens": {
+        "samples": 5,
+        "latencyMs": 419,
+        "wallMs": 1132,
+        "commits": 5,
+        "longTaskCount": 5,
+        "longTaskMs": 796,
+        "longestTaskMs": 425,
+        "dropped": 4,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          550,
+          517,
+          500,
+          500,
+          500
+        ]
+      },
+      "closes": {
+        "samples": 5,
+        "latencyMs": 314,
+        "wallMs": 1093,
+        "commits": 3,
+        "longTaskCount": 5,
+        "longTaskMs": 733,
+        "longestTaskMs": 228,
+        "dropped": 3,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          467,
+          450,
+          433,
+          433,
+          417
+        ]
+      },
+      "sheetShape": {
+        "placement": "fixed",
+        "pane": {
+          "x": 0,
+          "y": 0,
+          "w": 390,
+          "h": 844
+        },
+        "coversBoard": true,
+        "cardRendersInstrumented": true
+      },
+      "profileOpen": null,
+      "profileClose": null
+    },
+    {
+      "viewport": "phone",
+      "scale": 500,
+      "query": "?demo=1&scale=500",
+      "loadMs": 4597,
+      "cardCount": 740,
+      "opens": {
+        "samples": 5,
+        "latencyMs": 465,
+        "wallMs": 1308,
+        "commits": 5,
+        "longTaskCount": 5,
+        "longTaskMs": 946,
+        "longestTaskMs": 469,
+        "dropped": 4,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          650,
+          567,
+          567,
+          567,
+          550
+        ]
+      },
+      "closes": {
+        "samples": 5,
+        "latencyMs": 350,
+        "wallMs": 1173,
+        "commits": 3,
+        "longTaskCount": 5,
+        "longTaskMs": 828,
+        "longestTaskMs": 264,
+        "dropped": 3,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          533,
+          500,
+          500,
+          483,
+          483
+        ]
+      },
+      "sheetShape": {
+        "placement": "fixed",
+        "pane": {
+          "x": 0,
+          "y": 0,
+          "w": 390,
+          "h": 844
+        },
+        "coversBoard": true,
+        "cardRendersInstrumented": true
+      },
+      "profileOpen": null,
+      "profileClose": null
+    }
+  ]
+}

@@ -1,0 +1,2637 @@
+{
+  "generatedAt": "2026-11-07T03:21:30.197Z",
+  "cycles": 5,
+  "settleMs": 300,
+  "cpuThrottle": 4,
+  "cells": [
+    {
+      "viewport": "phone",
+      "scale": 0,
+      "query": "?demo=1",
+      "loadMs": 546,
+      "cardCount": 74,
+      "opens": {
+        "samples": 5,
+        "latencyMs": 64,
+        "wallMs": 412,
+        "commits": 5,
+        "longTaskCount": 0,
+        "longTaskMs": 0,
+        "longestTaskMs": 0,
+        "dropped": 0,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          100,
+          67
+        ]
+      },
+      "closes": {
+        "samples": 5,
+        "latencyMs": 49,
+        "wallMs": 396,
+        "commits": 3,
+        "longTaskCount": 0,
+        "longTaskMs": 0,
+        "longestTaskMs": 0,
+        "dropped": 0,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          50
+        ]
+      },
+      "sheetShape": {
+        "placement": "fixed",
+        "pane": {
+          "x": 0,
+          "y": 0,
+          "w": 390,
+          "h": 844
+        },
+        "coversBoard": true,
+        "cardRendersInstrumented": true
+      },
+      "profileOpen": {
+        "totalSamples": 281,
+        "activeSamples": 140,
+        "top": [
+          {
+            "file": "",
+            "line": 0,
+            "fn": "getBoundingClientRect",
+            "selfSamples": 20,
+            "selfPctActive": 14.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3819,
+            "fn": "renderWithHooks",
+            "selfSamples": 9,
+            "selfPctActive": 6.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 2071,
+            "fn": "SyntheticBaseEvent",
+            "selfSamples": 4,
+            "selfPctActive": 2.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 19378,
+            "fn": "push",
+            "selfSamples": 4,
+            "selfPctActive": 2.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 42017,
+            "fn": "BoardPage",
+            "selfSamples": 4,
+            "selfPctActive": 2.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 35892,
+            "fn": "cardMenuActions",
+            "selfSamples": 4,
+            "selfPctActive": 2.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 339,
+            "fn": "exports.createElement",
+            "selfSamples": 4,
+            "selfPctActive": 2.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8809,
+            "fn": "(anonymous)",
+            "selfSamples": 3,
+            "selfPctActive": 2.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 28832,
+            "fn": "renderRun",
+            "selfSamples": 3,
+            "selfPctActive": 2.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 9054,
+            "fn": "setProp",
+            "selfSamples": 3,
+            "selfPctActive": 2.1
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "(garbage collector)",
+            "selfSamples": 3,
+            "selfPctActive": 2.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 7993,
+            "fn": "renderRootSync",
+            "selfSamples": 2,
+            "selfPctActive": 1.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 26854,
+            "fn": "Board",
+            "selfSamples": 2,
+            "selfPctActive": 1.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25358,
+            "fn": "flattenRuns",
+            "selfSamples": 2,
+            "selfPctActive": 1.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 15393,
+            "fn": "parseClassName",
+            "selfSamples": 2,
+            "selfPctActive": 1.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24432,
+            "fn": "sameCardProps",
+            "selfSamples": 2,
+            "selfPctActive": 1.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 20881,
+            "fn": "scan",
+            "selfSamples": 2,
+            "selfPctActive": 1.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 15246,
+            "fn": "getGroupRecursive",
+            "selfSamples": 2,
+            "selfPctActive": 1.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 9447,
+            "fn": "updateProperties",
+            "selfSamples": 2,
+            "selfPctActive": 1.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 35011,
+            "fn": "decorate",
+            "selfSamples": 2,
+            "selfPctActive": 1.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 42896,
+            "fn": "(anonymous)",
+            "selfSamples": 2,
+            "selfPctActive": 1.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 11056,
+            "fn": "findInstanceBlockingTarget",
+            "selfSamples": 1,
+            "selfPctActive": 0.7
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 9032,
+            "fn": "accumulateEnterLeaveListenersForEvent",
+            "selfSamples": 1,
+            "selfPctActive": 0.7
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 23966,
+            "fn": "ThreadCardImpl.card.onMouseEnter",
+            "selfSamples": 1,
+            "selfPctActive": 0.7
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 42588,
+            "fn": "(anonymous)",
+            "selfSamples": 1,
+            "selfPctActive": 0.7
+          }
+        ],
+        "files": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "selfSamples": 113,
+            "selfPctActive": 80.7
+          },
+          {
+            "file": "",
+            "selfSamples": 27,
+            "selfPctActive": 19.3
+          }
+        ]
+      },
+      "profileClose": {
+        "totalSamples": 188,
+        "activeSamples": 80,
+        "top": [
+          {
+            "file": "",
+            "line": 0,
+            "fn": "(garbage collector)",
+            "selfSamples": 5,
+            "selfPctActive": 6.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 1997,
+            "fn": "batchedUpdates$1",
+            "selfSamples": 4,
+            "selfPctActive": 5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8809,
+            "fn": "(anonymous)",
+            "selfSamples": 4,
+            "selfPctActive": 5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 7993,
+            "fn": "renderRootSync",
+            "selfSamples": 4,
+            "selfPctActive": 5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 42017,
+            "fn": "BoardPage",
+            "selfSamples": 4,
+            "selfPctActive": 5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 21519,
+            "fn": "sorted",
+            "selfSamples": 4,
+            "selfPctActive": 5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3371,
+            "fn": "updateSlot",
+            "selfSamples": 3,
+            "selfPctActive": 3.8
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "removeChild",
+            "selfSamples": 3,
+            "selfPctActive": 3.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 9054,
+            "fn": "setProp",
+            "selfSamples": 3,
+            "selfPctActive": 3.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25988,
+            "fn": "nestUnderParents",
+            "selfSamples": 2,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 28192,
+            "fn": "threadLi",
+            "selfSamples": 2,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 339,
+            "fn": "exports.createElement",
+            "selfSamples": 2,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24376,
+            "fn": "(anonymous)",
+            "selfSamples": 2,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 6187,
+            "fn": "commitHookEffectListUnmount",
+            "selfSamples": 2,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 42651,
+            "fn": "(anonymous)",
+            "selfSamples": 1,
+            "selfPctActive": 1.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 11174,
+            "fn": "clearIfContinuousEvent",
+            "selfSamples": 1,
+            "selfPctActive": 1.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8703,
+            "fn": "processDispatchQueue",
+            "selfSamples": 1,
+            "selfPctActive": 1.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 19378,
+            "fn": "push",
+            "selfSamples": 1,
+            "selfPctActive": 1.3
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "pushState",
+            "selfSamples": 1,
+            "selfPctActive": 1.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 1145,
+            "fn": "push",
+            "selfSamples": 1,
+            "selfPctActive": 1.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 1154,
+            "fn": "pushHostContainer",
+            "selfSamples": 1,
+            "selfPctActive": 1.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 21239,
+            "fn": "threadState",
+            "selfSamples": 1,
+            "selfPctActive": 1.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25931,
+            "fn": "(anonymous)",
+            "selfSamples": 1,
+            "selfPctActive": 1.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 26107,
+            "fn": "(anonymous)",
+            "selfSamples": 1,
+            "selfPctActive": 1.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 26132,
+            "fn": "sortNestedByColumnRank",
+            "selfSamples": 1,
+            "selfPctActive": 1.3
+          }
+        ],
+        "files": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "selfSamples": 69,
+            "selfPctActive": 86.3
+          },
+          {
+            "file": "",
+            "selfSamples": 11,
+            "selfPctActive": 13.8
+          }
+        ]
+      }
+    },
+    {
+      "viewport": "phone",
+      "scale": 300,
+      "query": "?demo=1&scale=300",
+      "loadMs": 1385,
+      "cardCount": 474,
+      "opens": {
+        "samples": 5,
+        "latencyMs": 182,
+        "wallMs": 633,
+        "commits": 5,
+        "longTaskCount": 2,
+        "longTaskMs": 226,
+        "longestTaskMs": 174,
+        "dropped": 2,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          267,
+          217,
+          200,
+          200,
+          200
+        ]
+      },
+      "closes": {
+        "samples": 5,
+        "latencyMs": 142,
+        "wallMs": 627,
+        "commits": 3,
+        "longTaskCount": 4,
+        "longTaskMs": 271,
+        "longestTaskMs": 137,
+        "dropped": 2,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          200,
+          183,
+          183,
+          183,
+          167
+        ]
+      },
+      "sheetShape": {
+        "placement": "fixed",
+        "pane": {
+          "x": 0,
+          "y": 0,
+          "w": 390,
+          "h": 844
+        },
+        "coversBoard": true,
+        "cardRendersInstrumented": true
+      },
+      "profileOpen": {
+        "totalSamples": 781,
+        "activeSamples": 269,
+        "top": [
+          {
+            "file": "",
+            "line": 0,
+            "fn": "getBoundingClientRect",
+            "selfSamples": 26,
+            "selfPctActive": 9.7
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 339,
+            "fn": "exports.createElement",
+            "selfSamples": 17,
+            "selfPctActive": 6.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8809,
+            "fn": "(anonymous)",
+            "selfSamples": 12,
+            "selfPctActive": 4.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24551,
+            "fn": "ThreadCard",
+            "selfSamples": 10,
+            "selfPctActive": 3.7
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 19378,
+            "fn": "push",
+            "selfSamples": 9,
+            "selfPctActive": 3.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3819,
+            "fn": "renderWithHooks",
+            "selfSamples": 9,
+            "selfPctActive": 3.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 28192,
+            "fn": "threadLi",
+            "selfSamples": 8,
+            "selfPctActive": 3
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "querySelectorAll",
+            "selfSamples": 8,
+            "selfPctActive": 3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24432,
+            "fn": "sameCardProps",
+            "selfSamples": 7,
+            "selfPctActive": 2.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 9447,
+            "fn": "updateProperties",
+            "selfSamples": 7,
+            "selfPctActive": 2.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 43706,
+            "fn": "(anonymous)",
+            "selfSamples": 6,
+            "selfPctActive": 2.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 26983,
+            "fn": "(anonymous)",
+            "selfSamples": 6,
+            "selfPctActive": 2.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 26854,
+            "fn": "Board",
+            "selfSamples": 5,
+            "selfPctActive": 1.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 35892,
+            "fn": "cardMenuActions",
+            "selfSamples": 4,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 43824,
+            "fn": "(anonymous)",
+            "selfSamples": 4,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 1960,
+            "fn": "getEventTarget",
+            "selfSamples": 3,
+            "selfPctActive": 1.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5640,
+            "fn": "beginWork",
+            "selfSamples": 3,
+            "selfPctActive": 1.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 34778,
+            "fn": "ThreadPane",
+            "selfSamples": 3,
+            "selfPctActive": 1.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5058,
+            "fn": "updateMemoComponent",
+            "selfSamples": 3,
+            "selfPctActive": 1.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24372,
+            "fn": "sameMenuActions",
+            "selfSamples": 3,
+            "selfPctActive": 1.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 9054,
+            "fn": "setProp",
+            "selfSamples": 3,
+            "selfPctActive": 1.1
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "(garbage collector)",
+            "selfSamples": 3,
+            "selfPctActive": 1.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 11013,
+            "fn": "dispatchEvent",
+            "selfSamples": 2,
+            "selfPctActive": 0.7
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8783,
+            "fn": "dispatchEventForPluginEventSystem",
+            "selfSamples": 2,
+            "selfPctActive": 0.7
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 11056,
+            "fn": "findInstanceBlockingTarget",
+            "selfSamples": 2,
+            "selfPctActive": 0.7
+          }
+        ],
+        "files": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "selfSamples": 224,
+            "selfPctActive": 83.3
+          },
+          {
+            "file": "",
+            "selfSamples": 45,
+            "selfPctActive": 16.7
+          }
+        ]
+      },
+      "profileClose": {
+        "totalSamples": 819,
+        "activeSamples": 191,
+        "top": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 28192,
+            "fn": "threadLi",
+            "selfSamples": 15,
+            "selfPctActive": 7.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 339,
+            "fn": "exports.createElement",
+            "selfSamples": 15,
+            "selfPctActive": 7.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 2008,
+            "fn": "getListener",
+            "selfSamples": 10,
+            "selfPctActive": 5.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 43706,
+            "fn": "(anonymous)",
+            "selfSamples": 8,
+            "selfPctActive": 4.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25929,
+            "fn": "familyColumnOverrides",
+            "selfSamples": 6,
+            "selfPctActive": 3.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8809,
+            "fn": "(anonymous)",
+            "selfSamples": 5,
+            "selfPctActive": 2.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 20881,
+            "fn": "scan",
+            "selfSamples": 5,
+            "selfPctActive": 2.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 43824,
+            "fn": "(anonymous)",
+            "selfSamples": 4,
+            "selfPctActive": 2.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24551,
+            "fn": "ThreadCard",
+            "selfSamples": 4,
+            "selfPctActive": 2.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 2667,
+            "fn": "createWorkInProgress",
+            "selfSamples": 4,
+            "selfPctActive": 2.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 1997,
+            "fn": "batchedUpdates$1",
+            "selfSamples": 3,
+            "selfPctActive": 1.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 891,
+            "fn": "getNearestMountedFiber",
+            "selfSamples": 3,
+            "selfPctActive": 1.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 42017,
+            "fn": "BoardPage",
+            "selfSamples": 3,
+            "selfPctActive": 1.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 35892,
+            "fn": "cardMenuActions",
+            "selfSamples": 3,
+            "selfPctActive": 1.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24376,
+            "fn": "(anonymous)",
+            "selfSamples": 3,
+            "selfPctActive": 1.6
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "querySelectorAll",
+            "selfSamples": 3,
+            "selfPctActive": 1.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 1960,
+            "fn": "getEventTarget",
+            "selfSamples": 2,
+            "selfPctActive": 1
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "pushState",
+            "selfSamples": 2,
+            "selfPctActive": 1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5640,
+            "fn": "beginWork",
+            "selfSamples": 2,
+            "selfPctActive": 1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3819,
+            "fn": "renderWithHooks",
+            "selfSamples": 2,
+            "selfPctActive": 1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 4423,
+            "fn": "updateMemo",
+            "selfSamples": 2,
+            "selfPctActive": 1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3814,
+            "fn": "areHookInputsEqual",
+            "selfSamples": 2,
+            "selfPctActive": 1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25660,
+            "fn": "assembleBoard",
+            "selfSamples": 2,
+            "selfPctActive": 1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25720,
+            "fn": "buildFamilyIndex",
+            "selfSamples": 2,
+            "selfPctActive": 1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25988,
+            "fn": "nestUnderParents",
+            "selfSamples": 2,
+            "selfPctActive": 1
+          }
+        ],
+        "files": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "selfSamples": 180,
+            "selfPctActive": 94.2
+          },
+          {
+            "file": "",
+            "selfSamples": 11,
+            "selfPctActive": 5.8
+          }
+        ]
+      }
+    },
+    {
+      "viewport": "phone",
+      "scale": 500,
+      "query": "?demo=1&scale=500",
+      "loadMs": 2212,
+      "cardCount": 740,
+      "opens": {
+        "samples": 5,
+        "latencyMs": 228,
+        "wallMs": 720,
+        "commits": 5,
+        "longTaskCount": 5,
+        "longTaskMs": 443,
+        "longestTaskMs": 229,
+        "dropped": 6,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          333,
+          283,
+          267,
+          267,
+          267
+        ]
+      },
+      "closes": {
+        "samples": 5,
+        "latencyMs": 216,
+        "wallMs": 718,
+        "commits": 3,
+        "longTaskCount": 4,
+        "longTaskMs": 395,
+        "longestTaskMs": 199,
+        "dropped": 3,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          267,
+          267,
+          233,
+          233,
+          233
+        ]
+      },
+      "sheetShape": {
+        "placement": "fixed",
+        "pane": {
+          "x": 0,
+          "y": 0,
+          "w": 390,
+          "h": 844
+        },
+        "coversBoard": true,
+        "cardRendersInstrumented": true
+      },
+      "profileOpen": {
+        "totalSamples": 1098,
+        "activeSamples": 330,
+        "top": [
+          {
+            "file": "",
+            "line": 0,
+            "fn": "getBoundingClientRect",
+            "selfSamples": 19,
+            "selfPctActive": 5.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 339,
+            "fn": "exports.createElement",
+            "selfSamples": 18,
+            "selfPctActive": 5.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 28192,
+            "fn": "threadLi",
+            "selfSamples": 14,
+            "selfPctActive": 4.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 20881,
+            "fn": "scan",
+            "selfSamples": 13,
+            "selfPctActive": 3.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 6320,
+            "fn": "commitHostUpdate",
+            "selfSamples": 13,
+            "selfPctActive": 3.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8809,
+            "fn": "(anonymous)",
+            "selfSamples": 10,
+            "selfPctActive": 3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3819,
+            "fn": "renderWithHooks",
+            "selfSamples": 10,
+            "selfPctActive": 3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 43706,
+            "fn": "(anonymous)",
+            "selfSamples": 9,
+            "selfPctActive": 2.7
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "querySelectorAll",
+            "selfSamples": 8,
+            "selfPctActive": 2.4
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "(garbage collector)",
+            "selfSamples": 7,
+            "selfPctActive": 2.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24331,
+            "fn": "cardSetIds",
+            "selfSamples": 7,
+            "selfPctActive": 2.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 26854,
+            "fn": "Board",
+            "selfSamples": 6,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 891,
+            "fn": "getNearestMountedFiber",
+            "selfSamples": 6,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 19378,
+            "fn": "push",
+            "selfSamples": 5,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 35892,
+            "fn": "cardMenuActions",
+            "selfSamples": 5,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5058,
+            "fn": "updateMemoComponent",
+            "selfSamples": 5,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24406,
+            "fn": "cardRefsOf",
+            "selfSamples": 5,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5821,
+            "fn": "bubbleProperties",
+            "selfSamples": 5,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 42017,
+            "fn": "BoardPage",
+            "selfSamples": 4,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 26983,
+            "fn": "(anonymous)",
+            "selfSamples": 4,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 2008,
+            "fn": "getListener",
+            "selfSamples": 3,
+            "selfPctActive": 0.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25720,
+            "fn": "buildFamilyIndex",
+            "selfSamples": 3,
+            "selfPctActive": 0.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 26058,
+            "fn": "(anonymous)",
+            "selfSamples": 3,
+            "selfPctActive": 0.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24551,
+            "fn": "ThreadCard",
+            "selfSamples": 3,
+            "selfPctActive": 0.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 34778,
+            "fn": "ThreadPane",
+            "selfSamples": 3,
+            "selfPctActive": 0.9
+          }
+        ],
+        "files": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "selfSamples": 285,
+            "selfPctActive": 86.4
+          },
+          {
+            "file": "",
+            "selfSamples": 45,
+            "selfPctActive": 13.6
+          }
+        ]
+      },
+      "profileClose": {
+        "totalSamples": 856,
+        "activeSamples": 247,
+        "top": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 339,
+            "fn": "exports.createElement",
+            "selfSamples": 17,
+            "selfPctActive": 6.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 28192,
+            "fn": "threadLi",
+            "selfSamples": 16,
+            "selfPctActive": 6.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8809,
+            "fn": "(anonymous)",
+            "selfSamples": 12,
+            "selfPctActive": 4.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 20881,
+            "fn": "scan",
+            "selfSamples": 12,
+            "selfPctActive": 4.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 43706,
+            "fn": "(anonymous)",
+            "selfSamples": 8,
+            "selfPctActive": 3.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24551,
+            "fn": "ThreadCard",
+            "selfSamples": 7,
+            "selfPctActive": 2.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 35892,
+            "fn": "cardMenuActions",
+            "selfSamples": 6,
+            "selfPctActive": 2.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3457,
+            "fn": "reconcileChildFibersImpl",
+            "selfSamples": 6,
+            "selfPctActive": 2.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5058,
+            "fn": "updateMemoComponent",
+            "selfSamples": 6,
+            "selfPctActive": 2.4
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "(garbage collector)",
+            "selfSamples": 6,
+            "selfPctActive": 2.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25720,
+            "fn": "buildFamilyIndex",
+            "selfSamples": 5,
+            "selfPctActive": 2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 6320,
+            "fn": "commitHostUpdate",
+            "selfSamples": 5,
+            "selfPctActive": 2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 21519,
+            "fn": "sorted",
+            "selfSamples": 4,
+            "selfPctActive": 1.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24432,
+            "fn": "sameCardProps",
+            "selfSamples": 4,
+            "selfPctActive": 1.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24376,
+            "fn": "(anonymous)",
+            "selfSamples": 4,
+            "selfPctActive": 1.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 9447,
+            "fn": "updateProperties",
+            "selfSamples": 4,
+            "selfPctActive": 1.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 26343,
+            "fn": "laneSignature",
+            "selfSamples": 4,
+            "selfPctActive": 1.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 2008,
+            "fn": "getListener",
+            "selfSamples": 4,
+            "selfPctActive": 1.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 891,
+            "fn": "getNearestMountedFiber",
+            "selfSamples": 4,
+            "selfPctActive": 1.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25660,
+            "fn": "assembleBoard",
+            "selfSamples": 3,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 35898,
+            "fn": "(anonymous)",
+            "selfSamples": 3,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "URL",
+            "selfSamples": 3,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8189,
+            "fn": "completeUnitOfWork",
+            "selfSamples": 3,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 7006,
+            "fn": "commitMutationEffectsOnFiber",
+            "selfSamples": 3,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "pushState",
+            "selfSamples": 3,
+            "selfPctActive": 1.2
+          }
+        ],
+        "files": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "selfSamples": 228,
+            "selfPctActive": 92.3
+          },
+          {
+            "file": "",
+            "selfSamples": 19,
+            "selfPctActive": 7.7
+          }
+        ]
+      }
+    },
+    {
+      "viewport": "desktop",
+      "scale": 0,
+      "query": "?demo=1",
+      "loadMs": 488,
+      "cardCount": 74,
+      "opens": {
+        "samples": 5,
+        "latencyMs": 74,
+        "wallMs": 429,
+        "commits": 6,
+        "longTaskCount": 1,
+        "longTaskMs": 51,
+        "longestTaskMs": 51,
+        "dropped": 1,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          200,
+          100,
+          67,
+          50,
+          50
+        ]
+      },
+      "closes": {
+        "samples": 5,
+        "latencyMs": 60,
+        "wallMs": 420,
+        "commits": 4,
+        "longTaskCount": 0,
+        "longTaskMs": 0,
+        "longestTaskMs": 0,
+        "dropped": 0,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          50
+        ]
+      },
+      "sheetShape": {
+        "placement": "relative",
+        "pane": {
+          "x": 960,
+          "y": 0,
+          "w": 480,
+          "h": 900
+        },
+        "coversBoard": false,
+        "cardRendersInstrumented": true
+      },
+      "profileOpen": {
+        "totalSamples": 301,
+        "activeSamples": 168,
+        "top": [
+          {
+            "file": "",
+            "line": 0,
+            "fn": "getBoundingClientRect",
+            "selfSamples": 35,
+            "selfPctActive": 20.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3819,
+            "fn": "renderWithHooks",
+            "selfSamples": 13,
+            "selfPctActive": 7.7
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "(garbage collector)",
+            "selfSamples": 5,
+            "selfPctActive": 3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 19378,
+            "fn": "push",
+            "selfSamples": 3,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 42017,
+            "fn": "BoardPage",
+            "selfSamples": 3,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3457,
+            "fn": "reconcileChildFibersImpl",
+            "selfSamples": 3,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 20881,
+            "fn": "scan",
+            "selfSamples": 3,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 6320,
+            "fn": "commitHostUpdate",
+            "selfSamples": 3,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 6187,
+            "fn": "commitHookEffectListUnmount",
+            "selfSamples": 3,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "querySelectorAll",
+            "selfSamples": 3,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 42588,
+            "fn": "(anonymous)",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8809,
+            "fn": "(anonymous)",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 7993,
+            "fn": "renderRootSync",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5640,
+            "fn": "beginWork",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25947,
+            "fn": "bestFamilyDriver",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 30126,
+            "fn": "BoardToolbar",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 26854,
+            "fn": "Board",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25190,
+            "fn": "columnRunsOf",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 28192,
+            "fn": "threadLi",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 18658,
+            "fn": "cn",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24551,
+            "fn": "ThreadCard",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24432,
+            "fn": "sameCardProps",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 20943,
+            "fn": "parseGithubItemUrl",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 30660,
+            "fn": "(anonymous)",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 9054,
+            "fn": "setProp",
+            "selfSamples": 2,
+            "selfPctActive": 1.2
+          }
+        ],
+        "files": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "selfSamples": 121,
+            "selfPctActive": 72
+          },
+          {
+            "file": "",
+            "selfSamples": 47,
+            "selfPctActive": 28
+          }
+        ]
+      },
+      "profileClose": {
+        "totalSamples": 198,
+        "activeSamples": 81,
+        "top": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 42017,
+            "fn": "BoardPage",
+            "selfSamples": 4,
+            "selfPctActive": 4.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8809,
+            "fn": "(anonymous)",
+            "selfSamples": 3,
+            "selfPctActive": 3.7
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3819,
+            "fn": "renderWithHooks",
+            "selfSamples": 3,
+            "selfPctActive": 3.7
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 339,
+            "fn": "exports.createElement",
+            "selfSamples": 3,
+            "selfPctActive": 3.7
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 43706,
+            "fn": "(anonymous)",
+            "selfSamples": 3,
+            "selfPctActive": 3.7
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24432,
+            "fn": "sameCardProps",
+            "selfSamples": 3,
+            "selfPctActive": 3.7
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "removeChild",
+            "selfSamples": 3,
+            "selfPctActive": 3.7
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 7993,
+            "fn": "renderRootSync",
+            "selfSamples": 2,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25720,
+            "fn": "buildFamilyIndex",
+            "selfSamples": 2,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 21623,
+            "fn": "buildColumns",
+            "selfSamples": 2,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 21239,
+            "fn": "threadState",
+            "selfSamples": 2,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 12982,
+            "fn": "orderForColumn",
+            "selfSamples": 2,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3402,
+            "fn": "reconcileChildrenArray",
+            "selfSamples": 2,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 6320,
+            "fn": "commitHostUpdate",
+            "selfSamples": 2,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 9447,
+            "fn": "updateProperties",
+            "selfSamples": 2,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "(garbage collector)",
+            "selfSamples": 2,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 1997,
+            "fn": "batchedUpdates$1",
+            "selfSamples": 1,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 2071,
+            "fn": "SyntheticBaseEvent",
+            "selfSamples": 1,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8703,
+            "fn": "processDispatchQueue",
+            "selfSamples": 1,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 23967,
+            "fn": "ThreadCardImpl.card.onMouseOut",
+            "selfSamples": 1,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 19378,
+            "fn": "push",
+            "selfSamples": 1,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "pushState",
+            "selfSamples": 1,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3642,
+            "fn": "processUpdateQueue",
+            "selfSamples": 1,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5640,
+            "fn": "beginWork",
+            "selfSamples": 1,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 4423,
+            "fn": "updateMemo",
+            "selfSamples": 1,
+            "selfPctActive": 1.2
+          }
+        ],
+        "files": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "selfSamples": 72,
+            "selfPctActive": 88.9
+          },
+          {
+            "file": "",
+            "selfSamples": 9,
+            "selfPctActive": 11.1
+          }
+        ]
+      }
+    },
+    {
+      "viewport": "desktop",
+      "scale": 300,
+      "query": "?demo=1&scale=300",
+      "loadMs": 1477,
+      "cardCount": 474,
+      "opens": {
+        "samples": 5,
+        "latencyMs": 212,
+        "wallMs": 689,
+        "commits": 6,
+        "longTaskCount": 1,
+        "longTaskMs": 211,
+        "longestTaskMs": 207,
+        "dropped": 1,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          283,
+          233,
+          217,
+          217,
+          217
+        ]
+      },
+      "closes": {
+        "samples": 5,
+        "latencyMs": 148,
+        "wallMs": 657,
+        "commits": 4,
+        "longTaskCount": 2,
+        "longTaskMs": 203,
+        "longestTaskMs": 108,
+        "dropped": 3,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          200,
+          167,
+          167,
+          150,
+          150
+        ]
+      },
+      "sheetShape": {
+        "placement": "relative",
+        "pane": {
+          "x": 960,
+          "y": 0,
+          "w": 480,
+          "h": 900
+        },
+        "coversBoard": false,
+        "cardRendersInstrumented": true
+      },
+      "profileOpen": {
+        "totalSamples": 813,
+        "activeSamples": 341,
+        "top": [
+          {
+            "file": "",
+            "line": 0,
+            "fn": "getBoundingClientRect",
+            "selfSamples": 106,
+            "selfPctActive": 31.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 339,
+            "fn": "exports.createElement",
+            "selfSamples": 15,
+            "selfPctActive": 4.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 20869,
+            "fn": "findTicketRefs",
+            "selfSamples": 11,
+            "selfPctActive": 3.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 28192,
+            "fn": "threadLi",
+            "selfSamples": 8,
+            "selfPctActive": 2.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 43706,
+            "fn": "(anonymous)",
+            "selfSamples": 8,
+            "selfPctActive": 2.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24551,
+            "fn": "ThreadCard",
+            "selfSamples": 8,
+            "selfPctActive": 2.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 891,
+            "fn": "getNearestMountedFiber",
+            "selfSamples": 7,
+            "selfPctActive": 2.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8809,
+            "fn": "(anonymous)",
+            "selfSamples": 6,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3819,
+            "fn": "renderWithHooks",
+            "selfSamples": 6,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24372,
+            "fn": "sameMenuActions",
+            "selfSamples": 6,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "querySelectorAll",
+            "selfSamples": 5,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 19378,
+            "fn": "push",
+            "selfSamples": 4,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 42017,
+            "fn": "BoardPage",
+            "selfSamples": 4,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 35892,
+            "fn": "cardMenuActions",
+            "selfSamples": 4,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5058,
+            "fn": "updateMemoComponent",
+            "selfSamples": 4,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 9447,
+            "fn": "updateProperties",
+            "selfSamples": 4,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 26983,
+            "fn": "(anonymous)",
+            "selfSamples": 4,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8703,
+            "fn": "processDispatchQueue",
+            "selfSamples": 3,
+            "selfPctActive": 0.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 1997,
+            "fn": "batchedUpdates$1",
+            "selfSamples": 3,
+            "selfPctActive": 0.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5039,
+            "fn": "reconcileChildren",
+            "selfSamples": 3,
+            "selfPctActive": 0.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25660,
+            "fn": "assembleBoard",
+            "selfSamples": 3,
+            "selfPctActive": 0.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3402,
+            "fn": "reconcileChildrenArray",
+            "selfSamples": 3,
+            "selfPctActive": 0.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 13837,
+            "fn": "(anonymous)",
+            "selfSamples": 3,
+            "selfPctActive": 0.9
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "URL",
+            "selfSamples": 3,
+            "selfPctActive": 0.9
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 35011,
+            "fn": "decorate",
+            "selfSamples": 3,
+            "selfPctActive": 0.9
+          }
+        ],
+        "files": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "selfSamples": 223,
+            "selfPctActive": 65.4
+          },
+          {
+            "file": "",
+            "selfSamples": 118,
+            "selfPctActive": 34.6
+          }
+        ]
+      },
+      "profileClose": {
+        "totalSamples": 545,
+        "activeSamples": 198,
+        "top": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 28192,
+            "fn": "threadLi",
+            "selfSamples": 13,
+            "selfPctActive": 6.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 339,
+            "fn": "exports.createElement",
+            "selfSamples": 11,
+            "selfPctActive": 5.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8809,
+            "fn": "(anonymous)",
+            "selfSamples": 6,
+            "selfPctActive": 3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25720,
+            "fn": "buildFamilyIndex",
+            "selfSamples": 6,
+            "selfPctActive": 3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3457,
+            "fn": "reconcileChildFibersImpl",
+            "selfSamples": 5,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5058,
+            "fn": "updateMemoComponent",
+            "selfSamples": 5,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 42017,
+            "fn": "BoardPage",
+            "selfSamples": 4,
+            "selfPctActive": 2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 21623,
+            "fn": "buildColumns",
+            "selfSamples": 4,
+            "selfPctActive": 2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24551,
+            "fn": "ThreadCard",
+            "selfSamples": 4,
+            "selfPctActive": 2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24432,
+            "fn": "sameCardProps",
+            "selfSamples": 4,
+            "selfPctActive": 2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 20881,
+            "fn": "scan",
+            "selfSamples": 4,
+            "selfPctActive": 2
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "removeChild",
+            "selfSamples": 4,
+            "selfPctActive": 2
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "setAttribute",
+            "selfSamples": 4,
+            "selfPctActive": 2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 6320,
+            "fn": "commitHostUpdate",
+            "selfSamples": 4,
+            "selfPctActive": 2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 1960,
+            "fn": "getEventTarget",
+            "selfSamples": 3,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 891,
+            "fn": "getNearestMountedFiber",
+            "selfSamples": 3,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 431,
+            "fn": "exports.useSyncExternalStore",
+            "selfSamples": 3,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 13,
+            "fn": "(anonymous)",
+            "selfSamples": 3,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 43706,
+            "fn": "(anonymous)",
+            "selfSamples": 3,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 43824,
+            "fn": "(anonymous)",
+            "selfSamples": 3,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 35892,
+            "fn": "cardMenuActions",
+            "selfSamples": 3,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24376,
+            "fn": "(anonymous)",
+            "selfSamples": 3,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "querySelectorAll",
+            "selfSamples": 3,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 2008,
+            "fn": "getListener",
+            "selfSamples": 2,
+            "selfPctActive": 1
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "pushState",
+            "selfSamples": 2,
+            "selfPctActive": 1
+          }
+        ],
+        "files": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "selfSamples": 180,
+            "selfPctActive": 90.9
+          },
+          {
+            "file": "",
+            "selfSamples": 18,
+            "selfPctActive": 9.1
+          }
+        ]
+      }
+    },
+    {
+      "viewport": "desktop",
+      "scale": 500,
+      "query": "?demo=1&scale=500",
+      "loadMs": 1997,
+      "cardCount": 740,
+      "opens": {
+        "samples": 5,
+        "latencyMs": 277,
+        "wallMs": 801,
+        "commits": 6,
+        "longTaskCount": 2,
+        "longTaskMs": 344,
+        "longestTaskMs": 290,
+        "dropped": 2,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          367,
+          317,
+          317,
+          317,
+          317
+        ]
+      },
+      "closes": {
+        "samples": 5,
+        "latencyMs": 107,
+        "wallMs": 690,
+        "commits": 4,
+        "longTaskCount": 3,
+        "longTaskMs": 333,
+        "longestTaskMs": 195,
+        "dropped": 3,
+        "cardRenders": 1,
+        "worstFrameGaps": [
+          267,
+          233,
+          233,
+          233,
+          217
+        ]
+      },
+      "sheetShape": {
+        "placement": "relative",
+        "pane": {
+          "x": 960,
+          "y": 0,
+          "w": 480,
+          "h": 900
+        },
+        "coversBoard": false,
+        "cardRendersInstrumented": true
+      },
+      "profileOpen": {
+        "totalSamples": 1213,
+        "activeSamples": 510,
+        "top": [
+          {
+            "file": "",
+            "line": 0,
+            "fn": "getBoundingClientRect",
+            "selfSamples": 157,
+            "selfPctActive": 30.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 28192,
+            "fn": "threadLi",
+            "selfSamples": 17,
+            "selfPctActive": 3.3
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 339,
+            "fn": "exports.createElement",
+            "selfSamples": 16,
+            "selfPctActive": 3.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 20881,
+            "fn": "scan",
+            "selfSamples": 13,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24551,
+            "fn": "ThreadCard",
+            "selfSamples": 11,
+            "selfPctActive": 2.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5058,
+            "fn": "updateMemoComponent",
+            "selfSamples": 11,
+            "selfPctActive": 2.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24432,
+            "fn": "sameCardProps",
+            "selfSamples": 11,
+            "selfPctActive": 2.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 9447,
+            "fn": "updateProperties",
+            "selfSamples": 10,
+            "selfPctActive": 2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 19378,
+            "fn": "push",
+            "selfSamples": 8,
+            "selfPctActive": 1.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5640,
+            "fn": "beginWork",
+            "selfSamples": 7,
+            "selfPctActive": 1.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 6320,
+            "fn": "commitHostUpdate",
+            "selfSamples": 7,
+            "selfPctActive": 1.4
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "(garbage collector)",
+            "selfSamples": 7,
+            "selfPctActive": 1.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3819,
+            "fn": "renderWithHooks",
+            "selfSamples": 6,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 2071,
+            "fn": "SyntheticBaseEvent",
+            "selfSamples": 5,
+            "selfPctActive": 1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 43824,
+            "fn": "(anonymous)",
+            "selfSamples": 5,
+            "selfPctActive": 1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 35892,
+            "fn": "cardMenuActions",
+            "selfSamples": 5,
+            "selfPctActive": 1
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "URL",
+            "selfSamples": 5,
+            "selfPctActive": 1
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "querySelectorAll",
+            "selfSamples": 5,
+            "selfPctActive": 1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8809,
+            "fn": "(anonymous)",
+            "selfSamples": 4,
+            "selfPctActive": 0.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 42017,
+            "fn": "BoardPage",
+            "selfSamples": 4,
+            "selfPctActive": 0.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 21072,
+            "fn": "cardTicketRefs",
+            "selfSamples": 4,
+            "selfPctActive": 0.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 3457,
+            "fn": "reconcileChildFibersImpl",
+            "selfSamples": 4,
+            "selfPctActive": 0.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24406,
+            "fn": "cardRefsOf",
+            "selfSamples": 4,
+            "selfPctActive": 0.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24376,
+            "fn": "(anonymous)",
+            "selfSamples": 4,
+            "selfPctActive": 0.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24389,
+            "fn": "sameStateDot",
+            "selfSamples": 4,
+            "selfPctActive": 0.8
+          }
+        ],
+        "files": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "selfSamples": 327,
+            "selfPctActive": 64.1
+          },
+          {
+            "file": "",
+            "selfSamples": 183,
+            "selfPctActive": 35.9
+          }
+        ]
+      },
+      "profileClose": {
+        "totalSamples": 913,
+        "activeSamples": 325,
+        "top": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 339,
+            "fn": "exports.createElement",
+            "selfSamples": 18,
+            "selfPctActive": 5.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 28192,
+            "fn": "threadLi",
+            "selfSamples": 17,
+            "selfPctActive": 5.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24432,
+            "fn": "sameCardProps",
+            "selfSamples": 15,
+            "selfPctActive": 4.6
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 20881,
+            "fn": "scan",
+            "selfSamples": 13,
+            "selfPctActive": 4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 6320,
+            "fn": "commitHostUpdate",
+            "selfSamples": 11,
+            "selfPctActive": 3.4
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "(garbage collector)",
+            "selfSamples": 11,
+            "selfPctActive": 3.4
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 8809,
+            "fn": "(anonymous)",
+            "selfSamples": 10,
+            "selfPctActive": 3.1
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5640,
+            "fn": "beginWork",
+            "selfSamples": 9,
+            "selfPctActive": 2.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24551,
+            "fn": "ThreadCard",
+            "selfSamples": 9,
+            "selfPctActive": 2.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 35892,
+            "fn": "cardMenuActions",
+            "selfSamples": 8,
+            "selfPctActive": 2.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 13,
+            "fn": "(anonymous)",
+            "selfSamples": 6,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24406,
+            "fn": "cardRefsOf",
+            "selfSamples": 6,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 24389,
+            "fn": "sameStateDot",
+            "selfSamples": 6,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 26343,
+            "fn": "laneSignature",
+            "selfSamples": 6,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 2008,
+            "fn": "getListener",
+            "selfSamples": 6,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 891,
+            "fn": "getNearestMountedFiber",
+            "selfSamples": 6,
+            "selfPctActive": 1.8
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25720,
+            "fn": "buildFamilyIndex",
+            "selfSamples": 5,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 43706,
+            "fn": "(anonymous)",
+            "selfSamples": 5,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 43824,
+            "fn": "(anonymous)",
+            "selfSamples": 5,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 2667,
+            "fn": "createWorkInProgress",
+            "selfSamples": 5,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 5058,
+            "fn": "updateMemoComponent",
+            "selfSamples": 5,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 9447,
+            "fn": "updateProperties",
+            "selfSamples": 5,
+            "selfPctActive": 1.5
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 42017,
+            "fn": "BoardPage",
+            "selfSamples": 4,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "index-CfN9zxs3.js",
+            "line": 25660,
+            "fn": "assembleBoard",
+            "selfSamples": 4,
+            "selfPctActive": 1.2
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "URL",
+            "selfSamples": 4,
+            "selfPctActive": 1.2
+          }
+        ],
+        "files": [
+          {
+            "file": "index-CfN9zxs3.js",
+            "selfSamples": 296,
+            "selfPctActive": 91.1
+          },
+          {
+            "file": "",
+            "selfSamples": 29,
+            "selfPctActive": 8.9
+          }
+        ]
+      }
+    }
+  ]
+}
