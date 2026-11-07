@@ -6,6 +6,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "The errored card's menu"
   },
   {
+    "text": "**Opening and closing the pane no longer works the board behind it.** On a phone the pane covers the board, so the open and close gestures skip the board-wide work they used to pay behind the invisible sheet: the placement freeze, the chip refetch, and the card re-render (0 card renders per gesture measured on a 740-card board). On a window wide enough to show both, every gesture behaves exactly as before.",
+    "children": [],
+    "group": "The thread pane on a phone"
+  },
+  {
     "text": "**The board paints once, settled: the loading view holds until the board's data is in.** The state lists a mount fetches (done marks, pin parks, links, error acks, snoozes, ranks, groups, family folds) land before the first paint, so cards stop shifting into place in the moments after the board looks loaded; a 400ms ceiling paints whatever has arrived if a list hangs.",
     "children": [],
     "group": "The board's load"

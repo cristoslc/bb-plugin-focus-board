@@ -310,6 +310,19 @@ let fakeGroups: Record<string, { name: string; createdAt: string }> = {};
 let fakeGroupMemberships: Record<string, string> = {};
 let fakeGroupSeq = 0;
 
+// The linked-issue records the plugin server (server.ts link_*) holds, seeded
+// per test: thread id → the array shape parseLinkedIssues validates. Tests
+// seed GitHub-shaped entries (repo + issue + kind + href + createdAt +
+// source) to give the ticket chips a ref set, most often so the chip
+// snapshot's refetch triggers (the operator-moment fingerprint) have
+// something visible to count.
+let fakeLinks: Record<string, unknown[]> = {};
+
+/** Seed the fake link store (fresh per test; pass {} to clear). */
+export function seedFakeLinks(links: Record<string, unknown[]>): void {
+  fakeLinks = structuredClone(links);
+}
+
 /** Seed the fake group registry and memberships (fresh per test). */
 export function seedFakeGroups(
   groups: Record<string, { name: string; createdAt: string }>,
@@ -373,7 +386,20 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     case "sweep_config_get":
       return { doneArchiveMs: 172800000, idleArchiveMs: 172800000 };
     case "link_list":
-      return { links: {} };
+      // The seeded links ride the same shape the real host serves:
+      // thread id → its array of link records (parseLinkedIssues validates
+      // each entry and fails loud on a malformed one).
+      return { links: structuredClone(fakeLinks) };
+    case "tracker_status": {
+      // The chip snapshot's status read. The fake serves no real statuses —
+      // the resolution itself is what the snapshot's landing gate cares
+      // about, and fetch-count assertions (the operator-moment bump) read
+      // them off rpcCalls, not the dots.
+      const { repo, numbers } = (args ?? {}) as { repo: string; numbers?: number[] };
+      void repo;
+      void numbers;
+      return { statuses: {} };
+    }
     case "snooze_list":
       return { snoozes: {} };
     case "rank_list":

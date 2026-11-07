@@ -1,4 +1,5 @@
 import {
+  memo,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -314,7 +315,7 @@ function captureCardRects(root: HTMLElement): Map<string, DOMRect> {
   return rects;
 }
 
-export function ParentLaneBoard({
+function ParentLaneBoardBase({
   lanes,
   activeThreadId,
   doneIds,
@@ -1213,3 +1214,11 @@ export function ParentLaneBoard({
     </div>
   );
 }
+
+/**
+ * The parent lane board is memoized for the same reason `Board` is (issue
+ * #406's covered-sheet quiet open): the caller keeps every prop's identity
+ * stable (hoisted handlers in app.tsx), so a covered open/close wakes
+ * nothing here either.
+ */
+export const ParentLaneBoard = memo(ParentLaneBoardBase);

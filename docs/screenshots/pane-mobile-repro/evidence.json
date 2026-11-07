@@ -1,0 +1,1269 @@
+{
+  "machine": {
+    "chrome": "Chrome/157.0.8103.39",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "viewportMode": "phone",
+    "cpuThrottleRate": 4,
+    "paneCycles": 5,
+    "base": "http://localhost:5173/",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36"
+  },
+  "boards": [
+    {
+      "board": "columns-demo",
+      "query": "?demo=1&scale=500",
+      "load": {
+        "domInteractive": 24,
+        "domContentLoaded": 265,
+        "load": 269,
+        "fcp": 356,
+        "lcp": 1668,
+        "boardPaintAt": 1515,
+        "totalBlockingTime": 2550,
+        "longTaskCount": 9,
+        "commitCount": 5,
+        "nodeCount": 16009,
+        "cardCount": 740,
+        "laneCount": 9,
+        "styleSheets": 6
+      },
+      "interactions": [
+        {
+          "label": "pan-board-horizontal",
+          "wallMs": 1168,
+          "commits": 1,
+          "longTaskCount": 1,
+          "longTaskMs": 69,
+          "longestTaskMs": 69,
+          "frames": 64,
+          "dropped": 2,
+          "fps": 55
+        },
+        {
+          "label": "scroll-busiest-lane-vertical",
+          "wallMs": 864,
+          "commits": 0,
+          "longTaskCount": 0,
+          "longTaskMs": 0,
+          "longestTaskMs": 0,
+          "frames": 52,
+          "dropped": 0,
+          "fps": 60
+        },
+        {
+          "label": "hover-12-cards",
+          "wallMs": 1916,
+          "commits": 0,
+          "longTaskCount": 8,
+          "longTaskMs": 585,
+          "longestTaskMs": 182,
+          "frames": 84,
+          "dropped": 12,
+          "fps": 44
+        },
+        {
+          "label": "open-thread-pane",
+          "wallMs": 1015,
+          "commits": 0,
+          "longTaskCount": 6,
+          "longTaskMs": 459,
+          "longestTaskMs": 110,
+          "frames": 39,
+          "dropped": 6,
+          "fps": 38
+        }
+      ],
+      "boardBox": {
+        "x": 0,
+        "y": 57,
+        "w": 390,
+        "h": 787,
+        "scrollWidth": 2444,
+        "clientWidth": 390
+      },
+      "laneScroll": {
+        "cards": 305,
+        "scrollHeight": 24095,
+        "clientHeight": 744,
+        "x": 683,
+        "y": 460
+      },
+      "hoverProfile": {
+        "label": "hover-12-cards",
+        "totalSamples": 5165,
+        "activeSamples": 75,
+        "sampleIntervalUs": 100,
+        "top": [
+          {
+            "file": "react-dom_client.js",
+            "line": 12549,
+            "fn": "findInstanceBlockingTarget",
+            "selfSamples": 16,
+            "selfPctActive": 21.3,
+            "selfPctTotal": 0.3
+          },
+          {
+            "file": "react-dom_client.js",
+            "line": 10002,
+            "fn": "(anonymous)",
+            "selfSamples": 15,
+            "selfPctActive": 20,
+            "selfPctTotal": 0.3
+          },
+          {
+            "file": "react-dom_client.js",
+            "line": 2149,
+            "fn": "getListener",
+            "selfSamples": 8,
+            "selfPctActive": 10.7,
+            "selfPctTotal": 0.2
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "querySelectorAll",
+            "selfSamples": 5,
+            "selfPctActive": 6.7,
+            "selfPctTotal": 0.1
+          },
+          {
+            "file": "",
+            "line": 54,
+            "fn": "tick",
+            "selfSamples": 4,
+            "selfPctActive": 5.3,
+            "selfPctTotal": 0.1
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "requestAnimationFrame",
+            "selfSamples": 4,
+            "selfPctActive": 5.3,
+            "selfPctTotal": 0.1
+          },
+          {
+            "file": "react-dom_client.js",
+            "line": 12507,
+            "fn": "dispatchEvent",
+            "selfSamples": 4,
+            "selfPctActive": 5.3,
+            "selfPctTotal": 0.1
+          },
+          {
+            "file": "react-dom_client.js",
+            "line": 2197,
+            "fn": "SyntheticBaseEvent",
+            "selfSamples": 4,
+            "selfPctActive": 5.3,
+            "selfPctTotal": 0.1
+          },
+          {
+            "file": "react-dom_client.js",
+            "line": 9976,
+            "fn": "dispatchEventForPluginEventSystem",
+            "selfSamples": 3,
+            "selfPctActive": 4,
+            "selfPctTotal": 0.1
+          },
+          {
+            "file": "react-dom_client.js",
+            "line": 1930,
+            "fn": "isCustomElement",
+            "selfSamples": 2,
+            "selfPctActive": 2.7,
+            "selfPctTotal": 0
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "run",
+            "selfSamples": 2,
+            "selfPctActive": 2.7,
+            "selfPctTotal": 0
+          },
+          {
+            "file": "pptr",
+            "line": null,
+            "fn": "1:(anonymous)",
+            "selfSamples": 1,
+            "selfPctActive": 1.3,
+            "selfPctTotal": 0
+          },
+          {
+            "file": "",
+            "line": 0,
+            "fn": "getBoundingClientRect",
+            "selfSamples": 1,
+            "selfPctActive": 1.3,
+            "selfPctTotal": 0
+          },
+          {
+            "file": "react-dom_client.js",
+            "line": 2270,
+            "fn": "isTextInputElement",
+            "selfSamples": 1,
+            "selfPctActive": 1.3,
+            "selfPctTotal": 0
+          },
+          {
+            "file": "react-dom_client.js",
+            "line": 2103,
+            "fn": "getEventTarget",
+            "selfSamples": 1,
+            "selfPctActive": 1.3,
+            "selfPctTotal": 0
+          },
+          {
+            "file": "attention-freeze.ts",
+            "line": 89,
+            "fn": "columnPlacementOf",
+            "selfSamples": 1,
+            "selfPctActive": 1.3,
+            "selfPctTotal": 0
+          },
+          {
+            "file": "attention-freeze.ts",
+            "line": 91,
+            "fn": "(anonymous)",
+            "selfSamples": 1,
+            "selfPctActive": 1.3,
+            "selfPctTotal": 0
+          },
+          {
+            "file": "react-dom_client.js",
+            "line": 13761,
+            "fn": "timeStamp",
+            "selfSamples": 1,
+            "selfPctActive": 1.3,
+            "selfPctTotal": 0
+          },
+          {
+            "file": "react-dom_client.js",
+            "line": 501,
+            "fn": "getLowestCommonAncestor",
+            "selfSamples": 1,
+            "selfPctActive": 1.3,
+            "selfPctTotal": 0
+          }
+        ],
+        "files": [
+          {
+            "file": "react-dom_client.js",
+            "selfSamples": 56,
+            "selfPctActive": 74.7
+          },
+          {
+            "file": "",
+            "selfSamples": 16,
+            "selfPctActive": 21.3
+          },
+          {
+            "file": "attention-freeze.ts",
+            "selfSamples": 2,
+            "selfPctActive": 2.7
+          },
+          {
+            "file": "pptr",
+            "selfSamples": 1,
+            "selfPctActive": 1.3
+          }
+        ]
+      },
+      "paneSheet": {
+        "panePlacement": "fixed",
+        "pane": {
+          "x": 0,
+          "y": 0,
+          "w": 390,
+          "h": 844
+        },
+        "board": {
+          "x": 0,
+          "y": 57,
+          "w": 390,
+          "h": 787
+        },
+        "paneBackground": "oklch(0.195 0 0)",
+        "paneOpacity": "1",
+        "coversBoard": true,
+        "focusSolidCards": 0,
+        "hoveredCards": 0
+      },
+      "paneCycles": {
+        "open": {
+          "samples": 5,
+          "appearMs": 312,
+          "appearMinMs": 297,
+          "appearMaxMs": 341,
+          "paintedMs": 897,
+          "wallMs": 1402,
+          "commits": 3,
+          "cardRenders": 0,
+          "longTaskCount": 3,
+          "longTaskMs": 439,
+          "longestTaskMs": 280,
+          "dropped": 3
+        },
+        "close": {
+          "samples": 5,
+          "appearMs": 290,
+          "appearMinMs": 283,
+          "appearMaxMs": 294,
+          "paintedMs": 290,
+          "wallMs": 1265,
+          "commits": 3,
+          "cardRenders": 0,
+          "longTaskCount": 8,
+          "longTaskMs": 790,
+          "longestTaskMs": 279,
+          "dropped": 8
+        }
+      },
+      "paneCycleSamples": {
+        "open": [
+          {
+            "direction": "open",
+            "appearMs": 341,
+            "paintedMs": 902,
+            "wallMs": 1405,
+            "commits": 3,
+            "longTaskCount": 3,
+            "longTaskMs": 439,
+            "longestTaskMs": 280,
+            "frames": 34,
+            "dropped": 3,
+            "fps": 24,
+            "cardRenders": 0
+          },
+          {
+            "direction": "open",
+            "appearMs": 312,
+            "paintedMs": 713,
+            "wallMs": 1215,
+            "commits": 3,
+            "longTaskCount": 1,
+            "longTaskMs": 271,
+            "longestTaskMs": 271,
+            "frames": 35,
+            "dropped": 3,
+            "fps": 29,
+            "cardRenders": 0
+          },
+          {
+            "direction": "open",
+            "appearMs": 297,
+            "paintedMs": 826,
+            "wallMs": 1328,
+            "commits": 3,
+            "longTaskCount": 2,
+            "longTaskMs": 407,
+            "longestTaskMs": 283,
+            "frames": 34,
+            "dropped": 3,
+            "fps": 26,
+            "cardRenders": 0
+          },
+          {
+            "direction": "open",
+            "appearMs": 306,
+            "paintedMs": 897,
+            "wallMs": 1402,
+            "commits": 3,
+            "longTaskCount": 3,
+            "longTaskMs": 543,
+            "longestTaskMs": 294,
+            "frames": 34,
+            "dropped": 3,
+            "fps": 24,
+            "cardRenders": 0
+          },
+          {
+            "direction": "open",
+            "appearMs": 317,
+            "paintedMs": 919,
+            "wallMs": 1422,
+            "commits": 3,
+            "longTaskCount": 3,
+            "longTaskMs": 518,
+            "longestTaskMs": 272,
+            "frames": 35,
+            "dropped": 4,
+            "fps": 25,
+            "cardRenders": 0
+          }
+        ],
+        "close": [
+          {
+            "direction": "close",
+            "appearMs": 294,
+            "paintedMs": 294,
+            "wallMs": 1202,
+            "commits": 3,
+            "longTaskCount": 2,
+            "longTaskMs": 354,
+            "longestTaskMs": 294,
+            "frames": 33,
+            "dropped": 3,
+            "fps": 27,
+            "cardRenders": 0
+          },
+          {
+            "direction": "close",
+            "appearMs": 283,
+            "paintedMs": 283,
+            "wallMs": 1137,
+            "commits": 3,
+            "longTaskCount": 2,
+            "longTaskMs": 337,
+            "longestTaskMs": 275,
+            "frames": 30,
+            "dropped": 3,
+            "fps": 26,
+            "cardRenders": 0
+          },
+          {
+            "direction": "close",
+            "appearMs": 294,
+            "paintedMs": 294,
+            "wallMs": 1322,
+            "commits": 3,
+            "longTaskCount": 8,
+            "longTaskMs": 790,
+            "longestTaskMs": 283,
+            "frames": 19,
+            "dropped": 9,
+            "fps": 14,
+            "cardRenders": 0
+          },
+          {
+            "direction": "close",
+            "appearMs": 290,
+            "paintedMs": 290,
+            "wallMs": 1265,
+            "commits": 3,
+            "longTaskCount": 8,
+            "longTaskMs": 833,
+            "longestTaskMs": 273,
+            "frames": 15,
+            "dropped": 8,
+            "fps": 12,
+            "cardRenders": 0
+          },
+          {
+            "direction": "close",
+            "appearMs": 283,
+            "paintedMs": 283,
+            "wallMs": 1328,
+            "commits": 3,
+            "longTaskCount": 8,
+            "longTaskMs": 797,
+            "longestTaskMs": 279,
+            "frames": 20,
+            "dropped": 9,
+            "fps": 15,
+            "cardRenders": 0
+          }
+        ]
+      },
+      "paneProfiles": {
+        "open": {
+          "label": "columns-demo-pane-open",
+          "totalSamples": 4526,
+          "activeSamples": 1839,
+          "sampleIntervalUs": 100,
+          "top": [
+            {
+              "file": "react_jsx-dev-runtime.js",
+              "line": 191,
+              "fn": "exports.jsxDEV",
+              "selfSamples": 1315,
+              "selfPctActive": 71.5,
+              "selfPctTotal": 29.1
+            },
+            {
+              "file": "react_jsx-dev-runtime.js",
+              "line": 148,
+              "fn": "jsxDEVImpl",
+              "selfSamples": 40,
+              "selfPctActive": 2.2,
+              "selfPctTotal": 0.9
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "run",
+              "selfSamples": 39,
+              "selfPctActive": 2.1,
+              "selfPctTotal": 0.9
+            },
+            {
+              "file": "board.tsx",
+              "line": 2470,
+              "fn": "threadLi",
+              "selfSamples": 32,
+              "selfPctActive": 1.7,
+              "selfPctTotal": 0.7
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "(garbage collector)",
+              "selfSamples": 32,
+              "selfPctActive": 1.7,
+              "selfPctTotal": 0.7
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "querySelectorAll",
+              "selfSamples": 28,
+              "selfPctActive": 1.5,
+              "selfPctTotal": 0.6
+            },
+            {
+              "file": "react-BlwGVCDl.js",
+              "line": 645,
+              "fn": "exports.createElement",
+              "selfSamples": 15,
+              "selfPctActive": 0.8,
+              "selfPctTotal": 0.3
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "now",
+              "selfSamples": 15,
+              "selfPctActive": 0.8,
+              "selfPctTotal": 0.3
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 2091,
+              "fn": "warnUnknownProperties",
+              "selfSamples": 15,
+              "selfPctActive": 0.8,
+              "selfPctTotal": 0.3
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 1971,
+              "fn": "validateProperty",
+              "selfSamples": 14,
+              "selfPctActive": 0.8,
+              "selfPctTotal": 0.3
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "createTask",
+              "selfSamples": 13,
+              "selfPctActive": 0.7,
+              "selfPctTotal": 0.3
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 10692,
+              "fn": "updateProperties",
+              "selfSamples": 12,
+              "selfPctActive": 0.7,
+              "selfPctTotal": 0.3
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 10002,
+              "fn": "(anonymous)",
+              "selfSamples": 11,
+              "selfPctActive": 0.6,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 11374,
+              "fn": "commitUpdate",
+              "selfSamples": 11,
+              "selfPctActive": 0.6,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "(anonymous)",
+              "selfSamples": 10,
+              "selfPctActive": 0.5,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 2149,
+              "fn": "getListener",
+              "selfSamples": 10,
+              "selfPctActive": 0.5,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 1234,
+              "fn": "getClosestInstanceFromNode",
+              "selfSamples": 10,
+              "selfPctActive": 0.5,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 937,
+              "fn": "runWithFiberInDEV",
+              "selfSamples": 7,
+              "selfPctActive": 0.4,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "getBoundingClientRect",
+              "selfSamples": 7,
+              "selfPctActive": 0.4,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "requestAnimationFrame",
+              "selfSamples": 7,
+              "selfPctActive": 0.4,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "board.tsx",
+              "line": 1758,
+              "fn": "(anonymous)",
+              "selfSamples": 6,
+              "selfPctActive": 0.3,
+              "selfPctTotal": 0.1
+            },
+            {
+              "file": "app.tsx",
+              "line": 372,
+              "fn": "kept",
+              "selfSamples": 6,
+              "selfPctActive": 0.3,
+              "selfPctTotal": 0.1
+            },
+            {
+              "file": "app.tsx",
+              "line": 2939,
+              "fn": "(anonymous)",
+              "selfSamples": 6,
+              "selfPctActive": 0.3,
+              "selfPctTotal": 0.1
+            },
+            {
+              "file": "tickets.ts",
+              "line": 98,
+              "fn": "scan",
+              "selfSamples": 6,
+              "selfPctActive": 0.3,
+              "selfPctTotal": 0.1
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "matches",
+              "selfSamples": 5,
+              "selfPctActive": 0.3,
+              "selfPctTotal": 0.1
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 9976,
+              "fn": "dispatchEventForPluginEventSystem",
+              "selfSamples": 5,
+              "selfPctActive": 0.3,
+              "selfPctTotal": 0.1
+            },
+            {
+              "file": "nesting.ts",
+              "line": 153,
+              "fn": "buildFamilyIndex",
+              "selfSamples": 5,
+              "selfPctActive": 0.3,
+              "selfPctTotal": 0.1
+            },
+            {
+              "file": "card-menu.ts",
+              "line": 27,
+              "fn": "cardMenuActions",
+              "selfSamples": 5,
+              "selfPctActive": 0.3,
+              "selfPctTotal": 0.1
+            },
+            {
+              "file": "app.tsx",
+              "line": 2746,
+              "fn": "(anonymous)",
+              "selfSamples": 5,
+              "selfPctActive": 0.3,
+              "selfPctTotal": 0.1
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 652,
+              "fn": "pushHostContext",
+              "selfSamples": 5,
+              "selfPctActive": 0.3,
+              "selfPctTotal": 0.1
+            }
+          ],
+          "files": [
+            {
+              "file": "react_jsx-dev-runtime.js",
+              "selfSamples": 1357,
+              "selfPctActive": 73.8
+            },
+            {
+              "file": "",
+              "selfSamples": 178,
+              "selfPctActive": 9.7
+            },
+            {
+              "file": "react-dom_client.js",
+              "selfSamples": 162,
+              "selfPctActive": 8.8
+            },
+            {
+              "file": "board.tsx",
+              "selfSamples": 44,
+              "selfPctActive": 2.4
+            },
+            {
+              "file": "app.tsx",
+              "selfSamples": 17,
+              "selfPctActive": 0.9
+            },
+            {
+              "file": "react-BlwGVCDl.js",
+              "selfSamples": 15,
+              "selfPctActive": 0.8
+            },
+            {
+              "file": "thread-card.tsx",
+              "selfSamples": 14,
+              "selfPctActive": 0.8
+            },
+            {
+              "file": "nesting.ts",
+              "selfSamples": 11,
+              "selfPctActive": 0.6
+            },
+            {
+              "file": "tickets.ts",
+              "selfSamples": 9,
+              "selfPctActive": 0.5
+            },
+            {
+              "file": "card-menu.ts",
+              "selfSamples": 5,
+              "selfPctActive": 0.3
+            },
+            {
+              "file": "grouping.ts",
+              "selfSamples": 4,
+              "selfPctActive": 0.2
+            },
+            {
+              "file": "pptr",
+              "selfSamples": 3,
+              "selfPctActive": 0.2
+            },
+            {
+              "file": "group-boxes.ts",
+              "selfSamples": 3,
+              "selfPctActive": 0.2
+            },
+            {
+              "file": "card-transport.ts",
+              "selfSamples": 3,
+              "selfPctActive": 0.2
+            },
+            {
+              "file": "mock-sdk.tsx",
+              "selfSamples": 3,
+              "selfPctActive": 0.2
+            }
+          ]
+        },
+        "close": {
+          "label": "columns-demo-pane-close",
+          "totalSamples": 3273,
+          "activeSamples": 1684,
+          "sampleIntervalUs": 100,
+          "top": [
+            {
+              "file": "react_jsx-dev-runtime.js",
+              "line": 191,
+              "fn": "exports.jsxDEV",
+              "selfSamples": 1291,
+              "selfPctActive": 76.7,
+              "selfPctTotal": 39.4
+            },
+            {
+              "file": "react_jsx-dev-runtime.js",
+              "line": 148,
+              "fn": "jsxDEVImpl",
+              "selfSamples": 50,
+              "selfPctActive": 3,
+              "selfPctTotal": 1.5
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "run",
+              "selfSamples": 27,
+              "selfPctActive": 1.6,
+              "selfPctTotal": 0.8
+            },
+            {
+              "file": "board.tsx",
+              "line": 2470,
+              "fn": "threadLi",
+              "selfSamples": 27,
+              "selfPctActive": 1.6,
+              "selfPctTotal": 0.8
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 1963,
+              "fn": "validateProperties$2",
+              "selfSamples": 14,
+              "selfPctActive": 0.8,
+              "selfPctTotal": 0.4
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "now",
+              "selfSamples": 13,
+              "selfPctActive": 0.8,
+              "selfPctTotal": 0.4
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 937,
+              "fn": "runWithFiberInDEV",
+              "selfSamples": 12,
+              "selfPctActive": 0.7,
+              "selfPctTotal": 0.4
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "createTask",
+              "selfSamples": 10,
+              "selfPctActive": 0.6,
+              "selfPctTotal": 0.3
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 11374,
+              "fn": "commitUpdate",
+              "selfSamples": 10,
+              "selfPctActive": 0.6,
+              "selfPctTotal": 0.3
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 2091,
+              "fn": "warnUnknownProperties",
+              "selfSamples": 10,
+              "selfPctActive": 0.6,
+              "selfPctTotal": 0.3
+            },
+            {
+              "file": "react-BlwGVCDl.js",
+              "line": 645,
+              "fn": "exports.createElement",
+              "selfSamples": 8,
+              "selfPctActive": 0.5,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "app.tsx",
+              "line": 372,
+              "fn": "kept",
+              "selfSamples": 7,
+              "selfPctActive": 0.4,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "card-menu.ts",
+              "line": 36,
+              "fn": "(anonymous)",
+              "selfSamples": 7,
+              "selfPctActive": 0.4,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 10692,
+              "fn": "updateProperties",
+              "selfSamples": 7,
+              "selfPctActive": 0.4,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "(anonymous)",
+              "selfSamples": 7,
+              "selfPctActive": 0.4,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "(garbage collector)",
+              "selfSamples": 7,
+              "selfPctActive": 0.4,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "",
+              "line": 0,
+              "fn": "querySelector",
+              "selfSamples": 6,
+              "selfPctActive": 0.4,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 3779,
+              "fn": "updateElement",
+              "selfSamples": 6,
+              "selfPctActive": 0.4,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "thread-card.tsx",
+              "line": 2139,
+              "fn": "sameCardProps",
+              "selfSamples": 6,
+              "selfPctActive": 0.4,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "tickets.ts",
+              "line": 98,
+              "fn": "scan",
+              "selfSamples": 6,
+              "selfPctActive": 0.4,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 1971,
+              "fn": "validateProperty",
+              "selfSamples": 6,
+              "selfPctActive": 0.4,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "app.tsx",
+              "line": 1701,
+              "fn": "(anonymous)",
+              "selfSamples": 5,
+              "selfPctActive": 0.3,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "app.tsx",
+              "line": 2939,
+              "fn": "(anonymous)",
+              "selfSamples": 5,
+              "selfPctActive": 0.3,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "thread-card.tsx",
+              "line": 2083,
+              "fn": "(anonymous)",
+              "selfSamples": 5,
+              "selfPctActive": 0.3,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 10238,
+              "fn": "validatePropertiesInDevelopment",
+              "selfSamples": 5,
+              "selfPctActive": 0.3,
+              "selfPctTotal": 0.2
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 6325,
+              "fn": "beginWork",
+              "selfSamples": 4,
+              "selfPctActive": 0.2,
+              "selfPctTotal": 0.1
+            },
+            {
+              "file": "card-menu.ts",
+              "line": 27,
+              "fn": "cardMenuActions",
+              "selfSamples": 4,
+              "selfPctActive": 0.2,
+              "selfPctTotal": 0.1
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 652,
+              "fn": "pushHostContext",
+              "selfSamples": 4,
+              "selfPctActive": 0.2,
+              "selfPctTotal": 0.1
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 3709,
+              "fn": "coerceRef",
+              "selfSamples": 4,
+              "selfPctActive": 0.2,
+              "selfPctTotal": 0.1
+            },
+            {
+              "file": "react-dom_client.js",
+              "line": 2851,
+              "fn": "FiberNode",
+              "selfSamples": 4,
+              "selfPctActive": 0.2,
+              "selfPctTotal": 0.1
+            }
+          ],
+          "files": [
+            {
+              "file": "react_jsx-dev-runtime.js",
+              "selfSamples": 1341,
+              "selfPctActive": 79.6
+            },
+            {
+              "file": "react-dom_client.js",
+              "selfSamples": 126,
+              "selfPctActive": 7.5
+            },
+            {
+              "file": "",
+              "selfSamples": 90,
+              "selfPctActive": 5.3
+            },
+            {
+              "file": "board.tsx",
+              "selfSamples": 34,
+              "selfPctActive": 2
+            },
+            {
+              "file": "app.tsx",
+              "selfSamples": 21,
+              "selfPctActive": 1.2
+            },
+            {
+              "file": "thread-card.tsx",
+              "selfSamples": 14,
+              "selfPctActive": 0.8
+            },
+            {
+              "file": "card-menu.ts",
+              "selfSamples": 11,
+              "selfPctActive": 0.7
+            },
+            {
+              "file": "nesting.ts",
+              "selfSamples": 10,
+              "selfPctActive": 0.6
+            },
+            {
+              "file": "react-BlwGVCDl.js",
+              "selfSamples": 9,
+              "selfPctActive": 0.5
+            },
+            {
+              "file": "grouping.ts",
+              "selfSamples": 8,
+              "selfPctActive": 0.5
+            },
+            {
+              "file": "tickets.ts",
+              "selfSamples": 7,
+              "selfPctActive": 0.4
+            },
+            {
+              "file": "group-boxes.ts",
+              "selfSamples": 3,
+              "selfPctActive": 0.2
+            },
+            {
+              "file": "sweep.ts",
+              "selfSamples": 3,
+              "selfPctActive": 0.2
+            },
+            {
+              "file": "link-metadata.ts",
+              "selfSamples": 2,
+              "selfPctActive": 0.1
+            },
+            {
+              "file": "mock-sdk.tsx",
+              "selfSamples": 1,
+              "selfPctActive": 0.1
+            }
+          ]
+        }
+      },
+      "traces": {
+        "paneOpen": [
+          {
+            "name": "RunTask",
+            "ms": 856,
+            "count": 2533
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 586,
+            "count": 86
+          },
+          {
+            "name": "Commit",
+            "ms": 32,
+            "count": 38
+          },
+          {
+            "name": "PrePaint",
+            "ms": 19,
+            "count": 40
+          },
+          {
+            "name": "Paint",
+            "ms": 14,
+            "count": 7
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 12,
+            "count": 39
+          },
+          {
+            "name": "HitTest",
+            "ms": 2,
+            "count": 3
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 2,
+            "count": 12
+          },
+          {
+            "name": "TimerFire",
+            "ms": 2,
+            "count": 3
+          },
+          {
+            "name": "Layout",
+            "ms": 2,
+            "count": 2
+          }
+        ],
+        "paneClose": [
+          {
+            "name": "RunTask",
+            "ms": 797,
+            "count": 2045
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 572,
+            "count": 65
+          },
+          {
+            "name": "Commit",
+            "ms": 35,
+            "count": 31
+          },
+          {
+            "name": "PrePaint",
+            "ms": 16,
+            "count": 31
+          },
+          {
+            "name": "HitTest",
+            "ms": 14,
+            "count": 2
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 12,
+            "count": 31
+          },
+          {
+            "name": "Paint",
+            "ms": 8,
+            "count": 4
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 3,
+            "count": 13
+          },
+          {
+            "name": "Layout",
+            "ms": 1,
+            "count": 1
+          }
+        ],
+        "pan": [
+          {
+            "name": "RunTask",
+            "ms": 315,
+            "count": 1604
+          },
+          {
+            "name": "HitTest",
+            "ms": 80,
+            "count": 13
+          },
+          {
+            "name": "Commit",
+            "ms": 51,
+            "count": 75
+          },
+          {
+            "name": "PrePaint",
+            "ms": 21,
+            "count": 62
+          },
+          {
+            "name": "UpdateLayoutTree",
+            "ms": 12,
+            "count": 50
+          },
+          {
+            "name": "EventDispatch",
+            "ms": 9,
+            "count": 53
+          },
+          {
+            "name": "FunctionCall",
+            "ms": 8,
+            "count": 141
+          },
+          {
+            "name": "TimerFire",
+            "ms": 0,
+            "count": 1
+          }
+        ]
+      }
+    }
+  ]
+}

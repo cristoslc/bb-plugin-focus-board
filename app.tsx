@@ -203,6 +203,7 @@ import {
   type FamilyStateStore,
 } from "./lib/family-state";
 import { usePrefersDarkScheme } from "./components/ui/hooks/use-media-query";
+import { useIsCompactViewport } from "./components/ui/hooks/use-compact-viewport";
 import { WallpaperActiveProvider } from "./components/wallpaper-contrast";
 import { PaneSheetCoverageProvider } from "./components/pane-sheet-coverage";
 import { WallpaperPaintLayer } from "./components/wallpaper-paint";
@@ -238,6 +239,11 @@ const EMPTY_NESTED: ReadonlyMap<string, readonly PluginSidebarThread[]> = new Ma
 /** No natural-lane capture: the attention freeze owns the pane's pin now, so
  *  app passes a stable empty to assembleBoard's legacy frozenColumns param. */
 const EMPTY_FROZEN_COLUMNS: ReadonlyMap<string, { id: string; label: string }> = new Map();
+
+/** The board's child-count/child-row maps when there is no assembly: stable
+ *  empties, so the Board's props never churn identity per render behind the
+ *  covered sheet's quiet open (issue #406). */
+const EMPTY_CHILD_COUNTS: ReadonlyMap<string, number> = new Map();
 
 /**
  * `toPluginPanel` is typed `void`, but the host may return `false` when it
@@ -1173,6 +1179,22 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Scheme read for the wallpaper's dark variant: the hook lives with the
   // media-query hooks and flips live (a change listener, no reload).
   const darkScheme = usePrefersDarkScheme();
+  // Do the open pane and the board share the room? The compact viewport's
+  // pane covers the board as an opaque full-window sheet
+  // (components/thread-pane.tsx), the same read the card spotlight uses
+  // (components/pane-sheet-coverage.tsx) to withhold the recede marker on
+  // exactly this condition. The board-behind-the-sheet work below keys on
+  // it: the attention freeze (no visible board to hold a placement on) and
+  // the chip snapshot's pane term (no visible row to refresh chips for)
+  // skip while it holds, which is the measured open/close driver on a
+  // phone (issue #406, docs/perf/pane-mobile-attribution-2026-11-06.md).
+  const paneCoversBoard = useIsCompactViewport();
+  // The gesture-time bridge for the covered-sheet reads (the ref, not the
+  // closure): a memoized card fiber bails across a viewport flip and would
+  // serve the click its open-time closure. Written every render beside the
+  // other latest-value bridges below.
+  const paneCoversRef = useRef(false);
+  paneCoversRef.current = paneCoversBoard;
   // The open pane lives in the panel's URL subPath (`t/<threadId>`), not in
   // component state, so bb's back arrow, a reload, and deep links all land on
   // the pane the user left. The ref mirrors the last pushed thread id; sync
@@ -1184,6 +1206,13 @@ function BoardPage({ subPath }: { subPath: string }) {
   // restoration, but the board stays fully usable.
   const [fallbackPaneThreadId, setFallbackPaneThreadId] = useState<string | null>(null);
   const openThreadId = paneThreadId ?? fallbackPaneThreadId;
+  // The open thread's latest value as a ref: openThreadCard and
+  // closeThreadPane only COMPARE against it (dedupe, fallback-close
+  // ownership), so carrying it as a dep would churn both callbacks' identity
+  // on every pane state flip and wake the memoized Board through their prop
+  // handoff — the gesture the covered-sheet quiet open exists to silence.
+  const openThreadIdRef = useRef(openThreadId);
+  openThreadIdRef.current = openThreadId;
   // Sweep arm state: at most one armed column at a time. The candidate id
   // list is captured at arm time and frozen — late arrivals never join.
   const [armedSweep, setArmedSweep] = useState<ArmedSweep | null>(null);
@@ -1395,6 +1424,18 @@ function BoardPage({ subPath }: { subPath: string }) {
     [],
   );
   const capturePaneAttention = useCallback((threadId: string): void => {
+    // The covered sheet's skip (issue #406): on a compact viewport the pane
+    // covers the board behind an opaque surface, so a captured placement
+    // pins a board nobody can see — and runs the full board rebuild on every
+    // open and close, the measured mobile cost. The read is the REF, not
+    // this callback's closure: the ref carries the latest render's answer
+    // (the same latest-value bridge attentionInputRef is), because a card's
+    // memoized fiber bails across a viewport flip and would serve this
+    // gesture its open-time closure — a covered open that later uncovers
+    // would keep skipping every capture until some churn re-rendered the
+    // card. Per open, never latched: the next open with the board visible
+    // captures as it always did.
+    if (paneCoversRef.current) return;
     const input = attentionInputRef.current;
     if (input === null) return;
     if (input.parent) {
@@ -2113,9 +2154,16 @@ function BoardPage({ subPath }: { subPath: string }) {
   // transition or a re-sort changes the join, so the hook refetches with
   // the ref set unchanged; a fingerprint-equal render (the common case)
   // borrows the settled snapshot. "" mirrors the empty ref set.
+  // The pane term skips under the covered sheet (issue #406): opening and
+  // closing the pane behind the opaque sheet changes nothing any card
+  // paints, but the term's flip refetched the whole snapshot — every open
+  // and close paid its own tracker_status wave plus two whole-board
+  // comparator sweeps on it. The poll, the focus catch-up, and the card's
+  // state and order terms keep the dots live underneath.
   const chipRepaintSignal = useMemo(() => {
     if (visibleRefKey === "") return "";
-    const parts: string[] = [`pane:${openThreadId ?? "closed"}`];
+    const parts: string[] = [];
+    if (!paneCoversBoard) parts.push(`pane:${openThreadId ?? "closed"}`);
     const paint = (thread: PluginSidebarThread) => {
       parts.push(
         `${thread.id}:${threadState(thread, errorAckIds)}${doneIds.has(thread.id) ? ":done" : ""}`,
@@ -2144,7 +2192,7 @@ function BoardPage({ subPath }: { subPath: string }) {
       }
     }
     return parts.join(",");
-  }, [visibleRefKey, columns, nestedChildrenByParent, parentLanes, openThreadId, errorAckIds, doneIds, assembly]);
+  }, [visibleRefKey, columns, nestedChildrenByParent, parentLanes, openThreadId, errorAckIds, doneIds, assembly, paneCoversBoard]);
   // Text-ref hrefs across visible threads, the tracker_validate batch (the
   // chip rule: a #N/URL in text chips only when the item is confirmed).
   // Sorted-join mirrors visibleRefKey: cheap string equality as the effect
@@ -2589,13 +2637,15 @@ function BoardPage({ subPath }: { subPath: string }) {
       // The attention freeze: the pane's card captures its rendered
       // placement (lane, slot, family lane, lane view) at open time.
       capturePaneAttention(threadId);
-      if (rejected && openThreadId !== threadId) {
+      // The ref comparison (not the openThreadId dep): identity stability
+      // keeps the Board prop's handoff quiet across pane flips (issue #406).
+      if (rejected && openThreadIdRef.current !== threadId) {
         // Without a working history integration the subPath never changes, so
         // open locally: the pane opens now and closes via onClose below.
         setFallbackPaneThreadId(threadId);
       }
     },
-    [navigate, openThreadId, capturePaneAttention],
+    [navigate, capturePaneAttention],
   );
 
   // Reference chips in the pane (issue #161): labels resolve from the board's
@@ -2694,7 +2744,8 @@ function BoardPage({ subPath }: { subPath: string }) {
   const closeThreadPane = useCallback(() => {
     pushedThreadIdRef.current = null;
     const rejected = pushRejected(() => navigate.toPluginPanel(PANEL_PATH, { subPath: "" }));
-    if (rejected && openThreadId !== null) {
+    // The ref comparison (same identity-stability contract as openThreadCard).
+    if (rejected && openThreadIdRef.current !== null) {
       // The rejected push never settles, so the route effect's close branch
       // does not run: release the attention pin here instead — fallback mode
       // owns the pane without URL state, and this close is the whole story.
@@ -2702,7 +2753,7 @@ function BoardPage({ subPath }: { subPath: string }) {
       setPaneCapture(null);
       setPaneLaneCapture(null);
     }
-  }, [navigate, openThreadId]);
+  }, [navigate]);
 
   // The URL is the source of truth for the pane. A subPath change that our
   // own push did not cause — bb's back arrow, a shared deep link, a reload —
@@ -2732,6 +2783,13 @@ function BoardPage({ subPath }: { subPath: string }) {
     // must never re-freeze, or a thread that moved placements would slide the
     // card after the fact (the same contract a click-opened pane has); the
     // recapture pass below is the only re-pin, and it reads the pinned board.
+    // The covered sheet skips the capture writes (issue #406): the board is
+    // invisible behind it. The read is the ref, not this effect's closure
+    // (the flip may commit without re-running this effect, and the effect
+    // must not gain a viewport dep: its flip re-run would route-act a pane
+    // whose truth lives in fallback state only; re-arming rides
+    // capturePaneAttention's per-open read instead).
+    if (paneCoversRef.current) return;
     const adoptId = action.threadId;
     setFallbackPaneThreadId(null);
     setPaneCapture((current) => {
@@ -3121,6 +3179,186 @@ function BoardPage({ subPath }: { subPath: string }) {
    * in scale, bounded by the echo latency rather than a timer.
    */
   const unreadEchoSuppressRef = useRef<ReadonlySet<string>>(new Set());
+
+  // ── The board's own gesture handlers, hoisted for board-render stability
+  // (issue #406's covered-sheet quiet open). The board call sites used
+  // fresh closures per render; with memoized Board components every such
+  // closure breaks the covered open/close's bailout and the board wakes
+  // anyway. These bodies are the JSX's inline handlers moved verbatim —
+  // same writes, same timing — into stable callbacks.
+  const boardDropDone = useCallback(
+    (threadId: string) => {
+      // User-initiated: the pin releases for this gesture's move.
+      releaseAttentionFor(new Set([threadId]));
+      const thread = threads.find((candidate) => candidate.id === threadId);
+      const next = new Set(doneIds);
+      next.add(threadId);
+      setDoneIds(next);
+      rpc.call("done_set", { threadId, done: true }).catch(() => {});
+      // Done implies read: the card must not land in Done still
+      // claiming unread (or come back from Mark Not Done unread).
+      if (thread !== undefined && thread.isUnread) {
+        void actions.setRead(threadId, true);
+      }
+      exitPinnedLane(threadId);
+    },
+    [releaseAttentionFor, threads, doneIds, actions, exitPinnedLane, rpc],
+  );
+  const boardDropUnread = useCallback(
+    (threadId: string) => {
+      releaseAttentionFor(new Set([threadId]));
+      const thread = threads.find((candidate) => candidate.id === threadId);
+      if (thread === undefined) return;
+      if (thread.isPinned) {
+        // The exit: unpin + park, and register the echo suppression
+        // BEFORE the gesture's own read write lands — the fresh park
+        // must not be restored by the very gesture that parked it.
+        unreadEchoSuppressRef.current = new Set(
+          unreadEchoSuppressRef.current,
+        ).add(threadId);
+        exitPinnedLane(threadId);
+      } else {
+        // Marking unread on an unpinned card is the attention
+        // signal: state-truth effects apply — a parked pin rides
+        // the mark back into Pinned, and a Done card un-does.
+        applyUnreadStateEffects(threadId);
+      }
+      if (!thread.isUnread) {
+        // The read flip rides the host bridge: arm the claim the
+        // same way the menu's toggleRead does — reveal intent, and
+        // the attention recapture's in-flight guard.
+        pendingStateClaimsRef.current.set(threadId, { field: "isUnread", value: true });
+        void actions.setRead(threadId, false);
+      }
+    },
+    [releaseAttentionFor, threads, exitPinnedLane, applyUnreadStateEffects, actions],
+  );
+  const boardDropPinned = useCallback(
+    (threadId: string) => {
+      releaseAttentionFor(new Set([threadId]));
+      const thread = threads.find((candidate) => candidate.id === threadId);
+      if (thread !== undefined && !thread.isPinned) {
+        void actions.setPinned(threadId, true);
+      }
+    },
+    [releaseAttentionFor, threads, actions],
+  );
+  const boardReparent = useCallback(
+    (childId: string, parentThreadId: string | null) => {
+      // User-initiated: a re-rooting re-places both ends; release
+      // their pins so the gesture's placement lands.
+      const touched = parentThreadId === null
+        ? new Set([childId])
+        : new Set([childId, parentThreadId]);
+      releaseAttentionFor(touched);
+      // The host owns the write (threads.update → thread:changed →
+      // the sidebar hook refetches → nesting re-derives). The board
+      // surfaces rejections; the guard re-checked fresh rows
+      // server-side, so a rejection means stale UI data.
+      return rpc.call("thread_reparent", { threadId: childId, parentThreadId }).then(
+        () => undefined,
+      );
+    },
+    [releaseAttentionFor, rpc],
+  );
+  const boardRankMove = useCallback(
+    (columnKey: string, threadId: string, beforeId: string | null, toEnd: boolean, visibleIds: readonly string[], unitIds?: readonly string[]) => {
+      // User-initiated movement: strip the affected column's pins
+      // first, so the gesture's snap lands and the recapture pass
+      // re-pins the settled order.
+      releaseAttentionFor(new Set(visibleIds));
+      setRankSaveError(null);
+      // Optimistic: the card (or whole box, unitIds) snaps to its
+      // slot immediately, and the rank-changed refetch confirms. A
+      // rejected write settles back to the stored order on the next
+      // refetch rather than sticking.
+      setRanks((prev) => ({
+        ...prev,
+        [columnKey]:
+          unitIds !== undefined && unitIds.length > 1
+            ? applyUnitMoveVisible(
+                orderForColumn(prev, columnKey),
+                [...visibleIds],
+                unitIds,
+                beforeId,
+                toEnd,
+              )
+            : applyMoveVisible(
+                orderForColumn(prev, columnKey),
+                [...visibleIds],
+                threadId,
+                beforeId,
+                toEnd,
+              ),
+      }));
+      rpc
+        .call("rank_move", {
+          columnKey,
+          threadId,
+          beforeId,
+          toEnd,
+          visibleIds: [...visibleIds],
+          // Omit the member entirely when there is no unit: a literal
+          // member set to `undefined` is an own property whose value
+          // JSON has no equivalent, and the host's input validation
+          // walks it as a JSON value and rejects — every solo drag
+          // was refused at the bridge with "$input.unitIds is not a
+          // JSON value" (issue #240). A spread writes nothing when
+          // the unit is absent.
+          ...(unitIds !== undefined && unitIds.length > 1
+            ? { unitIds: [...unitIds] }
+            : {}),
+        })
+        .catch((error: unknown) => {
+          // Fail loud (issue #232): a rejected write used to revert
+          // the landing silently.
+          setRankSaveError(
+            error instanceof Error ? error.message : "the host rejected the reorder.",
+          );
+          refetchRanks();
+        });
+    },
+    [releaseAttentionFor, refetchRanks, rpc],
+  );
+  const boardRankClear = useCallback(
+    (columnKey: string, visibleIds: readonly string[]) => {
+      // The lane menu's remove-custom-order write: the optimistic drop
+      // of the column's key (the lane reads recency at once), then
+      // rank_clear on the host and the rank-changed echo confirms. A
+      // rejected clear settles the stored order back on the refetch.
+      releaseAttentionFor(new Set(visibleIds));
+      setRankSaveError(null);
+      setRanks((prev) => {
+        const next = { ...prev };
+        if (Object.hasOwn(next, columnKey)) delete next[columnKey];
+        return next;
+      });
+      rpc
+        .call("rank_clear", { columnKey })
+        .catch((error: unknown) => {
+          setRankSaveError(
+            error instanceof Error ? error.message : "the host rejected the clear.",
+          );
+          refetchRanks();
+        });
+    },
+    [releaseAttentionFor, refetchRanks, rpc],
+  );
+  const boardJoinGroup = useCallback(
+    (droppedId: string, groupId: string) => {
+      // User-initiated: joining a lane moves the card; the pin
+      // releases for the gesture.
+      releaseAttentionFor(new Set([droppedId]));
+      setThreadGroup(droppedId, groupId);
+    },
+    [releaseAttentionFor, setThreadGroup],
+  );
+  const linkedIssuesFor = useCallback(
+    (threadId: string) => linksByThread[threadId],
+    [linksByThread],
+  );
+  const dismissRankSaveError = useCallback(() => setRankSaveError(null), []);
+  const dismissFamilyStateSaveError = useCallback(() => setFamilyStateSaveError(null), []);
 
   // Park reconciliation over the same native cross-surface feed
   // (`sdk.subscribe`, "thread:changed"): EVERY pin write — bb's sidebar,
@@ -3563,7 +3801,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         {groupBy === "parent" ? (
           <ParentLaneBoard
             lanes={parentLanes ?? []}
-            activeThreadId={openThreadId}
+            activeThreadId={paneCoversBoard ? null : openThreadId}
             doneIds={doneIds}
             errorAckIds={errorAckIds}
             dimmedIds={dimmedIds}
@@ -3572,7 +3810,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
             pulseRateFor={pulseRateFor}
-            linkedIssuesFor={(threadId) => linksByThread[threadId]}
+            linkedIssuesFor={linkedIssuesFor}
             validatedHrefs={validatedHrefs}
             parentLaneOrder={parentLaneOrder}
             onParentLaneOrderChange={persistParentLaneOrder}
@@ -3608,7 +3846,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           <Board
             columns={columns}
             groupBy={groupBy}
-            activeThreadId={openThreadId}
+            activeThreadId={paneCoversBoard ? null : openThreadId}
             cardTransport={cardTransport}
             motionPref={motionFollow ? "system" : "manual"}
             motionPacing={motionPacing}
@@ -3616,17 +3854,12 @@ function BoardPage({ subPath }: { subPath: string }) {
             doneIds={doneIds}
             errorAckIds={errorAckIds}
             nestedChildrenByParent={nestedChildrenByParent}
-            childCountByParent={assembly?.childCountByParent ?? new Map()}
-            doneChildrenByParent={assembly?.doneChildrenByParent ?? new Map()}
+            childCountByParent={assembly?.childCountByParent ?? EMPTY_CHILD_COUNTS}
+            doneChildrenByParent={assembly?.doneChildrenByParent ?? EMPTY_NESTED}
             groupBoxOf={groupBoxPlan.groupBoxOf}
             highlightedGroupId={highlightedGroupId}
             onHighlightGroup={setHighlightedGroupId}
-            onJoinGroup={(droppedId, groupId) => {
-              // User-initiated: joining a lane moves the card; the pin
-              // releases for the gesture.
-              releaseAttentionFor(new Set([droppedId]));
-              setThreadGroup(droppedId, groupId);
-            }}
+            onJoinGroup={boardJoinGroup}
             onRenameGroup={renameGroup}
             onDeleteGroup={deleteGroup}
             onNewThreadInGroup={openNewThreadInGroup}
@@ -3642,7 +3875,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             repoBaseFor={repoBaseFor}
             statusFor={statusFor}
             pulseRateFor={pulseRateFor}
-            linkedIssuesFor={(threadId) => linksByThread[threadId]}
+            linkedIssuesFor={linkedIssuesFor}
             validatedHrefs={validatedHrefs}
             onOpenThread={openThreadCard}
             onClosePane={closeThreadPane}
@@ -3657,9 +3890,9 @@ function BoardPage({ subPath }: { subPath: string }) {
             sweepNotice={sweepNotice}
             onDismissSweepNotice={clearSweepNotice}
             rankSaveError={rankSaveError}
-            onDismissRankSaveError={() => setRankSaveError(null)}
+            onDismissRankSaveError={dismissRankSaveError}
             familyStateSaveError={familyStateSaveError}
-            onDismissFamilyStateSaveError={() => setFamilyStateSaveError(null)}
+            onDismissFamilyStateSaveError={dismissFamilyStateSaveError}
             browserNotice={browserNotice}
             onDismissBrowserNotice={clearBrowserNotice}
             onSweepUndo={undoSweepFor}
@@ -3670,151 +3903,14 @@ function BoardPage({ subPath }: { subPath: string }) {
             onSweepDisarm={disarmSweep}
             onSweepConfirm={confirmSweepFor}
             onSweepCancel={cancelSweepFor}
-            onDropDone={(threadId) => {
-              // User-initiated: the pin releases for this gesture's move.
-              releaseAttentionFor(new Set([threadId]));
-              const thread = threads.find((candidate) => candidate.id === threadId);
-              const next = new Set(doneIds);
-              next.add(threadId);
-              setDoneIds(next);
-              rpc.call("done_set", { threadId, done: true }).catch(() => {});
-              // Done implies read: the card must not land in Done still
-              // claiming unread (or come back from Mark Not Done unread).
-              if (thread !== undefined && thread.isUnread) {
-                void actions.setRead(threadId, true);
-              }
-              exitPinnedLane(threadId);
-            }}
-            onDropUnread={(threadId) => {
-              releaseAttentionFor(new Set([threadId]));
-              const thread = threads.find((candidate) => candidate.id === threadId);
-              if (thread === undefined) return;
-              if (thread.isPinned) {
-                // The exit: unpin + park, and register the echo suppression
-                // BEFORE the gesture's own read write lands — the fresh park
-                // must not be restored by the very gesture that parked it.
-                unreadEchoSuppressRef.current = new Set(
-                  unreadEchoSuppressRef.current,
-                ).add(threadId);
-                exitPinnedLane(threadId);
-              } else {
-                // Marking unread on an unpinned card is the attention
-                // signal: state-truth effects apply — a parked pin rides
-                // the mark back into Pinned, and a Done card un-does.
-                applyUnreadStateEffects(threadId);
-              }
-              if (!thread.isUnread) {
-                // The read flip rides the host bridge: arm the claim the
-                // same way the menu's toggleRead does — reveal intent, and
-                // the attention recapture's in-flight guard.
-                pendingStateClaimsRef.current.set(threadId, { field: "isUnread", value: true });
-                void actions.setRead(threadId, false);
-              }
-            }}
-            // Drop on Pinned pins, unless the card is already pinned: a
-            // pinned card's drop is a same-lane reorder (claimed by the card
-            // or lane handler) and never reaches this path.
-            onDropPinned={(threadId) => {
-              releaseAttentionFor(new Set([threadId]));
-              const thread = threads.find((candidate) => candidate.id === threadId);
-              if (thread !== undefined && !thread.isPinned) {
-                void actions.setPinned(threadId, true);
-              }
-            }}
+            onDropDone={boardDropDone}
+            onDropUnread={boardDropUnread}
+            onDropPinned={boardDropPinned}
             rankStore={ranks}
             rawParentOf={familyIndex.rawParentOf}
-            onReparent={(childId, parentThreadId) => {
-              // User-initiated: a re-rooting re-places both ends; release
-              // their pins so the gesture's placement lands.
-              const touched = parentThreadId === null
-                ? new Set([childId])
-                : new Set([childId, parentThreadId]);
-              releaseAttentionFor(touched);
-              // The host owns the write (threads.update → thread:changed →
-              // the sidebar hook refetches → nesting re-derives). The board
-              // surfaces rejections; the guard re-checked fresh rows
-              // server-side, so a rejection means stale UI data.
-              return rpc.call("thread_reparent", { threadId: childId, parentThreadId }).then(
-                () => undefined,
-              );
-            }}
-            onRankMove={(columnKey, threadId, beforeId, toEnd, visibleIds, unitIds) => {
-              // User-initiated movement: strip the affected column's pins
-              // first, so the gesture's snap lands and the recapture pass
-              // re-pins the settled order.
-              releaseAttentionFor(new Set(visibleIds));
-              setRankSaveError(null);
-              // Optimistic: the card (or whole box, unitIds) snaps to its
-              // slot immediately, and the rank-changed refetch confirms. A
-              // rejected write settles back to the stored order on the next
-              // refetch rather than sticking.
-              setRanks((prev) => ({
-                ...prev,
-                [columnKey]:
-                  unitIds !== undefined && unitIds.length > 1
-                    ? applyUnitMoveVisible(
-                        orderForColumn(prev, columnKey),
-                        visibleIds,
-                        unitIds,
-                        beforeId,
-                        toEnd,
-                      )
-                    : applyMoveVisible(
-                        orderForColumn(prev, columnKey),
-                        visibleIds,
-                        threadId,
-                        beforeId,
-                        toEnd,
-                      ),
-              }));
-              rpc
-                .call("rank_move", {
-                  columnKey,
-                  threadId,
-                  beforeId,
-                  toEnd,
-                  visibleIds: [...visibleIds],
-                  // Omit the member entirely when there is no unit: a literal
-                  // member set to `undefined` is an own property whose value
-                  // JSON has no equivalent, and the host's input validation
-                  // walks it as a JSON value and rejects — every solo drag
-                  // was refused at the bridge with "$input.unitIds is not a
-                  // JSON value" (issue #240). A spread writes nothing when
-                  // the unit is absent.
-                  ...(unitIds !== undefined && unitIds.length > 1
-                    ? { unitIds: [...unitIds] }
-                    : {}),
-                })
-                .catch((error: unknown) => {
-                  // Fail loud (issue #232): a rejected write used to revert
-                  // the landing silently.
-                  setRankSaveError(
-                    error instanceof Error ? error.message : "the host rejected the reorder.",
-                  );
-                  refetchRanks();
-                });
-            }}
-            // The lane menu's remove-custom-order write: the optimistic drop
-            // of the column's key (the lane reads recency at once), then
-            // rank_clear on the host and the rank-changed echo confirms. A
-            // rejected clear settles the stored order back on the refetch.
-            onRankClear={(columnKey, visibleIds) => {
-              releaseAttentionFor(new Set(visibleIds));
-              setRankSaveError(null);
-              setRanks((prev) => {
-                const next = { ...prev };
-                if (Object.hasOwn(next, columnKey)) delete next[columnKey];
-                return next;
-              });
-              rpc
-                .call("rank_clear", { columnKey })
-                .catch((error: unknown) => {
-                  setRankSaveError(
-                    error instanceof Error ? error.message : "the host rejected the clear.",
-                  );
-                  refetchRanks();
-                });
-            }}
+            onReparent={boardReparent}
+            onRankMove={boardRankMove}
+            onRankClear={boardRankClear}
             // The lane menu's sort pair: one key per pick, persisted with the
             // other view preferences and synced to another window's write
             // through the storage event the useCrossWindowStorage hook reads.
