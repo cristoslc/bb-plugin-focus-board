@@ -283,7 +283,8 @@ export const rpcContract = defineRpcContract({
     output: z.object({ threadId: z.string(), parked: z.boolean() }),
   },
   /**
-   * Clear error (issue #157): per-thread plugin metadata key "errorAck" →
+   * Error acknowledgment (issue #157; the card entry reads "Ignore error",
+   * issue #405): per-thread plugin metadata key "errorAck" →
    * { ackedAt } (lib/error-ack-metadata). The operator's acknowledgment of
    * an errored card: the board stops claiming attention for that thread's
    * error signals. The pending-interaction arm is never ackable — a wait

@@ -57,17 +57,17 @@ export interface CardMenuInputs {
    * The card's Needs-you claim comes from error signals only — a hard-failed
    * turn or failed send (threadState attention minus any pending
    * interaction), and the operator has not acknowledged it yet. True when
-   * the menu offers "Clear error" (lib/error-ack-metadata). A pending
-   * interaction never qualifies: a wait for the operator needs a real
-   * answer (lib/interaction-sync.ts owns that flag).
+   * the menu offers "Retry" and "Ignore error" (lib/error-ack-metadata). A
+   * pending interaction never qualifies: a wait for the operator needs a
+   * real answer (lib/interaction-sync.ts owns that flag).
    */
   canClearError: boolean;
   /**
    * The card's family is more than itself: it renders nested child rows, or
    * it is itself a nested row of one. True exactly when the menu offers
    * "Zoom to family" (issue #170) — a lone top-level card has no family to
-   * zoom to, so the entry stays hidden beside the conditional Clear-error
-   * entry's shape.
+   * zoom to, so the entry stays hidden beside the conditional Retry and
+   * Ignore-error entries' shape.
    */
   inFamily: boolean;
 }
@@ -82,8 +82,22 @@ export interface CardMenuHandlers {
   togglePinned: () => void;
   toggleRead: () => void;
   toggleDone: () => void;
-  /** Acknowledge the card's error (issue #157): the board stops claiming attention. */
-  clearError: () => void;
+  /**
+   * Retry (issue #405): re-submits the thread's errored turn through the
+   * host's real retry primitive (sdk.threads.retry — the same re-submission
+   * bb's own thread surface offers, never a re-sent message). A host refusal
+   * reports on the board's notice banner, with bb's reason; app.tsx owns
+   * that report.
+   */
+  retryError: () => void;
+  /**
+   * Ignore error (issue #157, whose "Clear error" entry this renames): the
+   * acknowledgment is not a fix — it records that the operator has seen the
+   * card's error and the board stops claiming attention for it. The write
+   * is untouched (rpc error_ack_set, metadata key "errorAck"); only the
+   * entry's words now describe it.
+   */
+  ignoreError: () => void;
   toggleSweepKeep: () => void;
   /** Detach a nested thread from its family (drop-onto gesture's undo). */
   makeTopLevel: () => void;
@@ -174,10 +188,20 @@ export function cardMenuActions(
     ...(canClearError
       ? [
           {
-            id: "clear-error",
-            label: "Clear error",
+            // Retry rides ahead of Ignore error (issue #405): the two moves
+            // an errored card wants are the opposite pair — re-submit, or
+            // dismiss the claim — and they act on exactly the same condition,
+            // the unacked error arms.
+            id: "retry-error",
+            label: "Retry",
+            icon: "RotateCcw",
+            run: handlers.retryError,
+          } satisfies CardMenuAction,
+          {
+            id: "ignore-error",
+            label: "Ignore error",
             icon: "BellOff",
-            run: handlers.clearError,
+            run: handlers.ignoreError,
           } satisfies CardMenuAction,
         ]
       : []),

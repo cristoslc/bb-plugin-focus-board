@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { columnFor, threadState } from "../components/grouping";
+import { assembleBoard } from "../components/nesting";
 import { thread } from "./thread-fixture";
 import { staleErrorAckIds } from "../lib/error-ack-metadata";
 
@@ -88,6 +89,57 @@ describe("columnFor with an error ack", () => {
         NOW,
       ).id,
     ).toBe("attention");
+  });
+});
+
+describe("assembleBoard with an error ack (issue #405)", () => {
+  const context = { projects: [], providers: [] };
+
+  it("a lone acked errored card settles out of Needs you through the full assembly", () => {
+    const assembly = assembleBoard(
+      [thread({ id: "thr_a", status: "error", updatedAt: NOW - 5 * 60 * 1000 })],
+      "status",
+      context,
+      new Map(),
+      new Set(),
+      NOW,
+      { errorAcks: new Set(["thr_a"]) },
+    );
+    const attention = assembly.columns.find((column) => column.id === "attention");
+    expect(attention?.threads ?? []).toEqual([]);
+    const idle = assembly.columns.find((column) => column.id === "idle-recent");
+    expect(idle?.threads.map((thread) => thread.id)).toEqual(["thr_a"]);
+  });
+
+  it("a family whose errored child's ack settled the family override out of Needs you", () => {
+    const assembly = assembleBoard(
+      [
+        thread({ id: "thr_parent", status: "idle", updatedAt: NOW - 60 * 60 * 1000 }),
+        thread({
+          id: "thr_child",
+          parentThreadId: "thr_parent",
+          status: "error",
+          updatedAt: NOW - 5 * 60 * 1000,
+        }),
+      ],
+      "status",
+      context,
+      new Map(),
+      new Set(),
+      NOW,
+      { errorAcks: new Set(["thr_child"]) },
+    );
+    const attention = assembly.columns.find((column) => column.id === "attention");
+    expect(attention?.threads ?? []).toEqual([]);
+    // The family lives in its settled bucket (its parent's own idle age), not
+    // Needs you; the acked child still renders as the parent's nested row.
+    const idleParent = assembly.columns.some((column) =>
+      column.threads.some((thread) => thread.id === "thr_parent"),
+    );
+    expect(idleParent).toBe(true);
+    expect(assembly.nestedChildrenByParent.get("thr_parent")?.map((c) => c.id)).toEqual([
+      "thr_child",
+    ]);
   });
 });
 

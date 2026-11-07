@@ -219,7 +219,10 @@ export function assembleBoard(
           ranks,
           attentionColumns,
           new Map(),
-          new Set<string>(),
+          // The acks ride through the flat board too (issue #405): the
+          // previous literal `new Set<string>()` here dropped them, so an
+          // acked card kept the Needs-you column on a flat board.
+          options.errorAcks ?? new Set<string>(),
           options.laneOrderDirections,
         ),
         attention?.slots ?? new Map(),
@@ -243,6 +246,11 @@ export function assembleBoard(
     context,
     doneIds,
     now,
+    // The R4 override reads the acks too (issue #405): a family whose
+    // attention came from error arms the operator acknowledged lands where
+    // its settled member's state puts it — the override no longer
+    // re-claims Needs you for an error the board has already dismissed.
+    options.errorAcks,
   );
   const nested = nestUnderParents(
     buildColumns(

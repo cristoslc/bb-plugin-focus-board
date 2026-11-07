@@ -1,0 +1,92 @@
+# Operator-assisted E2E: the errored card's menu gains Retry and reads
+# "Ignore error" (issue #405, on the #157 acknowledgment).
+#
+# The commission in one menu: an errored card's context menu offers the
+# opposite pair — Retry (the SDK's real re-submission primitive,
+# `threads.retry`, recorded in the harness's call log as `threads.retry`)
+# ahead of Ignore error (the old acknowledgment under a name that tells what
+# its write does) — and a healthy card offers neither. The refusal path
+# surfaces bb's own reason on the board's notice banner (`?retryFails=`
+# arms the mock's refusal) instead of failing silently.
+#
+# The suite runs on the touch device (390x844, hasTouch), where the menu's
+# home is the card's ⋯ trigger (issue #336): the card_menu gesture opens it
+# and click_aria drives the entries by their label text.
+#
+# Run: npm run uat -- tests/manual/uat-errored-card-menu.yaml
+suite: errored-card-menu
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5223
+defaults:
+  groupBy: status
+  theme: dark
+  viewport: { width: 390, height: 844, hasTouch: true, isMobile: true }
+  shots: true
+
+steps:
+  - id: error-card-menu-offers-retry-and-ignore-error
+    title: An errored card's menu offers Retry and Ignore error beside the state toggles
+    goto: "?groupBy=status"
+    gestures:
+      - { card_menu: { card: thr_deploy_fail } }
+    assert:
+      - menu_open:
+          open: true
+          label: "Thread actions"
+          header: "Deploy failed: missing DATABASE_URL secret"
+          card: thr_deploy_fail
+      - text_count: { text: "Retry", count: 1 }
+      - text_count: { text: "Ignore error", count: 1 }
+      - no_visible_error: true
+
+  - id: retry-writes-the-sdk-retry-primitive
+    title: Pick Retry re-submits the failed turn over the SDK retry, and acks nothing
+    goto: "?groupBy=status"
+    gestures:
+      - { card_menu: { card: thr_deploy_fail } }
+      - click_aria: "Retry"
+    assert:
+      - rpc_called_method: threads.retry
+      - rpc_not_called: error_ack_set
+      - menu_open: { open: false }
+      - no_visible_error: true
+
+  - id: retry-refusal-surfaces-the-reason
+    title: A refused retry reports bb's reason on the board's notice banner
+    goto: "?groupBy=status&retryFails=thread%20is%20stopping"
+    gestures:
+      - { card_menu: { card: thr_deploy_fail } }
+      - click_aria: "Retry"
+    assert:
+      - rpc_called_method: threads.retry
+      - text_visible: "Retrying the thread failed: thread is stopping"
+      - no_visible_error: true
+
+  - id: ignore-error-writes-the-ack-and-settles-the-card
+    title: Pick Ignore error acks the error, with the old write, and the card leaves Needs you
+    goto: "?groupBy=status"
+    gestures:
+      - { card_menu: { card: thr_deploy_fail } }
+      - click_aria: "Ignore error"
+    assert:
+      - rpc_called_method: error_ack_set
+      - column_contains: { column: attention, id: thr_deploy_fail, shown: false }
+      - column_contains: { column: idle-recent, id: thr_deploy_fail, shown: true }
+      - menu_open: { open: false }
+      - no_visible_error: true
+
+  - id: healthy-card-menu-offers-neither-entry
+    title: A healthy card's menu offers neither Retry nor Ignore error
+    goto: "?groupBy=status"
+    gestures:
+      - { card_menu: { card: thr_uat_queue } }
+    assert:
+      - menu_open:
+          open: true
+          label: "Thread actions"
+          card: thr_uat_queue
+      - text_count: { text: "Retry", count: 0 }
+      - text_count: { text: "Ignore error", count: 0 }
+      - no_visible_error: true
+

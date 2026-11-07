@@ -23,7 +23,8 @@ function makeHandlers(): CardMenuHandlers {
 		togglePinned: vi.fn(noop),
 		toggleRead: vi.fn(noop),
 		toggleDone: vi.fn(noop),
-		clearError: vi.fn(noop),
+		retryError: vi.fn(noop),
+		ignoreError: vi.fn(noop),
 		toggleSweepKeep: vi.fn(noop),
 		makeTopLevel: vi.fn(noop),
 		archive: vi.fn(noop),
@@ -271,33 +272,51 @@ describe("card menu Zoom to family (issue #170)", () => {
 	});
 });
 
-describe("card menu Clear error (issue #157)", () => {
-	it("a card whose attention comes from error signals alone offers Clear error beside the state toggles", () => {
+describe("card menu Ignore error and Retry (issue #405, the #157 entry renamed)", () => {
+	it("an errored card's menu offers Retry ahead of Ignore error, between the state toggles", () => {
 		const actions = cardMenuActions(makeInputs({ canClearError: true }), makeHandlers());
 		const read = actions.findIndex((a) => a.id === "read");
-		const clear = actions.findIndex((a) => a.id === "clear-error");
+		const retry = actions.findIndex((a) => a.id === "retry-error");
+		const ignore = actions.findIndex((a) => a.id === "ignore-error");
 		const done = actions.findIndex((a) => a.id === "done");
-		expect(clear).toBeGreaterThan(read);
-		expect(clear).toBeLessThan(done);
-		const entry = actions[clear]!;
-		expect(entry.label).toBe("Clear error");
-		expect(entry.icon).toBe("BellOff");
-		expect(entry.dividerAbove).toBeUndefined();
+		expect(retry).toBeGreaterThan(read);
+		expect(retry).toBeLessThan(ignore);
+		expect(ignore).toBeLessThan(done);
+		expect(ignore).toBe(retry + 1);
+		const retryEntry = actions[retry]!;
+		expect(retryEntry.label).toBe("Retry");
+		expect(retryEntry.icon).toBe("RotateCcw");
+		expect(retryEntry.dividerAbove).toBeUndefined();
+		const ignoreEntry = actions[ignore]!;
+		expect(ignoreEntry.label).toBe("Ignore error");
+		expect(ignoreEntry.icon).toBe("BellOff");
+		expect(ignoreEntry.dividerAbove).toBeUndefined();
 	});
 
-	it("a card without error-signal attention offers no Clear error", () => {
+	it("a card without error-signal attention offers neither Retry nor Ignore error", () => {
 		const actions = cardMenuActions(makeInputs({ canClearError: false }), makeHandlers());
-		expect(actions.find((a) => a.id === "clear-error")).toBeUndefined();
+		expect(actions.find((a) => a.id === "retry-error")).toBeUndefined();
+		expect(actions.find((a) => a.id === "ignore-error")).toBeUndefined();
 	});
 
-	it("running Clear error invokes the caller's handler (one acknowledgment)", () => {
+	it("running Retry invokes the caller's handler (one re-submission)", () => {
 		const handlers = makeHandlers();
 		const entry = cardMenuActions(makeInputs({ canClearError: true }), handlers).find(
-			(a) => a.id === "clear-error",
+			(a) => a.id === "retry-error",
 		);
 		expect(entry).toBeDefined();
 		entry!.run();
-		expect(handlers.clearError).toHaveBeenCalledTimes(1);
+		expect(handlers.retryError).toHaveBeenCalledTimes(1);
+	});
+
+	it("running Ignore error invokes the caller's handler (one acknowledgment)", () => {
+		const handlers = makeHandlers();
+		const entry = cardMenuActions(makeInputs({ canClearError: true }), handlers).find(
+			(a) => a.id === "ignore-error",
+		);
+		expect(entry).toBeDefined();
+		entry!.run();
+		expect(handlers.ignoreError).toHaveBeenCalledTimes(1);
 	});
 });
 
