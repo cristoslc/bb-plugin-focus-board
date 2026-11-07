@@ -1,4 +1,5 @@
 import {
+  memo,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -653,7 +654,7 @@ function StateDot({
   );
 }
 
-export function Board({
+function BoardBase({
   columns,
   groupBy,
   activeThreadId,
@@ -5202,6 +5203,14 @@ export function Board({
     </div>
   );
 }
+
+/**
+ * The board is memoized: its props' identities are the caller's job to keep
+ * (the hoisted gesture handlers in app.tsx), so a covered sheet's quiet
+ * open/close (issue #406) wakes nothing in this whole subtree, and every
+ * other surface's render reaches the cards only when a prop actually moved.
+ */
+export const Board = memo(BoardBase);
 
 /**
  * jsdom (the test environment) does not implement `CSS.escape`; real
