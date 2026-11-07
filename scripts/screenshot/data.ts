@@ -209,6 +209,12 @@ export const SIM_THREADS: readonly SimThread[] = [
   thread({
     id: "thr_deploy_fail",
     displayTitle: "Deploy failed: missing DATABASE_URL secret",
+    // A hard-failed turn, the shape a retry targets (issue #405): the
+    // status arm carries the error, not just the indicator, so the ack
+    // rides the error status the stale sweep keys on (lib/error-ack-metadata
+    // drops an ack whose thread left "error").
+    status: "error",
+    runtimeStatus: "error",
     indicator: "unread-error",
     indicatorLabel: "Unread error",
     latestAttentionAt: SIM_NOW - 35 * MINUTE,

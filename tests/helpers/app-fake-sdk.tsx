@@ -268,6 +268,26 @@ export function resetFakeRpcCalls(): void {
   rpcCalls.splice(0, rpcCalls.length);
 }
 
+// The retry arm (issue #405): the app's `sdk.threads.retry` calls recorded
+// separately from the plugin rpc log, with a failure stub the refusal
+// path's test arms — a host refusal must surface, never fail silently.
+let retryFailure: string | null = null;
+const retryCalls: { args?: unknown }[] = [];
+
+/** Reject every threads.retry with `message` until cleared (null = serve). */
+export function stubRetryFailure(message: string | null): void {
+  retryFailure = message;
+}
+
+/** Every sdk.threads.retry call the app under test made, in order. */
+export function fakeRetryCalls(): { args?: unknown }[] {
+  return structuredClone(retryCalls);
+}
+
+export function resetFakeRetryCalls(): void {
+  retryCalls.splice(0, retryCalls.length);
+}
+
 /** Seed the fake rank store from ordered lists (fresh per test). */
 export function seedFakeRanks(orders: Record<string, string[]>): void {
   fakeRanks = Object.fromEntries(
@@ -523,6 +543,18 @@ const fakeSdk = {
     },
     events: {
       list: async () => [],
+    },
+    // The retry primitive (issue #405): recorded apart from rpcCalls, with
+    // the stubbed rejection served from the failure knob above.
+    retry: async (args?: { threadId: string }) => {
+      retryCalls.push({ args });
+      if (retryFailure !== null) throw new Error(retryFailure);
+      return {
+        ok: true as const,
+        attempt: 1,
+        delivery: "sent" as const,
+        turnRequestId: "trq_fake_retry",
+      };
     },
   },
   hosts: {

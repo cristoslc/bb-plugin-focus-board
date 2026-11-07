@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+#### The errored card's menu
+
+- **An errored card's menu offers Retry beside the acknowledgment, and the acknowledgment reads Ignore error.** Retry re-submits the failed turn through the host's own retry, and a refusal reports bb's reason on the board's notice banner. Ignore error is the old write unchanged under a name that says what it does: the board's flag lifts, bb's error record stays.
+
 ### Changed
 
 #### The board's load

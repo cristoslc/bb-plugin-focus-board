@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-06T15:50:32.446Z by `npm run uat`._
+_Generated 2026-11-07T03:21:15.865Z by `npm run uat`._
 
 ## attention-pulse
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_4qh62ybyi5-1/bb-plugin-focus-board/tests/manual/uat-attention-pulse.yaml` · theme dark
+Source: `tests/manual/uat-attention-pulse.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

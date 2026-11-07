@@ -294,6 +294,13 @@ function browserReachFailure(error: unknown): string {
   }`;
 }
 
+/** The banner copy naming why the host refused a card-menu retry (issue #405). */
+function cardRetryFailure(error: unknown): string {
+  return `Retrying the thread failed: ${
+    error instanceof Error ? error.message : String(error)
+  }`;
+}
+
 /**
  * The mount fan-in's nine immediate lists (issue #403): the readiness gate
  * holds the board's first paint until each has settled — resolved OR
@@ -3282,9 +3289,9 @@ function BoardPage({ subPath }: { subPath: string }) {
           isKept: isThreadKept,
           grouped: groupAssignments[thread.id] !== undefined,
           inFamily,
-          // Clear error (issue #157): offer only on attention the error arms
-          // carry — threadState attention minus a pending interaction, and
-          // not already acknowledged.
+          // Retry and Ignore error (issues #405 and #157): offer only on
+          // attention the error arms carry — threadState attention minus a
+          // pending interaction, and not already acknowledged.
           canClearError:
             threadState(thread, errorAckIds) === "attention" &&
             !thread.hasPendingInteraction &&
@@ -3359,12 +3366,28 @@ function BoardPage({ subPath }: { subPath: string }) {
               void actions.setRead(thread.id, false);
             }
           },
-          clearError: () => {
+          retryError: () => {
+            // Retry (issue #405): the host's real retry primitive —
+            // sdk.threads.retry re-submits the failed turn (the default is
+            // the thread's most recent turn, the one whose failure put it in
+            // error), delivered or queued on exactly the same terms as a
+            // send. A refusal surfaces on the board's notice banner with
+            // bb's reason, the same shape the browser-reveal failure takes:
+            // the click never reads as one the board ignored. Nothing to
+            // write locally: the dispatch's own host updates re-lane the
+            // card when the retry lands.
+            void sdk.threads.retry({ threadId: thread.id }).catch((error) => {
+              setBrowserNotice({ message: cardRetryFailure(error) });
+            });
+          },
+          ignoreError: () => {
             // Optimistic local ack: the card settles out of Needs you in the
             // same commit (dot, accent, lane). The RPC records it (metadata
             // "errorAck") so the ack survives reloads, and its publish
             // refetches every other open board. bb's own thread view keeps
             // the error; only the board's attention claim lifts (issue #157).
+            // The entry reads "Ignore error" now (issue #405) — a rename of
+            // what the acknowledgment does, not a change of it.
             setErrorAckIds((current) => new Set(current).add(thread.id));
             rpc.call("error_ack_set", { threadId: thread.id, acked: true }).catch(() => {});
             requestReveal(thread.id);

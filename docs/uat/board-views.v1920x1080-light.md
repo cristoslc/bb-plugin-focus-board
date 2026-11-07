@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-06T15:50:32.446Z by `npm run uat`._
+_Generated 2026-11-07T03:21:52.761Z by `npm run uat`._
 
 ## board-views (v1920x1080-light)
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_4qh62ybyi5-1/bb-plugin-focus-board/tests/manual/uat-board-views.yaml` · theme light
+Source: `tests/manual/uat-board-views.yaml` · theme light
 
 | Step | Result | Detail |
 | --- | --- | --- |

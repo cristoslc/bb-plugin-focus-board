@@ -735,6 +735,21 @@ const mockSdk = {
     events: {
       list: async () => [],
     },
+    // The errored card's Retry entry (issue #405): recorded in `uatCalls` as
+    // `threads.retry` (the SDK level the real call rides, the same recording
+    // seam `hosts.pickFolder` uses), with `?retryFails=<reason>` arming a
+    // refusal so a suite can pin the board surfacing bb's reason.
+    retry: async (args?: { threadId: string }) => {
+      uatCalls.push({ method: "threads.retry", args });
+      const reason = PAGE_PARAMS.get("retryFails");
+      if (reason !== null) throw new Error(reason);
+      return {
+        ok: true as const,
+        attempt: 1,
+        delivery: "sent" as const,
+        turnRequestId: "trq_uat_retry",
+      };
+    },
   },
   hosts: {
     // The fields the plugin's create flows read: the dialog's picked-folder
