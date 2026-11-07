@@ -114,6 +114,7 @@ The backfill's per-bullet decisions live here so the record survives the pull re
 | 1.7.8 | A lane's name and caret open that lane's own menu, and the tiny hand-order badge is gone | demonstrated | the demo board's default lanes; the name+caret pair clicked on the Unread lane, no fixture needed |
 | 1.7.8 | The menu names the lane's order, and sorting has real actions | demonstrated | the opened menu's Oldest first pick re-orders the Unread lane live, and the reopened menu checks the picked side (the persistence facet rides the same clip) |
 | 1.7.8 | The What's-new feed credits contributors | demonstrated | 1.7.7's working-stays bullet carries the bracket note, so the shipped feed stages the attributed read under `lastSeenVersion=0.1.0` |
+| 1.7.9 | An errored card's menu offers Retry beside the acknowledgment, and the acknowledgment reads Ignore error | demonstrated | the demo board's own errored thread (`thr_deploy_fail`); the menu right-clicked on the card, Ignore error picked, and the card settles out of Needs you |
 
 Still skipped, with the reason:
 
@@ -147,6 +148,8 @@ Still skipped, with the reason:
 | 1.7.7 | Clicking a file-change row's name opens the thread in the main view | The maximize's outcome is host navigation (bb's main view opens the diff); the harness has no host to render it. |
 | 1.7.7 | The thread pane's "Recent decisions" card is gone | Proves an absence; nothing on screen to film. |
 | 1.7.8 | The load-time dissolve no longer plays: the board's mounting echo lands its cards in place | The fix proves an absence; the board simply stops repainting a few hundred ms after it looks loaded, and no frame distinguishes the landed state. |
+| 1.7.9 | Opening and closing the pane no longer works the board behind it | The fix proves an absence behind the invisible sheet (0 card renders per gesture); identical pixels frame to frame. |
+| 1.7.9 | The board paints once, settled: the loading view holds until the board's data is in | Load timing; on a local fixture the mount fetches land in the same frame as paint, and a staged hang would film the 400ms ceiling path rather than the shipped one. |
 
 ## Checklist for a release producer
 
