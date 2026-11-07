@@ -7,17 +7,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-#### The errored card's menu
+### Changed
+
+### Fixed
+
+## [1.7.9] - 2026-11-07
+
+### Added
+
+#### Context menus
 
 - **An errored card's menu offers Retry beside the acknowledgment, and the acknowledgment reads Ignore error.** Retry re-submits the failed turn through the host's own retry, and a refusal reports bb's reason on the board's notice banner. Ignore error is the old write unchanged under a name that says what it does: the board's flag lifts, bb's error record stays.
 
 ### Changed
 
-#### The thread pane on a phone
+#### The thread pane
 
 - **Opening and closing the pane no longer works the board behind it.** On a phone the pane covers the board, so the open and close gestures skip the board-wide work they used to pay behind the invisible sheet: the placement freeze, the chip refetch, and the card re-render (0 card renders per gesture measured on a 740-card board). On a window wide enough to show both, every gesture behaves exactly as before.
 
-#### The board's load
+#### Board layout
 
 - **The board paints once, settled: the loading view holds until the board's data is in.** The state lists a mount fetches (done marks, pin parks, links, error acks, snoozes, ranks, groups, family folds) land before the first paint, so cards stop shifting into place in the moments after the board looks loaded; a 400ms ceiling paints whatever has arrived if a list hangs.
 
