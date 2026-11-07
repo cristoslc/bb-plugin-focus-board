@@ -219,3 +219,29 @@ tasks at 4x/8x on 740 cards) falls away with the two board rebuilds per
 cycle. What remains is the fixed pane cost plus (on the real device) bb's
 ThreadChat mount, the keyboard's viewport effect, and real network — the
 residual the harness cannot price.
+
+### Measured correction (2026-11-07, post-fix): the prediction over-credited the capture rebuild
+
+The prediction above bet everything on the capture writes. The Stage 2 fix
+shipped in layers, and the intermediate measurement caught the
+misattribution: after the freeze-skip + chip pane-term alone (report
+`pane-mobile-attribution-2026-11-07T03-52-13-811Z.json`), the 740-card cell
+moved 465→477ms open / 350→371ms close at 8x — noise, not the predicted
+collapse. The post-fix CPU profile attributed the remainder to the BOARD
+re-render itself: `openThreadId` and the fresh closure props (onOpenThread,
+onClosePane, the drop/rank/menu callbacks) re-rendered all ~740 `threadLi`
+fibers and their `ThreadCard`s on every gesture regardless of the capture
+state (`getNearestMountedFiber`, `threadLi`, `sameCardProps`, and React
+element allocation dominated the profile).
+
+The landed fix therefore also quiets the board subtree: `activeThreadId` is
+withheld (null) while the sheet covers the board, Board and ParentLaneBoard
+are memoized (`memo(BoardBase)` / `memo(ParentLaneBoardBase)`), the gesture
+closures are hoisted to app-stable callbacks, and openThreadId bridges
+through a ref for openThreadCard/closeThreadPane whose only reads are
+comparisons. The red-first render-count test (zero card renders on covered
+open AND close) now pins what the measured profile demanded.
+
+Final measured numbers on the full fix are in the PR body for this work
+(Stage 2's completion report); the layer measurement above is archived
+raw at `docs/perf/pane-mobile-attribution-2026-11-07T03-52-13-811Z.json`.
