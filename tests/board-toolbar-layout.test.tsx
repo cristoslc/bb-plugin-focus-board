@@ -209,6 +209,22 @@ describe("BoardToolbar layout", () => {
     expect(onGroupByChange).toHaveBeenCalledWith("recency");
   });
 
+  it("names the ungrouped view No grouping in the chip and the menu, writing none", () => {
+    // The row read "None" and named nothing (the board it picks is one lane
+    // of every thread, not an empty board). The label is the only thing that
+    // moved: the chip, the menu row, and the value the row writes.
+    const onGroupByChange = vi.fn();
+    renderToolbar({ groupBy: "none", onGroupByChange });
+    const view = document.querySelector('button[aria-label="View"]');
+    if (view === null) throw new Error("View trigger not found");
+    expect(view.textContent).toContain("No grouping");
+    expect(view.textContent).not.toContain("None");
+    openViewMenu();
+    expect(screen.queryByRole("option", { name: "None" })).toBeNull();
+    fireEvent.click(screen.getByRole("option", { name: "No grouping" }));
+    expect(onGroupByChange).toHaveBeenCalledWith("none");
+  });
+
   it("carries no maximize button — that lives in the New thread modal", () => {
     renderToolbar();
     expect(screen.queryByLabelText("Maximize new thread")).toBeNull();

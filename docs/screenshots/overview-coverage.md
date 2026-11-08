@@ -129,7 +129,7 @@ Marks: **current** means the old `family-zoom.gif` or an existing README still a
 - Focus view: current, GIF.
 - Parent thread view: current (the old GIF), still `overview-parent-view.png`.
 - Group view: omitted. It is a separate board surface and outside the Focus view this media set covers; `docs/release-safety/families-desktop.png` photographs it.
-- Last activity, Project, Provider, Machine, and None: named in `overview-view-menu.png`, not photographed one by one. Each reuses the same lane structure with different buckets, so five more board stills would repeat the same picture.
+- Last activity, Project, Provider, Machine, and No grouping: named in `overview-view-menu.png`, not photographed one by one. Each reuses the same lane structure with different buckets, so five more board stills would repeat the same picture.
 
 ## Regenerating
 

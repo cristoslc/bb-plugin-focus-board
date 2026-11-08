@@ -120,7 +120,7 @@ cols -.->|"every state change re-runs the pipeline"| chg
    the state lane it was read in. The retired pane-slot and box overrides
    feed no claims.
 7. **Lane visibility.** A lane shows only while it holds a card, with the two
-   standing exceptions: the Working lane in Attention and the None view's
+   standing exceptions: the Working lane in Attention and the No grouping view's
    single column.
 8. **Slot order.** Manual rank, then pinned first, then newest activity; Done
    orders by activity, never by the done stamp; a needs-you card in the

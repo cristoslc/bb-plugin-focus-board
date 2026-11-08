@@ -8,7 +8,9 @@
  * Each shot opens its own harness page (a modal, a highlight, or a scroll
  * state must never leak into the next picture) and reuses the GIF recorder's
  * gestures, so a still cannot drift from the storyboard it illustrates.
- * OUT_DIR / HARNESS_URL / CHROME_PATH behave like the other captures.
+ * OUT_DIR / HARNESS_URL / CHROME_PATH behave like the other captures, and
+ * ONLY=<name>[,<name>] records just those stills, so a changed control can
+ * regenerate its own picture without churning the rest.
  */
 import path from "node:path";
 import {
@@ -267,10 +269,25 @@ const SHOTS = [
   },
 ];
 
+const ONLY = new Set(
+  (process.env.ONLY ?? "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter((name) => name !== ""),
+);
+// A typo in ONLY must fail rather than quietly record nothing.
+const PLANNED =
+  ONLY.size === 0 ? SHOTS : SHOTS.filter((shot) => ONLY.has(shot.name));
+if (PLANNED.length === 0) {
+  throw new Error(
+    `stills: ONLY=${[...ONLY].join(",")} matches no shot (${SHOTS.map((shot) => shot.name).join(", ")})`,
+  );
+}
+
 const browser = await launchRecorderBrowser({ width: 1680, height: 945, deviceScaleFactor: 2 });
 const failures = [];
 try {
-  for (const shot of SHOTS) {
+  for (const shot of PLANNED) {
     console.log(`  ${shot.name}`);
     const session = await openSession(browser, {
       query: shot.query,
@@ -305,6 +322,6 @@ try {
 
 if (failures.length > 0) {
   for (const failure of failures) console.error(`FAILED ${failure}`);
-  throw new Error(`${failures.length} of ${SHOTS.length} overview stills failed`);
+  throw new Error(`${failures.length} of ${PLANNED.length} overview stills failed`);
 }
-console.log(`${SHOTS.length} stills captured in ${OUT_DIR}`);
+console.log(`${PLANNED.length} stills captured in ${OUT_DIR}`);

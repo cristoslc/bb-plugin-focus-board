@@ -468,7 +468,7 @@ export function buildFamilyIndex(threads: readonly PluginSidebarThread[]): Famil
  * re-derive it:
  *
  * | view                          | cross-space child    | own group ≠ parent's  |
- * | Focus / Last activity / None  | — (one space key)    | dual: row + own card  |
+ * | Focus / Last activity / No grouping | — (one space key) | dual: row + own card |
  * | Project / Provider / Machine  | own card only (flat) | dual: row + own card  |
  * | Group                         | own card only (flat) | own card only (flat)  |
  * | Parent                        | lanes, no boxes (never reaches here; `groupBoxesApply` says no) |
@@ -820,7 +820,7 @@ function bestFamilyDriver(
  *   cannot relocate).
  * - Axis match (project/provider/machine): a live child nests only when its
  *   axis key matches its parent's; otherwise it stays flat in its own column.
- *   Recency and None groupings always nest.
+ *   Recency and No grouping always nest.
  * - The feature-group copy-out (`childPlacement` step 5): in every
  *   box-enabled view, a live child whose own feature group differs from its
  *   parent's nests AND keeps its column slot, so its own card lands inside
