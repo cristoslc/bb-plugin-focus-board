@@ -1,0 +1,217 @@
+# Operator-assisted E2E: the ungrouped view is a card GRID (issue #416).
+#
+# "No grouping" used to render one flat lane named Threads: a 256px card
+# column, a lane header with its caret menu, and the whole lane vocabulary
+# applied to a single lane. It now renders every card in a responsive grid
+# that fills the width, with NO lanes at all, and the View menu carries the
+# grid's own order (Sort by + Order) instead of the lane direction pair.
+#
+# What only a real browser can say: that the grid's computed template
+# actually wraps into several tracks (the `min_tracks` assertion — a grid that
+# never resolved its template would read 1), that the menu's rows sit inside
+# the open menu's box, and that a tap re-orders the real DOM. The stored
+# write, the card's context menu (the mouse's right-click and the touch
+# device's ⋯ trigger are pointer-class specific, and one matrix cell cannot
+# carry both), and the persistence of a picked order across a reload are
+# pinned in jsdom (tests/app-grid-view.test.tsx); the `?gridSort=` seed in
+# main.tsx re-seeds a stored order on every goto, which the sorting steps
+# below lean on.
+#
+# Matrix: desktop and a wide TOUCH viewport, because the grid is the view a
+# phone gets when the operator says "just show me the cards" — the taps travel
+# the pointer path a touch screen uses in the second cell.
+#
+# Run: npm run uat -- tests/manual/uat-grid-view.yaml
+suite: grid-view
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5241
+defaults:
+  groupBy: none
+  theme: dark
+matrix:
+  viewports:
+    - { width: 1920, height: 1080 }
+    - { width: 1180, height: 820, hasTouch: true }
+shots: true
+
+# The fixture's three sort keys each read differently on purpose:
+#   last activity  thr_column_sort (just now) … thr_gutter_family (18 days)
+#   created        thr_grouping_spike (30m) … thr_ship_release (20 days)
+#   title          Add keyboard shortcuts … Write E2E test for drag-to-done
+# so a key that silently read another field would fail its own step.
+steps:
+  - id: the-ungrouped-view-is-a-card-grid
+    title: No grouping renders a card grid with no lanes and no lane headers
+    goto: "?groupBy=none"
+    assert:
+      # 24 top-level cards: 25 fixture threads minus the one child that
+      # renders as a row under its parent. Zero lane containers, zero lane
+      # headers, and the computed template must wrap (>= 2 tracks at both
+      # matrix widths).
+      - grid: { cards: 24, lanes: 0, lane_headers: 0, min_tracks: 2 }
+      - text_hidden: "Threads"
+      # The default order is the board's standing read: last activity,
+      # newest first. Every top-level card, in the order the grid paints it.
+      - grid:
+          order:
+            [
+              thr_column_sort,
+              thr_ship_release,
+              thr_permissions,
+              thr_drag_done,
+              thr_glyph_glue,
+              thr_kbd_focus,
+              thr_rpc_auth,
+              thr_deploy_fail,
+              thr_toolbar_labels,
+              thr_uat_queue,
+              thr_review_pr,
+              thr_flaky_ci,
+              thr_readme_quickstart,
+              thr_pane_padding,
+              thr_roadmap,
+              thr_icon_lazy,
+              thr_license,
+              thr_env_edge,
+              thr_grouping_spike,
+              thr_parent_lane,
+              thr_sweep_parent,
+              thr_proj_family,
+              thr_big_family,
+              thr_gutter_family,
+            ]
+
+  - id: the-view-menu-carries-the-grids-order
+    title: The View menu offers Sort by and Order, and no lane direction
+    gestures:
+      - click_aria: "View"
+    assert:
+      - menu_pairs_visible: "View"
+      - text_visible: "Sort by"
+      - text_visible: "Order"
+      - text_visible: "Alphabetical"
+      - text_hidden: "Lane direction"
+
+  - id: alphabetical-re-orders-the-grid-in-place
+    title: Tapping Alphabetical re-orders the same cards by title
+    gestures:
+      - click_aria: "Alphabetical"
+    assert:
+      - grid:
+          order:
+            [
+              thr_kbd_focus,
+              thr_license,
+              thr_sweep_parent,
+              thr_deploy_fail,
+              thr_readme_quickstart,
+              thr_env_edge,
+              thr_pane_padding,
+              thr_permissions,
+              thr_big_family,
+              thr_flaky_ci,
+              thr_proj_family,
+              thr_parent_lane,
+              thr_roadmap,
+              thr_uat_queue,
+              thr_column_sort,
+              thr_icon_lazy,
+              thr_rpc_auth,
+              thr_review_pr,
+              thr_ship_release,
+              thr_grouping_spike,
+              thr_gutter_family,
+              thr_toolbar_labels,
+              thr_glyph_glue,
+              thr_drag_done,
+            ]
+      # Still a grid: the sort re-orders the cards, it never re-frames them.
+      - grid: { cards: 24, lanes: 0 }
+      - no_visible_error: true
+
+  - id: z-to-a-reverses-the-title-order
+    title: The Order pair relabels for titles and Z to A reverses the grid
+    gestures:
+      - click_aria: "Z to A"
+    assert:
+      - grid:
+          order:
+            [
+              thr_drag_done,
+              thr_glyph_glue,
+              thr_toolbar_labels,
+              thr_gutter_family,
+              thr_grouping_spike,
+              thr_ship_release,
+              thr_review_pr,
+              thr_rpc_auth,
+              thr_icon_lazy,
+              thr_column_sort,
+              thr_uat_queue,
+              thr_roadmap,
+              thr_parent_lane,
+              thr_proj_family,
+              thr_flaky_ci,
+              thr_big_family,
+              thr_permissions,
+              thr_pane_padding,
+              thr_env_edge,
+              thr_readme_quickstart,
+              thr_deploy_fail,
+              thr_sweep_parent,
+              thr_license,
+              thr_kbd_focus,
+            ]
+
+  - id: created-orders-by-creation-date
+    title: The Created key reads createdAt — the newest thread leads, not the busiest
+    gestures:
+      - click_aria: "Created"
+    assert:
+      - grid:
+          order:
+            [
+              thr_grouping_spike,
+              thr_column_sort,
+              thr_permissions,
+              thr_drag_done,
+              thr_glyph_glue,
+              thr_kbd_focus,
+              thr_rpc_auth,
+              thr_deploy_fail,
+              thr_toolbar_labels,
+              thr_uat_queue,
+              thr_review_pr,
+              thr_flaky_ci,
+              thr_readme_quickstart,
+              thr_pane_padding,
+              thr_roadmap,
+              thr_icon_lazy,
+              thr_license,
+              thr_env_edge,
+              thr_parent_lane,
+              thr_sweep_parent,
+              thr_proj_family,
+              thr_big_family,
+              thr_gutter_family,
+              thr_ship_release,
+            ]
+      # The Order pair names the date axis, not the title one.
+      - text_visible: "Newest first"
+
+  - id: a-grid-card-opens-its-thread-in-the-pane
+    title: A card in the grid opens the pane on a click, exactly as a lane card does
+    goto: "?groupBy=none"
+    gestures:
+      - click: { card: thr_column_sort }
+    assert:
+      - pane: { threadId: thr_column_sort }
+
+  - id: search-narrows-the-grid
+    title: Typing in search narrows the grid to the matching cards
+    goto: "?groupBy=none&q=roadmap"
+    assert:
+      - grid: { cards: 1, lanes: 0 }
+      - text_visible: "Plan Q4 plugin roadmap"
+      - text_hidden: "Ship 0.1.1: column ordering fix + release notes"

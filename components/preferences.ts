@@ -1,6 +1,12 @@
 import type { GroupBy } from "./grouping";
 import type { CSSProperties } from "react";
 import {
+  DEFAULT_GRID_SORT,
+  defaultDirectionFor,
+  GRID_SORT_KEYS,
+  type GridSort,
+} from "./grid-sort";
+import {
   ARCHIVE_UNITS,
   DEFAULT_ARCHIVE_UNIT,
   DEFAULT_ARCHIVE_VALUE,
@@ -768,6 +774,35 @@ export function wallpaperStoredValue(settings: WallpaperSettings): string {
   if (settings.global === null) return JSON.stringify({ version: 1, global: null });
   const layer = parseWallpaperLayer(settings.global) ?? null;
   return JSON.stringify({ version: 1, global: layer });
+}
+
+/**
+ * The ungrouped view's card-grid sort (issue #416): one scalar key holding
+ * `"<key>:<direction>"` (`"activity:desc"`), because the grid has exactly one
+ * order at a time. It is a view preference like `groupBy` — last write wins,
+ * no per-lane map — and it is read ONLY by the grid, so a lane view ignores
+ * a stored grid order and the grid keeps it until the operator changes it.
+ */
+export const GRID_SORT_KEY = "focus-board:gridSort";
+
+/**
+ * Validate a stored grid sort. Tolerant, never throwing: an unknown key falls
+ * back to the default (last activity, newest first), and a known key stored
+ * without a direction — a hand-written seed, a hand-edited key — takes that
+ * key's own default direction instead of the other key's.
+ */
+export function parseGridSortStored(raw: string | null): GridSort {
+  if (raw === null || raw === "") return { ...DEFAULT_GRID_SORT };
+  const [rawKey, rawDirection] = raw.split(":");
+  const key = GRID_SORT_KEYS.find((option) => option.value === rawKey)?.value;
+  if (key === undefined) return { ...DEFAULT_GRID_SORT };
+  const direction =
+    rawDirection === "asc" || rawDirection === "desc" ? rawDirection : defaultDirectionFor(key);
+  return { key, direction };
+}
+
+export function gridSortStoredValue(sort: GridSort): string {
+  return `${sort.key}:${sort.direction}`;
 }
 
 /**

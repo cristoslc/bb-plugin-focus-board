@@ -182,6 +182,11 @@ export const SIM_THREADS: readonly SimThread[] = [
     status: "active",
     runtimeStatus: "active",
     updatedAt: SIM_NOW - 4 * MINUTE,
+    // The card grid's Created sort (issue #416) needs fixtures whose three
+    // sort keys disagree: this one is the newest activity on the board and
+    // the oldest thread here, so an activity read and a created read can
+    // never be mistaken for each other. Nothing else reads createdAt.
+    createdAt: SIM_NOW - 20 * DAY,
     lastReadAt: SIM_NOW - 4 * MINUTE,
     environment: boardEnv("main"),
   }),
@@ -329,6 +334,9 @@ export const SIM_THREADS: readonly SimThread[] = [
     id: "thr_grouping_spike",
     displayTitle: "Spike: grouping model",
     updatedAt: SIM_NOW - 9 * DAY,
+    // The other half of the Created sort's inversion (see thr_ship_release):
+    // the oldest activity on the board, the newest thread here.
+    createdAt: SIM_NOW - 30 * MINUTE,
     lastReadAt: SIM_NOW - 9 * DAY,
   }),
 

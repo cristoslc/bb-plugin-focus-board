@@ -9,9 +9,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+#### The ungrouped view
+
+- **The No grouping view is a card grid with a sort order.** Every card fills a responsive grid that wraps with the window instead of sitting in one narrow Threads lane, and the View menu offers Sort by (Last activity, Created, Alphabetical) with an Order pair in that view. Lane drag order, lane menus and the sweep pill stay in the grouped views.
+  - **The chosen sort persists, and the default is last activity newest first.** Picking a key starts it in its own direction, so Alphabetical opens A to Z, and the grid re-sorts in place.
+
 #### The View menu
 
-- **The View menu's None row now reads No grouping.** The row never emptied the board: it picks the board with no grouping key, one lane holding every thread. The stored value, the Threads lane, and every saved view are unchanged.
+- **The View menu's None row now reads No grouping.** The row never emptied the board: it picks the board with no grouping key. The stored value and every saved view are unchanged.
 - **Lane direction and Nest child threads are two-choice pairs in the View menu.** Pick Vertical or Horizontal, or switch nesting Off and On, and the board re-lays in place; the old nesting checkbox is gone and both pairs write the preferences the Appearance tab already owns.
 
 ### Fixed

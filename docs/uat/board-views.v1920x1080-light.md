@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-11-08T05:07:58.543Z by `npm run uat`._
+_Generated 2026-11-08T05:32:42.838Z by `npm run uat`._
 
 ## board-views (v1920x1080-light)
 
@@ -14,7 +14,7 @@ Source: `tests/manual/uat-board-views.yaml` · theme light
 | The Provider view splits the board into one lane per provider | pass | ✓ text visible: "Claude Code"; ✓ text visible: "Codex"; ✓ claude-code order |
 | The Machine view groups by the host name and has no machine-less lane | pass | ✓ text visible: "MacBook Pro"; ✓ text hidden: "No machine" |
 | The Group view lanes by feature-group assignment with a No group bucket | pass | ✓ text visible: "chat-imagegent"; ✓ text visible: "No group"; ✓ grp_chat_imagegent order |
-| The Threads (no grouping) view renders a single flat lane | pass | ✓ text visible: "Threads" |
+| The No grouping view renders a card grid with no lanes | pass | ✓ the grid holds at least 1 cards; ✓ the grid carries 0 lane containers; ✓ the grid carries 0 lane headers; ✓ text hidden: "Threads" |
 | The Parent-thread view renders the family lanes (loose threads excluded) | pass | ✓ text visible: "Parent thread lane fixture"; ✓ text visible: "Child thread lane fixture" |
 | The horizontal Attention board derives the same state and age lanes | pass | ✓ lane direction: horizontal; ✓ unread order; ✓ working order |
 | The horizontal Last activity board keeps its age buckets and orders | pass | ✓ text visible: "Today"; ✓ text visible: "A while ago"; ✓ recent order; ✓ today order |
@@ -22,4 +22,4 @@ Source: `tests/manual/uat-board-views.yaml` · theme light
 | The horizontal Provider view splits the same provider lanes | pass | ✓ claude-code order |
 | The horizontal Machine view groups by the same host lane | pass | ✓ text visible: "MacBook Pro"; ✓ text hidden: "No machine" |
 | The horizontal Group view keeps the assignment lanes and the No group bucket | pass | ✓ text visible: "No group"; ✓ grp_chat_imagegent order |
-| The horizontal Threads view renders the same single flat lane | pass | ✓ text visible: "Threads" |
+| The lane direction changes nothing in the grid — it has no lanes | pass | ✓ the grid holds at least 1 cards; ✓ the grid carries 0 lane containers; ✓ text hidden: "Threads" |
