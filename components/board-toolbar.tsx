@@ -17,6 +17,7 @@ import {
   parseFilterRibbonStored,
   filterRibbonStoredValue,
 } from "./preferences";
+import type { LaneDirectionPref } from "./preferences";
 import { useIsCompactViewport } from "./ui/hooks/use-compact-viewport";
 import type { FilterState, GroupBy, StateFilterValue } from "./grouping";
 import { GROUP_BY_OPTIONS, STATE_FILTER_OPTIONS } from "./grouping";
@@ -104,6 +105,11 @@ interface MultiSelectDropdownProps {
    *  always active), not a narrowing filter. */
   modeChip?: boolean;
   footer?: React.ReactNode;
+  /** The popup's row cap in px. The chip rows cap at 320 so a long list
+   *  scrolls inside a short menu; a chip whose footer carries controls of
+   *  its own (the View menu's two choice rows) raises it to hold its whole
+   *  body, or the last control sits under the fold. */
+  rowsMaxHeight?: number;
 }
 
 function MultiSelectDropdown({
@@ -119,6 +125,7 @@ function MultiSelectDropdown({
   exclusive = false,
   modeChip = false,
   footer,
+  rowsMaxHeight = 320,
 }: MultiSelectDropdownProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -218,7 +225,7 @@ function MultiSelectDropdown({
         // away, Escape — wiped query first, claimed here — and the trigger's
         // own toggle).
         role="presentation"
-        maxHeight={320}
+        maxHeight={rowsMaxHeight}
         className="min-w-56"
         onEscape={(event) => {
           // A footer field owns its Escape when the key landed in it (the
@@ -575,14 +582,97 @@ function GroupDropdown({
   );
 }
 
+/**
+ * One two-state row in the View menu's options block: a label over a segment
+ * pair, exactly one segment chosen. The semantics are the Appearance tab's
+ * choice anatomy (`ChoiceRow` in components/appearance-controls.tsx: a
+ * `role="radiogroup"` of `role="radio"` buttons, each naming its own
+ * `aria-checked`), drawn as the compact pair the wallpaper's Fit control
+ * uses (components/wallpaper-picker.tsx). A selection between two states,
+ * never a checkbox: a checkbox says "this flag", a pair says which of the
+ * two reads is in force. The pair does not close the menu — both choices
+ * stay reachable in one visit.
+ */
+function ViewChoiceRow({
+  label,
+  options,
+  selected,
+  onSelect,
+  disabled = false,
+  title,
+}: {
+  /** The row's name; also the radiogroup's accessible name. */
+  label: string;
+  options: readonly { value: string; label: string }[];
+  selected: string;
+  onSelect: (value: string) => void;
+  disabled?: boolean;
+  title?: string;
+}) {
+  return (
+    <div className="px-1 py-1" data-view-choice={label}>
+      <div className="flex items-center justify-between gap-2" title={title}>
+        <span
+          className={cn(
+            "text-xs",
+            disabled ? "text-muted-foreground/60" : "text-foreground",
+          )}
+        >
+          {label}
+        </span>
+        <div
+          role="radiogroup"
+          aria-label={label}
+          aria-disabled={disabled ? "true" : undefined}
+          className={cn(
+            "flex shrink-0 overflow-hidden rounded-md border border-border",
+            disabled && "opacity-50",
+          )}
+        >
+          {options.map((option) => {
+            const active = selected === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                aria-disabled={disabled ? "true" : undefined}
+                onClick={() => {
+                  if (disabled) return;
+                  onSelect(option.value);
+                }}
+                className={cn(
+                  "px-2 py-0.5 text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  active
+                    ? "bg-primary/15 text-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  disabled && "cursor-not-allowed hover:bg-transparent hover:text-muted-foreground",
+                )}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface BoardToolbarProps {
   groupBy: GroupBy;
   onGroupByChange: (value: GroupBy) => void;
+  /** The board's lane read (the Appearance tab's same preference): the
+   *  shipped vertical columns or the horizontal rows. The View menu carries
+   *  the pair so the layout changes beside the view it belongs to. */
+  laneDirection: LaneDirectionPref;
+  onLaneDirectionChange: (value: LaneDirectionPref) => void;
   /** R3: "Nest child threads" toggle — nested rendering on/off. */
   nestChildren: boolean;
   onNestChildrenChange: (enabled: boolean) => void;
-  /** Parent grouping always renders two-level families: the toggle reads
-   *  checked and is greyed out (a depth cap, not a user choice). */
+  /** Parent grouping always renders two-level families: the nesting pair
+   *  reads On and disables both segments (a depth cap, not a user choice). */
   nestingLocked?: boolean;
   filter: FilterState;
   onFilterChange: (filter: FilterState) => void;
@@ -660,6 +750,8 @@ function FamilyScopeChip({
 export function BoardToolbar({
   groupBy,
   onGroupByChange,
+  laneDirection,
+  onLaneDirectionChange,
   nestChildren,
   onNestChildrenChange,
   nestingLocked,
@@ -858,9 +950,12 @@ export function BoardToolbar({
   );
   const viewMenu = (
     /* The View menu: picking a grouping replaces the current one, and the
-        "Nest child threads" toggle lives here now — it changes how the
-        board structures families, like the grouping. Locked under the
-        Parent view, which always nests two levels. */
+        options block below the rows carries the two structural choices that
+        belong to the view — the lane direction (Vertical | Horizontal, the
+        Appearance tab's same setting) and "Nest child threads" (Off | On).
+        Both are two-state pairs, the app's choice anatomy, never checkboxes.
+        Nesting is locked under the Parent view, which always nests two
+        levels, so its pair reads On and refuses both picks. */
     <MultiSelectDropdown
       exclusive
       modeChip
@@ -870,40 +965,35 @@ export function BoardToolbar({
       options={groupByOptions}
       summaryFor={() => GROUP_BY_OPTIONS.find((o) => o.value === groupBy)?.label ?? groupBy}
       onSingleSelect={(value) => onGroupByChange(value as GroupBy)}
+      rowsMaxHeight={420}
       footer={
-        <button
-          type="button"
-          role="checkbox"
-          aria-checked={nestingLocked || nestChildren}
-          aria-disabled={nestingLocked || undefined}
-          title={
-            nestingLocked ? "Parent view always nests two levels" : undefined
-          }
-          onClick={() => {
-            if (nestingLocked) return;
-            onNestChildrenChange(!nestChildren);
-          }}
-          className={cn(
-            "flex w-full items-center gap-1.5 rounded-sm px-2 py-1.5 text-left text-xs",
-            "hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            nestingLocked && "cursor-not-allowed opacity-50 hover:bg-transparent",
-          )}
-        >
-          <span
-            className={cn(
-              "flex size-3.5 shrink-0 items-center justify-center rounded-[3px] border",
-              nestingLocked || nestChildren
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-muted-foreground/50 bg-background",
-            )}
-            aria-hidden
-          >
-            {nestingLocked || nestChildren ? (
-              <Icon name="Check" className="size-2.5" aria-hidden />
-            ) : null}
-          </span>
-          Nest child threads
-        </button>
+        <div className="pt-0.5">
+          <ViewChoiceRow
+            label="Lane direction"
+            options={[
+              { value: "vertical", label: "Vertical" },
+              { value: "horizontal", label: "Horizontal" },
+            ]}
+            selected={laneDirection}
+            onSelect={(value) => onLaneDirectionChange(value as LaneDirectionPref)}
+            title="Which way the board's lanes run: columns, or rows."
+          />
+          <ViewChoiceRow
+            label="Nest child threads"
+            options={[
+              { value: "off", label: "Off" },
+              { value: "on", label: "On" },
+            ]}
+            selected={nestingLocked === true || nestChildren ? "on" : "off"}
+            onSelect={(value) => onNestChildrenChange(value === "on")}
+            disabled={nestingLocked === true}
+            title={
+              nestingLocked === true
+                ? "Parent view always nests two levels"
+                : "Render each family's children as rows under its card."
+            }
+          />
+        </div>
       }
     />
   );

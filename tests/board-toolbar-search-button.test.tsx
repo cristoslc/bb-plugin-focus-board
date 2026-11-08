@@ -17,6 +17,8 @@ function renderToolbar({ search }: { search: string }) {
   const props = {
     groupBy: "status" as const,
     onGroupByChange: vi.fn(),
+    laneDirection: "vertical" as const,
+    onLaneDirectionChange: vi.fn(),
     nestChildren: true,
     onNestChildrenChange: vi.fn(),
     nestingLocked: false,

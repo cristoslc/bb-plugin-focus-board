@@ -2215,13 +2215,15 @@ const pageLockedFlush = () => {
 };
 
 /**
- * The "Nest child threads" toggle, read as the operator sees it: the View
- * menu's footer row — role=checkbox, checked = aria-checked, disabled =
- * aria-disabled present. The row only exists while the View menu is open,
- * so this opens the menu on the View trigger (closed, the footer is not in
- * the DOM at all), reads the row, and closes the menu again. Returns
- * { present: false } rather than throwing when the toggle cannot be found:
- * the nest_locked rule turns that into the step's failed assertion.
+ * The "Nest child threads" choice, read as the operator sees it: the View
+ * menu's two-state pair — role=radiogroup named "Nest child threads", its
+ * chosen segment (On/Off) carrying aria-checked, the group carrying
+ * aria-disabled while the Parent view locks nesting. The pair only exists
+ * while the View menu is open, so this opens the menu on the View trigger
+ * (closed, the pair is not in the DOM at all), reads it, and closes the
+ * menu again. Returns { present: false } rather than throwing when the pair
+ * cannot be found: the nest_locked rule turns that into the step's failed
+ * assertion.
  */
 const pageNestToggle = async () => {
   let trigger = document.querySelector('button[aria-label="View"]');
@@ -2245,30 +2247,66 @@ const pageNestToggle = async () => {
     }
   }
   if (!trigger) return { present: false, reason: "no View menu trigger on the toolbar or the expanded ribbon" };
-  const readRow = () =>
-    [...document.querySelectorAll('button[role="checkbox"]')].find(
-      (el) => el.textContent?.includes("Nest child threads"),
-    );
-  const wasOpen = readRow() !== undefined;
+  const readPair = () =>
+    document.querySelector('[role="radiogroup"][aria-label="Nest child threads"]');
+  const wasOpen = readPair() !== null;
   if (!wasOpen) {
     trigger.click();
     const deadline = window.performance.now() + 2000;
     while (window.performance.now() < deadline) {
-      if (readRow() !== undefined) break;
+      if (readPair() !== null) break;
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
   }
-  const row = readRow();
-  if (!row) {
-    return { present: false, reason: "the Nest child threads row never appeared in the open View menu" };
+  const group = readPair();
+  if (!group) {
+    return { present: false, reason: "the Nest child threads pair never appeared in the open View menu" };
   }
+  const chosen = [...group.querySelectorAll('[role="radio"]')].find(
+    (el) => el.getAttribute("aria-checked") === "true",
+  );
   const state = {
     present: true,
-    checked: row.getAttribute("aria-checked") === "true",
-    disabled: row.hasAttribute("aria-disabled"),
+    checked: chosen?.textContent?.trim() === "On",
+    disabled: group.getAttribute("aria-disabled") === "true",
   };
   if (!wasOpen) trigger.click();
   return state;
+};
+
+/**
+ * The open menu's two-state pairs sit inside the menu's own box: every
+ * radiogroup (the View menu's lane-direction and nesting controls) lies
+ * within the shell's client box at the current scroll. A capped menu clipped
+ * the nesting pair under the scroll fold once; a real pointer on a clipped
+ * control lands on the dismissal backdrop and closes the menu instead of
+ * picking. `click_aria` cannot see this — it calls the element's own click —
+ * so this rule exists to read what a tap would hit.
+ */
+const pageMenuPairsVisible = (label) => {
+  const shell = document.querySelector(
+    `[role="presentation"][aria-label="${CSS.escape(label)}"]`,
+  );
+  if (!shell) return { ok: false, detail: `no open ${label} menu` };
+  const box = shell.getBoundingClientRect();
+  const groups = [...shell.querySelectorAll('[role="radiogroup"]')];
+  if (groups.length === 0) {
+    return { ok: false, detail: `the open ${label} menu shows no choice pair` };
+  }
+  const clipped = [];
+  for (const group of groups) {
+    const r = group.getBoundingClientRect();
+    if (r.top < box.top - 0.5 || r.bottom > box.bottom + 0.5) {
+      clipped.push(group.getAttribute("aria-label") ?? "unnamed pair");
+    }
+  }
+  return {
+    ok: clipped.length === 0,
+    detail:
+      clipped.length === 0
+        ? `${groups.length} pair(s) inside the menu box`
+        : `${clipped.join(", ")} sits outside the menu box (${Math.round(box.height)}px tall)`,
+  };
 };
 
 /**
@@ -3429,6 +3467,19 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
         `board declared ${JSON.stringify(got)}`,
       );
     }
+    if (rule.menu_pairs_visible !== undefined) {
+      // The open toolbar menu's choice pairs must sit inside the menu's own
+      // box. The View menu's eight rows plus its two choice rows once
+      // overflowed the chip cap, so the nesting pair rendered under the
+      // scroll fold: a `click_aria` tap still found it by text, but a real
+      // pointer landed on the backdrop and closed the menu instead.
+      const got = await page.evaluate(pageMenuPairsVisible, rule.menu_pairs_visible);
+      expect(
+        `menu pairs visible inside the open ${rule.menu_pairs_visible} menu`,
+        got.ok,
+        got.detail,
+      );
+    }
     if (rule.band_hover !== undefined) {
       const got = await page.evaluate(pageBandHover);
       expect(`swimlane hover shades one row across lanes`, got.ok === rule.band_hover, got.reason ?? "");
@@ -3497,7 +3548,7 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
         expect(
           `nest toggle locked: ${rule.nest_locked}`,
           false,
-          toggle.reason ?? "Nest child threads checkbox not found",
+          toggle.reason ?? "Nest child threads pair not found",
         );
       } else {
         const ok = rule.nest_locked

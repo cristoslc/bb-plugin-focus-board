@@ -53,6 +53,8 @@ function renderToolbar({ compact = false, stubObserver = true }: { compact?: boo
   const props = {
     groupBy: "status" as const,
     onGroupByChange: vi.fn(),
+    laneDirection: "vertical" as const,
+    onLaneDirectionChange: vi.fn(),
     nestChildren: true,
     onNestChildrenChange: vi.fn(),
     nestingLocked: false,

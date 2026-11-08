@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 #### The View menu
 
 - **The View menu's None row now reads No grouping.** The row never emptied the board: it picks the board with no grouping key, one lane holding every thread. The stored value, the Threads lane, and every saved view are unchanged.
+- **Lane direction and Nest child threads are two-choice pairs in the View menu.** Pick Vertical or Horizontal, or switch nesting Off and On, and the board re-lays in place; the old nesting checkbox is gone and both pairs write the preferences the Appearance tab already owns.
 
 ### Fixed
 

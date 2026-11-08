@@ -8,7 +8,7 @@
 // changelog has unseen content (click deep-links to the What's-new tab), a
 // plain settings gear otherwise (click opens on Behavior).
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import {
   BoardToolbar,
   SEARCH_PLACEHOLDER,
@@ -26,6 +26,8 @@ function renderToolbar(
   const props = {
     groupBy: "status" as const,
     onGroupByChange: vi.fn(),
+    laneDirection: "vertical" as const,
+    onLaneDirectionChange: vi.fn(),
     nestChildren: true,
     onNestChildrenChange: vi.fn(),
     nestingLocked: false,
@@ -176,28 +178,31 @@ describe("BoardToolbar layout", () => {
     expect(screen.queryByText(/Wallpaper/)).toBeNull();
   });
 
-  it("the View menu's Nest row toggles nesting", () => {
+  it("the View menu's Nest child threads pair toggles nesting", () => {
+    // Moved pin (the two-state selector): the old single checkbox row is now
+    // the Off | On radiogroup, the same choice anatomy the Appearance tab
+    // uses. The control reports the pick; the menu stays open.
     const onNestChildrenChange = vi.fn();
     renderToolbar({ onNestChildrenChange, nestChildren: false });
     openViewMenu();
-    const row = screen.getByText("Nest child threads").closest("button");
-    if (row === null) throw new Error("Nest row not rendered");
-    expect(row.getAttribute("aria-checked")).toBe("false");
-    fireEvent.click(row);
+    const pair = screen.getByRole("radiogroup", { name: "Nest child threads" });
+    expect(within(pair).getByRole("radio", { name: "Off" }).getAttribute("aria-checked")).toBe(
+      "true",
+    );
+    fireEvent.click(within(pair).getByRole("radio", { name: "On" }));
     expect(onNestChildrenChange).toHaveBeenCalledWith(true);
   });
 
-  it("with nesting locked (parent view), the Nest row reads checked and stays put", () => {
+  it("with nesting locked (parent view), the Nest pair reads On and refuses", () => {
     const onNestChildrenChange = vi.fn();
-    renderToolbar({ nestingLocked: true, nestChildren: false });
+    renderToolbar({ nestingLocked: true, nestChildren: false, onNestChildrenChange });
     openViewMenu();
-    const row = screen
-      .getByText("Nest child threads")
-      ?.closest("button");
-    if (row === null) throw new Error("Nest row not rendered");
-    expect(row.getAttribute("aria-checked")).toBe("true");
-    expect(row.getAttribute("aria-disabled")).toBe("true");
-    fireEvent.click(row);
+    const pair = screen.getByRole("radiogroup", { name: "Nest child threads" });
+    expect(within(pair).getByRole("radio", { name: "On" }).getAttribute("aria-checked")).toBe(
+      "true",
+    );
+    expect(pair.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(within(pair).getByRole("radio", { name: "Off" }));
     expect(onNestChildrenChange).not.toHaveBeenCalled();
   });
 

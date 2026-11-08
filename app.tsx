@@ -3773,6 +3773,8 @@ function BoardPage({ subPath }: { subPath: string }) {
         <BoardToolbar
           groupBy={groupBy}
           onGroupByChange={persistGroupBy}
+          laneDirection={laneDirection}
+          onLaneDirectionChange={persistLaneDirection}
           filter={filter}
           onFilterChange={persistFilter}
           search={search}
