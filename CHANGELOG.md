@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+#### The View menu
+
+- **The View menu's None row now reads No grouping.** The row never emptied the board: it picks the board with no grouping key, one lane holding every thread. The stored value, the Threads lane, and every saved view are unchanged.
+
 ### Fixed
 
 ## [1.7.9] - 2026-11-07

@@ -27,7 +27,7 @@ export const GROUP_BY_OPTIONS: readonly { value: GroupBy; label: string }[] = [
   { value: "project", label: "Project" },
   { value: "provider", label: "Provider" },
   { value: "machine", label: "Machine" },
-  { value: "none", label: "None" },
+  { value: "none", label: "No grouping" },
 ];
 
 export type ThreadState = "working" | "attention" | "unread" | "idle";

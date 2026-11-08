@@ -524,6 +524,18 @@ describe("GROUP_BY_OPTIONS", () => {
   it("labels the feature-group grouping Group", () => {
     expect(GROUP_BY_OPTIONS.find((option) => option.value === "group")?.label).toBe("Group");
   });
+
+  it("labels the ungrouped view No grouping, naming what the option does", () => {
+    // The row read "None", which named nothing: the option is not an empty
+    // board, it is the board with no grouping key — one lane holding every
+    // thread (columnFor answers { id: "all", label: "Threads" }). "No
+    // grouping" says that in the menu's own vocabulary. The stored value
+    // stays "none", so every seed, rank key, and saved preference holds.
+    expect(GROUP_BY_OPTIONS.find((option) => option.value === "none")?.label).toBe(
+      "No grouping",
+    );
+    expect(GROUP_BY_OPTIONS.map((option) => option.label)).not.toContain("None");
+  });
 });
 
 describe("machine grouping", () => {

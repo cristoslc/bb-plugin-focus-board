@@ -3,7 +3,7 @@
 # The harness mounts the actual app.tsx against the mocked SDK
 # (scripts/screenshot) and this suite visits each grouping the View menu
 # offers — Attention (status), Last activity (recency), Project, Provider,
-# Machine, Group, Threads (none), and the Parent-thread view — asserting the
+# Machine, Group, Threads (No grouping), and the Parent-thread view — asserting the
 # lanes each view derives and, where the fixture's recency order is fully
 # derivable, the cards' order inside them. The parent view's panning and
 # locking behavior has its own suite (uat-parent-lanes.yaml); this one just

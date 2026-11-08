@@ -146,7 +146,7 @@ describe("the view matrix — a child in its own group copies out AND keeps its 
     expect(columnOf(board.columns, "c")?.id).toBe("recent");
   });
 
-  it("None: same dual render, in the flat column", () => {
+  it("No grouping: same dual render, in the flat column", () => {
     const [parent, child] = pair();
     const board = assemble([parent, child], "none", GROUPS);
     expect(rowIds(board, "p")).toEqual(["c"]);
@@ -420,7 +420,7 @@ describe("flatNestReason — a visible copy-out reports nothing", () => {
     expect(flatNestReason(child, parent, "status", new Set())).toBeNull();
   });
 
-  it("the same under Last activity, None, and the same-space axis views", () => {
+  it("the same under Last activity, No grouping, and the same-space axis views", () => {
     const [parent, child] = pair();
     for (const view of ["recency", "none", "project", "provider"] as const) {
       expect(flatNestReason(child, parent, view, new Set())).toBeNull();
