@@ -1,0 +1,33 @@
+{
+  "chipText": "None",
+  "board": {
+    "laneIds": [
+      "pinned",
+      "all",
+      "done"
+    ],
+    "laneLabels": [
+      "Pinned, 2 threads",
+      "Threads, 20 threads",
+      "Done, 3 threads"
+    ],
+    "cardCount": 40,
+    "boardWidth": 1920,
+    "lanesSpan": null
+  },
+  "menu": {
+    "labels": [
+      "Focus",
+      "Parent thread",
+      "Group",
+      "Last activity",
+      "Project",
+      "Provider",
+      "Machine",
+      "None"
+    ],
+    "selected": [
+      "None"
+    ]
+  }
+}

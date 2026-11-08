@@ -123,6 +123,18 @@ host app involved.
   `evidence.json`). Run the vite harness first (same as above), then
   `node scripts/screenshot/repro-done-scroll-yank.mjs`; honors the same
   `CHROME_PATH`, `HARNESS_URL`, and `OUT_DIR` overrides.
+- `repro-view-menu-label.mjs` — capture and gate for the View menu's
+  ungrouped option label (it read "None", which named nothing): loads the board
+  seeded to that grouping (`?groupBy=none`), records the View chip's text, the
+  menu's rows, and the resulting board's lanes at 1920x1080, and captures the
+  menu-open and board frames. Exits non-zero unless the menu and chip read
+  `EXPECT_LABEL` (default `No grouping`) and no row reads "None"
+  (`EXPECT_LABEL=none` records evidence only, for a pre-change frame set
+  through `OUT_DIR`). Artifacts land in
+  `docs/screenshots/repro-view-menu-label/` (`menu.png`, `board.png`,
+  `evidence.json`; the pre-change run is preserved in
+  `docs/screenshots/repro-view-menu-label-prefix/`). Run the vite harness
+  first; honors `CHROME_PATH`, `HARNESS_URL`, `OUT_DIR`, and `EXPECT_LABEL`.
 - `capture-toolbar-tint.mjs` — one-shot header capture for the toolbar's
   band tint: shots the toolbar in dark then light, desktop (1920x1080) and
   phone (390x844), and exits non-zero unless all four states resolve the
@@ -160,7 +172,9 @@ host app involved.
   `node scripts/screenshot/capture-overview-gif.mjs` and
   `node scripts/screenshot/capture-overview-stills.mjs`. Honors
   `CHROME_PATH`, `HARNESS_URL`, `OUT_DIR`, `FRAMES_DIR`, `GIF_FPS`, and
-  `GIF_WIDTH`. `docs/screenshots/overview-coverage.md` is the feature
+  `GIF_WIDTH`; the stills also take `ONLY=<name>[,<name>]` to record just the
+  named shots (`ONLY=overview-view-menu` for a control whose own label
+  changed). `docs/screenshots/overview-coverage.md` is the feature
   outline and storyboard source of truth. The older
   `capture-family-zoom-gif.mjs` stays reproducible and its GIF remains in
   the repository, but the README's hero is now `overview.gif`.
