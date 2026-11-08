@@ -24,11 +24,13 @@ import {
 import { SweepButton, SweepCancelButton } from "./sweep-button";
 import { SweepNoticeBanner, SweepRefusalBanner } from "./sweep-banners";
 import { ThreadCard } from "./thread-card";
+import { StateDot } from "./state-dot";
+import { CardGrid } from "./card-grid";
+import { DEFAULT_GRID_SORT, type GridSort } from "./grid-sort";
 import { useCardSpotlightStyles } from "./card-spotlight";
 import { useAttentionPulseGate } from "./attention-pulse-gate";
 import {
   DotGlyph,
-  DOT_CLASS,
   DOT_CLUSTER_CAPSULE_CLASS,
   DOT_GENERATION_CLASS,
   DOT_GENERATION_NAMES,
@@ -630,29 +632,20 @@ interface BoardProps {
    * renders the button and labels it per state; the caller dispatches.
    */
   onSweepCancel?: () => void;
+  /**
+   * The ungrouped view's card-grid order (issue #416). Read only when the
+   * grouping is "none" — the grid is that view, and no lane reads this key.
+   * Absent keeps the board's standing read (last activity, newest first),
+   * which is also the grid's default, so a Board called without it renders
+   * the same order the app starts with.
+   */
+  gridSort?: GridSort;
 }
 
 // The state dot palette rides the shared dot-grid vocabulary
-// (components/dot-grid), the same one the collapsed strips paint.
-
-function StateDot({
-  thread,
-  errorAcks = new Set<string>(),
-}: {
-  thread: PluginSidebarThread;
-  /** Clear-error acknowledgment ids (issue #157): an acked error dot sits quiet. */
-  errorAcks?: ReadonlySet<string>;
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-block size-1.5 shrink-0 rounded-full",
-        DOT_CLASS[threadState(thread, errorAcks)] ?? "bg-muted-foreground/30",
-      )}
-      aria-hidden
-    />
-  );
-}
+// (components/dot-grid), the same one the collapsed strips paint. The dot
+// itself lives in components/state-dot so the grid and the lane board draw
+// the identical element.
 
 function BoardBase({
   columns,
@@ -729,6 +722,7 @@ function BoardBase({
   // vertical column board exactly as before.
   laneDirection = "vertical",
   onSweepCancel,
+  gridSort = DEFAULT_GRID_SORT,
 }: BoardProps) {
   // The spotlight rule (components/card-spotlight.ts) is document-global CSS;
   // each board mounts it idempotently, so whichever board renders first wins.
@@ -742,6 +736,12 @@ function BoardBase({
   // dimension the transport's ghost collapse and arrival grow measure.
   const flowAxis: TransportAxis = laneDirection;
   const horizontalLanes = flowAxis === "horizontal";
+  // The ungrouped view is a card GRID, not a one-lane board (issue #416):
+  // every lane affordance below is bypassed — no rank key, no lane header, no
+  // sweep pill, no floor, no transport between lanes — and the cards land in
+  // components/card-grid. Reading it from the grouping keeps ONE source of
+  // truth: `groupBy` decides the view, and the view decides the frame.
+  const gridMode = groupBy === "none";
   // Touch owns a pan, never a drag (issue #328). On a coarse pointer the
   // platform's touch-drag recognizer lifts any `draggable` element out of a
   // finger's gesture after a long press — Chrome Android and iOS Safari both
@@ -867,7 +867,9 @@ function BoardBase({
       // scrollIntoView, which would scroll every ancestor including the
       // host page.
       const cardRect = card.getBoundingClientRect();
-      if (horizontalLanes) {
+      if (gridMode || horizontalLanes) {
+        // The grid and the row board share one axis: a vertical scroller,
+        // where the card to follow can sit any number of rows down.
         container.scrollTop += containerSlideY(container.getBoundingClientRect(), cardRect);
       } else {
         container.scrollLeft += containerSlideX(container.getBoundingClientRect(), cardRect);
@@ -901,8 +903,9 @@ function BoardBase({
     return () => observer.disconnect();
     // activeCardLaneId re-fits when the active card relocates (pin, done,
     // archive, grouping change) without firing on same-lane data refreshes;
-    // a direction flip re-lays the board, so it refits the same way.
-  }, [activeThreadId, activeCardLaneId, laneDirection]);
+    // a direction flip re-lays the board, so it refits the same way, and a
+    // grouping switch to the grid changes the scroll axis.
+  }, [activeThreadId, activeCardLaneId, laneDirection, gridMode]);
 
   // One-shot, intent-scoped bring-into-view (`revealRequest` from app.tsx):
   // every menu action that relocates a card — Pin/Unpin into or out of the
@@ -955,7 +958,7 @@ function BoardBase({
       return;
     }
     const cardRect = card.getBoundingClientRect();
-    if (horizontalLanes) {
+    if (gridMode || horizontalLanes) {
       container.scrollTop += containerSlideY(container.getBoundingClientRect(), cardRect);
     } else {
       container.scrollLeft += containerSlideX(container.getBoundingClientRect(), cardRect);
@@ -969,7 +972,7 @@ function BoardBase({
       }
     }
     claim.consumed = true;
-  }, [reveal, columns, laneDirection]);
+  }, [reveal, columns, laneDirection, gridMode]);
 
   // ── The lane transport dissolve ─────────────────────────────────────────
   // A card relocating between lanes in one commit does not teleport: its old
@@ -1124,10 +1127,13 @@ function BoardBase({
       // post-window state change — arms exactly as today.
       return;
     }
-    if (cardTransport === "none") {
+    if (cardTransport === "none" || gridMode) {
       // Instant relocation: the planner never runs. The snapshots re-seed so
       // re-enabling the transporter starts a fresh baseline instead of
-      // diffing against one collected while the planner was off.
+      // diffing against one collected while the planner was off. The grid
+      // shares this gate for its own reason: it has no lanes to dissolve
+      // between, and a card's "move" there is a re-sort the operator asked
+      // for, not a relocation worth animating.
       prevLaneByThreadRef.current = null;
       prevRunUnitsRef.current = null;
       prevColumnsRef.current = null;
@@ -2448,6 +2454,39 @@ function BoardBase({
           />
         ) : null}
       </div>
+      {gridMode ? (
+        // The ungrouped view: a responsive card grid, no lanes (issue #416).
+        // The same assembled columns feed it, so search, filters, counts,
+        // nesting and the card menu all apply; only the lane frame is gone.
+        <CardGrid
+          containerRef={scrollRef}
+          columns={columns}
+          gridSort={gridSort}
+          activeThreadId={activeThreadId}
+          doneIds={doneIds}
+          errorAckIds={errorAckIds}
+          nestedChildrenByParent={nestedChildrenByParent}
+          childCountByParent={childCountByParent}
+          doneChildrenByParent={doneChildrenByParent}
+          dimmedIds={dimmedIds}
+          collapsedFamilyIds={collapsedFamilyIds}
+          onFamilyCollapsedChange={onFamilyCollapsedChange}
+          hideIdleFamilyIds={hideIdleFamilyIds}
+          onFamilyHideIdleChange={onFamilyHideIdleChange}
+          projectNameFor={projectNameFor}
+          repoBaseFor={repoBaseFor}
+          statusFor={statusFor}
+          linkedIssuesFor={linkedIssuesFor}
+          validatedHrefs={validatedHrefs}
+          onOpenThread={onOpenThread}
+          onBackgroundClick={handleBackgroundClick}
+          menuActionsFor={menuActionsFor}
+          snoozeFor={snoozeFor}
+          pulseRateFor={pulseRateFor}
+          onAttentionEnter={onAttentionEnter}
+          onAttentionLeave={onAttentionLeave}
+        />
+      ) : (
       <div
         ref={scrollRef}
         onClick={handleBackgroundClick}
@@ -5030,6 +5069,7 @@ function BoardBase({
         })}
         </div>
       </div>
+      )}
       {groupMenu !== null ? (
         <MenuPopover
           open={groupMenu}

@@ -119,10 +119,12 @@ function renderFoldedBox(options: FoldedOptions = {}) {
     ]),
   );
   const props = {
-    groupBy: "none" as const,
+    groupBy: "project" as const,
     // One lane, so the group frames one box carrying both members (the
     // split default frames one slice per lane, which is a different test).
-    columns: buildColumns(members, "none", context, new Map(), new Set<string>(), NOW, {}),
+    // The grouping is a plain one-lane view on purpose: the ungrouped view is
+    // the card grid (issue #416), which has no lanes and so no boxes.
+    columns: buildColumns(members, "project", context, new Map(), new Set<string>(), NOW, {}),
     activeThreadId: null,
     doneIds: new Set<string>(),
     errorAckIds: options.errorAckIds ?? new Set<string>(),

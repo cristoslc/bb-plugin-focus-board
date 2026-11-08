@@ -35,7 +35,9 @@ const page = await browser.newPage();
 await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 });
 await page.goto(`${base}?groupBy=none`, { waitUntil: "networkidle2" });
 await page.waitForSelector("[data-thread-card]", { timeout: 15000 });
-await page.waitForSelector('section[data-column-id="all"]', { timeout: 15000 });
+// The ungrouped view is a card GRID since issue #416: no lane section to wait
+// for, the grid element is the surface.
+await page.waitForSelector("[data-card-grid]", { timeout: 15000 });
 
 const evidence = {};
 
@@ -44,22 +46,21 @@ evidence.chipText = await page.$eval('button[aria-label="View"]', (el) =>
   el.textContent.trim(),
 );
 
-// 2. The board the option picks: one lane, labelled Threads, at a wide
-// viewport.
+// 2. The board the option picks: the card grid, no lanes, at a wide viewport.
 evidence.board = await page.evaluate(() => {
-  const lanes = [
-    ...document.querySelectorAll("section[data-column-id]"),
-  ];
-  const board = document.querySelector("[data-columns-board]");
+  const grid = document.querySelector("[data-card-grid]");
+  const board = document.querySelector("[data-card-grid-board]");
   return {
-    laneIds: lanes.map((lane) => lane.getAttribute("data-column-id")),
-    laneLabels: lanes.map((lane) => lane.getAttribute("aria-label")),
+    laneIds: [...document.querySelectorAll("[data-column-id]")].map((lane) =>
+      lane.getAttribute("data-column-id"),
+    ),
+    gridCards: document.querySelectorAll("li[data-grid-card]").length,
     cardCount: document.querySelectorAll("[data-thread-card]").length,
     boardWidth: board?.getBoundingClientRect().width ?? null,
-    lanesSpan:
-      lanes.length === 1
-        ? Math.round(lanes[0].getBoundingClientRect().width)
-        : null,
+    gridTracks:
+      grid === null
+        ? null
+        : getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length,
   };
 });
 await page.screenshot({ path: path.join(outDir, "board.png") });
@@ -105,16 +106,16 @@ if (expectLabel !== "none") {
   if (!evidence.chipText.includes(expectLabel)) {
     problems.push(`the View chip reads "${evidence.chipText}"`);
   }
-  // The ungrouped board is one lane of every thread, plus the Pinned and
-  // Done furniture every view keeps: no bucket lane may appear beside it.
-  const strayLanes = evidence.board.laneIds.filter(
-    (id) => id !== "all" && id !== "pinned" && id !== "done",
-  );
-  if (!evidence.board.laneIds.includes("all")) {
-    problems.push("the board has no Threads lane");
+  // Since issue #416 the ungrouped view is a card grid: no lane container of
+  // any kind, and a grid that wraps at this width.
+  if (evidence.board.laneIds.length > 0) {
+    problems.push(`the grid grew lane containers ${evidence.board.laneIds.join(", ")}`);
   }
-  if (strayLanes.length > 0) {
-    problems.push(`the board grew bucket lanes ${strayLanes.join(", ")}`);
+  if (evidence.board.gridCards === 0) {
+    problems.push("the grid rendered no cards");
+  }
+  if (evidence.board.gridTracks === null || evidence.board.gridTracks < 2) {
+    problems.push(`the grid laid out ${evidence.board.gridTracks} column(s)`);
   }
   if (problems.length > 0) {
     console.error(`FAIL: ${problems.join("; ")}`);

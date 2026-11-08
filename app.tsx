@@ -38,6 +38,7 @@ import type { SpawnedThread } from "./components/new-thread-modal";
 import type { CardMenuAction } from "./components/thread-card-menu";
 import { cardMenuActions } from "./lib/card-menu";
 import type { FilterState, GroupBy, LaneHideOutcome } from "./components/grouping";
+import type { GridSort } from "./components/grid-sort";
 import {
   buildColumns,
   columnFor,
@@ -186,6 +187,9 @@ import {
   LANE_ORDER_DIRECTIONS_KEY,
   parseLaneOrderDirections,
   laneOrderDirectionsStoredValue,
+  GRID_SORT_KEY,
+  gridSortStoredValue,
+  parseGridSortStored,
   parseMotionSettings,
   motionPacingStoredValue,
   motionSettingsStoredValues,
@@ -1139,6 +1143,18 @@ function BoardPage({ subPath }: { subPath: string }) {
   const persistLaneDirection = useCallback((value: LaneDirectionPref) => {
     setLaneDirection(value);
     writeStored(LANE_DIRECTION_KEY, laneDirectionStoredValue(value));
+  }, []);
+  // The ungrouped view's card-grid order (issue #416). One scalar preference
+  // like the grouping beside it: the grid reads it, every lane view ignores
+  // it, and the choice survives reloads and the harness seed
+  // (`?gridSort=title:asc`). Default = the board's standing read, last
+  // activity newest first.
+  const [gridSort, setGridSort] = useState<GridSort>(() =>
+    parseGridSortStored(readStoredText(GRID_SORT_KEY, "")),
+  );
+  const persistGridSort = useCallback((value: GridSort) => {
+    setGridSort(value);
+    writeStored(GRID_SORT_KEY, gridSortStoredValue(value));
   }, []);
   // Per-lane sort direction (the lane menu's sort pair): a columnRankKey →
   // "oldest-first" map, localStorage-backed like every other view preference.
@@ -3775,6 +3791,8 @@ function BoardPage({ subPath }: { subPath: string }) {
           onGroupByChange={persistGroupBy}
           laneDirection={laneDirection}
           onLaneDirectionChange={persistLaneDirection}
+          gridSort={gridSort}
+          onGridSortChange={persistGridSort}
           filter={filter}
           onFilterChange={persistFilter}
           search={search}
@@ -3853,6 +3871,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             motionPref={motionFollow ? "system" : "manual"}
             motionPacing={motionPacing}
             laneDirection={laneDirection}
+            gridSort={gridSort}
             doneIds={doneIds}
             errorAckIds={errorAckIds}
             nestedChildrenByParent={nestedChildrenByParent}

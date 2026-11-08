@@ -227,6 +227,15 @@ export interface ThreadCardProps {
    */
   rankKey?: string;
   /**
+   * Is the card (and any nested row under it) a drag SOURCE? Default true —
+   * the lane board's cards lift, because a lane has an order to write and
+   * floors to carry a card across. The ungrouped card grid (issue #416) turns
+   * it off: its order is a chosen sort key and a drop has no write behind it,
+   * so a lift there would promise a reorder (or a nest) that cannot land.
+   * Only the source is switched off; drag TARGETS stay the board's own wiring.
+   */
+  dragEnabled?: boolean;
+  /**
    * Snooze wake lookup (lib/snooze): the wake epoch-ms for a snoozed thread,
    * null when it is not snoozed. A snoozed card dims in place, carries a
    * "Snoozed · wakes …" chip, and refuses drag so it cannot join the very
@@ -845,6 +854,7 @@ function ChildRow({
   snoozeFor,
   rankKey,
   onRankDragStart,
+  dragEnabled = true,
   rankDrag,
   onAttentionEnter,
   onAttentionLeave,
@@ -870,6 +880,10 @@ function ChildRow({
    * read the gesture. */
   rankKey?: string;
   onRankDragStart?: (threadId: string | null) => void;
+  /** Is the row a drag source? (ThreadCard's `dragEnabled`, passed down — the
+   *  grid switches both tiers off together, so a row cannot lift out of a
+   *  board whose cards do not.) */
+  dragEnabled?: boolean;
   /**
    * The same-family reorder gesture from the board (targeting, guards, and
    * the write all live there). Only the row's events and its insertion line
@@ -913,7 +927,7 @@ function ChildRow({
       href={child.href}
       data-thread-card={child.id}
       data-snoozed={childSnoozeWakeAt !== null ? "" : undefined}
-      draggable={!childSnoozed && !coarsePointer}
+      draggable={dragEnabled && !childSnoozed && !coarsePointer}
       onMouseEnter={onAttentionEnter === undefined ? undefined : () => onAttentionEnter(child.id)}
       onMouseOut={
         onAttentionLeave === undefined
@@ -944,7 +958,7 @@ function ChildRow({
         // A snoozed child refuses drag (`draggable={!childSnoozed}` above);
         // the guard keeps the refusal true even where the attribute is not
         // enforced, so nothing can drag a sleeping card anywhere.
-        if (childSnoozed) {
+        if (childSnoozed || !dragEnabled) {
           event.preventDefault();
           return;
         }
@@ -1089,6 +1103,7 @@ export function ThreadCardImpl({
   childCount,
   dimmed,
   rankKey,
+  dragEnabled = true,
   onRankDragStart,
   snoozeFor,
   pulseRateFor,
@@ -1742,13 +1757,13 @@ export function ThreadCardImpl({
           <a
             href={thread.href}
             aria-current={isActive && !isTransportGhost ? "true" : undefined}
-            draggable={!snoozed && !coarsePointer}
+            draggable={dragEnabled && !snoozed && !coarsePointer}
             onDragStart={(event) => {
               // A snoozed card refuses drag (`draggable={!snoozed}` above);
               // this guard keeps the refusal true even where the attribute
               // is not enforced, so nothing can drag a sleeping card into a
               // lane move its sleep is meant to skip.
-              if (snoozed) {
+              if (snoozed || !dragEnabled) {
                 event.preventDefault();
                 return;
               }
@@ -2129,6 +2144,7 @@ export function ThreadCardImpl({
                     onOpenThread={onOpenThread}
                     menuActions={childMenuActions?.(activeCollapsedChild)}
                     snoozeFor={snoozeFor}
+                    dragEnabled={dragEnabled}
                     onAttentionEnter={onAttentionEnter}
                     onAttentionLeave={onAttentionLeave}
                     chipRows={childChipRowsFor(activeCollapsedChild)}
@@ -2168,6 +2184,7 @@ export function ThreadCardImpl({
                         snoozeFor={snoozeFor}
                         rankKey={rankKey}
                         onRankDragStart={onRankDragStart}
+                        dragEnabled={dragEnabled}
                         rankDrag={childRankDrag}
                         onAttentionEnter={onAttentionEnter}
                         onAttentionLeave={onAttentionLeave}
@@ -2194,6 +2211,7 @@ export function ThreadCardImpl({
                                 snoozeFor={snoozeFor}
                                 rankKey={subRankKey}
                                 onRankDragStart={onRankDragStart}
+                                dragEnabled={dragEnabled}
                                 onAttentionEnter={onAttentionEnter}
                                 onAttentionLeave={onAttentionLeave}
                                 chipRows={childChipRowsFor(sub)}
@@ -2451,6 +2469,9 @@ export function sameCardProps(prev: ThreadCardProps, next: ThreadCardProps): boo
     "childCount",
     "dimmed",
     "rankKey",
+    // The drag source's own switch (the grid's cards do not lift): a flip is
+    // a render branch (`draggable`), so it must repaint.
+    "dragEnabled",
     "isTransportGhost",
     "compact",
     "isCollapsed",

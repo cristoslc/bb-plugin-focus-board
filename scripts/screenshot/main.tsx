@@ -83,6 +83,14 @@ window.localStorage.setItem(
   "focus-board:laneDirection",
   params.get("laneDirection") ?? "vertical",
 );
+// Seed the ungrouped view's grid order (issue #416): `?gridSort=title:asc`
+// writes the same scalar the View menu's Sort by / Order rows write. Absent →
+// the default (last activity, newest first), and every `goto` re-seeds it so a
+// suite never inherits the previous step's pick.
+window.localStorage.setItem(
+  "focus-board:gridSort",
+  params.get("gridSort") ?? "activity:desc",
+);
 
 // Seed a bundled wallpaper for the media stills: `?wallpaper=pine` writes the
 // same stored document the Appearance picker writes (cover fit, the preset's

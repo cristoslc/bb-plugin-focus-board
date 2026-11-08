@@ -187,8 +187,36 @@ const pageOrder = (columnId) => {
   };
 };
 
-/** Drag a card onto a whole column, not a card within it (the Done lane). */
-const pageDragToColumn = ({ from, column }) => {
+/**
+ * The ungrouped view's card GRID (issue #416): the grid element's cards in
+ * their rendered order, how many tracks the grid's computed template lays
+ * out (the width test — a grid that never wrapped would read 1), and how many
+ * LANE containers the page carries (must be 0: the grid has no columns).
+ * Returns null when no grid is mounted, which the rule reports as a failure
+ * rather than a silent pass.
+ */
+const pageGridState = () => {
+  const grid = document.querySelector("[data-card-grid]");
+  if (!(grid instanceof HTMLElement)) return null;
+  const idOf = (el) => el.getAttribute("href")?.split("/").pop() ?? "?";
+  const ids = [...grid.querySelectorAll(":scope > li[data-grid-card]")].map((li) => {
+    const anchor = li.querySelector("a[href]");
+    return anchor === null ? "?" : idOf(anchor);
+  });
+  const tracks = getComputedStyle(grid).gridTemplateColumns
+    .split(" ")
+    .filter((track) => track !== "" && track !== "none").length;
+  return {
+    ids,
+    tracks,
+    lanes: document.querySelectorAll("[data-column-id]").length,
+    laneHeaders: document.querySelectorAll("[data-lane-menu-trigger]").length,
+    // The grid's own scroll box, for the "one surface, no lane scroller"
+    // reading (a lane board exposes its scroller as [data-columns-board]).
+    boardPresent: document.querySelector("[data-card-grid-board]") !== null,
+  };
+};
+/** Drag a card onto a whole column, not a card within it (the Done lane). */const pageDragToColumn = ({ from, column }) => {
   const anchor = document.querySelector(`li[data-rank-slot="${from}"] a[draggable]`);
   const section = document.querySelector(`section[data-column-id="${column}"]`);
   if (!anchor || !section) throw new Error(`drag_to_column: missing ${from} or ${column}`);
@@ -2518,6 +2546,66 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
         );
       }
     }
+    if (rule.grid !== undefined) {
+      // The ungrouped view's card grid (issue #416): its cards in rendered
+      // order, its track count, and the lane containers it must NOT have.
+      const want = rule.grid;
+      const got = await page.evaluate(pageGridState);
+      if (got === null) {
+        expect("the card grid is mounted", false, "no [data-card-grid] on the page");
+      } else {
+        if (want.cards !== undefined) {
+          expect(
+            `the grid holds ${want.cards} cards`,
+            got.ids.length === want.cards,
+            `found ${got.ids.length} [${got.ids.join(",")}]`,
+          );
+        }
+        if (want.min_cards !== undefined) {
+          expect(
+            `the grid holds at least ${want.min_cards} cards`,
+            got.ids.length >= want.min_cards,
+            `found ${got.ids.length}`,
+          );
+        }
+        if (want.order !== undefined) {
+          const wanted = want.order.join(",");
+          const actual = got.ids.join(",");
+          expect(`grid order`, wanted === actual, `want [${wanted}] got [${actual}]`);
+        }
+        if (want.contains !== undefined) {
+          const missing = want.contains.filter((id) => !got.ids.includes(id));
+          expect(
+            `grid holds ${want.contains.join(",")}`,
+            missing.length === 0,
+            missing.length === 0
+              ? `holds [${got.ids.join(",")}]`
+              : `missing ${missing.join(",")} from [${got.ids.join(",")}]`,
+          );
+        }
+        if (want.min_tracks !== undefined) {
+          expect(
+            `the grid wraps into at least ${want.min_tracks} columns`,
+            got.tracks >= want.min_tracks,
+            `the computed template laid out ${got.tracks} track(s)`,
+          );
+        }
+        if (want.lanes !== undefined) {
+          expect(
+            `the grid carries ${want.lanes} lane containers`,
+            got.lanes === want.lanes,
+            `found ${got.lanes} [data-column-id] container(s)`,
+          );
+        }
+        if (want.lane_headers !== undefined) {
+          expect(
+            `the grid carries ${want.lane_headers} lane headers`,
+            got.laneHeaders === want.lane_headers,
+            `found ${got.laneHeaders} header(s)`,
+          );
+        }
+      }
+    }
     if (rule.column_contains !== undefined) {
       // Membership without the order: the assertion a cross-window suite needs
       // (a card written in one window landed in the other window's lane), where
@@ -4138,10 +4226,14 @@ async function runSuite(file, { port, browser, cell = null }) {
       // one page.
       await page.evaluateOnNewDocument(installProtectedDrag);
       await page.goto(`${base}${withLoadQuery(target, load)}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-      // The board surface: a grouped board (sections) or an empty state.
+      // The board surface: a grouped board (sections), the ungrouped card
+      // grid (issue #416, which has no sections at all), or an empty state.
       // The parent-thread view legitimately renders no sections when a
-      // filter/search drops every family, so the wait must accept both.
-      await page.waitForSelector("section[aria-label], [role=status]", { timeout: 30_000 });
+      // filter/search drops every family, so the wait must accept both; the
+      // grid needs its own arm for the same reason.
+      await page.waitForSelector("section[aria-label], [data-card-grid], [role=status]", {
+        timeout: 30_000,
+      });
       // The theme rides BOTH switches (production parity): the `dark` class
       // drives the token set, and `prefers-color-scheme` emulation drives
       // Tailwind's media-based `dark:` utilities — the class alone cannot

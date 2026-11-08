@@ -18,6 +18,13 @@ import {
   filterRibbonStoredValue,
 } from "./preferences";
 import type { LaneDirectionPref } from "./preferences";
+import {
+  GRID_SORT_KEYS,
+  DEFAULT_GRID_SORT,
+  defaultDirectionFor,
+  gridSortDirectionOptions,
+  type GridSort,
+} from "./grid-sort";
 import { useIsCompactViewport } from "./ui/hooks/use-compact-viewport";
 import type { FilterState, GroupBy, StateFilterValue } from "./grouping";
 import { GROUP_BY_OPTIONS, STATE_FILTER_OPTIONS } from "./grouping";
@@ -668,8 +675,14 @@ interface BoardToolbarProps {
    *  the pair so the layout changes beside the view it belongs to. */
   laneDirection: LaneDirectionPref;
   onLaneDirectionChange: (value: LaneDirectionPref) => void;
-  /** R3: "Nest child threads" toggle — nested rendering on/off. */
-  nestChildren: boolean;
+  /** The ungrouped view's card-grid order (issue #416): the View menu's
+   *  "Sort by" key and its "Order" pair, rendered only while that view is
+   *  active — the grid is the one surface with an order to choose. Absent
+   *  keeps the default order; an unwired toolbar (a component preview) then
+   *  offers no sort rows at all rather than rows that write nowhere. */
+  gridSort?: GridSort;
+  onGridSortChange?: (value: GridSort) => void;
+  /** R3: "Nest child threads" toggle — nested rendering on/off. */  nestChildren: boolean;
   onNestChildrenChange: (enabled: boolean) => void;
   /** Parent grouping always renders two-level families: the nesting pair
    *  reads On and disables both segments (a depth cap, not a user choice). */
@@ -752,6 +765,8 @@ export function BoardToolbar({
   onGroupByChange,
   laneDirection,
   onLaneDirectionChange,
+  gridSort = DEFAULT_GRID_SORT,
+  onGridSortChange,
   nestChildren,
   onNestChildrenChange,
   nestingLocked,
@@ -950,12 +965,15 @@ export function BoardToolbar({
   );
   const viewMenu = (
     /* The View menu: picking a grouping replaces the current one, and the
-        options block below the rows carries the two structural choices that
+        options block below the rows carries the structural choices that
         belong to the view — the lane direction (Vertical | Horizontal, the
         Appearance tab's same setting) and "Nest child threads" (Off | On).
         Both are two-state pairs, the app's choice anatomy, never checkboxes.
         Nesting is locked under the Parent view, which always nests two
-        levels, so its pair reads On and refuses both picks. */
+        levels, so its pair reads On and refuses both picks. The ungrouped
+        view is a card grid with no lanes, so there the lane-direction row
+        gives way to the grid's own order: "Sort by" (three keys) and its
+        "Order" pair (issue #416). */
     <MultiSelectDropdown
       exclusive
       modeChip
@@ -968,16 +986,52 @@ export function BoardToolbar({
       rowsMaxHeight={420}
       footer={
         <div className="pt-0.5">
-          <ViewChoiceRow
-            label="Lane direction"
-            options={[
-              { value: "vertical", label: "Vertical" },
-              { value: "horizontal", label: "Horizontal" },
-            ]}
-            selected={laneDirection}
-            onSelect={(value) => onLaneDirectionChange(value as LaneDirectionPref)}
-            title="Which way the board's lanes run: columns, or rows."
-          />
+          {groupBy === "none" ? (
+            onGridSortChange === undefined ? null : (
+            <>
+              {/* The ungrouped view is a card grid, so its rows are the grid's
+                  order (issue #416). The lane direction row is absent here:
+                  a grid has no lanes to run in either direction, and offering
+                  the pair would promise a re-layout the view cannot take. */}
+              <ViewChoiceRow
+                label="Sort by"
+                options={GRID_SORT_KEYS}
+                selected={gridSort.key}
+                onSelect={(value) => {
+                  // Picking a key starts it in its own direction (newest
+                  // first for a date, A to Z for titles) — never the
+                  // previous key's, which would read as the wrong way round.
+                  const key = value as GridSort["key"];
+                  onGridSortChange({ key, direction: defaultDirectionFor(key) });
+                }}
+                title="What the card grid is ordered by."
+              />
+              <ViewChoiceRow
+                label="Order"
+                options={gridSortDirectionOptions(gridSort.key)}
+                selected={gridSort.direction}
+                onSelect={(value) =>
+                  onGridSortChange({
+                    key: gridSort.key,
+                    direction: value as GridSort["direction"],
+                  })
+                }
+                title="Which way the grid reads: newest or oldest first, A to Z or Z to A."
+              />
+            </>
+            )
+          ) : (
+            <ViewChoiceRow
+              label="Lane direction"
+              options={[
+                { value: "vertical", label: "Vertical" },
+                { value: "horizontal", label: "Horizontal" },
+              ]}
+              selected={laneDirection}
+              onSelect={(value) => onLaneDirectionChange(value as LaneDirectionPref)}
+              title="Which way the board's lanes run: columns, or rows."
+            />
+          )}
           <ViewChoiceRow
             label="Nest child threads"
             options={[
