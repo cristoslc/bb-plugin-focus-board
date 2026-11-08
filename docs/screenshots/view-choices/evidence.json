@@ -1,0 +1,34 @@
+[
+  {
+    "frame": "desktop-menu-open.png",
+    "laneDirection": "Vertical",
+    "nestChildren": "On",
+    "board": "vertical"
+  },
+  {
+    "frame": "desktop-horizontal-tapped.png",
+    "laneDirection": "Horizontal",
+    "board": "horizontal"
+  },
+  {
+    "frame": "desktop-nest-off-tapped.png",
+    "nestChildren": "Off",
+    "familyRows": false
+  },
+  {
+    "frame": "touch-menu-open.png",
+    "laneDirection": "Vertical",
+    "nestChildren": "On",
+    "board": "vertical"
+  },
+  {
+    "frame": "touch-horizontal-tapped.png",
+    "laneDirection": "Horizontal",
+    "board": "horizontal"
+  },
+  {
+    "frame": "touch-nest-off-tapped.png",
+    "nestChildren": "Off",
+    "familyRows": false
+  }
+]

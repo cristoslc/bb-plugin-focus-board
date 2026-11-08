@@ -4,5 +4,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "text": "**The View menu's None row now reads No grouping.** The row never emptied the board: it picks the board with no grouping key, one lane holding every thread. The stored value, the Threads lane, and every saved view are unchanged.",
     "children": [],
     "group": "The View menu"
+  },
+  {
+    "text": "**Lane direction and Nest child threads are two-choice pairs in the View menu.** Pick Vertical or Horizontal, or switch nesting Off and On, and the board re-lays in place; the old nesting checkbox is gone and both pairs write the preferences the Appearance tab already owns.",
+    "children": [],
+    "group": "The View menu"
   }
 ];

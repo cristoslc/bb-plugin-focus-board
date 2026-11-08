@@ -1,0 +1,79 @@
+# Operator-assisted E2E: the View menu's two-state choices on the real board.
+#
+# The View dropdown carries the board's structural choices beside its
+# groupings: the lane direction (Vertical | Horizontal — the Appearance tab's
+# same preference) and "Nest child threads" (Off | On). Both are two-choice
+# selections, never checkboxes, and both drive the open board live: the lane
+# pick re-lays the columns as rows, the nesting pick flattens the family rows
+# and puts them back. The viewport is a wide touch device (1180x820,
+# `hasTouch`) so the taps travel the pointer path a touch screen uses while
+# the full palette still fits one row.
+#
+# The stored write is pinned in jsdom (`tests/app-view-menu-choices.test.tsx`);
+# this suite proves what only a real browser can: the menu's own rendering,
+# the taps, and the board's re-lay with no reload. A `goto` here re-seeds the
+# lane direction from the query (scripts/screenshot/main.tsx), so a reload
+# cannot show a persisted direction; the live flip is the read.
+#
+# Run: npm run uat -- tests/manual/uat-view-choices.yaml
+suite: view-choices
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5231
+defaults:
+  groupBy: status
+  theme: dark
+  viewport: { width: 1180, height: 820, hasTouch: true }
+shots: true
+
+steps:
+  - id: the-view-menu-carries-both-two-state-pairs
+    title: The open View menu names both choices — Lane direction and Nest child threads
+    goto: "?groupBy=status&lastSeenUnreleased=current"
+    gestures:
+      - click_aria: "View"
+    assert:
+      - menu_pairs_visible: "View"
+      - text_visible: "Lane direction"
+      - text_visible: "Nest child threads"
+      - text_visible: "Vertical"
+      - text_visible: "Horizontal"
+
+  - id: tapping-horizontal-re-lays-the-open-board
+    title: Tapping Horizontal reads the board as rows at once, no reload
+    gestures:
+      - click_aria: "Horizontal"
+    assert:
+      - lane_direction: horizontal
+      - column: unread
+        ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]
+      - no_visible_error: true
+
+  - id: tapping-vertical-returns-the-columns
+    title: Tapping Vertical brings the column board straight back
+    gestures:
+      - click_aria: "Vertical"
+    assert:
+      - lane_direction: vertical
+
+  - id: the-family-starts-nested
+    title: The Nest child threads pair reads On, the family row is under its card
+    goto: "?groupBy=status&lastSeenUnreleased=current"
+    assert:
+      - nested_row: { id: thr_proj_live, shown: true }
+
+  - id: tapping-off-flattens-the-family
+    title: Tapping Off flattens the board — the child stands as its own card
+    gestures:
+      - click_aria: "View"
+      - click_aria: "Off"
+    assert:
+      - nested_row: { id: thr_proj_live, shown: false }
+      - text_visible: "Dry-run the cutover checklist"
+
+  - id: tapping-on-restores-the-family-rows
+    title: Tapping On brings the family rows back
+    gestures:
+      - click_aria: "On"
+    assert:
+      - nested_row: { id: thr_proj_live, shown: true }

@@ -43,6 +43,8 @@ function renderToolbar(overrides: Partial<BoardToolbarProps> = {}) {
   const props = {
     groupBy: "status" as const,
     onGroupByChange: vi.fn(),
+    laneDirection: "vertical" as const,
+    onLaneDirectionChange: vi.fn(),
     nestChildren: false,
     onNestChildrenChange: vi.fn(),
     filter,

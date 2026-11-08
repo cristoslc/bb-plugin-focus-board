@@ -139,6 +139,10 @@ describe("BoardToolbar search ref wiring", () => {
       <BoardToolbar
         groupBy="state"
         onGroupByChange={() => {}}
+        laneDirection="vertical"
+        onLaneDirectionChange={() => {}}
+        nestChildren
+        onNestChildrenChange={() => {}}
         filter={filter as never}
         onFilterChange={() => {}}
         search=""
