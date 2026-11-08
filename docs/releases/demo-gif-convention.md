@@ -115,6 +115,9 @@ The backfill's per-bullet decisions live here so the record survives the pull re
 | 1.7.8 | The menu names the lane's order, and sorting has real actions | demonstrated | the opened menu's Oldest first pick re-orders the Unread lane live, and the reopened menu checks the picked side (the persistence facet rides the same clip) |
 | 1.7.8 | The What's-new feed credits contributors | demonstrated | 1.7.7's working-stays bullet carries the bracket note, so the shipped feed stages the attributed read under `lastSeenVersion=0.1.0` |
 | 1.7.9 | An errored card's menu offers Retry beside the acknowledgment, and the acknowledgment reads Ignore error | demonstrated | the demo board's own errored thread (`thr_deploy_fail`); the menu right-clicked on the card, Ignore error picked, and the card settles out of Needs you |
+| 1.7.10 | The No grouping view is a card grid with a sort order | demonstrated | the View menu's No grouping pick over the grouped board; Sort by's Alphabetical pick re-sorts the grid in place (`release-demos/v1.7.10.mjs`) |
+| 1.7.10 | The View menu's None row now reads No grouping | demonstrated | rides the clip above's opening frame — the menu open with the renamed row — one asset covering both bullets |
+| 1.7.10 | Lane direction and Nest child threads are two-choice pairs in the View menu | demonstrated | the opened menu's Horizontal pick re-lays the lanes as rows, then the Off pick folds families to single cards, in one clip |
 
 Still skipped, with the reason:
 
