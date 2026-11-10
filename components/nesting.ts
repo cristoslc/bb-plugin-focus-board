@@ -7,7 +7,6 @@ import type {
   ThreadState,
 } from "./grouping";
 import {
-  STATUS_COLUMN_ORDER,
   NO_GROUP_BUCKET,
   buildColumns,
   columnFor,
@@ -630,8 +629,26 @@ export function flatNestReason(
   return null;
 }
 
-function stateRank(state: ThreadState): number {
-  const index = STATUS_COLUMN_ORDER.indexOf(state);
+/**
+ * The urgency rank the family lane drive scores members by. Deliberately NOT
+ * `STATUS_COLUMN_ORDER`, the lanes' left-to-right read: the columns lead with
+ * Unread because a reply waiting to be caught up on earns an earlier look than
+ * a job in flight when the operator scans lanes, but a family card carries its
+ * OWN thread's state on its dot, and under the status grouping a lane names the
+ * state (see `frozenLaneHolds`). Scoring the family by lane order let an unread
+ * child drag a RUNNING parent out of Working, which is the board lying about
+ * the one signal it exists to carry — reported 2026-11-10, thr_nusa59caqp: a
+ * working orchestrator with one working and one unread child read as Unread.
+ * Live work outranks the unread arm here, exactly as `threadState` ranks one
+ * thread (working before unread); Needs you stays first, and idle — unranked —
+ * still loses to everything, so an idle family lifts on an unread child as it
+ * always has. The parent card's own badge is untouched either way: this is a
+ * placement rule, not a state rewrite.
+ */
+const DRIVE_STATE_ORDER: readonly ThreadState[] = ["attention", "working", "unread"];
+
+function driveStateRank(state: ThreadState): number {
+  const index = DRIVE_STATE_ORDER.indexOf(state);
   return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }
 
@@ -725,16 +742,18 @@ function driveElevates(
   errorAcks: ReadonlySet<string> = new Set<string>(),
 ): boolean {
   if (groupBy === "recency") return a.updatedAt > b.updatedAt;
-  return stateRank(threadState(a, errorAcks)) < stateRank(threadState(b, errorAcks));
+  return driveStateRank(threadState(a, errorAcks)) < driveStateRank(threadState(b, errorAcks));
 }
 
 /**
  * R4: under the status grouping, where should each family land? The family
  * (a root and its nested descendants) appears in the column of its most
- * attention-requiring nested member — the smallest state rank across the
- * family's drive set (`familyDriveMembers`: the root plus every descendant
- * that still renders inside the family card). The root's OWN attention
- * always lifts. Under the recency grouping the same drive set scores by
+ * attention-requiring nested member — the smallest rank across the family's
+ * drive set (`familyDriveMembers`: the root plus every descendant that still
+ * renders inside the family card), scored by `DRIVE_STATE_ORDER` (Needs you,
+ * then live work, then the unread arm — never down the lanes' left-to-right
+ * read; see that table). The root's OWN attention always lifts. Under the
+ * recency grouping the same drive set scores by
  * freshness instead: the newest updatedAt in the family carries the family's
  * bucket, so a child's fresh activity lifts a stale parent the same way a
  * running child lifts the status lane. The returned map is keyed by family
@@ -777,7 +796,7 @@ export function familyColumnOverrides(
     // Under the status grouping an all-idle drive set names no lane (idle
     // ranks below every state that can demand a column move): the family
     // keeps the parent's own bucket, so no entry.
-    if (groupBy === "status" && stateRank(threadState(best, errorAcks)) === Number.MAX_SAFE_INTEGER) {
+    if (groupBy === "status" && driveStateRank(threadState(best, errorAcks)) === Number.MAX_SAFE_INTEGER) {
       continue;
     }
     overrides.set(rootId, columnFor(best, groupBy, context, now, errorAcks));
