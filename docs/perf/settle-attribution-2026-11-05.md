@@ -300,3 +300,86 @@ the same head `docs/perf/settle-attribution-2026-11-06T14-58-15-611Z.json`):
   gate's ceiling; that is its SCHEDULE record (the probe logs schedules, never
   cancels) — the commit census shows no commit at the ceiling's due time, the
   release having canceled it pre-paint.
+
+## The aggregate mount read after-run (issue #424: the hold was dead on a real workspace)
+
+The hold above shipped with a 400ms ceiling, sized against this harness's modeled
+drain. On a real workspace the mount fan-in is an order of magnitude larger, so
+the ceiling — not the ninth landing — was the active path, and the board painted
+before the metadata arrived. The operator reported it as a horizontal-lane
+problem; the measurements below say the lane direction was never involved.
+
+### What the live board actually did (before this change)
+
+bb serving the plugin at 358 threads / 139 cards, three cold loads per lane
+direction, page-side `performance.now()` via a puppeteer census:
+
+| Direction | first card | nine mount lists all landed | card-count changes after the paint |
+|---|---|---|---|
+| horizontal | 683 / 648 / 837ms | 3548 / 4801 / 4961ms | 4 / 5 / 4 |
+| vertical | 636 / 633 / 632ms | 3140 / 3087 / 2971ms | 4 / 4 / 4 |
+
+One horizontal load's per-list completion times: `sweep_config_get` 278ms,
+`rank_list` 526, `link_list` 2787, `done_list` 2836, `family_state_list` 2918,
+`pin_parks_list` 2918, `snooze_list` 2980, `error_acks_list` 3002,
+`groups_list` 3548. Its card census: 150 cards at 683ms, then 213 at 2905, 133
+at 2953, 126 at 3299, 139 at 4026 — the fold, the group boxes and the Done
+projections all landing after the board looked loaded, in that order.
+
+**The gate itself was never bypassed.** It is one early return in `BoardPage`
+(`app.tsx`), and every board surface sits behind it — `ParentLaneBoard` and the
+columns/rows `Board` alike; `laneDirection` only reaches `Board` as a prop. What
+differed between the lanes was paint cost: the column board's own render is
+200-300ms heavier on this harness, which is why vertical's first card lands later
+and why the metadata sometimes reaches the screen while it is still painting.
+
+### Why the fan-in took 2s
+
+Six of the nine mount handlers walked every live thread and read its plugin
+metadata namespace: `done_list`, `pin_parks_list`, `link_list`,
+`error_acks_list`, `snooze_list`, `groups_list`. Fired together they SERIALIZE
+on bb's bridge, so the fan-in cost the sum, not the max. Measured from the shell
+against the running plugin (one `curl` per call, then six in parallel):
+
+```
+done_list   alone 0.64s      link_list   alone 0.58s
+six scans in parallel, wall: 2.04s
+```
+
+### The change
+
+1. `board_state_get` (server.ts) reads each live thread's namespace ONCE and
+   projects all six bodies from it through the same helpers the per-list
+   handlers use (`listDoneFor`, `listParksFor`, `listLinksFor`, `listAcksFor`,
+   `listSnoozesFor`, `listGroupsFor`), so a mount and a realtime refetch of the
+   same list cannot drift. The realtime signal paths keep calling the
+   individual handlers: only the mount is aggregated.
+2. The mount fan-in in `app.tsx` is now that one call plus the three one-row
+   reads it does not carry (`sweep_config_get`, `rank_list`, `family_state_list`).
+3. `MOUNT_SETTLE_CEILING_MS` moves 400 → 1800: ~2.5x the measured aggregate
+   wall (~0.6s on 358 threads), with room for a board three times larger, so the
+   ceiling is the net for a hung call instead of the active path on every mount.
+
+### The after-numbers
+
+Harness, `scripts/perf/repro-lane-direction-hold.mjs` (four mount calls carry
+the nine lists now; `mountEndsBefore` is that set):
+
+| Staged fan-in | Direction | first card | mount ends before paint | reshuffled after paint |
+|---|---|---|---|---|
+| none (instant) | vertical | 836ms | 4/4 | no |
+| none (instant) | horizontal | 570ms | 4/4 | no |
+| 600ms per call | vertical | 1430ms | 4/4 | no |
+| 600ms per call | horizontal | 1151ms | 4/4 | no |
+| 1400ms per call | vertical | 2218ms | 4/4 | no |
+| 1400ms per call | horizontal | 1983ms | 4/4 | no |
+| 2600ms (past the ceiling) | vertical / horizontal | 2334 / 2157ms | 0/4 | yes, by design |
+
+Before this change the same staged runs read `mountEndsBefore=0/9` with a
+post-paint reshuffle in both directions: the 400ms ceiling always won.
+
+The load bench on the same tree (`docs/perf/load-bench-2026-11-10T14-14-30-160Z.json`,
+`--assert`, zero violations): client `mountToFirstCard` 118 / 188 / 244ms at
+100/300/500 scale, modeled 194 / 242ms at 300/500, and the modeled
+`fanInWindow` — one scan now — 52 / 77ms where the six-walk shape priced
+hundreds. No budget moved.

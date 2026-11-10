@@ -334,6 +334,22 @@ const MOUNT_LIST_KEYS = [
 
 type MountListKey = (typeof MOUNT_LIST_KEYS)[number];
 
+/**
+ * The six lists the mount's aggregate read carries (issue #424). They are the
+ * per-thread metadata walks that used to be five separate calls plus the
+ * group memberships walk; `board_state_get` answers all of them from one pass
+ * over the threads, so one landing settles all six gates together. The other
+ * three keys are single-row reads with their own calls.
+ */
+const BOARD_STATE_MOUNT_KEYS = [
+  "done",
+  "parks",
+  "links",
+  "errorAcks",
+  "snoozes",
+  "groups",
+] as const satisfies readonly MountListKey[];
+
 function BoardPage({ subPath }: { subPath: string }) {
   const {
     status: sidebarStatus,
@@ -545,6 +561,16 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Refetch units: the exact bodies the mount effect and the realtime
   // signals both consume, named so the realtime coalescer (below) can run
   // each once per pass.
+  const refetchSweepConfig = useCallback(() => {
+    rpc.call("sweep_config_get").then(
+      (result) =>
+        setSweepConfig({
+          doneArchiveMs: result.doneArchiveMs,
+          idleArchiveMs: result.idleArchiveMs,
+        }),
+      () => {}, // Settings are optional; defaults apply when unreachable.
+    ).finally(() => settleMountList("sweepConfig"));
+  }, [rpc, setSweepConfig]);
   const refetchDoneState = useCallback(() => {
     rpc.call("done_list").then(
       (result) => {
@@ -559,15 +585,8 @@ function BoardPage({ subPath }: { subPath: string }) {
       (result) => setParkIds(new Set(Object.keys(result.parks))),
       () => {}, // Parks gate nothing; an unloadable park list loses no pin.
     ).finally(() => settleMountList("parks"));
-    rpc.call("sweep_config_get").then(
-      (result) =>
-        setSweepConfig({
-          doneArchiveMs: result.doneArchiveMs,
-          idleArchiveMs: result.idleArchiveMs,
-        }),
-      () => {}, // Settings are optional; defaults apply when unreachable.
-    ).finally(() => settleMountList("sweepConfig"));
-  }, [rpc, setDoneIds, setDoneExtras, setParkIds, setSweepConfig]);
+    refetchSweepConfig();
+  }, [rpc, setDoneIds, setDoneExtras, setParkIds, refetchSweepConfig]);
   const refetchLinks = useCallback(() => {
     rpc.call("link_list").then(
       (result) => setLinksByThread(linksFromRpc(result)),
@@ -580,11 +599,6 @@ function BoardPage({ subPath }: { subPath: string }) {
       () => {}, // Acks are optional state; the board works without them.
     ).finally(() => settleMountList("errorAcks"));
   }, [rpc, setErrorAckIds]);
-  useEffect(() => {
-    refetchDoneState();
-    refetchLinks();
-    refetchErrorAcks();
-  }, [refetchDoneState, refetchLinks, refetchErrorAcks]);
   // The realtime coalescer (issue #186): one shared debounce over every
   // refetch-carrying signal, so a burst of signals — one write echoed
   // across channels, or several writes landing together — produces one
@@ -643,9 +657,8 @@ function BoardPage({ subPath }: { subPath: string }) {
       () => {}, // Snoozing is optional state; the board works without it.
     ).finally(() => settleMountList("snoozes"));
   }, [rpc]);
-  useEffect(() => {
-    refetchSnoozes();
-  }, [refetchSnoozes]);
+  // No mount call: the mount fan-in carries the snooze map (refetchBoardState
+  // below), and this unit serves the realtime signal path only.
   useRealtime("snooze-changed", () => {
     refetchScheduler.schedule("snoozes", refetchSnoozes);
   });
@@ -745,12 +758,39 @@ function BoardPage({ subPath }: { subPath: string }) {
       () => {}, // Groups are optional state; the board works without them.
     ).finally(() => settleMountList("groups"));
   }, [rpc]);
-  useEffect(() => {
-    refetchGroups();
-  }, [refetchGroups]);
+  // No mount call: the mount fan-in carries the registry and memberships
+  // (refetchBoardState below), and this unit serves the signal path only.
   useRealtime("group-changed", () => {
     refetchScheduler.schedule("groups", refetchGroups);
   });
+  /**
+   * The mount's ONE round trip (issue #424). Six of the nine mount lists each
+   * walked every live thread on the server and read its plugin-metadata
+   * namespace, and fired together those walks serialize on bb's bridge: the
+   * fan-in cost the SUM of six passes (~2s on a 358-thread workspace, measured
+   * on the live board), so the readiness gate's 400ms ceiling was the active
+   * path on every real mount and the board painted before the metadata landed.
+   * `board_state_get` reads each thread's namespace once and answers all six
+   * bodies; this seeds every state they feed and settles their gates together.
+   * The per-list units above stay: they serve the realtime signal paths.
+   */
+  const refetchBoardState = useCallback(() => {
+    rpc.call("board_state_get").then(
+      (result) => {
+        setDoneIds(new Set(result.done.doneIds));
+        setDoneExtras(recordsAsExtras(result.done.records));
+        setParkIds(new Set(Object.keys(result.parks.parks)));
+        setLinksByThread(linksFromRpc(result.links));
+        setErrorAckIds(new Set(result.acks.ackIds));
+        setSnoozeRecords(result.snoozes.snoozes);
+        setGroupRegistry(result.groups.groups);
+        setGroupAssignments(result.groups.memberships);
+      },
+      () => {}, // Every list here is optional state; the board works without them.
+    ).finally(() => {
+      for (const key of BOARD_STATE_MOUNT_KEYS) settleMountList(key);
+    });
+  }, [rpc, setDoneIds, setDoneExtras, setParkIds, setLinksByThread, setErrorAckIds, setSnoozeRecords, setGroupRegistry, setGroupAssignments]);
   const setThreadGroup = useCallback(
     (threadId: string, groupId: string | null) => {
       // Optimistic; the group-changed refetch settles the truth — including
@@ -1050,14 +1090,21 @@ function BoardPage({ subPath }: { subPath: string }) {
       () => {}, // Family fold state is optional; the board works without it.
     ).finally(() => settleMountList("familyState"));
   }, [rpc]);
-  useEffect(() => {
-    refetchFamilyState();
-  }, [refetchFamilyState]);
   // A fold or hide written by any surface (another window, another machine,
   // the migration above) converges here through the coalesced refetch.
   useRealtime("family-state-changed", () => {
     refetchScheduler.schedule("familyState", refetchFamilyState);
   });
+  // The mount fan-in, named once (issue #424): the aggregate read that carries
+  // six of the nine lists, then the three one-row reads it does not carry
+  // (sweep settings, rank orders, family folds). Together they settle every
+  // MOUNT_LIST_KEYS entry, so the readiness gate releases once the data is in.
+  useEffect(() => {
+    refetchBoardState();
+    refetchSweepConfig();
+    refetchRanks();
+    refetchFamilyState();
+  }, [refetchBoardState, refetchSweepConfig, refetchRanks, refetchFamilyState]);
   // Collapsed family boxes: the GROUP ids whose dashed boxes fold into one
   // normal-size card. Same deliberate-toggle-only shape as the family fold:
   // an id absent from the stored list renders expanded, and a corrupt stored

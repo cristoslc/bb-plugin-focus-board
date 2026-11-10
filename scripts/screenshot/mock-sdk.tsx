@@ -146,6 +146,13 @@ function modeledScanDelayMs(method: string, threadCount: number): number {
   if (method === "done_list") {
     return Math.ceil(simDoneIds.size / LIST_READ_CONCURRENCY) * META_SCAN_MS;
   }
+  // The mount aggregate (issue #424) reads each thread's namespace ONCE and
+  // projects every list from it, so it pays one scan wall for the six lists
+  // the individual handlers above price separately. A model that left it at
+  // zero would price the fix as free and the bench would stop measuring it.
+  if (method === "board_state_get") {
+    return Math.ceil(threadCount / LIST_READ_CONCURRENCY) * META_SCAN_MS;
+  }
   return 0;
 }
 
@@ -1182,6 +1189,31 @@ function adoptHostOp(op: HostOp): void {
 };
 
 const simRpcBase = async (method: string, args?: unknown): Promise<unknown> => {
+  if (method === "board_state_get") {
+    // The mount aggregate (issue #424): the same six bodies the per-list
+    // handlers below answer with, so the harness's board hydrates through one
+    // round trip exactly as the live board does.
+    return {
+      done: { doneIds: [...simDoneIds], records: structuredClone(SIM_DONE_RECORDS) },
+      parks: { parks: {} },
+      links: { links: structuredClone(simLinks) },
+      acks: { ackIds: [], records: {} },
+      snoozes: OVERVIEW_MODE
+        ? {
+            snoozes: {
+              thr_ov_snooze_card: {
+                wakeAt: new Date(Date.now() + 18 * 60 * 60 * 1000).toISOString(),
+                setAt: new Date(Date.now()).toISOString(),
+              },
+            },
+          }
+        : { snoozes: {} },
+      groups: {
+        groups: simGroupRegistry,
+        memberships: structuredClone(simGroupAssignments),
+      },
+    };
+  }
   if (method === "done_list") {
     return { doneIds: [...simDoneIds], records: structuredClone(SIM_DONE_RECORDS) };
   }

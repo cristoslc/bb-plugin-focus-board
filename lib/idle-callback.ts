@@ -20,13 +20,19 @@
  *  operator can realistically gesture after the board paints. */
 export const IDLE_CALLBACK_FALLBACK_MS = 400;
 
-/** The mount fan-in's hard ceiling in ms (issue #403): past this time the
- *  board paints with whatever mount lists have landed, exactly the pre-gate
- *  behavior, so a hung list can never blank the panel. Small enough that the
- *  deferred board still beats an operator's first gesture; large enough that
- *  a modeled drain (the fan-in's parallel burst, tens of ms) beats it
- *  comfortably — the ceiling is the safety net, never the active path. */
-export const MOUNT_SETTLE_CEILING_MS = 400;
+/** The mount fan-in's hard ceiling in ms (issues #403, #424): past this time
+ *  the board paints with whatever mount lists have landed, exactly the
+ *  pre-gate behavior, so a hung list can never blank the panel.
+ *
+ *  Sized from the MEASURED fan-in, never guessed (issue #424): the mount used
+ *  to cost six per-thread metadata walks that serialize on bb's bridge —
+ *  ~2.0-2.3s on a 358-thread workspace, which is why the retired 400ms value
+ *  was the active path on every real mount and the board painted before the
+ *  metadata landed. The aggregate mount read (`board_state_get`) collapses
+ *  those six walks into one pass, measured at ~0.6s on the same workspace, so
+ *  1.8s is ~2.5x the live fan-in with room for a board three times larger; the
+ *  ceiling now only fires on a genuinely hung call. */
+export const MOUNT_SETTLE_CEILING_MS = 1800;
 
 /** Schedule `callback` at idle with the fallback ceiling; returns cancel. */
 export function scheduleIdleCallback(

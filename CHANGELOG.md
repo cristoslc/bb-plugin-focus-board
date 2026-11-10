@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+#### The board's load
+
+- **The board paints once, settled, on real workspaces too.** The hold's 400ms ceiling fired before the mount read landed, so cards folded and regrouped after the board looked loaded. The mount read is now one round trip instead of six passes over every thread, and the ceiling sits above it.
+
 ### Fixed
 
 #### The board's lanes

@@ -81,14 +81,12 @@ const QUIET_MS = Math.max(200, Number(process.env.ATTR_QUIET_MS ?? "700"));
  *  REQUIRED_MOUNT_RPCS); copied, not imported, so the probe never runs the
  *  bench's budgets or writes its report shape. */
 const REQUIRED_MOUNT_RPCS = [
-  "done_list",
-  "pin_parks_list",
-  "sweep_config_get",
-  "link_list",
-  "error_acks_list",
-  "snooze_list",
+  // The mount fan-in since issue #424: the six per-thread metadata lists
+  // arrive in ONE aggregate read, so the drain waits on that call plus the
+  // three one-row reads and the pulse poll.
+  "board_state_get",
   "rank_list",
-  "groups_list",
+  "sweep_config_get",
   "family_state_list",
   "pulse_rates",
 ];

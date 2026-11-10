@@ -14,6 +14,7 @@ type Method = keyof typeof rpcContract;
 
 /** Minimal input each contract accepts (constructible without a host). */
 const validInputs: Record<Method, unknown> = {
+  board_state_get: null,
   done_list: null,
   done_set: { threadId: "thr_x", done: true },
   pin_parks_list: null,
@@ -66,6 +67,7 @@ const validInputs: Record<Method, unknown> = {
 };
 
 const nullInputMethods: Method[] = [
+  "board_state_get",
   "done_list",
   "groups_list",
   "pin_parks_list",

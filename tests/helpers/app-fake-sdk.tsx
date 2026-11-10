@@ -242,10 +242,21 @@ export function stubRankMoveFailure(message: string | null): void {
 let hungMethod: string | null = null;
 const hungResolvers: Array<(value: unknown) => void> = [];
 let rejectedMethod: string | null = null;
+// A SLOW-but-alive call (issue #424): the fan-in's real shape on a workspace
+// big enough that the mount read costs real time. Distinct from a hang — it
+// settles on its own, with no release needed.
+let delayedMethod: string | null = null;
+let delayedMs = 0;
 
 /** Make every call to `method` hang until `releaseRpcHangs()` (null clears). */
 export function stubRpcHang(method: string | null): void {
   hungMethod = method;
+}
+
+/** Make every call to `method` settle after `ms` (null clears). */
+export function stubRpcDelay(method: string | null, ms = 0): void {
+  delayedMethod = method;
+  delayedMs = ms;
 }
 
 /** Resolve every hung call with an empty payload (the callers' guards hold). */
@@ -378,7 +389,27 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
   if (method === rejectedMethod) {
     throw new Error(`app-fake-sdk: ${method} stubbed to reject`);
   }
+  if (method === delayedMethod) {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, delayedMs);
+    });
+  }
   switch (method) {
+    case "board_state_get":
+      // The mount aggregate (issue #424): the same six bodies the per-list
+      // handlers answer with, so a suite that seeds links/groups sees them
+      // through the mount exactly as it does through a signal refetch.
+      return {
+        done: { doneIds: [], records: {} },
+        parks: { parks: {} },
+        links: { links: structuredClone(fakeLinks) },
+        acks: { ackIds: [], records: {} },
+        snoozes: { snoozes: {} },
+        groups: {
+          groups: structuredClone(fakeGroups),
+          memberships: structuredClone(fakeGroupMemberships),
+        },
+      };
     case "done_list":
       return { doneIds: [], records: {} };
     case "pin_parks_list":

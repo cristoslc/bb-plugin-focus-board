@@ -1,0 +1,1902 @@
+{
+  "generatedAt": "2026-11-10T14:14:30.160Z",
+  "scales": [
+    100,
+    300,
+    500
+  ],
+  "repeats": 5,
+  "warmups": 2,
+  "modeledKnobs": "sidebarDelay=200&rpcLatency=8&metaScanMs=1.5",
+  "requiredMountRpcs": [
+    "board_state_get",
+    "rank_list",
+    "sweep_config_get",
+    "family_state_list",
+    "pulse_rates"
+  ],
+  "budgets": {
+    "client": {
+      "100": {
+        "appEval": 3000,
+        "firstCommit": 1500,
+        "mountToFirstCard": 900,
+        "fanInWindow": 300,
+        "settleTail": 250
+      },
+      "300": {
+        "appEval": 3000,
+        "firstCommit": 1500,
+        "mountToFirstCard": 2000,
+        "fanInWindow": 300,
+        "settleTail": 350
+      },
+      "500": {
+        "appEval": 3000,
+        "firstCommit": 1500,
+        "mountToFirstCard": 3000,
+        "fanInWindow": 300,
+        "settleTail": 600
+      }
+    },
+    "modeled": {
+      "100": {
+        "threadsWait": 1800,
+        "mountToFirstCard": 400,
+        "fanInWindow": 150,
+        "settleTail": 1800
+      },
+      "300": {
+        "threadsWait": 1800,
+        "mountToFirstCard": 600,
+        "fanInWindow": 200,
+        "settleTail": 1800
+      },
+      "500": {
+        "threadsWait": 1800,
+        "mountToFirstCard": 750,
+        "fanInWindow": 300,
+        "settleTail": 2400
+      }
+    }
+  },
+  "cells": {
+    "client@100": {
+      "profile": "client",
+      "scale": 100,
+      "query": "scale=100",
+      "cardCount": 174,
+      "runs": [
+        {
+          "headline": {
+            "firstCardPaint": 163.19999992847443,
+            "fcp": 208,
+            "lcp": null,
+            "tbt": 58,
+            "cardCount": 174
+          },
+          "stages": {
+            "appEval": 50,
+            "firstCommit": 53.799999952316284,
+            "threadsWait": -4.5,
+            "mountToFirstCard": 113.89999997615814,
+            "fanInWindow": 0.20000004768371582,
+            "settleTail": 85.20000004768372
+          },
+          "fanInAllowance": 34.200000047683716,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 54.299999952316284,
+              "end": 54.5
+            },
+            {
+              "method": "board_state_get",
+              "start": 54.299999952316284,
+              "end": 54.5
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 54.299999952316284,
+              "end": 54.5
+            },
+            {
+              "method": "family_state_list",
+              "start": 54.299999952316284,
+              "end": 54.5
+            },
+            {
+              "method": "pulse_rates",
+              "start": 54.5,
+              "end": 54.5
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 162.20000004768372,
+            "fcp": 204,
+            "lcp": null,
+            "tbt": 57,
+            "cardCount": 174
+          },
+          "stages": {
+            "appEval": 49.60000002384186,
+            "firstCommit": 53,
+            "threadsWait": -4,
+            "mountToFirstCard": 113.20000004768372,
+            "fanInWindow": 0.7999999523162842,
+            "settleTail": 85.39999997615814
+          },
+          "fanInAllowance": 34.799999952316284,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 53.5,
+              "end": 54.299999952316284
+            },
+            {
+              "method": "board_state_get",
+              "start": 53.5,
+              "end": 54.299999952316284
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 53.60000002384186,
+              "end": 54.299999952316284
+            },
+            {
+              "method": "family_state_list",
+              "start": 53.60000002384186,
+              "end": 54.299999952316284
+            },
+            {
+              "method": "pulse_rates",
+              "start": 54.10000002384186,
+              "end": 54.299999952316284
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 164.29999995231628,
+            "fcp": 208,
+            "lcp": null,
+            "tbt": 61,
+            "cardCount": 174
+          },
+          "stages": {
+            "appEval": 48.09999990463257,
+            "firstCommit": 52.199999928474426,
+            "threadsWait": -4.699999928474426,
+            "mountToFirstCard": 116.79999995231628,
+            "fanInWindow": 0.3999999761581421,
+            "settleTail": 82.89999997615814
+          },
+          "fanInAllowance": 34.39999997615814,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 52.799999952316284,
+              "end": 53.199999928474426
+            },
+            {
+              "method": "board_state_get",
+              "start": 52.799999952316284,
+              "end": 53.199999928474426
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 52.799999952316284,
+              "end": 53.199999928474426
+            },
+            {
+              "method": "family_state_list",
+              "start": 52.799999952316284,
+              "end": 53.199999928474426
+            },
+            {
+              "method": "pulse_rates",
+              "start": 53.09999990463257,
+              "end": 53.199999928474426
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 189.5,
+            "fcp": 228,
+            "lcp": null,
+            "tbt": 57,
+            "cardCount": 174
+          },
+          "stages": {
+            "appEval": 77.80000007152557,
+            "firstCommit": 81.30000007152557,
+            "threadsWait": -4.200000047683716,
+            "mountToFirstCard": 112.39999997615814,
+            "fanInWindow": 0.3999999761581421,
+            "settleTail": 82.30000007152557
+          },
+          "fanInAllowance": 34.39999997615814,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 81.70000004768372,
+              "end": 82.10000002384186
+            },
+            {
+              "method": "board_state_get",
+              "start": 81.70000004768372,
+              "end": 82.10000002384186
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 81.80000007152557,
+              "end": 82.10000002384186
+            },
+            {
+              "method": "family_state_list",
+              "start": 81.80000007152557,
+              "end": 82.10000002384186
+            },
+            {
+              "method": "pulse_rates",
+              "start": 82,
+              "end": 82.10000002384186
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 190,
+            "fcp": 232,
+            "lcp": null,
+            "tbt": 63,
+            "cardCount": 174
+          },
+          "stages": {
+            "appEval": 58.199999928474426,
+            "firstCommit": 75,
+            "threadsWait": -18.300000071525574,
+            "mountToFirstCard": 133.30000007152557,
+            "fanInWindow": 0.7000000476837158,
+            "settleTail": 78.29999995231628
+          },
+          "fanInAllowance": 34.700000047683716,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 75.69999992847443,
+              "end": 76.39999997615814
+            },
+            {
+              "method": "board_state_get",
+              "start": 75.69999992847443,
+              "end": 76.39999997615814
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 75.69999992847443,
+              "end": 76.39999997615814
+            },
+            {
+              "method": "family_state_list",
+              "start": 75.69999992847443,
+              "end": 76.39999997615814
+            },
+            {
+              "method": "pulse_rates",
+              "start": 76.29999995231628,
+              "end": 76.39999997615814
+            }
+          ]
+        }
+      ],
+      "stages": {
+        "appEval": {
+          "median": 50,
+          "min": 48.09999990463257,
+          "max": 77.80000007152557,
+          "spread": 29.700000166893005,
+          "samples": 5
+        },
+        "firstCommit": {
+          "median": 53.799999952316284,
+          "min": 52.199999928474426,
+          "max": 81.30000007152557,
+          "spread": 29.100000143051147,
+          "samples": 5
+        },
+        "threadsWait": {
+          "median": -4.5,
+          "min": -18.300000071525574,
+          "max": -4,
+          "spread": 14.300000071525574,
+          "samples": 5
+        },
+        "mountToFirstCard": {
+          "median": 113.89999997615814,
+          "min": 112.39999997615814,
+          "max": 133.30000007152557,
+          "spread": 20.90000009536743,
+          "samples": 5
+        },
+        "fanInWindow": {
+          "median": 0.3999999761581421,
+          "min": 0.20000004768371582,
+          "max": 0.7999999523162842,
+          "spread": 0.5999999046325684,
+          "samples": 5
+        },
+        "settleTail": {
+          "median": 82.89999997615814,
+          "min": 78.29999995231628,
+          "max": 85.39999997615814,
+          "spread": 7.100000023841858,
+          "samples": 5
+        }
+      },
+      "headline": {
+        "firstCardPaint": {
+          "median": 164,
+          "min": 162.20000004768372,
+          "max": 190,
+          "samples": 5
+        },
+        "fcp": {
+          "median": 208,
+          "min": 204,
+          "max": 232,
+          "samples": 5
+        },
+        "lcp": {
+          "samples": 0
+        },
+        "tbt": {
+          "median": 58,
+          "min": 57,
+          "max": 63,
+          "samples": 5
+        },
+        "cardCount": {
+          "median": 174,
+          "min": 174,
+          "max": 174,
+          "samples": 5
+        }
+      }
+    },
+    "modeled@100": {
+      "profile": "modeled",
+      "scale": 100,
+      "query": "scale=100&sidebarDelay=200&rpcLatency=8&metaScanMs=1.5",
+      "cardCount": 174,
+      "runs": [
+        {
+          "headline": {
+            "firstCardPaint": 376.1999999284744,
+            "fcp": 60,
+            "lcp": null,
+            "tbt": 71,
+            "cardCount": 174
+          },
+          "stages": {
+            "appEval": 53.199999928474426,
+            "firstCommit": 55.89999997615814,
+            "threadsWait": 198.69999992847443,
+            "mountToFirstCard": 121.60000002384186,
+            "fanInWindow": 26.799999952316284,
+            "settleTail": 105.10000002384186
+          },
+          "fanInAllowance": 60.799999952316284,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 58.39999997615814,
+              "end": 67.09999990463257
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 58.39999997615814,
+              "end": 67.09999990463257
+            },
+            {
+              "method": "family_state_list",
+              "start": 58.39999997615814,
+              "end": 67.09999990463257
+            },
+            {
+              "method": "pulse_rates",
+              "start": 58.59999990463257,
+              "end": 67.59999990463257
+            },
+            {
+              "method": "board_state_get",
+              "start": 58.39999997615814,
+              "end": 85.19999992847443
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 371.2000000476837,
+            "fcp": 72,
+            "lcp": null,
+            "tbt": 69,
+            "cardCount": 174
+          },
+          "stages": {
+            "appEval": 52,
+            "firstCommit": 54.800000071525574,
+            "threadsWait": 197.5,
+            "mountToFirstCard": 118.89999997615814,
+            "fanInWindow": 29.100000023841858,
+            "settleTail": 102.79999995231628
+          },
+          "fanInAllowance": 63.10000002384186,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 55.300000071525574,
+              "end": 66.90000009536743
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 55.300000071525574,
+              "end": 66.90000009536743
+            },
+            {
+              "method": "family_state_list",
+              "start": 55.300000071525574,
+              "end": 67
+            },
+            {
+              "method": "pulse_rates",
+              "start": 57.60000002384186,
+              "end": 67
+            },
+            {
+              "method": "board_state_get",
+              "start": 55.300000071525574,
+              "end": 84.40000009536743
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 362.2999999523163,
+            "fcp": 52,
+            "lcp": null,
+            "tbt": 67,
+            "cardCount": 174
+          },
+          "stages": {
+            "appEval": 43.39999997615814,
+            "firstCommit": 45.799999952316284,
+            "threadsWait": 199,
+            "mountToFirstCard": 117.5,
+            "fanInWindow": 27.299999952316284,
+            "settleTail": 133.5
+          },
+          "fanInAllowance": 61.299999952316284,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 46.10000002384186,
+              "end": 55.5
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 46.199999928474426,
+              "end": 55.5
+            },
+            {
+              "method": "family_state_list",
+              "start": 46.199999928474426,
+              "end": 55.5
+            },
+            {
+              "method": "pulse_rates",
+              "start": 46.299999952316284,
+              "end": 56.10000002384186
+            },
+            {
+              "method": "board_state_get",
+              "start": 46.10000002384186,
+              "end": 73.39999997615814
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 367.39999997615814,
+            "fcp": 68,
+            "lcp": null,
+            "tbt": 64,
+            "cardCount": 174
+          },
+          "stages": {
+            "appEval": 52.700000047683716,
+            "firstCommit": 55.60000002384186,
+            "threadsWait": 197.89999997615814,
+            "mountToFirstCard": 113.89999997615814,
+            "fanInWindow": 27.5,
+            "settleTail": 103.70000004768372
+          },
+          "fanInAllowance": 61.5,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 56,
+              "end": 65.70000004768372
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 56.10000002384186,
+              "end": 65.70000004768372
+            },
+            {
+              "method": "family_state_list",
+              "start": 56.10000002384186,
+              "end": 65.70000004768372
+            },
+            {
+              "method": "pulse_rates",
+              "start": 57.10000002384186,
+              "end": 66.30000007152557
+            },
+            {
+              "method": "board_state_get",
+              "start": 56,
+              "end": 83.5
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 377.10000002384186,
+            "fcp": 76,
+            "lcp": null,
+            "tbt": 66,
+            "cardCount": 174
+          },
+          "stages": {
+            "appEval": 59.800000071525574,
+            "firstCommit": 72,
+            "threadsWait": 188.70000004768372,
+            "mountToFirstCard": 116.39999997615814,
+            "fanInWindow": 27.800000071525574,
+            "settleTail": 109
+          },
+          "fanInAllowance": 61.700000047683716,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 73.5,
+              "end": 83.70000004768372
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 73.70000004768372,
+              "end": 83.80000007152557
+            },
+            {
+              "method": "family_state_list",
+              "start": 73.70000004768372,
+              "end": 83.80000007152557
+            },
+            {
+              "method": "pulse_rates",
+              "start": 74.30000007152557,
+              "end": 84.40000009536743
+            },
+            {
+              "method": "board_state_get",
+              "start": 73.60000002384186,
+              "end": 101.30000007152557
+            }
+          ]
+        }
+      ],
+      "stages": {
+        "appEval": {
+          "median": 52.700000047683716,
+          "min": 43.39999997615814,
+          "max": 59.800000071525574,
+          "spread": 16.40000009536743,
+          "samples": 5
+        },
+        "firstCommit": {
+          "median": 55.60000002384186,
+          "min": 45.799999952316284,
+          "max": 72,
+          "spread": 26.200000047683716,
+          "samples": 5
+        },
+        "threadsWait": {
+          "median": 197.89999997615814,
+          "min": 188.70000004768372,
+          "max": 199,
+          "spread": 10.299999952316284,
+          "samples": 5
+        },
+        "mountToFirstCard": {
+          "median": 117.5,
+          "min": 113.89999997615814,
+          "max": 121.60000002384186,
+          "spread": 7.700000047683716,
+          "samples": 5
+        },
+        "fanInWindow": {
+          "median": 27.5,
+          "min": 26.799999952316284,
+          "max": 29.100000023841858,
+          "spread": 2.3000000715255737,
+          "samples": 5
+        },
+        "settleTail": {
+          "median": 105.10000002384186,
+          "min": 102.79999995231628,
+          "max": 133.5,
+          "spread": 30.700000047683716,
+          "samples": 5
+        }
+      },
+      "headline": {
+        "firstCardPaint": {
+          "median": 371,
+          "min": 362.2999999523163,
+          "max": 377.10000002384186,
+          "samples": 5
+        },
+        "fcp": {
+          "median": 68,
+          "min": 52,
+          "max": 76,
+          "samples": 5
+        },
+        "lcp": {
+          "samples": 0
+        },
+        "tbt": {
+          "median": 67,
+          "min": 64,
+          "max": 71,
+          "samples": 5
+        },
+        "cardCount": {
+          "median": 174,
+          "min": 174,
+          "max": 174,
+          "samples": 5
+        }
+      }
+    },
+    "client@300": {
+      "profile": "client",
+      "scale": 300,
+      "query": "scale=300",
+      "cardCount": 440,
+      "runs": [
+        {
+          "headline": {
+            "firstCardPaint": 271.39999997615814,
+            "fcp": 364,
+            "lcp": null,
+            "tbt": 162,
+            "cardCount": 440
+          },
+          "stages": {
+            "appEval": 63.199999928474426,
+            "firstCommit": 68,
+            "threadsWait": -5.600000023841858,
+            "mountToFirstCard": 209,
+            "fanInWindow": 0.8000000715255737,
+            "settleTail": 116.29999995231628
+          },
+          "fanInAllowance": 34.800000071525574,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 68.59999990463257,
+              "end": 69.39999997615814
+            },
+            {
+              "method": "board_state_get",
+              "start": 68.59999990463257,
+              "end": 69.39999997615814
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 68.59999990463257,
+              "end": 69.39999997615814
+            },
+            {
+              "method": "family_state_list",
+              "start": 68.59999990463257,
+              "end": 69.39999997615814
+            },
+            {
+              "method": "pulse_rates",
+              "start": 69.29999995231628,
+              "end": 69.39999997615814
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 281.89999997615814,
+            "fcp": 364,
+            "lcp": null,
+            "tbt": 153,
+            "cardCount": 440
+          },
+          "stages": {
+            "appEval": 81.60000002384186,
+            "firstCommit": 86.60000002384186,
+            "threadsWait": -5.700000047683716,
+            "mountToFirstCard": 201,
+            "fanInWindow": 1.5999999046325684,
+            "settleTail": 104.29999995231628
+          },
+          "fanInAllowance": 35.59999990463257,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 87.10000002384186,
+              "end": 88.69999992847443
+            },
+            {
+              "method": "board_state_get",
+              "start": 87.10000002384186,
+              "end": 88.69999992847443
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 87.19999992847443,
+              "end": 88.69999992847443
+            },
+            {
+              "method": "family_state_list",
+              "start": 87.19999992847443,
+              "end": 88.69999992847443
+            },
+            {
+              "method": "pulse_rates",
+              "start": 88.5,
+              "end": 88.69999992847443
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 221.90000009536743,
+            "fcp": 300,
+            "lcp": null,
+            "tbt": 128,
+            "cardCount": 440
+          },
+          "stages": {
+            "appEval": 45.10000002384186,
+            "firstCommit": 50.10000002384186,
+            "threadsWait": -5.699999928474426,
+            "mountToFirstCard": 177.5,
+            "fanInWindow": 1.100000023841858,
+            "settleTail": 115.09999990463257
+          },
+          "fanInAllowance": 35.10000002384186,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 50.5,
+              "end": 51.60000002384186
+            },
+            {
+              "method": "board_state_get",
+              "start": 50.60000002384186,
+              "end": 51.60000002384186
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 50.60000002384186,
+              "end": 51.60000002384186
+            },
+            {
+              "method": "family_state_list",
+              "start": 50.60000002384186,
+              "end": 51.60000002384186
+            },
+            {
+              "method": "pulse_rates",
+              "start": 51.5,
+              "end": 51.60000002384186
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 234.60000002384186,
+            "fcp": 68,
+            "lcp": null,
+            "tbt": 125,
+            "cardCount": 440
+          },
+          "stages": {
+            "appEval": 47.10000002384186,
+            "firstCommit": 59.89999997615814,
+            "threadsWait": -13.600000023841858,
+            "mountToFirstCard": 188.30000007152557,
+            "fanInWindow": 3,
+            "settleTail": 92.69999992847443
+          },
+          "fanInAllowance": 37,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 60.60000002384186,
+              "end": 63.60000002384186
+            },
+            {
+              "method": "board_state_get",
+              "start": 60.60000002384186,
+              "end": 63.60000002384186
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 60.60000002384186,
+              "end": 63.60000002384186
+            },
+            {
+              "method": "family_state_list",
+              "start": 60.60000002384186,
+              "end": 63.60000002384186
+            },
+            {
+              "method": "pulse_rates",
+              "start": 63.39999997615814,
+              "end": 63.60000002384186
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 231.69999992847443,
+            "fcp": 308,
+            "lcp": null,
+            "tbt": 126,
+            "cardCount": 440
+          },
+          "stages": {
+            "appEval": 56.199999928474426,
+            "firstCommit": 60.299999952316284,
+            "threadsWait": -4.799999952316284,
+            "mountToFirstCard": 176.19999992847443,
+            "fanInWindow": 0.20000004768371582,
+            "settleTail": 107.60000002384186
+          },
+          "fanInAllowance": 34.200000047683716,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 60.799999952316284,
+              "end": 61
+            },
+            {
+              "method": "board_state_get",
+              "start": 60.799999952316284,
+              "end": 61
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 60.799999952316284,
+              "end": 61
+            },
+            {
+              "method": "family_state_list",
+              "start": 60.799999952316284,
+              "end": 61
+            },
+            {
+              "method": "pulse_rates",
+              "start": 61,
+              "end": 61
+            }
+          ]
+        }
+      ],
+      "stages": {
+        "appEval": {
+          "median": 56.199999928474426,
+          "min": 45.10000002384186,
+          "max": 81.60000002384186,
+          "spread": 36.5,
+          "samples": 5
+        },
+        "firstCommit": {
+          "median": 60.299999952316284,
+          "min": 50.10000002384186,
+          "max": 86.60000002384186,
+          "spread": 36.5,
+          "samples": 5
+        },
+        "threadsWait": {
+          "median": -5.699999928474426,
+          "min": -13.600000023841858,
+          "max": -4.799999952316284,
+          "spread": 8.800000071525574,
+          "samples": 5
+        },
+        "mountToFirstCard": {
+          "median": 188.30000007152557,
+          "min": 176.19999992847443,
+          "max": 209,
+          "spread": 32.800000071525574,
+          "samples": 5
+        },
+        "fanInWindow": {
+          "median": 1.100000023841858,
+          "min": 0.20000004768371582,
+          "max": 3,
+          "spread": 2.799999952316284,
+          "samples": 5
+        },
+        "settleTail": {
+          "median": 107.60000002384186,
+          "min": 92.69999992847443,
+          "max": 116.29999995231628,
+          "spread": 23.600000023841858,
+          "samples": 5
+        }
+      },
+      "headline": {
+        "firstCardPaint": {
+          "median": 235,
+          "min": 221.90000009536743,
+          "max": 281.89999997615814,
+          "samples": 5
+        },
+        "fcp": {
+          "median": 308,
+          "min": 68,
+          "max": 364,
+          "samples": 5
+        },
+        "lcp": {
+          "samples": 0
+        },
+        "tbt": {
+          "median": 128,
+          "min": 125,
+          "max": 162,
+          "samples": 5
+        },
+        "cardCount": {
+          "median": 440,
+          "min": 440,
+          "max": 440,
+          "samples": 5
+        }
+      }
+    },
+    "modeled@300": {
+      "profile": "modeled",
+      "scale": 300,
+      "query": "scale=300&sidebarDelay=200&rpcLatency=8&metaScanMs=1.5",
+      "cardCount": 440,
+      "runs": [
+        {
+          "headline": {
+            "firstCardPaint": 486.10000002384186,
+            "fcp": 104,
+            "lcp": null,
+            "tbt": 151,
+            "cardCount": 440
+          },
+          "stages": {
+            "appEval": 92.19999992847443,
+            "firstCommit": 95.39999997615814,
+            "threadsWait": 196.39999997615814,
+            "mountToFirstCard": 194.30000007152557,
+            "fanInWindow": 52.39999997615814,
+            "settleTail": 116.89999997615814
+          },
+          "fanInAllowance": 86.39999997615814,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 95.89999997615814,
+              "end": 104.79999995231628
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 95.89999997615814,
+              "end": 104.89999997615814
+            },
+            {
+              "method": "family_state_list",
+              "start": 95.89999997615814,
+              "end": 104.89999997615814
+            },
+            {
+              "method": "pulse_rates",
+              "start": 96.10000002384186,
+              "end": 105.60000002384186
+            },
+            {
+              "method": "board_state_get",
+              "start": 95.89999997615814,
+              "end": 148.29999995231628
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 433.3000000715256,
+            "fcp": 52,
+            "lcp": null,
+            "tbt": 151,
+            "cardCount": 440
+          },
+          "stages": {
+            "appEval": 38.800000071525574,
+            "firstCommit": 41.5,
+            "threadsWait": 197.90000009536743,
+            "mountToFirstCard": 193.89999997615814,
+            "fanInWindow": 51.90000009536743,
+            "settleTail": 111
+          },
+          "fanInAllowance": 85.90000009536743,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 42,
+              "end": 50.700000047683716
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 42,
+              "end": 50.800000071525574
+            },
+            {
+              "method": "family_state_list",
+              "start": 42,
+              "end": 50.800000071525574
+            },
+            {
+              "method": "pulse_rates",
+              "start": 42.200000047683716,
+              "end": 51.40000009536743
+            },
+            {
+              "method": "board_state_get",
+              "start": 42,
+              "end": 93.90000009536743
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 447.7000000476837,
+            "fcp": 76,
+            "lcp": null,
+            "tbt": 149,
+            "cardCount": 440
+          },
+          "stages": {
+            "appEval": 57.89999997615814,
+            "firstCommit": 61,
+            "threadsWait": 197.39999997615814,
+            "mountToFirstCard": 189.30000007152557,
+            "fanInWindow": 51.5,
+            "settleTail": 153
+          },
+          "fanInAllowance": 85.5,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 61.89999997615814,
+              "end": 71.39999997615814
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 62,
+              "end": 71.5
+            },
+            {
+              "method": "family_state_list",
+              "start": 62,
+              "end": 71.5
+            },
+            {
+              "method": "pulse_rates",
+              "start": 62.200000047683716,
+              "end": 72.20000004768372
+            },
+            {
+              "method": "board_state_get",
+              "start": 61.89999997615814,
+              "end": 113.39999997615814
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 455,
+            "fcp": 72,
+            "lcp": null,
+            "tbt": 161,
+            "cardCount": 440
+          },
+          "stages": {
+            "appEval": 52.60000002384186,
+            "firstCommit": 55.700000047683716,
+            "threadsWait": 197.29999995231628,
+            "mountToFirstCard": 202,
+            "fanInWindow": 52.39999997615814,
+            "settleTail": 115.5
+          },
+          "fanInAllowance": 86.39999997615814,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 56.200000047683716,
+              "end": 65.79999995231628
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 56.200000047683716,
+              "end": 65.89999997615814
+            },
+            {
+              "method": "family_state_list",
+              "start": 56.200000047683716,
+              "end": 66
+            },
+            {
+              "method": "pulse_rates",
+              "start": 57.10000002384186,
+              "end": 66.60000002384186
+            },
+            {
+              "method": "board_state_get",
+              "start": 56.200000047683716,
+              "end": 108.60000002384186
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 454.40000009536743,
+            "fcp": 80,
+            "lcp": null,
+            "tbt": 152,
+            "cardCount": 440
+          },
+          "stages": {
+            "appEval": 58,
+            "firstCommit": 71,
+            "threadsWait": 187.60000002384186,
+            "mountToFirstCard": 195.80000007152557,
+            "fanInWindow": 53,
+            "settleTail": 124
+          },
+          "fanInAllowance": 87,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 71.5,
+              "end": 83.20000004768372
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 71.5,
+              "end": 83.30000007152557
+            },
+            {
+              "method": "family_state_list",
+              "start": 71.5,
+              "end": 83.30000007152557
+            },
+            {
+              "method": "pulse_rates",
+              "start": 74.20000004768372,
+              "end": 83.90000009536743
+            },
+            {
+              "method": "board_state_get",
+              "start": 71.5,
+              "end": 124.5
+            }
+          ]
+        }
+      ],
+      "stages": {
+        "appEval": {
+          "median": 57.89999997615814,
+          "min": 38.800000071525574,
+          "max": 92.19999992847443,
+          "spread": 53.39999985694885,
+          "samples": 5
+        },
+        "firstCommit": {
+          "median": 61,
+          "min": 41.5,
+          "max": 95.39999997615814,
+          "spread": 53.89999997615814,
+          "samples": 5
+        },
+        "threadsWait": {
+          "median": 197.29999995231628,
+          "min": 187.60000002384186,
+          "max": 197.90000009536743,
+          "spread": 10.300000071525574,
+          "samples": 5
+        },
+        "mountToFirstCard": {
+          "median": 194.30000007152557,
+          "min": 189.30000007152557,
+          "max": 202,
+          "spread": 12.699999928474426,
+          "samples": 5
+        },
+        "fanInWindow": {
+          "median": 52.39999997615814,
+          "min": 51.5,
+          "max": 53,
+          "spread": 1.5,
+          "samples": 5
+        },
+        "settleTail": {
+          "median": 116.89999997615814,
+          "min": 111,
+          "max": 153,
+          "spread": 42,
+          "samples": 5
+        }
+      },
+      "headline": {
+        "firstCardPaint": {
+          "median": 454,
+          "min": 433.3000000715256,
+          "max": 486.10000002384186,
+          "samples": 5
+        },
+        "fcp": {
+          "median": 76,
+          "min": 52,
+          "max": 104,
+          "samples": 5
+        },
+        "lcp": {
+          "samples": 0
+        },
+        "tbt": {
+          "median": 151,
+          "min": 149,
+          "max": 161,
+          "samples": 5
+        },
+        "cardCount": {
+          "median": 440,
+          "min": 440,
+          "max": 440,
+          "samples": 5
+        }
+      }
+    },
+    "client@500": {
+      "profile": "client",
+      "scale": 500,
+      "query": "scale=500",
+      "cardCount": 706,
+      "runs": [
+        {
+          "headline": {
+            "firstCardPaint": 295.10000002384186,
+            "fcp": 64,
+            "lcp": null,
+            "tbt": 230,
+            "cardCount": 706
+          },
+          "stages": {
+            "appEval": 53.200000047683716,
+            "firstCommit": 58.89999997615814,
+            "threadsWait": -6.600000023841858,
+            "mountToFirstCard": 242.80000007152557,
+            "fanInWindow": 0.2999999523162842,
+            "settleTail": 166.10000002384186
+          },
+          "fanInAllowance": 34.299999952316284,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 59.60000002384186,
+              "end": 59.89999997615814
+            },
+            {
+              "method": "board_state_get",
+              "start": 59.700000047683716,
+              "end": 59.89999997615814
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 59.700000047683716,
+              "end": 59.89999997615814
+            },
+            {
+              "method": "family_state_list",
+              "start": 59.700000047683716,
+              "end": 59.89999997615814
+            },
+            {
+              "method": "pulse_rates",
+              "start": 59.799999952316284,
+              "end": 59.89999997615814
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 287.3000000715256,
+            "fcp": 56,
+            "lcp": null,
+            "tbt": 231,
+            "cardCount": 706
+          },
+          "stages": {
+            "appEval": 44.200000047683716,
+            "firstCommit": 49.40000009536743,
+            "threadsWait": -6.100000023841858,
+            "mountToFirstCard": 244,
+            "fanInWindow": 0.30000007152557373,
+            "settleTail": 170.29999995231628
+          },
+          "fanInAllowance": 34.300000071525574,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 50,
+              "end": 50.300000071525574
+            },
+            {
+              "method": "board_state_get",
+              "start": 50,
+              "end": 50.300000071525574
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 50,
+              "end": 50.300000071525574
+            },
+            {
+              "method": "family_state_list",
+              "start": 50.10000002384186,
+              "end": 50.300000071525574
+            },
+            {
+              "method": "pulse_rates",
+              "start": 50.200000047683716,
+              "end": 50.300000071525574
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 431,
+            "fcp": 608,
+            "lcp": null,
+            "tbt": 310,
+            "cardCount": 706
+          },
+          "stages": {
+            "appEval": 139.70000004768372,
+            "firstCommit": 147.89999997615814,
+            "threadsWait": -9.199999928474426,
+            "mountToFirstCard": 292.2999999523163,
+            "fanInWindow": 0.9000000953674316,
+            "settleTail": 271.89999997615814
+          },
+          "fanInAllowance": 34.90000009536743,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 149.39999997615814,
+              "end": 150.30000007152557
+            },
+            {
+              "method": "board_state_get",
+              "start": 149.5,
+              "end": 150.30000007152557
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 149.5,
+              "end": 150.30000007152557
+            },
+            {
+              "method": "family_state_list",
+              "start": 149.60000002384186,
+              "end": 150.30000007152557
+            },
+            {
+              "method": "pulse_rates",
+              "start": 150,
+              "end": 150.30000007152557
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 353.6999999284744,
+            "fcp": 484,
+            "lcp": null,
+            "tbt": 268,
+            "cardCount": 706
+          },
+          "stages": {
+            "appEval": 68.5,
+            "firstCommit": 75.60000002384186,
+            "threadsWait": -8,
+            "mountToFirstCard": 286.09999990463257,
+            "fanInWindow": 3,
+            "settleTail": 144.80000007152557
+          },
+          "fanInAllowance": 37,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 76.19999992847443,
+              "end": 79.19999992847443
+            },
+            {
+              "method": "board_state_get",
+              "start": 76.19999992847443,
+              "end": 79.19999992847443
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 76.29999995231628,
+              "end": 79.19999992847443
+            },
+            {
+              "method": "family_state_list",
+              "start": 76.29999995231628,
+              "end": 79.19999992847443
+            },
+            {
+              "method": "pulse_rates",
+              "start": 79,
+              "end": 79.19999992847443
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 292.1999999284744,
+            "fcp": 68,
+            "lcp": null,
+            "tbt": 209,
+            "cardCount": 706
+          },
+          "stages": {
+            "appEval": 50.699999928474426,
+            "firstCommit": 64.09999990463257,
+            "threadsWait": -14.199999928474426,
+            "mountToFirstCard": 242.29999995231628,
+            "fanInWindow": 5.399999976158142,
+            "settleTail": 166.30000007152557
+          },
+          "fanInAllowance": 39.39999997615814,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 65,
+              "end": 70.39999997615814
+            },
+            {
+              "method": "board_state_get",
+              "start": 65,
+              "end": 70.39999997615814
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 65.09999990463257,
+              "end": 70.39999997615814
+            },
+            {
+              "method": "family_state_list",
+              "start": 65.09999990463257,
+              "end": 70.39999997615814
+            },
+            {
+              "method": "pulse_rates",
+              "start": 70.19999992847443,
+              "end": 70.39999997615814
+            }
+          ]
+        }
+      ],
+      "stages": {
+        "appEval": {
+          "median": 53.200000047683716,
+          "min": 44.200000047683716,
+          "max": 139.70000004768372,
+          "spread": 95.5,
+          "samples": 5
+        },
+        "firstCommit": {
+          "median": 64.09999990463257,
+          "min": 49.40000009536743,
+          "max": 147.89999997615814,
+          "spread": 98.49999988079071,
+          "samples": 5
+        },
+        "threadsWait": {
+          "median": -8,
+          "min": -14.199999928474426,
+          "max": -6.100000023841858,
+          "spread": 8.099999904632568,
+          "samples": 5
+        },
+        "mountToFirstCard": {
+          "median": 244,
+          "min": 242.29999995231628,
+          "max": 292.2999999523163,
+          "spread": 50,
+          "samples": 5
+        },
+        "fanInWindow": {
+          "median": 0.9000000953674316,
+          "min": 0.2999999523162842,
+          "max": 5.399999976158142,
+          "spread": 5.100000023841858,
+          "samples": 5
+        },
+        "settleTail": {
+          "median": 166.30000007152557,
+          "min": 144.80000007152557,
+          "max": 271.89999997615814,
+          "spread": 127.09999990463257,
+          "samples": 5
+        }
+      },
+      "headline": {
+        "firstCardPaint": {
+          "median": 295,
+          "min": 287.3000000715256,
+          "max": 431,
+          "samples": 5
+        },
+        "fcp": {
+          "median": 68,
+          "min": 56,
+          "max": 608,
+          "samples": 5
+        },
+        "lcp": {
+          "samples": 0
+        },
+        "tbt": {
+          "median": 231,
+          "min": 209,
+          "max": 310,
+          "samples": 5
+        },
+        "cardCount": {
+          "median": 706,
+          "min": 706,
+          "max": 706,
+          "samples": 5
+        }
+      }
+    },
+    "modeled@500": {
+      "profile": "modeled",
+      "scale": 500,
+      "query": "scale=500&sidebarDelay=200&rpcLatency=8&metaScanMs=1.5",
+      "cardCount": 706,
+      "runs": [
+        {
+          "headline": {
+            "firstCardPaint": 483.5,
+            "fcp": 68,
+            "lcp": null,
+            "tbt": 228,
+            "cardCount": 706
+          },
+          "stages": {
+            "appEval": 44.39999997615814,
+            "firstCommit": 47.10000002384186,
+            "threadsWait": 197.19999992847443,
+            "mountToFirstCard": 239.20000004768372,
+            "fanInWindow": 76,
+            "settleTail": 179.60000002384186
+          },
+          "fanInAllowance": 110,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 47.799999952316284,
+              "end": 57.10000002384186
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 47.799999952316284,
+              "end": 57.299999952316284
+            },
+            {
+              "method": "family_state_list",
+              "start": 47.799999952316284,
+              "end": 57.299999952316284
+            },
+            {
+              "method": "pulse_rates",
+              "start": 48,
+              "end": 57.799999952316284
+            },
+            {
+              "method": "board_state_get",
+              "start": 47.799999952316284,
+              "end": 123.79999995231628
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 492.6999999284744,
+            "fcp": 48,
+            "lcp": null,
+            "tbt": 258,
+            "cardCount": 706
+          },
+          "stages": {
+            "appEval": 36.299999952316284,
+            "firstCommit": 38.799999952316284,
+            "threadsWait": 198.10000002384186,
+            "mountToFirstCard": 255.79999995231628,
+            "fanInWindow": 76.5,
+            "settleTail": 208.10000002384186
+          },
+          "fanInAllowance": 110.5,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 39.59999990463257,
+              "end": 48.59999990463257
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 39.699999928474426,
+              "end": 48.799999952316284
+            },
+            {
+              "method": "family_state_list",
+              "start": 39.699999928474426,
+              "end": 48.799999952316284
+            },
+            {
+              "method": "pulse_rates",
+              "start": 39.799999952316284,
+              "end": 49.299999952316284
+            },
+            {
+              "method": "board_state_get",
+              "start": 39.59999990463257,
+              "end": 116.09999990463257
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 492.39999997615814,
+            "fcp": 68,
+            "lcp": null,
+            "tbt": 233,
+            "cardCount": 706
+          },
+          "stages": {
+            "appEval": 50.299999952316284,
+            "firstCommit": 53.199999928474426,
+            "threadsWait": 196.80000007152557,
+            "mountToFirstCard": 242.39999997615814,
+            "fanInWindow": 76.29999995231628,
+            "settleTail": 189.5
+          },
+          "fanInAllowance": 110.29999995231628,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 53.60000002384186,
+              "end": 63.39999997615814
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 53.60000002384186,
+              "end": 63.39999997615814
+            },
+            {
+              "method": "family_state_list",
+              "start": 53.60000002384186,
+              "end": 63.5
+            },
+            {
+              "method": "pulse_rates",
+              "start": 54.60000002384186,
+              "end": 63.5
+            },
+            {
+              "method": "board_state_get",
+              "start": 53.60000002384186,
+              "end": 129.89999997615814
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 484.8000000715256,
+            "fcp": 72,
+            "lcp": null,
+            "tbt": 226,
+            "cardCount": 706
+          },
+          "stages": {
+            "appEval": 46.300000071525574,
+            "firstCommit": 57.40000009536743,
+            "threadsWait": 189.59999990463257,
+            "mountToFirstCard": 237.80000007152557,
+            "fanInWindow": 80.19999992847443,
+            "settleTail": 187.89999997615814
+          },
+          "fanInAllowance": 114.19999992847443,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 58.90000009536743,
+              "end": 71.80000007152557
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 58.90000009536743,
+              "end": 71.90000009536743
+            },
+            {
+              "method": "family_state_list",
+              "start": 59,
+              "end": 71.90000009536743
+            },
+            {
+              "method": "pulse_rates",
+              "start": 63,
+              "end": 72.5
+            },
+            {
+              "method": "board_state_get",
+              "start": 58.90000009536743,
+              "end": 139.10000002384186
+            }
+          ]
+        },
+        {
+          "headline": {
+            "firstCardPaint": 494.6999999284744,
+            "fcp": 68,
+            "lcp": null,
+            "tbt": 230,
+            "cardCount": 706
+          },
+          "stages": {
+            "appEval": 51.09999990463257,
+            "firstCommit": 54,
+            "threadsWait": 197.29999995231628,
+            "mountToFirstCard": 243.39999997615814,
+            "fanInWindow": 77.19999992847443,
+            "settleTail": 183.80000007152557
+          },
+          "fanInAllowance": 111.19999992847443,
+          "rpcCalls": [
+            {
+              "method": "rank_list",
+              "start": 54.5,
+              "end": 64.59999990463257
+            },
+            {
+              "method": "sweep_config_get",
+              "start": 54.5,
+              "end": 64.69999992847443
+            },
+            {
+              "method": "family_state_list",
+              "start": 54.5,
+              "end": 64.79999995231628
+            },
+            {
+              "method": "pulse_rates",
+              "start": 55.09999990463257,
+              "end": 65.29999995231628
+            },
+            {
+              "method": "board_state_get",
+              "start": 54.5,
+              "end": 131.69999992847443
+            }
+          ]
+        }
+      ],
+      "stages": {
+        "appEval": {
+          "median": 46.300000071525574,
+          "min": 36.299999952316284,
+          "max": 51.09999990463257,
+          "spread": 14.799999952316284,
+          "samples": 5
+        },
+        "firstCommit": {
+          "median": 53.199999928474426,
+          "min": 38.799999952316284,
+          "max": 57.40000009536743,
+          "spread": 18.600000143051147,
+          "samples": 5
+        },
+        "threadsWait": {
+          "median": 197.19999992847443,
+          "min": 189.59999990463257,
+          "max": 198.10000002384186,
+          "spread": 8.50000011920929,
+          "samples": 5
+        },
+        "mountToFirstCard": {
+          "median": 242.39999997615814,
+          "min": 237.80000007152557,
+          "max": 255.79999995231628,
+          "spread": 17.99999988079071,
+          "samples": 5
+        },
+        "fanInWindow": {
+          "median": 76.5,
+          "min": 76,
+          "max": 80.19999992847443,
+          "spread": 4.199999928474426,
+          "samples": 5
+        },
+        "settleTail": {
+          "median": 187.89999997615814,
+          "min": 179.60000002384186,
+          "max": 208.10000002384186,
+          "spread": 28.5,
+          "samples": 5
+        }
+      },
+      "headline": {
+        "firstCardPaint": {
+          "median": 492,
+          "min": 483.5,
+          "max": 494.6999999284744,
+          "samples": 5
+        },
+        "fcp": {
+          "median": 68,
+          "min": 48,
+          "max": 72,
+          "samples": 5
+        },
+        "lcp": {
+          "samples": 0
+        },
+        "tbt": {
+          "median": 230,
+          "min": 226,
+          "max": 258,
+          "samples": 5
+        },
+        "cardCount": {
+          "median": 706,
+          "min": 706,
+          "max": 706,
+          "samples": 5
+        }
+      }
+    }
+  },
+  "violations": []
+}

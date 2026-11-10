@@ -123,14 +123,12 @@ const BUDGETS_BY_STAGE = {
  * INCOMPLETE run — it exits loud rather than becoming a fast sample.
  */
 const REQUIRED_MOUNT_RPCS = [
-  "done_list",
-  "pin_parks_list",
-  "sweep_config_get",
-  "link_list",
-  "error_acks_list",
-  "snooze_list",
+  // The mount fan-in since issue #424: the six per-thread metadata lists
+  // arrive in ONE aggregate read, so the drain waits on that call plus the
+  // three one-row reads and the pulse poll.
+  "board_state_get",
   "rank_list",
-  "groups_list",
+  "sweep_config_get",
   "family_state_list",
   "pulse_rates",
 ];
