@@ -174,11 +174,21 @@ const pageOrder = (columnId) => {
     // list that way (the frame is a container, not a column member), and
     // hiding the frame's members behind the lead made the one-frame-per-
     // group lane read one card short.
-    ids: [...section.querySelectorAll(":scope > div > ul > li")].flatMap((li) =>
+    //
+    // The lane transport's wipe-out GHOSTS are not members: a card that
+    // relocates leaves an aria-hidden/inert copy of its old slot in the lane
+    // it left for the play's ~320ms, so a read taken right after a relocation
+    // saw the card in BOTH lanes and called a correct move a duplicate
+    // (the ack step of uat-errored-card-menu, read on a loaded machine).
+    ids: [
+      ...section.querySelectorAll(":scope > div > ul > li:not([data-transport-ghost])"),
+    ].flatMap((li) =>
       li.getAttribute("data-group-box") !== null
-        ? [...li.querySelectorAll(":scope > div > ul > li")].map((slot) =>
-            idOf(slot.querySelector("a[href]")),
-          )
+        ? [
+            ...li.querySelectorAll(
+              ":scope > div > ul > li:not([data-transport-ghost])",
+            ),
+          ].map((slot) => idOf(slot.querySelector("a[href]")))
         : idOf(li.querySelector("a[href]")),
     ),
     // Whether the lane has a STORED order (seed-on-first-intent: created by
