@@ -181,6 +181,55 @@ const EXTERNAL_LINK_RECORD = z.object({
 const LINK_RECORD_SCHEMA = z.union([GITHUB_LINK_RECORD, EXTERNAL_LINK_RECORD]);
 
 export const rpcContract = defineRpcContract({
+  /**
+   * The board's whole mount state in ONE round trip (issue #424): six of the
+   * nine mount lists each walked every live thread and read its plugin
+   * metadata namespace, and fired together those walks serialize on bb's
+   * bridge — so the mount fan-in cost the SUM of six passes (~2s on a
+   * 358-thread workspace, measured) instead of one. This handler reads each
+   * thread's namespace once and projects every shape from it.
+   *
+   * The payloads are the exact bodies the individual handlers answer with,
+   * built by the same projection helpers (`listDoneFor`, `listParksFor`, …),
+   * so a mount and a realtime refetch of the same list cannot drift. The
+   * realtime signal paths keep calling the individual handlers: only the
+   * mount is aggregated.
+   */
+  board_state_get: {
+    input: z.null(),
+    output: z.object({
+      done: z.object({
+        doneIds: z.array(z.string()),
+        records: z.record(
+          z.string(),
+          z.object({ doneAt: z.string().optional(), keep: z.boolean().optional() }),
+        ),
+      }),
+      parks: z.object({
+        parks: z.record(z.string(), z.object({ parkedAt: z.string() })),
+      }),
+      links: z.object({
+        links: z.record(z.string(), z.array(LINK_RECORD_SCHEMA)),
+      }),
+      acks: z.object({
+        ackIds: z.array(z.string()),
+        records: z.record(z.string(), z.object({ ackedAt: z.string() })),
+      }),
+      snoozes: z.object({
+        snoozes: z.record(
+          z.string(),
+          z.object({ wakeAt: z.string(), setAt: z.string() }),
+        ),
+      }),
+      groups: z.object({
+        groups: z.record(
+          z.string(),
+          z.object({ name: z.string(), createdAt: z.string() }),
+        ),
+        memberships: z.record(z.string(), z.string()),
+      }),
+    }),
+  },
   done_list: {
     input: z.null(),
     output: z.object({
@@ -934,14 +983,29 @@ export default async function plugin(bb: BbPluginApi) {
     });
   }
 
+  /**
+   * One thread's plugin-metadata namespace, read through the SDK (issue #424):
+   * every board state key (done, parks, links, acks, snoozes, group) lives in
+   * this one record, so a mount that needs several of them reads it ONCE and
+   * projects each key with its own parser. `NamespaceRead` is the seam the
+   * mount aggregate swaps for a memoizing reader; the list handlers pass the
+   * plain reader, so their payloads are byte-identical either way.
+   */
+  type NamespaceRead = (threadId: string) => Promise<Record<string, JsonValue>>;
+
+  async function readNamespace(threadId: string): Promise<Record<string, JsonValue>> {
+    // getPluginMetadata returns an untyped namespace record; every parser
+    // below validates its own key before use.
+    return (await bb.sdk.threads.getPluginMetadata({ threadId })) as Record<
+      string,
+      JsonValue
+    >;
+  }
+
   async function readDoneRecord(
     threadId: string,
   ): Promise<DoneRecord | null> {
-    // getPluginMetadata returns an untyped namespace record; cast to the
-    // JsonValue contract parseDoneRecord validates.
-    const namespace = await bb.sdk.threads.getPluginMetadata({ threadId });
-    const value = (namespace as Record<string, JsonValue>)[DONE_METADATA_KEY];
-    return parseDoneRecord(value);
+    return parseDoneRecord((await readNamespace(threadId))[DONE_METADATA_KEY]);
   }
 
   /**
@@ -967,15 +1031,14 @@ export default async function plugin(bb: BbPluginApi) {
     | { state: "gone" };
 
   async function scanDoneRecord(threadId: string): Promise<DoneRecordScan> {
-    let namespace: unknown;
+    let namespace: Record<string, JsonValue>;
     try {
-      namespace = await bb.sdk.threads.getPluginMetadata({ threadId });
+      namespace = await readNamespace(threadId);
     } catch (error: unknown) {
       if (isThreadGoneError(error)) return { state: "gone" };
       throw error;
     }
-    const value = (namespace as Record<string, JsonValue>)[DONE_METADATA_KEY];
-    const record = parseDoneRecord(value);
+    const record = parseDoneRecord(namespace[DONE_METADATA_KEY]);
     return record === null ? { state: "none" } : { state: "record", record };
   }
 
@@ -1029,11 +1092,7 @@ export default async function plugin(bb: BbPluginApi) {
   async function readPinParkRecord(
     threadId: string,
   ): Promise<PinParkRecord | null> {
-    // Same cast contract as readDoneRecord above: getPluginMetadata returns
-    // an untyped namespace record; parsePinParkRecord validates the shape.
-    const namespace = await bb.sdk.threads.getPluginMetadata({ threadId });
-    const value = (namespace as Record<string, JsonValue>)[PIN_PARK_METADATA_KEY];
-    return parsePinParkRecord(value);
+    return parsePinParkRecord((await readNamespace(threadId))[PIN_PARK_METADATA_KEY]);
   }
 
   /**
@@ -1054,18 +1113,6 @@ export default async function plugin(bb: BbPluginApi) {
         remove: [PIN_PARK_METADATA_KEY],
       });
     }
-  }
-
-  async function readErrorAckRecord(
-    threadId: string,
-  ): Promise<ErrorAckRecord | null> {
-    // Same cast contract as readDoneRecord: getPluginMetadata returns an
-    // untyped namespace record; parseErrorAckRecord validates the shape.
-    const namespace = await bb.sdk.threads.getPluginMetadata({ threadId });
-    const value = (namespace as Record<string, JsonValue>)[
-      ERROR_ACK_METADATA_KEY
-    ];
-    return parseErrorAckRecord(value);
   }
 
   /**
@@ -1121,11 +1168,7 @@ export default async function plugin(bb: BbPluginApi) {
   async function readGroupAssignment(
     threadId: string,
   ): Promise<{ groupId: string } | null> {
-    // Same cast contract as readDoneRecord: getPluginMetadata returns an
-    // untyped namespace record; parseGroupMember validates the shape.
-    const namespace = await bb.sdk.threads.getPluginMetadata({ threadId });
-    const value = (namespace as Record<string, JsonValue>)[GROUP_METADATA_KEY];
-    return parseGroupMember(value);
+    return parseGroupMember((await readNamespace(threadId))[GROUP_METADATA_KEY]);
   }
 
   async function writeGroupAssignment(threadId: string, groupId: string | null): Promise<void> {
@@ -1389,11 +1432,7 @@ export default async function plugin(bb: BbPluginApi) {
   // the title nor the branch name carries a text ticket ref.
 
   async function readLinkedIssues(threadId: string): Promise<ThreadLink[] | null> {
-    // Same cast contract as readDoneRecord above: getPluginMetadata returns
-    // an untyped namespace record; parseLinkedIssues validates the shape.
-    const namespace = await bb.sdk.threads.getPluginMetadata({ threadId });
-    const value = (namespace as Record<string, JsonValue>)[LINK_METADATA_KEY];
-    return parseLinkedIssues(value);
+    return parseLinkedIssues((await readNamespace(threadId))[LINK_METADATA_KEY]);
   }
 
   async function writeLinkedIssues(threadId: string, links: ThreadLink[] | null): Promise<void> {
@@ -1519,23 +1558,147 @@ export default async function plugin(bb: BbPluginApi) {
     await addToDoneIndex(threadId);
   }
 
-  async function listDoneRecords(): Promise<{
+  /**
+   * The projection helpers below are the ONE source of each list's payload
+   * shape (issue #424): every `*_list` handler and the mount aggregate
+   * (`board_state_get`) build their answers through the same helper, from an
+   * already-fetched row list plus a namespace reader. The only difference
+   * between the two callers is the reader — the plain `readNamespace` for a
+   * single list, the aggregated handler's memoizing reader so one mount pays
+   * one namespace read per thread instead of six.
+   */
+  type ScanRow = { id: string };
+
+  interface DonePayload {
     doneIds: string[];
     records: Record<string, { doneAt?: string; keep?: boolean }>;
-  }> {
-    await importLegacyDone();
-    const live = await bb.sdk.threads.list({});
-    const reads = await readBounded(live, (thread) => readDoneRecord(thread.id));
+  }
+
+  async function listDoneFor(
+    rows: readonly ScanRow[],
+    read: NamespaceRead,
+  ): Promise<DonePayload> {
+    const reads = await readBounded(rows, async (row) =>
+      parseDoneRecord((await read(row.id))[DONE_METADATA_KEY]),
+    );
     const doneIds: string[] = [];
-    const records: Record<string, { doneAt?: string; keep?: boolean }> = {};
+    const records: DonePayload["records"] = {};
     for (let index = 0; index < reads.length; index += 1) {
       const record = reads[index];
       if (record !== null) {
-        doneIds.push(live[index].id);
-        records[live[index].id] = record;
+        doneIds.push(rows[index].id);
+        records[rows[index].id] = record;
       }
     }
     return { doneIds: doneIds.sort(), records };
+  }
+
+  async function listParksFor(
+    rows: readonly ScanRow[],
+    read: NamespaceRead,
+  ): Promise<{ parks: Record<string, PinParkRecord> }> {
+    const reads = await readBounded(rows, async (row) =>
+      parsePinParkRecord((await read(row.id))[PIN_PARK_METADATA_KEY]),
+    );
+    const parks: Record<string, PinParkRecord> = {};
+    for (let index = 0; index < reads.length; index += 1) {
+      const record = reads[index];
+      if (record !== null) parks[rows[index].id] = record;
+    }
+    return { parks };
+  }
+
+  async function listLinksFor(
+    rows: readonly ScanRow[],
+    read: NamespaceRead,
+  ): Promise<{ links: Record<string, ThreadLink[]> }> {
+    const reads = await readBounded(rows, async (row) =>
+      parseLinkedIssues((await read(row.id))[LINK_METADATA_KEY]),
+    );
+    const links: Record<string, ThreadLink[]> = {};
+    for (let index = 0; index < reads.length; index += 1) {
+      const record = reads[index];
+      if (record !== null && record.length > 0) links[rows[index].id] = record;
+    }
+    return { links };
+  }
+
+  async function listAcksFor(
+    rows: readonly ScanRow[],
+    read: NamespaceRead,
+  ): Promise<{
+    ackIds: string[];
+    records: Record<string, ErrorAckRecord>;
+  }> {
+    const reads = await readBounded(rows, async (row) =>
+      parseErrorAckRecord((await read(row.id))[ERROR_ACK_METADATA_KEY]),
+    );
+    const records: Record<string, ErrorAckRecord> = {};
+    for (let index = 0; index < reads.length; index += 1) {
+      const record = reads[index];
+      if (record !== null) records[rows[index].id] = record;
+    }
+    return { ackIds: Object.keys(records).sort(), records };
+  }
+
+  async function listSnoozesFor(
+    rows: readonly ScanRow[],
+    read: NamespaceRead,
+  ): Promise<{ snoozes: Record<string, SnoozeRecord> }> {
+    const reads = await readBounded(rows, async (row) =>
+      parseSnoozeRecord((await read(row.id))[SNOOZE_METADATA_KEY]),
+    );
+    const snoozes: Record<string, SnoozeRecord> = {};
+    for (let index = 0; index < reads.length; index += 1) {
+      const record = reads[index];
+      if (record !== null) snoozes[rows[index].id] = record;
+    }
+    return { snoozes };
+  }
+
+  async function listGroupsFor(
+    rows: readonly ScanRow[],
+    read: NamespaceRead,
+  ): Promise<{
+    groups: Record<string, { name: string; createdAt: string }>;
+    memberships: Record<string, string>;
+  }> {
+    const [store, reads] = await Promise.all([
+      readGroupsStore(),
+      readBounded(rows, async (row) =>
+        parseGroupMember((await read(row.id))[GROUP_METADATA_KEY]),
+      ),
+    ]);
+    const memberships: Record<string, string> = {};
+    for (let index = 0; index < reads.length; index += 1) {
+      const record = reads[index];
+      // A record pointing at a group the registry lost (a manual KV edit) is
+      // orphaned data — skip it rather than box with a nameless label
+      // (planGroupBoxes ignores unknown ids on the client too).
+      if (record !== null && store[record.groupId] !== undefined) {
+        memberships[rows[index].id] = record.groupId;
+      }
+    }
+    return { groups: groupsRowFromStore(store), memberships };
+  }
+
+  /**
+   * done_list's body, keep flags merged: a `keep` for a thread never marked
+   * Done still rides to the client (the idle arm honors them).
+   */
+  async function donePayload(
+    rows: readonly ScanRow[],
+    read: NamespaceRead,
+  ): Promise<DonePayload> {
+    const [{ doneIds, records }, kept] = await Promise.all([
+      listDoneFor(rows, read),
+      readKept(),
+    ]);
+    for (const id of Object.keys(kept)) {
+      if (records[id] === undefined) records[id] = { keep: true };
+      else records[id] = { ...records[id], keep: true };
+    }
+    return { doneIds, records };
   }
 
   async function readKept(): Promise<KeepStore> {
@@ -1602,11 +1765,7 @@ export default async function plugin(bb: BbPluginApi) {
   async function readSnoozeRecord(
     threadId: string,
   ): Promise<SnoozeRecord | null> {
-    // Same cast contract as readDoneRecord above: getPluginMetadata returns
-    // an untyped namespace record; parseSnoozeRecord validates the shape.
-    const namespace = await bb.sdk.threads.getPluginMetadata({ threadId });
-    const value = (namespace as Record<string, JsonValue>)[SNOOZE_METADATA_KEY];
-    return parseSnoozeRecord(value);
+    return parseSnoozeRecord((await readNamespace(threadId))[SNOOZE_METADATA_KEY]);
   }
 
   /** Node's setTimeout ceiling (~24.8 days in ms); longer wakes re-arm. */
@@ -2313,19 +2472,35 @@ export default async function plugin(bb: BbPluginApi) {
       pulse.beginDemand();
       return { rates: pulse.rates(), generatedAt: Date.now() };
     },
-    done_list: async () => {
-      const [{ doneIds, records }, kept] = await Promise.all([
-        listDoneRecords(),
-        readKept(),
+    board_state_get: async () => {
+      // The mount's one round trip (issue #424): read every live thread's
+      // namespace ONCE and project all six shapes from it, then answer with
+      // the same bodies the individual handlers would have. `importLegacyDone`
+      // runs first for the same reason done_list runs it: a legacy KV row must
+      // be consumed before any read builds the done projection.
+      await importLegacyDone();
+      const rows = await bb.sdk.threads.list({});
+      const pending = new Map<string, Promise<Record<string, JsonValue>>>();
+      const readOnce: NamespaceRead = (threadId) => {
+        const hit = pending.get(threadId);
+        if (hit !== undefined) return hit;
+        const read = readNamespace(threadId);
+        pending.set(threadId, read);
+        return read;
+      };
+      const [done, parks, links, acks, snoozes, groups] = await Promise.all([
+        donePayload(rows, readOnce),
+        listParksFor(rows, readOnce),
+        listLinksFor(rows, readOnce),
+        listAcksFor(rows, readOnce),
+        listSnoozesFor(rows, readOnce),
+        listGroupsFor(rows, readOnce),
       ]);
-      // Keep flags for threads never marked Done still ride to the client —
-      // the idle arm honors them (the sweep's per-arm kept() lookups read
-      // this one merged map).
-      for (const id of Object.keys(kept)) {
-        if (records[id] === undefined) records[id] = { keep: true };
-        else records[id] = { ...records[id], keep: true };
-      }
-      return { doneIds, records };
+      return { done, parks, links, acks, snoozes, groups };
+    },
+    done_list: async () => {
+      await importLegacyDone();
+      return donePayload(await bb.sdk.threads.list({}), readNamespace);
     },
     done_set: async ({ threadId, done }) => {
       // Consume any legacy KV state before the first metadata write, or a
@@ -2338,14 +2513,7 @@ export default async function plugin(bb: BbPluginApi) {
     link_list: async () => {
       // The live list only, like pin_parks_list: a link on an archived
       // thread has no chip to drive (the card is not on the board).
-      const rows = await bb.sdk.threads.list({});
-      const reads = await readBounded(rows, (row) => readLinkedIssues(row.id));
-      const links: Record<string, ThreadLink[]> = {};
-      for (let index = 0; index < reads.length; index += 1) {
-        const record = reads[index];
-        if (record !== null && record.length > 0) links[rows[index].id] = record;
-      }
-      return { links };
+      return listLinksFor(await bb.sdk.threads.list({}), readNamespace);
     },
     link_set: async ({ threadId, repo, number, kind, url, label, source }) => {
       const now = new Date();
@@ -2390,14 +2558,7 @@ export default async function plugin(bb: BbPluginApi) {
       // The live list only: a park on an archived thread has no consumer —
       // un-archiving returns the thread through done state, not a pin — and
       // the SDK scan the done CLI lacks is not needed here.
-      const rows = await bb.sdk.threads.list({});
-      const reads = await readBounded(rows, (row) => readPinParkRecord(row.id));
-      const parks: Record<string, PinParkRecord> = {};
-      for (let index = 0; index < reads.length; index += 1) {
-        const record = reads[index];
-        if (record !== null) parks[rows[index].id] = record;
-      }
-      return { parks };
+      return listParksFor(await bb.sdk.threads.list({}), readNamespace);
     },
     pin_park_set: async ({ threadId, parked }) => {
       await writePinPark(threadId, parked);
@@ -2409,14 +2570,7 @@ export default async function plugin(bb: BbPluginApi) {
       // record stays dormant in metadata and re-arms if the thread returns
       // still errored; the client's stale sweep drops it after any turn
       // that leaves the error status, so a later error is never masked.
-      const rows = await bb.sdk.threads.list({});
-      const reads = await readBounded(rows, (row) => readErrorAckRecord(row.id));
-      const records: Record<string, ErrorAckRecord> = {};
-      for (let index = 0; index < reads.length; index += 1) {
-        const record = reads[index];
-        if (record !== null) records[rows[index].id] = record;
-      }
-      return { ackIds: Object.keys(records).sort(), records };
+      return listAcksFor(await bb.sdk.threads.list({}), readNamespace);
     },
     error_ack_set: async ({ threadId, acked }) => {
       await writeErrorAck(threadId, acked);
@@ -2427,14 +2581,7 @@ export default async function plugin(bb: BbPluginApi) {
       // The live list only, like pin_parks_list: a snooze record on an
       // archived thread has no board consumer (snoozed cards never leave
       // their column), and the wake scan below reads the same list.
-      const rows = await bb.sdk.threads.list({});
-      const reads = await readBounded(rows, (row) => readSnoozeRecord(row.id));
-      const snoozes: Record<string, SnoozeRecord> = {};
-      for (let index = 0; index < reads.length; index += 1) {
-        const record = reads[index];
-        if (record !== null) snoozes[rows[index].id] = record;
-      }
-      return { snoozes };
+      return listSnoozesFor(await bb.sdk.threads.list({}), readNamespace);
     },
     snooze_set: async ({ threadId, wakeAt }) => {
       const wakeMs = Date.parse(wakeAt);
@@ -2742,21 +2889,7 @@ export default async function plugin(bb: BbPluginApi) {
     groups_list: async () => {
       // Live rows only, like the other list scans: an archived member has
       // no card to box, and unarchive brings the assignment back with it.
-      const [store, rows] = await Promise.all([
-        readGroupsStore(),
-        bb.sdk.threads.list({}),
-      ]);
-      const memberships: Record<string, string> = {};
-      for (const row of rows) {
-        const record = await readGroupAssignment(row.id);
-        // A record pointing at a group the registry lost (a manual KV edit)
-        // is orphaned data — skip it rather than box with a nameless label
-        // (planGroupBoxes ignores unknown ids on the client too).
-        if (record !== null && store[record.groupId] !== undefined) {
-          memberships[row.id] = record.groupId;
-        }
-      }
-      return { groups: groupsRowFromStore(store), memberships };
+      return listGroupsFor(await bb.sdk.threads.list({}), readNamespace);
     },
     group_create: async ({ name }) => {
       const { id, record } = await createGroupNamed(name);
