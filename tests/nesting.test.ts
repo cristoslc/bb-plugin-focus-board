@@ -931,13 +931,48 @@ describe("assembleBoard — family columns (R4: the family moves as one unit)", 
     expect(result.nestedChildrenByParent.has("p")).toBe(false);
   });
 
-  it("an Unread child lifts a Working family into the unread column", () => {
+  it("a Working family with a Working and an Unread child stays in the working column", () => {
+    // The reported shape (2026-11-10, thr_nusa59caqp): a running orchestrator
+    // with one working child and one unread child rendered in Unread, so the
+    // operator's live work read as a reply waiting to be caught up on. The
+    // family drive ranks urgency the way `threadState` ranks one thread —
+    // live work above the unread arm — because the card carries its own
+    // state's lane; the unread child keeps its row and its dot inside the
+    // card. An idle family still lifts on the same child (see the next case).
     const parent = thread({ id: "p", status: "active", updatedAt: NOW - HOUR });
+    const workingChild = thread({
+      id: "cw",
+      parentThreadId: "p",
+      status: "active",
+      updatedAt: NOW - 2 * HOUR,
+    });
+    const unreadChild = thread({
+      id: "cu",
+      parentThreadId: "p",
+      isUnread: true,
+      updatedAt: NOW - 3 * HOUR,
+    });
+    const result = assembleBoard(
+      [parent, workingChild, unreadChild],
+      "status",
+      CONTEXT,
+      new Map(),
+      new Set(),
+      NOW,
+    );
+    expect(idsIn(result.columns, "working")).toEqual(["p"]);
+    expect(columnOf(result.columns, "cu")).toBeUndefined();
+    expect(idsIn(result.columns, "unread")).toEqual([]);
+    expect(ids(result.nestedChildrenByParent.get("p") ?? [])).toEqual(["cw", "cu"]);
+  });
+
+  it("an Unread child still lifts an Idle family into the unread column", () => {
+    const parent = thread({ id: "p", updatedAt: NOW - 2 * DAY });
     const child = thread({
       id: "c",
       parentThreadId: "p",
       isUnread: true,
-      updatedAt: NOW - 2 * HOUR,
+      updatedAt: NOW - 3 * DAY,
     });
     const result = assembleBoard([parent, child], "status", CONTEXT, new Map(), new Set(), NOW);
     expect(idsIn(result.columns, "unread")).toEqual(["p"]);

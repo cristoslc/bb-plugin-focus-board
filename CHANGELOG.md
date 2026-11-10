@@ -11,6 +11,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+#### The board's lanes
+
+- **A working family stays in Working when one of its children is unread.** The family's lane was picked by lane order, so a child's unread reply could pull a running parent into Unread. Live work now outranks it, and an idle family still lifts.
+
 ## [1.7.10] - 2026-11-08
 
 ### Added
