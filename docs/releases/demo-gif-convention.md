@@ -118,6 +118,7 @@ The backfill's per-bullet decisions live here so the record survives the pull re
 | 1.7.10 | The No grouping view is a card grid with a sort order | demonstrated | the View menu's No grouping pick over the grouped board; Sort by's Alphabetical pick re-sorts the grid in place (`release-demos/v1.7.10.mjs`) |
 | 1.7.10 | The View menu's None row now reads No grouping | demonstrated | rides the clip above's opening frame — the menu open with the renamed row — one asset covering both bullets |
 | 1.7.10 | Lane direction and Nest child threads are two-choice pairs in the View menu | demonstrated | the opened menu's Horizontal pick re-lays the lanes as rows, then the Off pick folds families to single cards, in one clip |
+| 1.7.11 | A working family stays in Working when one of its children is unread | demonstrated | the demo board's Family A (thr_demo_work); the child's turn-end unread patch over the harness's `pushThreadUpdate` (`release-demos/v1.7.11.mjs`) |
 
 Still skipped, with the reason:
 
@@ -153,6 +154,7 @@ Still skipped, with the reason:
 | 1.7.8 | The load-time dissolve no longer plays: the board's mounting echo lands its cards in place | The fix proves an absence; the board simply stops repainting a few hundred ms after it looks loaded, and no frame distinguishes the landed state. |
 | 1.7.9 | Opening and closing the pane no longer works the board behind it | The fix proves an absence behind the invisible sheet (0 card renders per gesture); identical pixels frame to frame. |
 | 1.7.9 | The board paints once, settled: the loading view holds until the board's data is in | Load timing; on a local fixture the mount fetches land in the same frame as paint, and a staged hang would film the 400ms ceiling path rather than the shipped one. |
+| 1.7.11 | The board paints once, settled, on real workspaces too | Load timing, the same reason 1.7.9's paint-once bullet carries: on a local fixture the mount read lands in the same frame as paint, and a staged hang would film the 400ms ceiling path rather than the shipped one. |
 
 ## Checklist for a release producer
 
