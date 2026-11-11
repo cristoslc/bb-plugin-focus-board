@@ -11,6 +11,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+#### Groups and family boxes
+
+- **A Group-filtered board keeps every child of a matched family.** A parent card came up one row short when a child lived in another group. The child now keeps its row inside the card, with its dot and its menu, and is never pulled into its own group's lane.
+
 ## [1.7.11] - 2026-11-11
 
 ### Added
