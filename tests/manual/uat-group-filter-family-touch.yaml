@@ -1,0 +1,47 @@
+# Operator-assisted E2E: the Group filter's family carry on a phone, driven by
+# a real finger.
+#
+# The desktop half lives in uat-group-filter-family.yaml (a step cannot change
+# a suite's viewport, so the phone read is its own suite). This one mounts the
+# filtered Group board at the repo's phone baseline with real touch emulation
+# and proves two things jsdom cannot: the layout holds at 390px, and a
+# CDP-driven finger pan neither starts a native drag nor loses the cross-group
+# child row — the family card the ruling protects stays intact under touch.
+#
+# Fixture: `?groupfamily=1` (scripts/screenshot/data.ts, SIM_GROUP_FAMILY_THREADS)
+#   grp_gf_alpha  thr_gf_parent → thr_gf_same (same group) + thr_gf_cross (Beta)
+#   grp_gf_beta   thr_gf_loner
+#
+# Run: npm run uat -- tests/manual/uat-group-filter-family-touch.yaml
+# (npm run build first — the harness loads dist/app.css)
+
+suite: group-filter-family-touch
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5181
+defaults:
+  groupBy: group
+  theme: dark
+  # The repo's phone baseline plus real touch emulation: without `hasTouch` the
+  # browser never runs its own gesture recognizer, so a pan proves nothing.
+  viewport: { width: 390, height: 844, hasTouch: true, isMobile: true }
+  shots: true
+
+steps:
+  - id: phone-filtered-card-keeps-both-rows
+    title: At 390px the filtered family card paints both children, the cross-group one included
+    goto: "?groupBy=group&groups=grp_gf_alpha&groupfamily=1"
+    assert:
+      - nested_row: { id: thr_gf_same, shown: true }
+      - nested_row: { id: thr_gf_cross, shown: true }
+      - text_visible: "Keep the Beta child under its parent"
+
+  - id: phone-pan-keeps-the-rows-and-starts-no-drag
+    title: A real finger pan scrolls the lane and leaves the family card whole, with no native drag
+    goto: "?groupBy=group&groups=grp_gf_alpha&groupfamily=1"
+    gestures:
+      - touch_pan: { from: { card: thr_gf_parent }, dx: -120, dy: 0 }
+    assert:
+      - nested_row: { id: thr_gf_same, shown: true }
+      - nested_row: { id: thr_gf_cross, shown: true }
+      - no_native_drag: true

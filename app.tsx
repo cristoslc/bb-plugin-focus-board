@@ -1886,8 +1886,15 @@ function BoardPage({ subPath }: { subPath: string }) {
       providers,
       groupsByThread,
       groupNames: new Map(Object.entries(groupRegistry).map(([id, group]) => [id, group.name])),
+      // The Group filter's restriction rides the context so the assembly can
+      // keep a filtered family card whole: a descendant carried by a thread
+      // that passes the restriction renders as a row inside that card
+      // (`groupFilterCarries`). Absent while the filter shows every bucket.
+      ...(filter.groups !== undefined && filter.groups.size > 0
+        ? { groupRestrict: filter.groups }
+        : {}),
     }),
-    [projects, providers, groupsByThread, groupRegistry],
+    [projects, providers, groupsByThread, groupRegistry, filter.groups],
   );
   const groupBoxPlan = useMemo(
     () =>

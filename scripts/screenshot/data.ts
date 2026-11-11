@@ -1607,3 +1607,53 @@ export const SIM_PINNED_GROUP_THREADS: readonly SimThread[] = [
     lastReadAt: SIM_NOW - 3 * MINUTE,
   }),
 ];
+
+/**
+ * The cross-group family the Group filter must keep whole: `?groupfamily=1`
+ * only. A parent in "Alpha rework" with one Alpha child and one child that
+ * lives in "Beta rework", plus a Beta loner so that lane has a member of its
+ * own. Filtering the board to Alpha has to keep the Beta child as a row inside
+ * the parent's card (the operator's ruling of 2026-11-11); before that ruling
+ * the keep pass dropped it and the card rendered with a hole.
+ */
+export const SIM_GROUP_FAMILY_GROUPS = [
+  { id: "grp_gf_alpha", name: "Alpha rework", memberIds: ["thr_gf_parent", "thr_gf_same"] },
+  { id: "grp_gf_beta", name: "Beta rework", memberIds: ["thr_gf_cross", "thr_gf_loner"] },
+] as const;
+
+export const SIM_GROUP_FAMILY_THREADS: readonly SimThread[] = [
+  thread({
+    id: "thr_gf_parent",
+    displayTitle: "Sweep the group filter's keep pass",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 4 * MINUTE,
+    lastReadAt: SIM_NOW - 4 * MINUTE,
+  }),
+  thread({
+    id: "thr_gf_same",
+    displayTitle: "Pin the same-group child row",
+    parentThreadId: "thr_gf_parent",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 6 * MINUTE,
+    lastReadAt: SIM_NOW - 6 * MINUTE,
+  }),
+  thread({
+    id: "thr_gf_cross",
+    displayTitle: "Keep the Beta child under its parent",
+    parentThreadId: "thr_gf_parent",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 8 * MINUTE,
+    lastReadAt: SIM_NOW - 8 * MINUTE,
+  }),
+  thread({
+    id: "thr_gf_loner",
+    displayTitle: "Stand alone in the Beta lane",
+    status: "active",
+    runtimeStatus: "active",
+    updatedAt: SIM_NOW - 12 * MINUTE,
+    lastReadAt: SIM_NOW - 12 * MINUTE,
+  }),
+];

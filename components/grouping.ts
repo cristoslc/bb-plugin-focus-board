@@ -80,6 +80,15 @@ export interface GroupingContext {
   groupsByThread?: ReadonlyMap<string, string>;
   /** Feature-group registry names (group id → name), read under the "group" grouping. */
   groupNames?: ReadonlyMap<string, string>;
+  /**
+   * The Group filter's active restriction (the toolbar dropdown's set), when
+   * it is non-empty. The assembly reads it — and only it — to keep a family
+   * card whole: a descendant carried by a thread that passes the restriction
+   * renders as a row inside that card whatever its own group is (see
+   * `groupFilterCarries`). Absent while the filter shows every bucket, so
+   * an unfiltered board keeps every grouping's standing placement.
+   */
+  groupRestrict?: ReadonlySet<string>;
 }
 
 /**
@@ -400,6 +409,41 @@ export function groupFilterMisses(
   const bucket = groupBucketFor(thread, groupsByThread);
   if (filter.groups !== undefined && filter.groups.size > 0 && !filter.groups.has(bucket)) {
     return true;
+  }
+  return false;
+}
+
+/**
+ * Does the Group filter's restriction carry `threadId` into its family card?
+ *
+ * The operator's ruling (2026-11-11): a family card on a filtered Group board
+ * shows the whole family. When a thread passes the restriction, every
+ * descendant of it renders inside that thread's card — its row, its state
+ * dot, its actions — whatever group the descendant belongs to. So a
+ * descendant is "carried" when one of its ancestors' buckets is in the
+ * restriction; nothing else about the descendant's own bucket matters.
+ *
+ * `stopsAt` lets a caller break the walk on an ancestor that cannot render
+ * (the family filter's project column gate), so a carried row never rides a
+ * card the board dropped. A thread with no ancestor is never carried: the
+ * inverse is deliberate — children alone do not pull a parent onto a
+ * filtered board.
+ */
+export function groupFilterCarries(
+  threadId: string,
+  parentOf: ReadonlyMap<string, string>,
+  restrict: ReadonlySet<string> | undefined,
+  groupsByThread?: ReadonlyMap<string, string>,
+  stopsAt?: (ancestorId: string) => boolean,
+): boolean {
+  if (restrict === undefined || restrict.size === 0) return false;
+  const seen = new Set<string>();
+  let cursor = parentOf.get(threadId);
+  while (cursor !== undefined && !seen.has(cursor)) {
+    seen.add(cursor);
+    if (stopsAt !== undefined && stopsAt(cursor)) return false;
+    if (restrict.has(groupsByThread?.get(cursor) ?? NO_GROUP_BUCKET)) return true;
+    cursor = parentOf.get(cursor);
   }
   return false;
 }

@@ -14,6 +14,7 @@ import {
   derivedCompareForDirection,
   doneRecencyCompare,
   groupBucketFor,
+  groupFilterCarries,
   groupFilterMisses,
   threadPassesFilter,
   threadState,
@@ -528,6 +529,16 @@ function childPlacement(
   stayNested: ReadonlySet<string> = new Set<string>(),
   /** Clear-error acknowledgment ids (issue #157): acked error arms stay quiet. */
   errorAcks: ReadonlySet<string> = new Set<string>(),
+  /**
+   * The group filter's carry (`groupFilterCarries`): the family card this
+   * child rides stands on the board because a thread in it passed the Group
+   * filter, so the child stays a row there whatever its own group is — the
+   * operator's ruling of 2026-11-11. It settles the two group rules below
+   * (step 4's group space key and step 5's copy-out) and nothing else: the
+   * done space, the operator-intent stand-alones, the done root, and the
+   * cross-axis space keys keep their own answers.
+   */
+  carriedByGroup: boolean = false,
 ): ChildPlacement {
   // Step 1: done is its own space.
   if (doneIds.has(child.id)) {
@@ -553,13 +564,23 @@ function childPlacement(
     if ((child.host?.id ?? "none") !== (parent.host?.id ?? "none")) return "flat";
   } else if (groupBy === "group") {
     // The Group view's columns are the buckets themselves, so its copy-out is
-    // a space rule and stays whole (the matrix above): no row.
-    return groupBucketFor(child, groupContext.groupsByThread) ===
+    // a space rule and stays whole (the matrix above): no row. The group
+    // FILTER's carry is the one exception — the filtered family keeps every
+    // descendant as a row (the operator's 2026-11-11 ruling), and the child's
+    // own bucket lane is exactly what the filter took off the board.
+    if (
+      groupBucketFor(child, groupContext.groupsByThread) ===
       groupBucketFor(parent, groupContext.groupsByThread)
-      ? "nest"
-      : "flat";
+    ) {
+      return "nest";
+    }
+    return carriedByGroup ? "nest" : "flat";
   }
   // Step 5: the feature-group copy-out — the row stays, the card joins its frame.
+  // A carried child never copies out: its own group's frame is not on a
+  // filtered board, and the ruling keeps children nested, never hoisted into
+  // another card.
+  if (carriedByGroup) return "nest";
   return groupCopiesOut(child, parent, groupBy, groupContext) ? "dual" : "nest";
 }
 
@@ -702,7 +723,16 @@ export function familyDriveMembers(
     const copiesOut =
       parent !== undefined &&
       groupScope !== undefined &&
-      groupCopiesOut(member, parent, groupScope.groupBy, groupScope.groupContext);
+      groupCopiesOut(member, parent, groupScope.groupBy, groupScope.groupContext) &&
+      // A child the Group filter carries never copies out: its own group's
+      // frame is not on a filtered board, and the carry keeps it a row
+      // (`childPlacement`), so it drives the family's lane like any row.
+      !groupFilterCarries(
+        member.id,
+        familyIndex.parentOf,
+        groupScope.groupContext.groupRestrict,
+        groupScope.groupContext.groupsByThread,
+      );
     if (member.id === rootId || (familyRowMember(member, doneIds, errorAcks) && !copiesOut)) {
       drive.push(member);
     }
@@ -907,7 +937,18 @@ export function nestUnderParents(
       flatIds.add(childId);
       continue;
     }
-  const placement = childPlacement(child, parent, groupBy, context, doneIds, options.attentionFreeze?.stayNested, errorAcks);
+    const placement = childPlacement(
+      child,
+      parent,
+      groupBy,
+      context,
+      doneIds,
+      options.attentionFreeze?.stayNested,
+      errorAcks,
+      // The group filter's carry reads the family index's own display edges:
+      // the card the child rides is an ancestor's, whatever the grouping.
+      groupFilterCarries(child.id, index.parentOf, context.groupRestrict, context.groupsByThread),
+    );
     if (placement === "flat") {
       flatIds.add(childId);
       continue;
@@ -1193,8 +1234,18 @@ function familyScopeMisses(
  * a column gate (project grouping builds a column per kept member's
  * project), so a member whose project is not selected drops from its passing
  * family outright — dim-kept context lives only inside columns that pass,
- * never projecting a column for an unselected project. State, provider, and
- * search misses keep-and-dim as before.
+ * never projecting a column for an unselected project.
+ *
+ * The group filter is a column gate too, with one exception, the operator's
+ * ruling of 2026-11-11: when a thread passes the group restriction, its whole
+ * family renders inside THAT card, so a descendant is carried whatever its
+ * own bucket is (`groupFilterCarries`) — the cross-group child keeps its row
+ * instead of vanishing from a card that is on the board. A member that no
+ * ancestor carries still drops outright (its own bucket builds a column the
+ * filter excluded), and an ancestor that misses the restriction is never
+ * carried back in by a matching child: children alone do not pull a parent
+ * onto the filtered board. State, provider, and search misses keep-and-dim
+ * as before, for carried descendants and every other member alike.
  *
  * Archived members are hidden outright: the family index carries none of
  * them, so an archived thread in the input forms its own (parentless)
@@ -1246,6 +1297,18 @@ export function filterFamilies(
     if (scopeRoot !== undefined && rootId !== scopeRoot) continue;
     const matching = family.filter(passes);
     if (matching.length === 0) continue;
+    const memberById = new Map(family.map((thread) => [thread.id, thread]));
+    // The group filter's carry: a member the restriction misses still renders
+    // inside a family card whose ancestor passes it (the operator's ruling of
+    // 2026-11-11 — see `groupFilterCarries`). The walk stops at any ancestor
+    // the project gate drops, so a carried row never rides a card the board
+    // does not render.
+    const carriedByGroup = (thread: PluginSidebarThread): boolean =>
+      groupFilterCarries(thread.id, familyIndex.parentOf, filter.groups, groupsByThread, (ancestorId) => {
+        const ancestor = memberById.get(ancestorId);
+        if (ancestor === undefined) return true;
+        return filter.projects.size > 0 && !filter.projects.has(ancestor.projectId);
+      });
     for (const thread of family) {
       if (matching.includes(thread)) {
         kept.push(thread);
@@ -1255,14 +1318,15 @@ export function filterFamilies(
       // operator did not select never renders, dimmed or not — a dim-kept
       // member grouped by project forms a column for an unselected project
       // (the Personal / unselected-family-parent report). The group filter
-      // runs the same gate (the Group view builds a column per bucket, and
-      // a member of an unselected bucket must never dim back onto the
-      // board). State, provider, and search misses keep-and-dim below,
-      // inside columns that pass.
+      // runs the same gate on a member no family ancestor carries (the Group
+      // view builds a column per bucket, and a member of an unselected bucket
+      // must never dim back onto the board); a carried descendant rides the
+      // card that already claims its column. State, provider, and search
+      // misses keep-and-dim below, inside columns that pass.
       if (filter.projects.size > 0 && !filter.projects.has(thread.projectId)) {
         continue;
       }
-      if (groupFilterMisses(thread, filter, groupsByThread)) {
+      if (groupFilterMisses(thread, filter, groupsByThread) && !carriedByGroup(thread)) {
         continue;
       }
       kept.push(thread);

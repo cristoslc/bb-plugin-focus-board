@@ -1,0 +1,63 @@
+# Operator-assisted E2E: the Group filter keeps a matched family whole.
+#
+# The operator's ruling (2026-11-11): filtering the board to a feature group
+# must show every child of every parent the filter matched — "ALL the parents'
+# children MUST also show up, even if they belong to different groups, as
+# children in that family card". Before this suite's fix the keep pass dropped
+# a cross-group child outright, so the Alpha card rendered one row short.
+#
+# The harness mounts the real app.tsx against the mocked SDK
+# (scripts/screenshot). `?groupfamily=1` adds the fixture
+# (scripts/screenshot/data.ts, SIM_GROUP_FAMILY_THREADS):
+#
+#   grp_gf_alpha  thr_gf_parent → thr_gf_same  (same group)
+#                               → thr_gf_cross (in grp_gf_beta)
+#   grp_gf_beta   thr_gf_loner
+#
+# `?groupBy=group&groups=<id>` seeds the same stored filter the toolbar's
+# Group dropdown writes, so the board opens on the filtered Group view. The
+# phone/touch half lives in uat-group-filter-family-touch.yaml (a step cannot
+# change a suite's viewport).
+#
+# Run: npm run uat -- tests/manual/uat-group-filter-family.yaml
+# (npm run build first — the harness loads dist/app.css)
+
+suite: group-filter-family
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5179
+defaults:
+  groupBy: group
+  theme: dark
+  viewport: { width: 1280, height: 800 }
+  shots: true
+
+steps:
+  - id: filtered-family-card-keeps-the-cross-group-child
+    title: Filtering to Alpha renders the parent card with BOTH children, the Beta child included
+    goto: "?groupBy=group&groups=grp_gf_alpha&groupfamily=1"
+    assert:
+      - column: grp_gf_alpha
+        ordered: [thr_gf_parent]
+      - nested_row: { id: thr_gf_same, shown: true }
+      - nested_row: { id: thr_gf_cross, shown: true }
+      - text_visible: "Sweep the group filter's keep pass"
+      - text_visible: "Keep the Beta child under its parent"
+
+  - id: the-excluded-group-lane-stays-off-the-board
+    title: Alpha alone is filtered, so the Beta lane and its frame never render
+    goto: "?groupBy=group&groups=grp_gf_alpha&groupfamily=1"
+    assert:
+      - text_hidden: "Stand alone in the Beta lane"
+      - text_hidden: "Beta rework"
+      - nested_row: { id: thr_gf_cross, shown: true }
+
+  - id: both-groups-filtered-the-child-is-nested-not-hoisted
+    title: With Alpha and Beta both selected, the child keeps its row and never gains a Beta card
+    goto: "?groupBy=group&groupfamily=1&groups=grp_gf_alpha&groups=grp_gf_beta"
+    assert:
+      - column: grp_gf_alpha
+        ordered: [thr_gf_parent]
+      - column: grp_gf_beta
+        ordered: [thr_gf_loner]
+      - nested_row: { id: thr_gf_cross, shown: true }

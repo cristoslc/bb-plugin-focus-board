@@ -10,7 +10,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
-import { SIM_ATTENTION_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DESC_GROUP, SIM_DESC_GROUP_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_DUAL_GROUPS, SIM_DUAL_GROUP_THREADS, SIM_IDLE_BUSY_THREADS, SIM_ORCH_FAMILY_THREADS, SIM_OVERVIEW_GROUPS, SIM_OVERVIEW_LINKS, SIM_OVERVIEW_THREADS, SIM_PINNED_GROUP, SIM_PINNED_GROUP_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimProject, type SimThread } from "./data";
+import { SIM_ATTENTION_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DESC_GROUP, SIM_DESC_GROUP_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_DUAL_GROUPS, SIM_DUAL_GROUP_THREADS, SIM_GROUP_FAMILY_GROUPS, SIM_GROUP_FAMILY_THREADS, SIM_IDLE_BUSY_THREADS, SIM_ORCH_FAMILY_THREADS, SIM_OVERVIEW_GROUPS, SIM_OVERVIEW_LINKS, SIM_OVERVIEW_THREADS, SIM_PINNED_GROUP, SIM_PINNED_GROUP_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimProject, type SimThread } from "./data";
 import {
   type FractionColumn,
   mintLegacyColumn,
@@ -415,6 +415,10 @@ const IDLE_BUSY_MODE = new URLSearchParams(window.location.search).get("idlebusy
 const ENVGATE_MODE = new URLSearchParams(window.location.search).get("envgate") === "1";
 const DUAL_GROUPS_MODE = new URLSearchParams(window.location.search).get("dualgroups") === "1";
 const PINNED_GROUP_MODE = new URLSearchParams(window.location.search).get("pinnedgroup") === "1";
+// `?groupfamily=1`: the cross-group family the Group filter keeps whole — a
+// parent in one group with a child in another (the operator's 2026-11-11
+// ruling), plus a member of the other group so its lane has a reason to stand.
+const GROUP_FAMILY_MODE = new URLSearchParams(window.location.search).get("groupfamily") === "1";
 // `?failautotitle=` (comma list): autotitle call kinds that fail ONCE, then
 // succeed — the UAT suite walks a failure into the fallback modal and out
 // through an alternative. Kinds: "plain" (the bare ✨ call), "threadmodel"
@@ -443,6 +447,7 @@ let simThreads: readonly SimThread[] = EMPTY_MODE
       ...(IDLE_BUSY_MODE ? SIM_IDLE_BUSY_THREADS : []),
       ...(DUAL_GROUPS_MODE ? SIM_DUAL_GROUP_THREADS : []),
       ...(PINNED_GROUP_MODE ? SIM_PINNED_GROUP_THREADS : []),
+      ...(GROUP_FAMILY_MODE ? SIM_GROUP_FAMILY_THREADS : []),
     ];
 
 /**
@@ -1038,6 +1043,15 @@ if (DESCGROUP_MODE) {
 if (DUAL_GROUPS_MODE) {
   for (const group of SIM_DUAL_GROUPS) {
     simGroupRegistry[group.id] = { name: group.name, createdAt: "2026-10-31T00:00:00.000Z" };
+    for (const memberId of group.memberIds) simGroupAssignments[memberId] = group.id;
+  }
+}
+// The group-family fixture (`?groupfamily=1`): two groups, the parent and one
+// child in Alpha, the other child and a loner in Beta — so a filtered Alpha
+// board proves the cross-group child rides the family card.
+if (GROUP_FAMILY_MODE) {
+  for (const group of SIM_GROUP_FAMILY_GROUPS) {
+    simGroupRegistry[group.id] = { name: group.name, createdAt: "2026-11-11T00:00:00.000Z" };
     for (const memberId of group.memberIds) simGroupAssignments[memberId] = group.id;
   }
 }
