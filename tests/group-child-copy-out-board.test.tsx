@@ -55,8 +55,6 @@ function renderAssembled(
     context.groupNames ?? new Map(),
     groupBy,
     context,
-    new Set(),
-    NOW,
   );
   const props = {
     groupBy,

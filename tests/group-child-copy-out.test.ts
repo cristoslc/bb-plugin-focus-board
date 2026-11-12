@@ -274,8 +274,6 @@ describe("edge cases", () => {
       GROUPS.groupNames ?? new Map(),
       "status",
       GROUPS,
-      new Set(),
-      NOW,
     );
     // the Pinned lane frames the group's lone member (issue #318) — still one card.
     expect(plan.groupBoxOf.get("c")?.groupId).toBe("grp_b");
@@ -302,8 +300,6 @@ describe("edge cases", () => {
       GROUPS.groupNames ?? new Map(),
       "status",
       GROUPS,
-      new Set(),
-      NOW,
     );
     expect(plan.groupBoxOf.get("c")?.groupId).toBe("grp_b");
     expect(plan.groupBoxOf.get("p")).toBeUndefined();
@@ -389,8 +385,6 @@ describe("drag honesty for the copied-out card", () => {
       GROUPS.groupNames ?? new Map(),
       "status",
       GROUPS,
-      new Set(),
-      NOW,
     );
     const runInfo = columnRunInfo([child], plan.groupBoxOf);
     expect(runInfo.get("c")?.role).toBe("solo");
@@ -407,8 +401,6 @@ describe("drag honesty for the copied-out card", () => {
       GROUPS.groupNames ?? new Map(),
       "status",
       GROUPS,
-      new Set(),
-      NOW,
     );
     expect(canJoinGroup("thr_free", "grp_b", plan.groupBoxOf)).toBe(true);
   });

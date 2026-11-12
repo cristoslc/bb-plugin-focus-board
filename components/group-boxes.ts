@@ -5,21 +5,27 @@
 // one source of truth:
 //
 // - A group exists on the board while AT LEAST ONE of its assigned threads
-//   is visible, live, and not done. A group of one renders its dashed box
-//   too (one card inside) — the outline is the drag-into target, so the
-//   group stays visible and joinable until its last candidate leaves (the
-//   record itself only GCs when every assignment clears). A PINNED member
-//   is a candidate like any other (the operator ruling 2026-10-30): the
-//   Pinned lane is one of the board's lanes, so the split default frames
-//   the group's slice there too, and a group whose only member is pinned
-//   keeps its frame in the Pinned lane instead of vanishing. A group member
-//   that drifts into Done loses its box, the same way a family's done
-//   children leave the nest.
+//   is visible. A group of one renders its dashed box too (one card inside)
+//   — the outline is the drag-into target, so the group stays visible and
+//   joinable until its last candidate leaves (the record itself only GCs
+//   when every assignment clears). A PINNED member is a candidate like any
+//   other (the operator ruling 2026-10-30): the Pinned lane is one of the
+//   board's lanes, so the split default frames the group's slice there too,
+//   and a group whose only member is pinned keeps its frame in the Pinned
+//   lane instead of vanishing. A DONE member is a candidate by that same
+//   argument (the operator ruling 2026-11-11, dec_yhouj8o5tyjh): the Done
+//   lane is a lane, so it frames the group's done slice, and a group whose
+//   only member is done keeps its frame where that card sits. The Done
+//   frame's one exclusion is `laneGroupBoxes`: a live parent's Done
+//   projection card carries that live thread's id, and a projection is the
+//   family's Done half, never the group's done thread, so it keeps its own
+//   slot outside the frame.
 // - SPLIT DEFAULT (the 2026-10-12 behavior change, issue #86): a group does
 //   NOT gather into its most attention-deserving lane. Members keep their
 //   own lanes and the dashed frame wraps each lane's slice — the frame
-//   appears in EVERY lane holding at least one live member, a slice of one
-//   included (the frame is still the drag-into target there). The plan
+//   appears in EVERY lane holding at least one member, live or done, a
+//   slice of one included (the frame is still the drag-into target there).
+//   The plan
 //   emits no column overrides: buildColumns places each member by its own
 //   data, and a growing group dilutes into lanes instead of occupying one.
 //   The operator re-gathers the group's footprint on demand: clicking a
@@ -78,8 +84,10 @@ export interface GroupBoxPlan {
   /**
    * Thread id → the box it renders in. Holds EXACTLY the threads inside
    * boxes; a thread absent from it renders standalone even when assigned
-   * (a done member, the parent grouping — a group of one boxes its lone
-   * member these days, and a pinned member boxes in the Pinned lane).
+   * (the parent grouping — a group of one boxes its lone member these days,
+   * and pinned and done members box in their own lanes). The Done lane
+   * renders from `laneGroupBoxes`, which drops the ids that lane does not
+   * hold as done threads (a live parent's Done projection card).
    */
   groupBoxOf: ReadonlyMap<string, GroupBox>;
   /** True when `planGroupBoxes` found at least one box. */
@@ -100,23 +108,24 @@ export function planGroupBoxes(
   groupNames: ReadonlyMap<string, string>,
   groupBy: GroupBy,
   context: GroupingContext,
-  doneIds: ReadonlySet<string>,
-  now: number = Date.now(),
 ): GroupBoxPlan {
   const groupBoxOf = new Map<string, GroupBox>();
   if (!groupBoxesApply(groupBy)) {
     return { groupBoxOf, active: false };
   }
-  // Candidates: live members only — done members keep the Done lane's
-  // placement, archived never pass through here. PINNED members stay
-  // candidates: the Pinned lane is a lane, so its slice of the group gets
-  // the same dashed frame every other lane's slice gets (and a group whose
-  // only member is pinned therefore keeps its frame there). A group below
-  // one candidate has no box: its members sit in their own lanes (the
-  // record survives — the group returns when a member comes back).
+  // Candidates: every visible assigned member. Archived threads never pass
+  // through here. PINNED members are candidates because the Pinned lane is
+  // one of the board's lanes (the operator ruling 2026-10-30), and DONE
+  // members for the same reason (the operator ruling 2026-11-11,
+  // dec_yhouj8o5tyjh): the frame follows the group's card into Done instead
+  // of leaving it unlabeled there. The Done frame's ONE exclusion is not a
+  // membership question — a live parent's projection card carries that live
+  // thread's id — so it lives in `laneGroupBoxes`, where the lane is known.
+  // A group below one candidate has no box: its members sit in their own
+  // lanes (the record survives — the group returns when a member comes back).
   const candidatesByGroup = new Map<string, PluginSidebarThread[]>();
   for (const thread of threads) {
-    if (thread.isArchived || doneIds.has(thread.id)) continue;
+    if (thread.isArchived) continue;
     const groupId = groupIdByThread.get(thread.id);
     if (groupId === undefined || !groupNames.has(groupId)) continue;
     const members = candidatesByGroup.get(groupId);
@@ -142,6 +151,36 @@ export function planGroupBoxes(
   return { groupBoxOf, active: groupBoxOf.size >= 1 };
 }
 
+/**
+ * The box map ONE lane renders from. Every lane reads `groupBoxOf` unchanged;
+ * Done reads this, because the Done frame wraps the group's DONE slice and
+ * nothing else. The one card that is boxed in the plan but is not a done
+ * thread is a live parent's Done projection card: the projection is the
+ * parent's own thread object (`components/nesting`), so it carries that live
+ * thread's id and the plan claims it as a member. A projection is the
+ * family's Done half, never the group's done thread, so it keeps its own
+ * slot outside the frame (the operator ruling 2026-11-11, dec_yhouj8o5tyjh).
+ *
+ * Filtering the map per lane keeps every consumer of a single lane reading
+ * the membership its frame draws: the run walk, the run roles, the unit
+ * drags, and the transports. A map with nothing to drop comes back as the
+ * same reference, so the common case costs one identity check.
+ */
+export function laneGroupBoxes<V extends GroupBoxRef & Pick<GroupBox, "members">>(
+  columnId: string,
+  groupBoxOf: ReadonlyMap<string, V>,
+  doneIds: ReadonlySet<string>,
+): ReadonlyMap<string, V> {
+  if (columnId !== "done" || groupBoxOf.size === 0) return groupBoxOf;
+  let kept: Map<string, V> | null = null;
+  for (const [threadId, box] of groupBoxOf) {
+    if (doneIds.has(threadId)) continue;
+    if (kept === null) kept = new Map(groupBoxOf);
+    kept.delete(threadId);
+  }
+  return kept ?? groupBoxOf;
+}
+
 /** The state's index in the status lane order (unknown states sort last). */
 function stateIndexOf(state: ThreadState): number {
   const index = STATUS_COLUMN_ORDER.indexOf(state);
@@ -153,9 +192,9 @@ function stateIndexOf(state: ThreadState): number {
  * group gather into ONE box item at the position of the FIRST member in
  * the lane's own order (the one-frame-per-lane rule; a non-member card
  * between them renders after the frame), standalone cards keep their
- * slots. The frame appears in EVERY lane holding at least one live
- * member: a slice of one (a group of one, or a multi-member group's lone
- * member in a lane) yields a box run around its single member — role
+ * slots. The frame appears in EVERY lane holding at least one member,
+ * live or done: a slice of one (a group of one, or a multi-member group's
+ * lone member in a lane) yields a box run around its single member — role
  * "solo" downstream, so it drags as a plain card but keeps the frame (the
  * outline is the drag-into target, and it is the highlight carrier).
  */
@@ -182,11 +221,11 @@ export interface RunColumnLike {
  * card (or another box's member) landing between the members closes the run
  * and opens a new one — each slice keeps its frame at its own slot. Standalone
  * cards keep their slots. Under the split default the frame appears in EVERY
- * lane holding at least one live member: a slice of one (a group of one, or a
- * multi-member group's lone member in a lane) yields a box run around its
- * single member — role "solo" downstream, so it drags as a plain card but
- * keeps the frame (the outline is the drag-into target, and it is the
- * highlight carrier).
+ * lane holding at least one member (live or done): a slice of one (a group
+ * of one, or a multi-member group's lone member in a lane) yields a box run
+ * around its single member — role "solo" downstream, so it drags as a plain
+ * card but keeps the frame (the outline is the drag-into target, and it is
+ * the highlight carrier).
  *
  * The one-frame-per-lane rule keeps the lane's representation of a group
  * honest (the operator ruling 2026-10-13, reversing the edd35e8 slice-split):
