@@ -201,6 +201,26 @@ export interface LaneTransport {
   members?: readonly PluginSidebarThread[];
   /** A run transport's previous box name — the ghost's label. */
   boxName?: string;
+  /**
+   * The departing lane's own frame, carried only when this move EMPTIES that
+   * lane (issue #391). `buildColumns` renders a lane only while it holds
+   * cards, so an emptied lane leaves the next commit's render entirely — and
+   * the out-ghost woven into it popped with the frame instead of finishing
+   * its dissolve. The label lets the board hold the lane's frame (header
+   * included, so the lane does not read as a glitch) for the dissolve's
+   * remainder, and the anchors keep that frame where the lane stood in the
+   * row: after `afterId` when that neighbour survived the commit, else before
+   * `beforeId`, else at the row's end. Absent when a resident stays behind —
+   * that lane is the board's own and renders its ghosts unaided.
+   */
+  fromLane?: HeldLaneAnchor;
+}
+
+/** Where an emptied lane's held frame belongs in the row (see `fromLane`). */
+export interface HeldLaneAnchor {
+  label: string;
+  afterId: string | null;
+  beforeId: string | null;
 }
 
 /** The old lane's ghost state: wiping, then its reserved space collapsing. */
@@ -222,6 +242,8 @@ export const TRANSPORT_ROW_GAP_PX = 6;
 /** A rendered column slice. Shaped like BoardColumn, loose for test reuse. */
 export interface TransportColumnLike {
   id: string;
+  /** The lane's display name, when the caller has one (a held frame's header). */
+  label?: string;
   threads: readonly PluginSidebarThread[];
 }
 
@@ -284,7 +306,9 @@ export function planLaneTransports(
     // id falls back to the raw slot, and an unfound card clamps to 0 the
     // way the old planner did (a ghost at the lane top beats every ghost
     // slot degrading).
-    const prevColumn = (prevColumns ?? columns).find((candidate) => candidate.id === prevLane);
+    const laneRow = prevColumns ?? columns;
+    const laneIndex = laneRow.findIndex((candidate) => candidate.id === prevLane);
+    const prevColumn = laneIndex >= 0 ? laneRow[laneIndex] : undefined;
     const prevOrder = prevDisplayIds?.get(prevLane);
     const displayIndex = prevOrder?.indexOf(threadId) ?? -1;
     const fromIndex =
@@ -297,9 +321,39 @@ export function planLaneTransports(
       fromColumnId: prevLane,
       fromIndex,
       toColumnId: nextLane,
+      // The lane this move empties has no column in the next commit, so its
+      // ghost would lose the space it dissolves in (issue #391). Carry the
+      // frame the board has to hold open: the label for its header, and the
+      // nearest surviving neighbours on each side for its slot in the row.
+      fromLane: columns.some((candidate) => candidate.id === prevLane)
+        ? undefined
+        : {
+            label: prevColumn?.label ?? prevLane,
+            afterId: nearestSurvivingLane(laneRow, laneIndex, -1, columns),
+            beforeId: nearestSurvivingLane(laneRow, laneIndex, 1, columns),
+          },
     });
   }
   return moves;
+}
+
+/**
+ * The nearest lane beside `from` in the previous row (walking `step` out) that
+ * the next commit still renders — the anchor a held frame holds onto. A lane
+ * that vanished in the same commit is no anchor, so a multi-lane close reads
+ * outward until it finds a survivor. Null when the row has none that way.
+ */
+function nearestSurvivingLane(
+  row: readonly TransportColumnLike[],
+  from: number,
+  step: -1 | 1,
+  next: readonly TransportColumnLike[],
+): string | null {
+  for (let index = from + step; index >= 0 && index < row.length; index += step) {
+    const id = row[index]!.id;
+    if (next.some((column) => column.id === id)) return id;
+  }
+  return null;
 }
 
 /**
@@ -424,6 +478,11 @@ export function collapseRunTransports(
         fromColumnId: prevUnit.columnId,
         fromIndex: anchor.fromIndex,
         toColumnId: unit.columnId,
+        // Every member moved out of the SAME lane, so the box's departing
+        // frame is the members' own held-lane anchor (issue #391): a box that
+        // empties its lane dissolves in that lane's held frame, exactly as a
+        // lone card does.
+        fromLane: anchor.fromLane,
       },
     );
     result = kept;
@@ -435,6 +494,67 @@ export function collapseRunTransports(
 export type GhostSlotEntry<T extends LaneTransport = LaneTransport> =
   | { kind: "run"; run: GroupRunItem }
   | { kind: "ghost"; ghost: T };
+
+/** One lane as the board renders it: its own column, or a held frame. */
+export interface LaneFrame<T extends TransportColumnLike> {
+  column: T;
+  /**
+   * The lane holds no cards of its own: the board closed it underneath a
+   * departing ghost, and it renders only for that dissolve's remainder
+   * (issue #391). A closing frame is never a drop surface.
+   */
+  closing: boolean;
+}
+
+/**
+ * The columns the board renders, with a frame held open for every lane a
+ * transport's dissolve is still leaving (issue #391).
+ *
+ * The lane rule is "columns exist only while they hold cards"
+ * (`components/grouping`), so a relocation that empties its old lane removes
+ * the lane from the next commit — and the out-ghost woven into that lane went
+ * with it, popping mid-dissolve instead of finishing. The transport already
+ * holds its own slot for the dissolve's whole clock (`transportPhasePlan`:
+ * the ghost is removed at `removeMs`, after the wipe and the collapse), so the
+ * lane's frame holds on the same clock: it is derived from the live plays,
+ * which the phase timers own, and it disappears the moment the last play
+ * leaving that lane is gone. Nothing about placement, ordering, or a lane's
+ * own data changes: the held frame carries an empty card list, and the ghosts
+ * already render into it.
+ *
+ * `closingColumn` builds the frame's own column (the board's `BoardColumn`
+ * shape), so the helper stays free of the board's types.
+ */
+export function withClosingLanes<T extends TransportColumnLike>(
+  columns: readonly T[],
+  plays: readonly LaneTransport[],
+  closingColumn: (lane: { id: string; label: string }) => T,
+): readonly LaneFrame<T>[] {
+  const held = new Map<string, HeldLaneAnchor>();
+  for (const play of plays) {
+    const fromLane = play.fromLane;
+    if (fromLane === undefined) continue;
+    if (columns.some((column) => column.id === play.fromColumnId)) continue;
+    if (held.has(play.fromColumnId)) continue;
+    held.set(play.fromColumnId, fromLane);
+  }
+  const frames: LaneFrame<T>[] = columns.map((column) => ({ column, closing: false }));
+  for (const [id, lane] of held) {
+    const after =
+      lane.afterId === null
+        ? -1
+        : frames.findIndex((frame) => frame.column.id === lane.afterId);
+    const before =
+      lane.beforeId === null
+        ? -1
+        : frames.findIndex((frame) => frame.column.id === lane.beforeId);
+    frames.splice(after >= 0 ? after + 1 : before >= 0 ? before : frames.length, 0, {
+      column: closingColumn({ id, label: lane.label }),
+      closing: true,
+    });
+  }
+  return frames;
+}
 
 /**
  * Weave the old lane's ghost cards into its run list at their old card-slot

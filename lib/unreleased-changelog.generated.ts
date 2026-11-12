@@ -11,6 +11,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "The board's lanes"
   },
   {
+    "text": "**A card that empties its lane finishes its dissolve before the lane closes.** The departing ghost used to vanish the instant its lane left the board, so the card popped instead of easing out. The lane now holds its frame until the dissolve's last tick, then closes with the ghost.",
+    "children": [],
+    "group": "Card animations"
+  },
+  {
     "text": "**A Group-filtered board keeps every child of a matched family.** A parent card came up one row short when a child lived in another group. The child now keeps its row inside the card, with its dot and its menu, and is never pulled into its own group's lane.",
     "children": [],
     "group": "Groups and family boxes"

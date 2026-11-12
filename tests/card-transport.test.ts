@@ -13,6 +13,7 @@ import {
   planLaneTransports,
   collapseRunTransports,
   runUnits,
+  withClosingLanes,
   firstRealCard,
   insertGhostSlots,
   TRANSPORT_WIPE_OUT_MS,
@@ -338,6 +339,166 @@ describe("collapseRunTransports", () => {
     expect(result).toHaveLength(1);
     expect(result[0].members).toHaveLength(13);
     expect(TRANSPORT_BATCH_CAP).toBeGreaterThan(1);
+  });
+});
+
+describe("the lane a move empties carries its own frame (issue #391)", () => {
+  // The board's lane rule is "columns exist only while they hold cards"
+  // (`components/grouping`), so the lane a relocation empties is gone from the
+  // next commit — and the ghost that dissolves there went with it. The plan
+  // carries the departing frame; `withClosingLanes` holds it for the play's
+  // own life.
+  const unreadOnly = thread({ id: "thr_a" });
+  const attention = columnOf("attention", [thread({ id: "thr_b" })]);
+  const working = columnOf("working", []);
+
+  it("plans the emptied lane's label and the surviving neighbours it stood between", () => {
+    const moves = planLaneTransports(
+      laneSignature([attention, columnOf("unread", [unreadOnly]), working]),
+      new Map([["thr_a", unreadOnly]]),
+      [columnOf("pinned", [unreadOnly]), attention, working],
+      [attention, columnOf("unread", [unreadOnly]), working],
+    );
+    expect(moves).toHaveLength(1);
+    expect(moves[0].fromLane).toEqual({
+      label: "unread",
+      afterId: "attention",
+      beforeId: "working",
+    });
+  });
+
+  it("anchors outward past a neighbour that vanished in the SAME commit", () => {
+    // Two lanes close at once: Unread's right neighbour (an idle bucket) is
+    // gone too, so the held frame anchors on the survivor beyond it.
+    const idle = columnOf("idle-today", []);
+    const moves = planLaneTransports(
+      laneSignature([attention, columnOf("unread", [unreadOnly]), idle]),
+      new Map([["thr_a", unreadOnly]]),
+      [columnOf("pinned", [unreadOnly]), attention],
+      [attention, columnOf("unread", [unreadOnly]), idle],
+    );
+    expect(moves[0].fromLane).toEqual({
+      label: "unread",
+      afterId: "attention",
+      beforeId: null,
+    });
+  });
+
+  it("carries no frame when a resident stays behind: that lane is the board's own", () => {
+    const resident = thread({ id: "thr_b", isUnread: true });
+    const moves = planLaneTransports(
+      laneSignature([columnOf("unread", [unreadOnly, resident])]),
+      new Map([["thr_a", unreadOnly]]),
+      [columnOf("pinned", [unreadOnly]), columnOf("unread", [resident])],
+      [columnOf("unread", [unreadOnly, resident])],
+    );
+    expect(moves).toHaveLength(1);
+    expect(moves[0].fromLane).toBeUndefined();
+  });
+
+  it("a box that empties its lane folds its departing frame into the unit transport", () => {
+    const m1 = thread({ id: "thr_m1" });
+    const m2 = thread({ id: "thr_m2" });
+    const prevUnits = new Map([
+      ["grp_1", { groupId: "grp_1", name: "Feature", columnId: "unread", memberIds: ["thr_m1", "thr_m2"] }],
+    ]);
+    const nextUnits = new Map([
+      ["grp_1", { groupId: "grp_1", name: "Feature", columnId: "pinned", memberIds: ["thr_m1", "thr_m2"] }],
+    ]);
+    const row = [attention, columnOf("unread", [m1, m2])];
+    const moves = planLaneTransports(
+      laneSignature(row),
+      new Map([
+        ["thr_m1", m1],
+        ["thr_m2", m2],
+      ]),
+      [columnOf("pinned", [m1, m2]), attention],
+      row,
+    );
+    const folded = collapseRunTransports(
+      moves,
+      prevUnits,
+      nextUnits,
+      new Map([
+        ["thr_m1", m1],
+        ["thr_m2", m2],
+      ]),
+    );
+    expect(folded).toHaveLength(1);
+    expect(folded[0].threadId).toBe("grp_1");
+    expect(folded[0].fromLane).toEqual({
+      label: "unread",
+      afterId: "attention",
+      beforeId: null,
+    });
+  });
+});
+
+describe("withClosingLanes", () => {
+  const closingColumn = ({ id, label }: { id: string; label: string }) => ({
+    ...columnOf(id, []),
+    label,
+  });
+  const attention = columnOf("attention", [thread({ id: "thr_b" })]);
+  const working = columnOf("working", []);
+  const heldPlay = {
+    threadId: "thr_a",
+    thread: thread({ id: "thr_a" }),
+    fromColumnId: "unread",
+    fromIndex: 0,
+    toColumnId: "pinned",
+    fromLane: { label: "Unread", afterId: "attention", beforeId: "working" },
+  };
+
+  it("renders the board's own columns untouched when nothing is closing", () => {
+    const columns = [attention, working];
+    const frames = withClosingLanes(columns, [], closingColumn);
+    expect(frames.map((frame) => frame.column)).toEqual(columns);
+    expect(frames.every((frame) => !frame.closing)).toBe(true);
+  });
+
+  it("holds the emptied lane's frame between its previous neighbours, holding no cards", () => {
+    const frames = withClosingLanes([attention, working], [heldPlay], closingColumn);
+    expect(frames.map((frame) => frame.column.id)).toEqual(["attention", "unread", "working"]);
+    const held = frames[1]!;
+    expect(held.closing).toBe(true);
+    expect(held.column.label).toBe("Unread");
+    expect(held.column.threads).toEqual([]);
+  });
+
+  it("falls back to the lane's other neighbour, then to the row's end", () => {
+    const before = withClosingLanes(
+      [attention, working],
+      [{ ...heldPlay, fromLane: { label: "Unread", afterId: null, beforeId: "working" } }],
+      closingColumn,
+    );
+    expect(before.map((frame) => frame.column.id)).toEqual(["attention", "unread", "working"]);
+    const lost = withClosingLanes(
+      [attention],
+      [{ ...heldPlay, fromLane: { label: "Unread", afterId: "gone", beforeId: "gone" } }],
+      closingColumn,
+    );
+    expect(lost.map((frame) => frame.column.id)).toEqual(["attention", "unread"]);
+  });
+
+  it("holds one frame per closed lane, and none for a lane the board still renders", () => {
+    const both = withClosingLanes(
+      [attention, working],
+      [heldPlay, { ...heldPlay, threadId: "thr_c" }],
+      closingColumn,
+    );
+    expect(both.filter((frame) => frame.closing)).toHaveLength(1);
+    const resident = withClosingLanes(
+      [attention, columnOf("unread", [thread({ id: "thr_b" })]), working],
+      [{ ...heldPlay, fromColumnId: "unread" }],
+      closingColumn,
+    );
+    expect(resident.filter((frame) => frame.closing)).toHaveLength(0);
+  });
+
+  it("the frame goes when its play does: the hold lives the dissolve's remainder", () => {
+    expect(withClosingLanes([attention, working], [heldPlay], closingColumn)).toHaveLength(3);
+    expect(withClosingLanes([attention, working], [], closingColumn)).toHaveLength(2);
   });
 });
 

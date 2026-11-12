@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-06T15:50:32.446Z by `npm run uat`._
+_Generated 2026-11-12T03:25:42.713Z by `npm run uat`._
 
 ## gesture-fuzz
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_4qh62ybyi5-1/bb-plugin-focus-board/tests/manual/uat-fuzz.yaml` · theme dark
+Source: `tests/manual/uat-fuzz.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

@@ -12,6 +12,7 @@ import { buildColumns } from "../components/grouping";
 import type { GroupBoxMap } from "../components/group-boxes";
 import {
   TRANSPORT_WIPE_IN_MS,
+  TRANSPORT_WIPE_OUT_MS,
   TRANSPORT_COLLAPSE_MS,
   TRANSPORT_SPARK_COUNT,
   LOAD_TRANSPORT_MOUNT_GUARD_MS,
@@ -227,6 +228,95 @@ describe("a card relocating between lanes plays the transport dissolve", () => {
   });
 });
 
+describe("a relocation that empties its lane holds the departing ghost (issue #391)", () => {
+  it("the closed lane's frame outlives its own data so the dissolve finishes, then closes with the ghost", async () => {
+    vi.useFakeTimers();
+    // thr_a is the Unread lane's ONLY card; thr_b keeps a second lane
+    // standing beside it.
+    const before = [
+      thread({ id: "thr_a", isUnread: true, updatedAt: NOW - 1000 }),
+      thread({ id: "thr_b", hasPendingInteraction: true, updatedAt: NOW - 2000 }),
+    ];
+    const after = [
+      thread({ id: "thr_a", isPinned: true, pinnedAt: 1, pinSortKey: 1, updatedAt: NOW - 1000 }),
+      thread({ id: "thr_b", hasPendingInteraction: true, updatedAt: NOW - 2000 }),
+    ];
+    const { rerender } = render(
+      <Board {...boardProps("status", before, undefined, { transportVariant: "dissolve" })} />,
+    );
+    await pastLoadEcho();
+    rerender(<Board {...boardProps("status", after, undefined, { transportVariant: "dissolve" })} />);
+
+    // `buildColumns` drops a lane once it holds no cards ("columns exist only
+    // while they hold cards"), but a departing ghost has nowhere to dissolve
+    // if the frame goes with it. The lane that closed underneath its ghost
+    // therefore keeps its own frame — the space that already renders
+    // departing ghosts — for the transport's own remove tick.
+    const heldLane = document.querySelector('[data-column-id="unread"]');
+    expect(heldLane).not.toBeNull();
+    expect(heldLane?.hasAttribute("data-column-closing")).toBe(true);
+    const ghost = heldLane?.querySelector("[data-transport-out]");
+    expect(ghost?.getAttribute("data-transport-out")).toBe("wiping-out");
+    expect(ghost?.getAttribute("aria-hidden")).toBe("true");
+    // The held frame sits where the lane sat in the row — after the lane it
+    // followed before the move, not shoved to the row's end.
+    expect(
+      [...document.querySelectorAll("[data-column-id]")].map((el) =>
+        el.getAttribute("data-column-id"),
+      ),
+    ).toEqual(["pinned", "attention", "unread", "working"]);
+
+    // The wipe plays to its end and hands over to the collapse: a ghost that
+    // unmounted with the lane would have ended here, at the lane's closure.
+    await act(async () => {
+      vi.advanceTimersByTime(TRANSPORT_WIPE_OUT_MS + 5);
+    });
+    expect(
+      document.querySelector('[data-column-id="unread"] [data-transport-out="collapsing"]'),
+    ).not.toBeNull();
+
+    // The phase plan's remove tick closes the frame and the ghost together:
+    // the hold lives exactly the dissolve's remainder, never longer.
+    await act(async () => {
+      vi.advanceTimersByTime(TRANSPORT_COLLAPSE_MS + 5);
+    });
+    expect(document.querySelector('[data-column-id="unread"]')).toBeNull();
+    expect(document.querySelector("[data-transport-out]")).toBeNull();
+  });
+
+  it("a relocation that leaves its lane populated holds nothing: the lane stays its own data's", async () => {
+    vi.useFakeTimers();
+    const before = [
+      thread({ id: "thr_a", isUnread: true, updatedAt: NOW - 1000 }),
+      thread({ id: "thr_b", isUnread: true, updatedAt: NOW - 2000 }),
+    ];
+    const after = [
+      thread({ id: "thr_a", isPinned: true, pinnedAt: 1, pinSortKey: 1, updatedAt: NOW - 1000 }),
+      thread({ id: "thr_b", isUnread: true, updatedAt: NOW - 2000 }),
+    ];
+    const { rerender } = render(
+      <Board {...boardProps("status", before, undefined, { transportVariant: "dissolve" })} />,
+    );
+    await pastLoadEcho();
+    rerender(<Board {...boardProps("status", after, undefined, { transportVariant: "dissolve" })} />);
+
+    // The lane still holds thr_b, so it is a lane of the board's own data:
+    // the ghost weaves into it and no hold is needed (and none may appear —
+    // a held frame would be a second lane carrying the same id).
+    const lane = document.querySelector('[data-column-id="unread"]');
+    expect(lane).not.toBeNull();
+    expect(lane?.hasAttribute("data-column-closing")).toBe(false);
+    expect(lane?.querySelector("[data-transport-out]")).not.toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(TRANSPORT_WIPE_OUT_MS + TRANSPORT_COLLAPSE_MS + 10);
+    });
+    const settled = document.querySelector('[data-column-id="unread"]');
+    expect(settled?.querySelector("[data-transport-out]")).toBeNull();
+    expect(settled?.querySelector('[data-thread-card="thr_b"]')).not.toBeNull();
+  });
+});
+
 describe("the load-echo mount guard (issue #373)", () => {
   it("a relocation within the first lane-map seed's window lands in place: no ghost, no arrival, the final layout held", async () => {
     vi.useFakeTimers();
@@ -258,10 +348,9 @@ describe("the load-echo mount guard (issue #373)", () => {
     expect(document.querySelectorAll('[data-column-id="unread"] [data-thread-card]')).toHaveLength(2);
     // The window expires: the NEXT relocation arms the dissolve exactly as
     // before the guard (the mechanism's post-window law, the same shape the
-    // suites above pin). Three cards so the old lane keeps a resident (an
-    // emptied lane leaves the render, per the columns' own existence rule,
-    // and its ghost has no lane to weave into — that edge predates the
-    // guard, observed on 47ffa8b with the same zero-ghost shape).
+    // suites above pin). Three cards so the old lane keeps a resident: a lane
+    // that empties now holds its own frame for the dissolve (issue #391's
+    // suite), and this pin is about the guard's boundary, not that hold.
     await pastLoadEcho();
     const further = [
       thread({ id: "thr_a", isPinned: true, pinnedAt: 1, pinSortKey: 1, updatedAt: NOW - 1000 }),
@@ -389,8 +478,9 @@ describe("a box run relocating between lanes transports as ONE unit", () => {
     const groupBoxOf: GroupBoxMap = new Map(
       members.map((member) => [member.id, box]),
     );
-    // A companion thread keeps the old lane alive (a lane that loses its
-    // last card vanishes and plays no ghost — its own removal dominates).
+    // A companion thread keeps the old lane populated, so the box's ghost
+    // weaves into a lane that is its own data's (an emptied lane would hold a
+    // frame of its own instead — issue #391's suite pins that shape).
     const companion = thread({ id: "thr_x", isUnread: true, updatedAt: NOW });
     const before = [...members, companion];
     const after = [
