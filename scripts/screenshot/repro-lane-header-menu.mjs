@@ -86,7 +86,9 @@ const menuRead = await page.evaluate(() => {
 });
 await page.screenshot({ path: `${OUT}lane-menu-open.png` });
 // The hover affordance: the pointer parked on the lane's name+caret pair
-// (the menu closed first — the backdrop click), the chip's bg-accent read.
+// (the menu closed first — the backdrop click), bb's interactive-state fill
+// plus the caret at full ink (the stronger-hover ruling replaced the chips'
+// `hover:bg-accent` tint; see docs/screenshots/lane-name-hover/).
 await page.mouse.click(640, 500);
 await page.waitForSelector('[role="menu"][aria-label="Lane actions"]', {
   hidden: true,
@@ -98,8 +100,12 @@ const hoverRead = await page.evaluate(() => {
   const trigger = document.querySelector(
     'section[data-column-id="unread"] header button[data-lane-menu-trigger]',
   );
+  const caret = trigger?.querySelector("svg");
   return {
-    hoverClass: trigger?.className.includes("hover:bg-accent") ?? false,
+    hoverClass: trigger?.className.includes("hover:bg-state-active") ?? false,
+    chipTintGone: trigger?.className.includes("hover:bg-accent") === false,
+    caretHoverTone:
+      caret?.getAttribute("class")?.includes("group-hover/lane-trigger:text-foreground") ?? false,
     cursor: trigger === null ? null : getComputedStyle(trigger).cursor,
     escapeCloses: false,
   };

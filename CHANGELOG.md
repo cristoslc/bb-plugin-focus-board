@@ -13,6 +13,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **A group's dashed frame now wraps its done cards in the Done lane.** Marking a member done used to drop its card out of the frame, and a group of one lost its frame everywhere once its only member settled. The frame now follows the group into Done, labelled and still a drop target, while a live family's Done projection card keeps its own slot outside it.
 
+#### The board's lanes
+
+- **A lane's name and caret light up as a chip on hover.** The dropdown chips' faint tint read as nothing on the plain canvas; the pair now takes bb's interactive-state fill and its caret sharpens to full ink, so the lane menu reads as a target before you click it.
+
 ### Fixed
 
 #### Groups and family boxes

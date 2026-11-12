@@ -18,6 +18,9 @@
   },
   "hoverAndEscape": {
     "hoverClass": true,
+    "chipTintGone": true,
+    "caretHoverTone": true,
+    "cursor": "pointer",
     "escapeCloses": true
   },
   "pills": {

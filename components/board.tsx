@@ -3148,7 +3148,23 @@ function BoardBase({
                       toolbar's dropdown idiom (a ChevronDown after the name)
                       rather than a dot glyph — the operator's second pass on
                       the per-lane menu ruling. The bare header around it is
-                      a drop surface, never a trigger. */}
+                      a drop surface, never a trigger.
+
+                      Hover reads at bb's interactive-state weight
+                      (`hover:bg-state-active`, not the chips' `bg-accent`).
+                      Accent is the same step as bb's `state-hover` and
+                      measured 1.24:1 against the dark canvas and 1.35:1
+                      against the light one — the too-subtle read the
+                      operator's ruling names. state-active is the step above
+                      it (1.63:1 / 1.60:1 on the same harness pass) and the
+                      fill bb's own small caret triggers hover with; the caret
+                      lifts from `muted-foreground/60` to full ink beside it,
+                      the fill-plus-glyph-tone pair bb's sidebar controls
+                      carry. The group is NAMED because the header already
+                      owns a plain `group` for its hide-lane icon, so a bare
+                      `group-hover:` would light the caret from anywhere in
+                      the header. Rest, the pointer cursor, the target, and
+                      the aria semantics are unchanged. */}
                   <h3 className="min-w-0 truncate text-[11px] font-medium text-muted-foreground">
                     <button
                       type="button"
@@ -3176,13 +3192,13 @@ function BoardBase({
                           y: box.bottom + 4,
                         });
                       }}
-                      className="flex min-w-0 cursor-pointer items-center gap-0.5 truncate rounded-sm px-1 py-0.5 text-[11px] font-medium transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="group/lane-trigger flex min-w-0 cursor-pointer items-center gap-0.5 truncate rounded-sm px-1 py-0.5 text-[11px] font-medium transition-colors hover:bg-state-active hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <span className="truncate">{column.label}</span>
                       <Icon
                         name="ChevronDown"
                         className={cn(
-                          "size-3 shrink-0 text-muted-foreground/60 transition-transform",
+                          "size-3 shrink-0 text-muted-foreground/60 transition-[color,transform] group-hover/lane-trigger:text-foreground",
                           laneMenu?.columnId === column.id && "rotate-180",
                         )}
                         aria-hidden

@@ -1,0 +1,144 @@
+{
+  "ruling": "dec_9yke6uqevbqt",
+  "url": "http://localhost:5231/",
+  "themes": {
+    "dark": {
+      "clip": {
+        "x": 550,
+        "y": 53,
+        "width": 268,
+        "height": 27
+      },
+      "rest": {
+        "classes": "group/lane-trigger flex min-w-0 cursor-pointer items-center gap-0.5 truncate rounded-sm px-1 py-0.5 text-[11px] font-medium transition-colors hover:bg-state-active hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "oklch(0.78 0 0)",
+        "cursor": "pointer",
+        "caret": "oklab(0.78 0 0 / 0.6)",
+        "caretClasses": "size-3 shrink-0 text-muted-foreground/60 transition-[color,transform] group-hover/lane-trigger:text-foreground",
+        "ariaExpanded": "false",
+        "ariaLabel": "Unread lane actions"
+      },
+      "hover": {
+        "classes": "group/lane-trigger flex min-w-0 cursor-pointer items-center gap-0.5 truncate rounded-sm px-1 py-0.5 text-[11px] font-medium transition-colors hover:bg-state-active hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "background": "oklab(0.81 0 0 / 0.225)",
+        "color": "oklch(0.81 0 0)",
+        "cursor": "pointer",
+        "caret": "oklch(0.81 0 0)",
+        "caretClasses": "size-3 shrink-0 text-muted-foreground/60 transition-[color,transform] group-hover/lane-trigger:text-foreground",
+        "ariaExpanded": "false",
+        "ariaLabel": "Unread lane actions"
+      }
+    },
+    "light": {
+      "clip": {
+        "x": 550,
+        "y": 53,
+        "width": 268,
+        "height": 27
+      },
+      "rest": {
+        "classes": "group/lane-trigger flex min-w-0 cursor-pointer items-center gap-0.5 truncate rounded-sm px-1 py-0.5 text-[11px] font-medium transition-colors hover:bg-state-active hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "background": "rgba(0, 0, 0, 0)",
+        "color": "oklch(0.45 0 0)",
+        "cursor": "pointer",
+        "caret": "oklab(0.45 0 0 / 0.6)",
+        "caretClasses": "size-3 shrink-0 text-muted-foreground/60 transition-[color,transform] group-hover/lane-trigger:text-foreground",
+        "ariaExpanded": "false",
+        "ariaLabel": "Unread lane actions"
+      },
+      "hover": {
+        "classes": "group/lane-trigger flex min-w-0 cursor-pointer items-center gap-0.5 truncate rounded-sm px-1 py-0.5 text-[11px] font-medium transition-colors hover:bg-state-active hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "background": "oklab(0.22 0 0 / 0.225)",
+        "color": "oklch(0.22 0 0)",
+        "cursor": "pointer",
+        "caret": "oklch(0.22 0 0)",
+        "caretClasses": "size-3 shrink-0 text-muted-foreground/60 transition-[color,transform] group-hover/lane-trigger:text-foreground",
+        "ariaExpanded": "false",
+        "ariaLabel": "Unread lane actions"
+      }
+    }
+  },
+  "fills": {
+    "dark": {
+      "--accent": {
+        "fill": [
+          40,
+          40,
+          40
+        ],
+        "vsCanvas": 1.24,
+        "resolved": "oklch(0.27495 0 0)"
+      },
+      "--muted": {
+        "fill": [
+          44,
+          44,
+          44
+        ],
+        "vsCanvas": 1.31,
+        "resolved": "oklch(0.2934 0 0)"
+      },
+      "--state-hover": {
+        "fill": [
+          44,
+          44,
+          44
+        ],
+        "vsCanvas": 1.31,
+        "resolved": "oklab(0.81 0 0 / 0.138)"
+      },
+      "--state-active": {
+        "fill": [
+          59,
+          59,
+          59
+        ],
+        "vsCanvas": 1.63,
+        "resolved": "oklab(0.81 0 0 / 0.225)"
+      }
+    },
+    "light": {
+      "--accent": {
+        "fill": [
+          217,
+          217,
+          217
+        ],
+        "vsCanvas": 1.35,
+        "resolved": "oklch(0.88555 0 0)"
+      },
+      "--muted": {
+        "fill": [
+          210,
+          210,
+          210
+        ],
+        "vsCanvas": 1.45,
+        "resolved": "oklch(0.8626 0 0)"
+      },
+      "--state-hover": {
+        "fill": [
+          220,
+          220,
+          220
+        ],
+        "vsCanvas": 1.31,
+        "resolved": "oklab(0.22 0 0 / 0.138)"
+      },
+      "--state-active": {
+        "fill": [
+          200,
+          200,
+          200
+        ],
+        "vsCanvas": 1.6,
+        "resolved": "oklab(0.22 0 0 / 0.225)"
+      }
+    }
+  },
+  "errors": [
+    "[404] http://localhost:5231/favicon.ico",
+    "[console.error] Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+}

@@ -6,6 +6,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "Groups and family boxes"
   },
   {
+    "text": "**A lane's name and caret light up as a chip on hover.** The dropdown chips' faint tint read as nothing on the plain canvas; the pair now takes bb's interactive-state fill and its caret sharpens to full ink, so the lane menu reads as a target before you click it.",
+    "children": [],
+    "group": "The board's lanes"
+  },
+  {
     "text": "**A Group-filtered board keeps every child of a matched family.** A parent card came up one row short when a child lived in another group. The child now keeps its row inside the card, with its dot and its menu, and is never pulled into its own group's lane.",
     "children": [],
     "group": "Groups and family boxes"
