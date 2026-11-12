@@ -12,6 +12,7 @@ import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { Board } from "../components/board";
 import { buildColumns } from "../components/grouping";
 import { planGroupBoxes } from "../components/group-boxes";
+import { assembleBoard } from "../components/nesting";
 import { thread } from "./thread-fixture";
 
 afterEach(cleanup);
@@ -982,5 +983,163 @@ describe("the Pinned lane frames its group slice (operator ruling 2026-10-30)", 
     // The join claims the drop, so the column's own pin write stays out of it.
     expect(onJoinGroup).toHaveBeenCalledWith("thr_free", "grp_1");
     expect(props.onDropPinned).not.toHaveBeenCalled();
+  });
+});
+
+// The operator's 2026-11-11 ruling on dec_yhouj8o5tyjh, the twin of the
+// 2026-10-30 Pinned ruling (#318): a lane is a lane, so the Done lane wraps
+// the group's DONE members in the group's dashed frame. One card never joins
+// that frame — a live parent's Done projection card carries that live
+// thread's id, and a projection is the family's Done half, not the group's
+// done thread.
+describe("the Done lane frames a group's done slice (dec_yhouj8o5tyjh)", () => {
+  const NAMES = new Map([["grp_1", "Auth rework"]]);
+
+  const planFor = (
+    threads: readonly PluginSidebarThread[],
+    assignments: Record<string, string>,
+  ) =>
+    planGroupBoxes(
+      threads,
+      new Map(Object.entries(assignments)),
+      NAMES,
+      "status",
+      context,
+    );
+
+  function renderDoneBoard(
+    threads: readonly PluginSidebarThread[],
+    assignments: Record<string, string>,
+    doneIds: ReadonlySet<string>,
+    extra: Partial<BoardProps> = {},
+  ) {
+    const plan = planFor(threads, assignments);
+    const props = {
+      groupBy: "status" as const,
+      columns: buildColumns(threads, "status", context, new Map(), doneIds, NOW, {}),
+      activeThreadId: null,
+      doneIds,
+      nestedChildrenByParent: new Map(),
+      doneChildrenByParent: new Map(),
+      childCountByParent: new Map<number, never>(),
+      dimmedIds: new Set<string>(),
+      rankStore: {},
+      onRankMove: () => {},
+      groupBoxOf: plan.groupBoxOf,
+      projectNameFor: () => "",
+      repoBaseFor: () => null,
+      onOpenThread: () => {},
+      onNewTask: () => {},
+      onDropDone: () => {},
+      onDropUnread: () => {},
+      onDropPinned: () => {},
+      menuActionsFor: () => [],
+      ...extra,
+    } as unknown as BoardProps;
+    render(<Board {...props} />);
+    return props;
+  }
+
+  const doneColumn = () => {
+    const el = document.querySelector<HTMLElement>('[data-column-id="done"]');
+    if (el === null) throw new Error("missing Done column");
+    return el;
+  };
+
+  it("a done member renders inside its group's frame in the Done lane", () => {
+    const live = thread({ id: "thr_live", status: "active", updatedAt: NOW - 1000 });
+    const doneMember = thread({ id: "thr_done", updatedAt: NOW - 60_000 });
+    renderDoneBoard(
+      [live, doneMember],
+      { thr_live: "grp_1", thr_done: "grp_1" },
+      new Set(["thr_done"]),
+    );
+    const frame = doneColumn().querySelector('[data-group-box="grp_1"]');
+    expect(frame).not.toBeNull();
+    expect(frame?.getAttribute("data-group-box-lead")).toBe("thr_done");
+    expect(frame?.querySelector('[data-group-box-member="grp_1"]')).not.toBeNull();
+    expect(frame?.querySelector('[data-thread-card="thr_done"]')).not.toBeNull();
+    // The name rides the frame in Done too, so the group reads where its
+    // settled cards are.
+    expect(doneColumn().querySelector('[data-group-box-label="grp_1"]')?.textContent).toBe(
+      "Auth rework",
+    );
+    // One frame per lane still holds: the live lane keeps its own.
+    expect(document.querySelectorAll('[data-group-box="grp_1"]')).toHaveLength(2);
+    expect(
+      document.querySelector('[data-column-id="working"] [data-thread-card="thr_done"]'),
+    ).toBeNull();
+  });
+
+  it("a group of one whose only member is done keeps its frame in the Done lane", () => {
+    // The shape #318 called a bug for Pinned: the group's card is still on
+    // the board, so the group stays visible and joinable where the card is.
+    const doneOnly = thread({ id: "thr_done", updatedAt: NOW - 60_000 });
+    renderDoneBoard([doneOnly], { thr_done: "grp_1" }, new Set(["thr_done"]));
+    const frames = doneColumn().querySelectorAll('[data-group-box="grp_1"]');
+    expect(frames).toHaveLength(1);
+    expect(frames[0]?.querySelectorAll('[data-thread-card="thr_done"]')).toHaveLength(1);
+  });
+
+  it("an unassigned done card stays bare in the Done lane", () => {
+    // The inverse: nothing about a Done frame appears for a card outside the
+    // feature, so the ungrouped board renders exactly as it did.
+    const loose = thread({ id: "thr_loose", updatedAt: NOW - 60_000 });
+    renderDoneBoard([loose], {}, new Set(["thr_loose"]));
+    expect(doneColumn().querySelector("[data-group-box]")).toBeNull();
+    expect(doneColumn().querySelector('[data-thread-card="thr_loose"]')).not.toBeNull();
+  });
+
+  it("a live parent's Done projection card stands outside the group's Done frame", () => {
+    // A projection is the same thread object as its live parent, so the box
+    // plan claims its id while the parent is live. In Done that card is the
+    // family's second rendering, never the group's done slice: it keeps its
+    // own slot, and the frame holds only genuinely done members.
+    const parent = thread({
+      id: "thr_parent",
+      displayTitle: "Family parent",
+      updatedAt: NOW - 2 * 60 * 60 * 1000,
+    });
+    const doneChild = thread({
+      id: "thr_child_done",
+      parentThreadId: "thr_parent",
+      displayTitle: "Done child",
+      updatedAt: NOW - 60 * 60 * 1000,
+    });
+    const doneSibling = thread({
+      id: "thr_done",
+      displayTitle: "Settled sibling",
+      updatedAt: NOW - 90 * 60 * 1000,
+    });
+    const doneIds = new Set(["thr_child_done", "thr_done"]);
+    const assembly = assembleBoard(
+      [parent, doneChild, doneSibling],
+      "status",
+      context,
+      new Map(),
+      doneIds,
+      NOW,
+    );
+    renderDoneBoard(
+      [parent, doneChild, doneSibling],
+      { thr_parent: "grp_1", thr_child_done: "grp_1", thr_done: "grp_1" },
+      doneIds,
+      {
+        columns: assembly.columns,
+        nestedChildrenByParent: assembly.nestedChildrenByParent,
+        doneChildrenByParent: assembly.doneChildrenByParent,
+        childCountByParent: assembly.childCountByParent,
+      },
+    );
+    const column = doneColumn();
+    // The projection card renders in the lane, outside every frame.
+    const projection = column.querySelector('[data-thread-card="thr_parent"]');
+    expect(projection).not.toBeNull();
+    expect(projection?.closest("[data-group-box]")).toBeNull();
+    // The frame exists, and it holds the group's done member only.
+    const frame = column.querySelector('[data-group-box="grp_1"]');
+    expect(frame).not.toBeNull();
+    expect(frame?.querySelector('[data-thread-card="thr_done"]')).not.toBeNull();
+    expect(frame?.querySelector('[data-thread-card="thr_parent"]')).toBeNull();
   });
 });

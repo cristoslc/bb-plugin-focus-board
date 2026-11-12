@@ -5,7 +5,6 @@
   frame grp_release (Release 1.0) in Working → thr_ov_release_parent, thr_ov_release_c0, thr_ov_release_c1, thr_ov_release_c2, thr_ov_work_member
   frame grp_chat (Chat pipeline) in Working → thr_ov_chat_sort, thr_ov_chat_e2e
   frame grp_docs (Docs sweep) in Idle · Recent → thr_ov_docs_readme, thr_ov_docs_harness
-  frame grp_release (Release 1.0) in Done → thr_ov_release_parent, thr_ov_release_c_done
   card thr_ov_work_member in Working → inside frame grp_release
   card thr_ov_triage in Unread → inside frame grp_triage
 
@@ -15,23 +14,23 @@
   frame grp_release (Release 1.0) in Working → thr_ov_release_parent, thr_ov_release_c0, thr_ov_release_c1, thr_ov_release_c2
   frame grp_chat (Chat pipeline) in Working → thr_ov_chat_sort, thr_ov_chat_e2e
   frame grp_docs (Docs sweep) in Idle · Recent → thr_ov_docs_readme, thr_ov_docs_harness
-  frame grp_release (Release 1.0) in Done → thr_ov_release_parent, thr_ov_release_c_done
-  card thr_ov_work_member in Done → standalone (no frame)
+  frame grp_release (Release 1.0) in Done → thr_ov_work_member
+  card thr_ov_work_member in Done → inside frame grp_release
 
 === status · AFTER the Triage group-of-one member marked done
   frame grp_release (Release 1.0) in Unread → thr_ov_release_watch
   frame grp_release (Release 1.0) in Working → thr_ov_release_parent, thr_ov_release_c0, thr_ov_release_c1, thr_ov_release_c2
   frame grp_chat (Chat pipeline) in Working → thr_ov_chat_sort, thr_ov_chat_e2e
   frame grp_docs (Docs sweep) in Idle · Recent → thr_ov_docs_readme, thr_ov_docs_harness
-  frame grp_release (Release 1.0) in Done → thr_ov_release_parent, thr_ov_release_c_done
-  card thr_ov_triage in Done → standalone (no frame)
+  frame grp_release (Release 1.0) in Done → thr_ov_work_member
+  frame grp_triage (Triage) in Done → thr_ov_triage
+  card thr_ov_triage in Done → inside frame grp_triage
 
 === group · BEFORE (no member done)
   frame grp_chat (Chat pipeline) in Chat pipeline → thr_ov_chat_sort, thr_ov_chat_e2e
   frame grp_docs (Docs sweep) in Docs sweep → thr_ov_docs_readme, thr_ov_docs_harness
   frame grp_release (Release 1.0) in Release 1.0 → thr_ov_release_parent, thr_ov_work_member, thr_ov_release_watch
   frame grp_triage (Triage) in Triage → thr_ov_triage
-  frame grp_release (Release 1.0) in Done → thr_ov_release_parent, thr_ov_release_c_done
   card thr_ov_work_member in Release 1.0 → inside frame grp_release
   card thr_ov_triage in Triage → inside frame grp_triage
 
@@ -40,30 +39,33 @@
   frame grp_docs (Docs sweep) in Docs sweep → thr_ov_docs_readme, thr_ov_docs_harness
   frame grp_release (Release 1.0) in Release 1.0 → thr_ov_release_parent, thr_ov_release_watch
   frame grp_triage (Triage) in Triage → thr_ov_triage
-  frame grp_release (Release 1.0) in Done → thr_ov_release_parent, thr_ov_release_c_done
-  card thr_ov_work_member in Done → standalone (no frame)
+  frame grp_release (Release 1.0) in Done → thr_ov_work_member
+  card thr_ov_work_member in Done → inside frame grp_release
 
 === group · AFTER the Triage group-of-one member marked done
   frame grp_chat (Chat pipeline) in Chat pipeline → thr_ov_chat_sort, thr_ov_chat_e2e
   frame grp_docs (Docs sweep) in Docs sweep → thr_ov_docs_readme, thr_ov_docs_harness
   frame grp_release (Release 1.0) in Release 1.0 → thr_ov_release_parent, thr_ov_release_watch
-  frame grp_release (Release 1.0) in Done → thr_ov_release_parent, thr_ov_release_c_done
-  card thr_ov_triage in Done → standalone (no frame)
+  frame grp_release (Release 1.0) in Done → thr_ov_work_member
+  frame grp_triage (Triage) in Done → thr_ov_triage
+  card thr_ov_triage in Done → inside frame grp_triage
 
 === assertions
   PASS  [status] before: the Release 1.0 frame wraps its member
   PASS  [status] after: the done member's card is in the Done lane
-  PASS  [status] after: no frame wraps the done member anywhere
+  PASS  [status] after: the Done lane's frame wraps the group's done member
   PASS  [status] before: the Triage group-of-one renders exactly one frame, in the member's own lane
   PASS  [status] after: the Triage card is in the Done lane
-  PASS  [status] after: the Triage group renders NO frame anywhere
-  PASS  [status] after: Done still draws the Release 1.0 frame around the family projection, never around the done member
+  PASS  [status] after: the Triage group-of-one keeps its frame in the Done lane
+  PASS  [status] after: the Triage group renders exactly one frame, in Done
+  PASS  [status] after: the live parent's Done projection card stays outside the group's Done frame
   PASS  [group] before: the Release 1.0 frame wraps its member
   PASS  [group] after: the done member's card is in the Done lane
-  PASS  [group] after: no frame wraps the done member anywhere
+  PASS  [group] after: the Done lane's frame wraps the group's done member
   PASS  [group] before: the Triage group-of-one renders exactly one frame, in the member's own lane
   PASS  [group] after: the Triage card is in the Done lane
-  PASS  [group] after: the Triage group renders NO frame anywhere
-  PASS  [group] after: Done still draws the Release 1.0 frame around the family projection, never around the done member
+  PASS  [group] after: the Triage group-of-one keeps its frame in the Done lane
+  PASS  [group] after: the Triage group renders exactly one frame, in Done
+  PASS  [group] after: the live parent's Done projection card stays outside the group's Done frame
 
 frames → /Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_e8xdgg5dgq-1/bb-plugin-focus-board/docs/screenshots/repro-group-fence-done/

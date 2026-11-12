@@ -1,0 +1,72 @@
+# Operator-assisted E2E: a feature group's dashed frame wraps its done slice.
+#
+# The operator ruling 2026-11-11 (dec_yhouj8o5tyjh, the twin of #318's Pinned
+# ruling): a lane is a lane, so the Done lane frames the group's DONE members
+# the way every other lane frames its slice. The harness's base registry holds
+# one group ("chat-imagegent", `grp_chat_imagegent`) around the two active
+# threads thr_column_sort and thr_drag_done, so this suite walks the real
+# gesture — the card's own two-click Mark Done checkbox — and reads the frames
+# off the DOM the operator sees.
+#
+# What the suite holds:
+#   1. the group frames in the Working lane before anything settles;
+#   2. marking one member done draws the group's frame in the Done lane around
+#      that card, while the live lane keeps its own frame around the rest;
+#   3. marking the last member done keeps the group's frame in Done (the group
+#      of one that used to vanish from the board entirely);
+#   4. an ungrouped done card draws no frame in Done, so the ungrouped board
+#      renders exactly as it did.
+#
+# Run: npm run uat -- tests/manual/uat-group-done-fence.yaml
+suite: group-done-fence
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5251
+defaults:
+  groupBy: status
+  theme: dark
+  viewport: { width: 1400, height: 900 }
+
+steps:
+  - id: the-group-frames-its-live-members
+    title: The board opens with the group's frame in the Working lane and none in Done
+    goto: "?groupBy=status"
+    assert:
+      - group_frame: { column: working, box: grp_chat_imagegent, members: [thr_column_sort, thr_drag_done] }
+      - group_frame: { column: done, box: grp_chat_imagegent, absent: true }
+      - text_visible: "chat-imagegent"
+
+  - id: one-member-done-frames-the-done-slice
+    title: Marking a member done draws the group's frame in the Done lane around that card
+    gestures:
+      - click_aria: { label: "Arm Mark Done", within: thr_drag_done }
+      - click_aria: { label: "Mark Done", within: thr_drag_done }
+      - sleep: 1200
+    assert:
+      - group_frame: { column: done, box: grp_chat_imagegent, members: [thr_drag_done] }
+      - group_frame: { column: working, box: grp_chat_imagegent, members: [thr_column_sort], excludes: [thr_drag_done] }
+      - column_contains: { column: done, id: thr_drag_done }
+      - column_contains: { column: working, id: thr_column_sort }
+
+  - id: the-last-member-done-keeps-the-frame-in-done
+    title: A group whose only remaining card is done keeps its frame in the Done lane
+    gestures:
+      - click_aria: { label: "Arm Mark Done", within: thr_column_sort }
+      - click_aria: { label: "Mark Done", within: thr_column_sort }
+      - sleep: 1200
+    assert:
+      - group_frame: { column: done, box: grp_chat_imagegent, members: [thr_column_sort, thr_drag_done] }
+      - column_contains: { column: working, id: thr_column_sort, shown: false }
+      - column_contains: { column: working, id: thr_drag_done, shown: false }
+      - text_visible: "chat-imagegent"
+
+  - id: an-ungrouped-done-card-draws-no-frame
+    title: A card outside every group settles into Done with no frame around it
+    goto: "?groupBy=status"
+    gestures:
+      - click_aria: { label: "Arm Mark Done", within: thr_rpc_auth }
+      - click_aria: { label: "Mark Done", within: thr_rpc_auth }
+      - sleep: 1200
+    assert:
+      - column_contains: { column: done, id: thr_rpc_auth }
+      - group_frame: { column: done, box: grp_chat_imagegent, absent: true }

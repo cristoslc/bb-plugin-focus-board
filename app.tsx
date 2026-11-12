@@ -1904,10 +1904,8 @@ function BoardPage({ subPath }: { subPath: string }) {
         groupContext.groupNames,
         groupBy,
         groupContext,
-        doneIds,
-        Date.now(),
       ),
-    [liveThreads, groupsByThread, groupContext, groupBy, doneIds],
+    [liveThreads, groupsByThread, groupContext, groupBy],
   );
   // ONE keep pass: the family filter is the board's only filter rule. The
   // retired group-box pass re-gated its input and dropped dimmed family

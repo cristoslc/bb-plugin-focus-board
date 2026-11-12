@@ -1,5 +1,6 @@
 import {
   memo,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -69,6 +70,7 @@ import {
   columnRunInfo,
   flattenRuns,
   inBoxMoveTarget,
+  laneGroupBoxes,
   runsFromColumns,
   unitMoveTarget,
   type ColumnRunInfo,
@@ -308,12 +310,14 @@ interface BoardProps {
   /**
    * Thread id → its feature-group family box ({ groupId, name }) — the
    * dashed outline wrapper for sibling threads sharing a named group.
-   * Holds ONLY threads that render inside a box (a done member is absent; a
-   * group of one KEEPS its box, its lone member included, and a pinned
-   * member boxes in the Pinned lane like any other lane's slice);
-   * undefined/empty when the caller has no group data and every card
-   * renders standalone. The box is decoration and the group's drop target:
-   * no dot, no pill, no color — the name is secondary text.
+   * Holds ONLY threads that render inside a box (a group of one KEEPS its
+   * box, its lone member included, and a pinned or done member boxes in its
+   * own lane like any other lane's slice); undefined/empty when the caller
+   * has no group data and every card renders standalone. The box is
+   * decoration and the group's drop target: no dot, no pill, no color — the
+   * name is secondary text. The Done lane renders from a filtered copy of
+   * this map (`laneGroupBoxes`), which keeps a live parent's Done projection
+   * card out of the frame.
    */
   groupBoxOf?: GroupBoxMap;
   /**
@@ -1027,6 +1031,22 @@ function BoardBase({
   // the sweeps. The zoom recedes into a portal instead and plays no glint
   // field, so all four shimmer render sites share one read.
   const transportSparksOn = !prefersReducedMotion && effectiveTransportVariant === "dissolve";
+  // The box map ONE lane renders from (components/group-boxes
+  // `laneGroupBoxes`): every lane reads the plan unchanged, and the Done lane
+  // drops the ids it does not hold as done threads — a live parent's Done
+  // projection card is the family's Done half, never the group's done thread,
+  // so it keeps its own slot outside the frame (the operator ruling
+  // 2026-11-11, dec_yhouj8o5tyjh). Read through one resolver so the run walk,
+  // the run roles, the unit drags, and the transports all agree.
+  const doneLaneGroupBoxes = useMemo(
+    () => laneGroupBoxes("done", groupBoxOf ?? EMPTY_GROUP_BOXES, doneIds),
+    [groupBoxOf, doneIds],
+  );
+  const boxesForLane = useCallback(
+    (columnId: string) =>
+      columnId === "done" ? doneLaneGroupBoxes : (groupBoxOf ?? EMPTY_GROUP_BOXES),
+    [doneLaneGroupBoxes, groupBoxOf],
+  );
   const prevGroupByRef = useRef<GroupBy | null>(null);
   const prevLaneByThreadRef = useRef<ReadonlyMap<string, string> | null>(null);
   // The run-unit map (a box run is ONE unit): diffed per commit so a whole
@@ -1080,7 +1100,7 @@ function BoardBase({
     for (const column of columns) {
       for (const card of column.threads) threadsById.set(card.id, card);
     }
-    const runUnitsNext = runUnits(columns, groupBoxOf ?? EMPTY_GROUP_BOXES);
+    const runUnitsNext = runUnits(columns, groupBoxOf ?? EMPTY_GROUP_BOXES, boxesForLane);
     const prev = prevLaneByThreadRef.current;
     const prevRunUnits = prevRunUnitsRef.current;
     const prevColumns = prevColumnsRef.current;
@@ -1094,7 +1114,12 @@ function BoardBase({
     const prevDisplayIds = new Map<string, readonly string[]>();
     if (prevColumns !== null) {
       for (const prevColumn of prevColumns) {
-        const prevRuns = runsFromColumns([prevColumn], prevGroupBoxOf ?? EMPTY_GROUP_BOXES);
+        const prevRuns = runsFromColumns(
+          [prevColumn],
+          prevGroupBoxOf === null
+            ? EMPTY_GROUP_BOXES
+            : laneGroupBoxes(prevColumn.id, prevGroupBoxOf, doneIds),
+        );
         prevDisplayIds.set(
           prevColumn.id,
           (prevRuns.get(prevColumn.id) ?? []).map((item) =>
@@ -1176,7 +1201,7 @@ function BoardBase({
     ]);
     // The transports state update re-renders BEFORE paint; the wipes below
     // start in the same commit's effect so nothing flashes half-drawn.
-  }, [columns, groupBoxOf]);
+  }, [columns, groupBoxOf, boxesForLane, doneIds]);
 
   /** Cancel one transport's phase timers (a re-target or unmounting). */
   const cancelTransportTimers = (threadId: string) => {
@@ -1507,14 +1532,15 @@ function BoardBase({
     const ids = new Set<string>();
     if (groupBoxOf === undefined) return ids;
     for (const column of columns) {
+      const laneBoxes = boxesForLane(column.id);
       const runs =
-        runsFromColumns([column], groupBoxOf).get(column.id) ?? [];
-      for (const [threadId, info] of columnRunInfo(flattenRuns(runs), groupBoxOf)) {
+        runsFromColumns([column], laneBoxes).get(column.id) ?? [];
+      for (const [threadId, info] of columnRunInfo(flattenRuns(runs), laneBoxes)) {
         if (info.role !== "solo") ids.add(threadId);
       }
     }
     return ids;
-  }, [columns, groupBoxOf]);
+  }, [columns, boxesForLane]);
 
   // Announce a completed move so a reorder is legible without sight of the
   // insertion line, which is the only feedback a screen reader would miss.
@@ -2565,7 +2591,7 @@ function BoardBase({
           // radius. Reordering on every toggle made deselecting feel like
           // the board was shuffling a deck (observed 2026-10-01).
           const columnRuns =
-            runsFromColumns([column], groupBoxOf ?? EMPTY_GROUP_BOXES).get(column.id) ?? [];
+            runsFromColumns([column], boxesForLane(column.id)).get(column.id) ?? [];
           // The lane's DISPLAYED order, not the raw column order: the run
           // walk gathers each group's members into the lane's ONE frame at
           // the first member's slot, so a member's raw slot and its rendered
@@ -2603,7 +2629,7 @@ function BoardBase({
           // Family-box run info for this column (the decided group design):
           // who is boxed, at which edge — and which flat ids move as one
           // unit. Empty plan → plain cards everywhere, zero overhead.
-          const runInfo = columnRunInfo(shownThreads, groupBoxOf ?? EMPTY_GROUP_BOXES);
+          const runInfo = columnRunInfo(shownThreads, boxesForLane(column.id));
           const unitOf = (threadId: string): readonly string[] | undefined => {
             const run = runInfo.get(threadId);
             return run !== undefined && run.role !== "solo" && run.memberIds.length > 1

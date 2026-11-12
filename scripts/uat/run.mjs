@@ -1339,6 +1339,29 @@ const pageTouchPanRead = () => {
   return readingOut;
 };
 
+/**
+ * The feature-group frames ONE lane draws, each with the card ids inside it.
+ * The dashed `[data-group-box]` container is the group's slice in that lane,
+ * so its members are exactly the cards the operator sees fenced. A lane with
+ * no frame comes back as an empty list, never as absent: the caller's rule
+ * distinguishes "this lane draws no frame" from "this lane is not on the
+ * board", which are different failures.
+ */
+const pageGroupFrames = (columnId) => {
+  const section = document.querySelector(`section[data-column-id="${columnId}"]`);
+  if (section === null) return null;
+  return {
+    frames: [...section.querySelectorAll("[data-group-box]")].map((frame) => ({
+      box: frame.getAttribute("data-group-box"),
+      name: frame.querySelector("[data-group-box-label]")?.textContent?.trim() ?? null,
+      lead: frame.getAttribute("data-group-box-lead"),
+      members: [...frame.querySelectorAll("[data-thread-card]")].map((card) =>
+        card.getAttribute("data-thread-card"),
+      ),
+    })),
+  };
+};
+
 /** The pickup the board currently wears, if any (the armed-state reading). */
 const pageTouchArmed = () => {
   const el = document.querySelector("[data-touch-drag-armed]");
@@ -2632,6 +2655,53 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
         present === (want.shown ?? true),
         `lane holds [${state.ids.join(",")}]`,
       );
+    }
+    if (rule.group_frame !== undefined) {
+      // One lane's dashed feature-group frame: which group, and the cards it
+      // holds. `members` proves the slice a frame wraps, `excludes` proves a
+      // card the frame must NOT hold (a live parent's Done projection card),
+      // and `absent: true` proves the lane draws no such frame at all (an
+      // ungrouped done card, a grouping that never boxes).
+      const want = rule.group_frame;
+      const got = await page.evaluate(pageGroupFrames, want.column);
+      const frame =
+        got === null
+          ? null
+          : (got.frames.find((candidate) => candidate.box === want.box) ?? null);
+      const holds = frame === null ? "[]" : `[${frame.members.join(",")}]`;
+      if (got === null) {
+        expect(`column ${want.column} exists`, false, "column not found on the board");
+      } else if (want.absent === true) {
+        expect(
+          `no ${want.box} frame in ${want.column}`,
+          frame === null,
+          frame === null ? "absent" : `frame holds ${holds}`,
+        );
+      } else {
+        expect(
+          `${want.box} frame in ${want.column}`,
+          frame !== null,
+          frame === null ? "no frame" : "present",
+        );
+        if (want.members !== undefined) {
+          const wanted = want.members;
+          const ok = frame !== null && wanted.every((id) => frame.members.includes(id));
+          expect(
+            `${want.box} frame in ${want.column} holds [${wanted.join(",")}]`,
+            ok,
+            `frame holds ${holds}`,
+          );
+        }
+        if (want.excludes !== undefined) {
+          const banned = want.excludes;
+          const ok = frame !== null && banned.every((id) => !frame.members.includes(id));
+          expect(
+            `${want.box} frame in ${want.column} excludes [${banned.join(",")}]`,
+            ok,
+            frame === null ? "no frame" : `frame holds ${holds}`,
+          );
+        }
+      }
     }
     if (rule.column_ordered !== undefined) {
       const got = await page.evaluate(

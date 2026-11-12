@@ -1,7 +1,11 @@
 /**
- * Group fences in the Done lane probe (thr_e8xdgg5dgq): do the dashed
- * feature-group frames that wrap a group's slice in every lane also wrap its
- * done members' slice in Done?
+ * Group fences in the Done lane probe (thr_e8xdgg5dgq): the dashed
+ * feature-group frames that wrap a group's slice in every lane now wrap its
+ * done members' slice in Done too (the operator ruling 2026-11-11,
+ * dec_yhouj8o5tyjh). This probe is the surface frame for that ruling: it
+ * marks a member done through the card's own checkbox and reads the frames
+ * off the DOM, so a regression that drops Done from the box plan fails here
+ * as well as in the jsdom suite.
  *
  * Drives the `?overview=1` fixture (its four real groups live in
  * `SIM_OVERVIEW_GROUPS`) twice — once on the Attention (status) board, once on
@@ -17,7 +21,9 @@
  *    anywhere while its card is still on the board, in Done.
  *
  * Run once vite is up: `npx vite --config scripts/screenshot/vite.config.ts`
- * then `node scripts/screenshot/repro-group-fence-done.mjs`.
+ * then `node scripts/screenshot/repro-group-fence-done.mjs`. Exit 0 means the
+ * Done lane frames its done slice and keeps the live family's projection card
+ * outside it.
  */
 import { mkdir } from "node:fs/promises";
 import puppeteer from "puppeteer-core";
@@ -156,8 +162,13 @@ async function run(tag, query) {
   );
   check(
     tag,
-    "after: no frame wraps the done member anywhere",
-    afterMember.frames.every((frame) => !frame.members.includes("thr_ov_work_member")),
+    "after: the Done lane's frame wraps the group's done member",
+    afterMember.frames.some(
+      (frame) =>
+        frame.lane === "Done" &&
+        frame.groupId === "grp_release" &&
+        frame.members.includes("thr_ov_work_member"),
+    ),
   );
   check(
     tag,
@@ -175,18 +186,28 @@ async function run(tag, query) {
   );
   check(
     tag,
-    "after: the Triage group renders NO frame anywhere",
-    afterGroupOfOne.frames.every((frame) => frame.groupId !== "grp_triage"),
+    "after: the Triage group-of-one keeps its frame in the Done lane",
+    afterGroupOfOne.frames.some(
+      (frame) =>
+        frame.lane === "Done" &&
+        frame.groupId === "grp_triage" &&
+        frame.members.includes("thr_ov_triage"),
+    ),
   );
-  // The wrinkle worth naming: the Done lane already draws a Release 1.0 frame
-  // today. It wraps the live family's projection card (the same thread id as
-  // the live parent), never the group's own done member.
+  check(
+    tag,
+    "after: the Triage group renders exactly one frame, in Done",
+    afterGroupOfOne.frames.filter((frame) => frame.groupId === "grp_triage").length === 1,
+  );
+  // The projection rule: a live parent's Done projection card is the family's
+  // Done half, not the group's done thread, so it keeps its own slot and the
+  // frame holds the group's done members only.
   const doneFrames = afterGroupOfOne.frames.filter((frame) => frame.lane === "Done");
   check(
     tag,
-    "after: Done still draws the Release 1.0 frame around the family projection, never around the done member",
+    "after: the live parent's Done projection card stays outside the group's Done frame",
     doneFrames.some((frame) => frame.groupId === "grp_release") &&
-      doneFrames.every((frame) => !frame.members.includes("thr_ov_work_member")),
+      doneFrames.every((frame) => !frame.members.includes("thr_ov_release_parent")),
   );
 }
 

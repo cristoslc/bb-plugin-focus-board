@@ -324,6 +324,10 @@ export interface RunUnit {
  * slice per column — the same box run item appearing in several lanes — and
  * a split group keeps its per-thread transports (each member relocates on
  * its own; one ghost, per lane, is the honest animation for that).
+ *
+ * `boxesForColumn` resolves each column's own map: the board's Done lane
+ * renders from a filtered map (`laneGroupBoxes`), so the transport walk has
+ * to read the lane the way the frame drew it, not the board-wide plan.
  */
 export function runUnits(
   columns: readonly {
@@ -331,11 +335,12 @@ export function runUnits(
     threads: readonly PluginSidebarThread[];
   }[],
   groupBoxOf: GroupBoxMap,
+  boxesForColumn: (columnId: string) => GroupBoxMap = () => groupBoxOf,
 ): ReadonlyMap<string, RunUnit> {
   const units = new Map<string, RunUnit>();
   const byGroup = new Map<string, { columns: Set<string>; unit: RunUnit }>();
   for (const column of columns) {
-    for (const item of columnRunItems(column, groupBoxOf)) {
+    for (const item of columnRunItems(column, boxesForColumn(column.id))) {
       if (item.kind !== "box") continue;
       const groupId = item.box.groupId;
       const existing = byGroup.get(groupId);

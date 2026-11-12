@@ -602,9 +602,11 @@ function childPlacement(
  * reported 2026-10-15/16, a re-parent and a refusal both read as the board
  * ignoring the operator.
  *
- * The "group" view's assignment buckets are host data the board's own
- * groupBoxOf plan prunes (pinned/done members drop out of the plan), so
- * that one grouping cannot answer here: it reads as a visible nest.
+ * The "group" view's buckets are host assignments, and a nest there lands as
+ * a row under the parent's card inside that group's own column — a visible
+ * change, so no notice is owed. (The box plan no longer prunes members a
+ * nest could hide: `planGroupBoxes` boxes every visible member, done
+ * included.)
  *
  * The feature-group copy-out (step 5) is deliberately NOT in this list: a
  * group-different nest under a box-enabled view renders VISIBLY twice, the

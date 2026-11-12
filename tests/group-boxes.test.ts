@@ -7,6 +7,7 @@ import {
   columnRunInfo,
   flattenRuns,
   inBoxMoveTarget,
+  laneGroupBoxes,
   planGroupBoxes,
   runsFromColumns,
   unitMoveTarget,
@@ -37,8 +38,6 @@ describe("planGroupBoxes", () => {
       NAMES,
       "status",
       context,
-      new Set(),
-      NOW,
     );
     expect(plan.active).toBe(true);
     expect(plan.groupBoxOf.get("thr_a")?.groupId).toBe("grp_auth");
@@ -57,8 +56,6 @@ describe("planGroupBoxes", () => {
       NAMES,
       "status",
       context,
-      new Set(),
-      NOW,
     );
     // The solitary box stays: the outline is the drag-into target, so the
     // group hides only when its LAST candidate leaves (record GCs at zero).
@@ -69,10 +66,13 @@ describe("planGroupBoxes", () => {
     expect(box?.members.map((t) => t.id)).toEqual(["thr_a"]);
   });
 
-  it("done members stay out of the plan; pinned members box like every other lane", () => {
-    // The 2026-10-30 operator ruling: a pinned member keeps the group's
-    // frame in the Pinned lane. Done members still leave the box (a done
-    // card is out of the nest), and archived ones never reach the plan.
+  it("every visible member boxes, pinned and done alike; archived ones never reach the plan", () => {
+    // The 2026-10-30 operator ruling brought pinned members back into the
+    // plan (the Pinned lane is one of the board's lanes) and the 2026-11-11
+    // ruling did the same for done members (the Done lane is a lane too,
+    // dec_yhouj8o5tyjh). The plan answers membership for every visible
+    // member; which lane frames which slice is the board's question, and the
+    // Done frame's projection-card exclusion lives in `laneGroupBoxes`.
     const threads = [
       thread({ id: "thr_done", updatedAt: NOW - 1000 }),
       thread({ id: "thr_pinned", isPinned: true, updatedAt: NOW - 1000 }),
@@ -92,14 +92,13 @@ describe("planGroupBoxes", () => {
       NAMES,
       "status",
       context,
-      new Set(["thr_done"]),
-      NOW,
     );
-    expect(plan.groupBoxOf.has("thr_done")).toBe(false);
+    expect(plan.groupBoxOf.has("thr_done")).toBe(true);
     expect(plan.groupBoxOf.has("thr_archived")).toBe(false);
     expect(plan.groupBoxOf.has("thr_pinned")).toBe(true);
     expect(plan.groupBoxOf.has("thr_a")).toBe(true);
     expect(plan.groupBoxOf.get("thr_a")?.members.map((t) => t.id)).toEqual([
+      "thr_done",
       "thr_pinned",
       "thr_a",
       "thr_b",
@@ -118,8 +117,6 @@ describe("planGroupBoxes", () => {
       NAMES,
       "status",
       context,
-      new Set(),
-      NOW,
     );
     expect(plan.active).toBe(true);
     expect(plan.groupBoxOf.get("thr_pin")?.groupId).toBe("grp_auth");
@@ -161,8 +158,6 @@ describe("planGroupBoxes", () => {
       NAMES,
       "status",
       context,
-      new Set(),
-      NOW,
     );
     const frame = (ranks: Record<string, readonly string[]>) => {
       const columns = buildColumns(
@@ -211,8 +206,6 @@ describe("planGroupBoxes", () => {
       NAMES,
       "status",
       context,
-      new Set(),
-      NOW,
     );
     const columns = buildColumns(threads, "status", context, new Map(), new Set(), NOW);
     expect(
@@ -233,8 +226,6 @@ describe("planGroupBoxes", () => {
       NAMES,
       "status",
       context,
-      new Set(),
-      NOW,
     );
     const columns = buildColumns(threads, "status", context, new Map(), new Set(), NOW);
     const recent = columns.find((column) => column.id === "idle-recent");
@@ -258,8 +249,6 @@ describe("planGroupBoxes", () => {
       NAMES,
       "project",
       { projects, providers: [] },
-      new Set(),
-      NOW,
     );
     expect(plan.active).toBe(true);
     expect(plan.groupBoxOf.get("thr_a")?.groupId).toBe("grp_auth");
@@ -280,8 +269,6 @@ describe("planGroupBoxes", () => {
       NAMES,
       "project",
       { projects, providers: [] },
-      new Set(),
-      NOW,
     );
     expect(plan.active).toBe(true);
     expect(plan.groupBoxOf.get("thr_a")?.name).toBe("Auth rework");
@@ -299,8 +286,6 @@ describe("planGroupBoxes", () => {
       NAMES,
       "provider",
       { projects: [] as never, providers: [{ id: "opencode", displayName: "OpenCode" }] },
-      new Set(),
-      NOW,
     );
     expect(plan.active).toBe(true);
     expect(plan.groupBoxOf.get("thr_a")).toBe(plan.groupBoxOf.get("thr_b"));
@@ -311,8 +296,6 @@ describe("planGroupBoxes", () => {
       NAMES,
       "machine",
       context,
-      new Set(),
-      NOW,
     );
     expect(machinePlan.active).toBe(true);
   });
@@ -328,8 +311,6 @@ describe("planGroupBoxes", () => {
       NAMES,
       "parent",
       context,
-      new Set(),
-      NOW,
     );
     expect(plan.active).toBe(false);
     expect(plan.groupBoxOf.size).toBe(0);
@@ -351,8 +332,6 @@ describe("planGroupBoxes", () => {
         groupsByThread: assignments,
         groupNames: NAMES,
       },
-      new Set(),
-      NOW,
     );
     expect(plan.active).toBe(true);
     // Under the group grouping the members' NATURAL column IS the group's
@@ -371,8 +350,6 @@ describe("planGroupBoxes", () => {
       NAMES,
       "recency",
       context,
-      new Set(),
-      NOW,
     );
     const columns = buildColumns(threads, "recency", context, new Map(), new Set(), NOW);
     const recent = columns.find((column) => column.id === "recent");
@@ -392,8 +369,6 @@ describe("planGroupBoxes", () => {
       NAMES,
       "recency",
       context,
-      new Set(),
-      NOW,
     );
   });
 
@@ -409,8 +384,6 @@ describe("planGroupBoxes", () => {
       NAMES,
       "status",
       context,
-      new Set(),
-      NOW,
     );
     // grp_unknown has no name → thr_b alone → no box for it.
     expect(plan.groupBoxOf.has("thr_b")).toBe(false);
@@ -437,8 +410,6 @@ describe("runsFromColumns — in-box member order follows the column's own order
     NAMES,
     "status",
     context,
-    new Set(),
-    NOW,
   );
   it("renders the box members in the column's display order, not the plan's", () => {
     const columns = buildColumns(
@@ -471,8 +442,6 @@ describe("runsFromColumns", () => {
     NAMES,
     "status",
     context,
-    new Set(),
-    NOW,
   );
 
   it("box members gather contiguously at the first member's slot, cards keep theirs", () => {
@@ -508,8 +477,6 @@ describe("runsFromColumns", () => {
         NAMES,
         "status",
         context,
-        new Set(),
-        NOW,
       );
       const columns = buildColumns(solo, "status", context, new Map(), new Set(), NOW, {});
       const working = columns.find((c) => c.id === "working");
@@ -553,8 +520,6 @@ describe("runsFromColumns under the split default — the frame follows every la
     NAMES,
     "status",
     context,
-    new Set(),
-    NOW,
   );
   const runsOf = (columnId: string) => {
     const columns = buildColumns(threads, "status", context, new Map(), new Set(), NOW, {});
@@ -600,8 +565,6 @@ describe("runsFromColumns under the split default — the frame follows every la
       NAMES,
       "status",
       context,
-      new Set(),
-      NOW,
     );
     const columns = buildColumns(coLocated, "status", context, new Map(), new Set(), NOW);
     const working = columns.find((candidate) => candidate.id === "working");
@@ -638,8 +601,6 @@ describe("runsFromColumns — one frame per group per lane (the lane gathers thr
     NAMES,
     "status",
     context,
-    new Set(),
-    NOW,
   );
   const runsOf = () => {
     const columns = buildColumns(threads, "status", context, new Map(), new Set(), NOW);
@@ -701,8 +662,6 @@ describe("columnRunInfo and unitMoveTarget", () => {
     NAMES,
     "status",
     context,
-    new Set(),
-    NOW,
   );
   const order = ["thr_a", "thr_b", "thr_c", "thr_x"];
   const info = columnRunInfo(threads, plan.groupBoxOf);
@@ -786,8 +745,6 @@ describe("the split plan leaves the frozen lane to the pane", () => {
     NAMES,
     "status",
     context,
-    new Set(),
-    NOW,
   );
   const frozen = new Map([["thr_a", { id: "idle-today", label: "Idle · Today" }]]);
 
@@ -838,8 +795,6 @@ describe("inBoxMoveTarget (reordering members INSIDE one box)", () => {
     NAMES,
     "status",
     context,
-    new Set(),
-    NOW,
   );
   const order = ["thr_c", "thr_b", "thr_a", "thr_x", "thr_y"];
   const info = columnRunInfo(threads, plan.groupBoxOf);
@@ -899,8 +854,6 @@ describe("inBoxMoveTarget (reordering members INSIDE one box)", () => {
       NAMES,
       "status",
       context,
-      new Set(),
-      NOW,
     );
     const soloInfo = columnRunInfo(threads, soloPlan.groupBoxOf);
     expect(inBoxMoveTarget(order, "thr_x", "before", "thr_c", soloInfo)).toBeNull();
@@ -964,10 +917,8 @@ describe("planGroupBoxes under the split default — families keep their own lan
 
   const boxedPlan = (
     threads: readonly PluginSidebarThread[],
-    doneIds: ReadonlySet<string> = new Set(),
     groupBy: "status" | "recency" = "status",
-  ) =>
-    planGroupBoxes(threads, groupOf({ thr_root: "grp_auth" }), NAMES, groupBy, context, doneIds, NOW);
+  ) => planGroupBoxes(threads, groupOf({ thr_root: "grp_auth" }), NAMES, groupBy, context);
 
   it("a member's active child lifts nothing: the plan emits no lane claim", () => {
     const threads = [
@@ -987,13 +938,25 @@ describe("planGroupBoxes under the split default — families keep their own lan
     expect(plan.groupBoxOf.has("thr_root")).toBe(true);
   });
 
-  it("a done child is copied out", () => {
+  it("a done child of a member boxes too: membership is the plan's, placement is the board's", () => {
+    // The plan answers membership only (`childPlacement` decides where a
+    // child renders). A done child that carries the group sits in the plan
+    // like any other member, and the Done lane's frame draws that
+    // membership minus the live parent's projection card — see
+    // `laneGroupBoxes`.
     const threads = [
       thread({ id: "thr_root", updatedAt: NOW - 5 * MINUTE }),
       thread({ id: "thr_kid", status: "active", updatedAt: NOW - MINUTE, parentThreadId: "thr_root" }),
     ];
-    const plan = boxedPlan(threads, new Set(["thr_kid"]));
+    const plan = planGroupBoxes(
+      threads,
+      groupOf({ thr_root: "grp_auth", thr_kid: "grp_auth" }),
+      NAMES,
+      "status",
+      context,
+    );
     expect(plan.groupBoxOf.has("thr_root")).toBe(true);
+    expect(plan.groupBoxOf.has("thr_kid")).toBe(true);
   });
 
   it("a pinned child is copied out", () => {
@@ -1047,5 +1010,52 @@ describe("doneRecencyCompare is untouched by the group plan", () => {
       thread({ id: "thr_b" }),
     ].sort(doneRecencyCompare(times));
     expect(sorted.map((t) => t.id)).toEqual(["thr_b", "thr_a"]);
+  });
+});
+describe("laneGroupBoxes — the Done lane's own map", () => {
+  // The operator ruling 2026-11-11 (dec_yhouj8o5tyjh): the Done lane frames
+  // the group's DONE slice. One card the plan claims is not a done thread:
+  // a live parent's Done projection card, which carries that live thread's
+  // id because the projection is the parent's own thread object. It keeps
+  // its own slot outside the frame.
+  const live = thread({ id: "thr_live" });
+  const doneMember = thread({ id: "thr_done" });
+  const boxes = new Map([
+    ["thr_live", { groupId: "grp_auth", name: "Auth rework", members: [live, doneMember] }],
+    ["thr_done", { groupId: "grp_auth", name: "Auth rework", members: [live, doneMember] }],
+  ]);
+  const doneIds = new Set(["thr_done"]);
+
+  it("drops the ids the lane does not hold as done threads", () => {
+    const lane = laneGroupBoxes("done", boxes, doneIds);
+    expect(lane.has("thr_done")).toBe(true);
+    expect(lane.has("thr_live")).toBe(false);
+    expect(lane.size).toBe(1);
+  });
+
+  it("every other lane reads the plan unchanged, by identity", () => {
+    // Identity, not equality: the board hands the same map to every lane it
+    // does not filter, so nothing downstream can see a re-derived map.
+    for (const columnId of ["status:working", "unread", "pinned", "idle-recent"]) {
+      expect(laneGroupBoxes(columnId, boxes, doneIds)).toBe(boxes);
+    }
+  });
+
+  it("a map with nothing to drop comes back as the same reference", () => {
+    const allDone = new Set(["thr_live", "thr_done"]);
+    expect(laneGroupBoxes("done", boxes, allDone)).toBe(boxes);
+    expect(laneGroupBoxes("done", new Map(), doneIds).size).toBe(0);
+  });
+
+  it("a done-only group keeps its frame in Done", () => {
+    // The sharp case: the group of one whose member is done. The plan boxes
+    // it, and the Done lane keeps that box, so the group stays visible and
+    // joinable where its card sits.
+    const solo = thread({ id: "thr_solo" });
+    const soloBoxes = new Map([
+      ["thr_solo", { groupId: "grp_solo", name: "Triage", members: [solo] }],
+    ]);
+    const lane = laneGroupBoxes("done", soloBoxes, new Set(["thr_solo"]));
+    expect(lane.has("thr_solo")).toBe(true);
   });
 });
