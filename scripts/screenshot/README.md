@@ -313,6 +313,21 @@ host app involved.
   tables, plus before/after shots). Run the vite harness first (same as above);
   honors the same `CHROME_PATH`, `HARNESS_URL`, and `OUT_DIR` overrides.
 
+- `repro-out-ghost.mjs` — one-shot headless repro/verification for issue #391
+  (a relocation that empties its old lane used to take the transport dissolve's
+  out-ghost with it: the lane leaves the render and the departing card popped).
+  Drives the shape as a data move on the harness (the last card of the Idle ·
+  Earlier lane relocates to Pinned, dissolve transport selected through the
+  stored preference), in two passes: stills through the dissolve window
+  (`pre`, `mid`, `collapse`, `post`) and a fresh page sampled every ~20ms (lane
+  present, `data-column-closing`, ghost present, ghost phase, opacity). Run it
+  per tree with `LABEL=before` / `LABEL=after`; the pre-fix tree samples no
+  ghost frame at all while the fixed one samples the wipe and the collapse
+  across ~600ms inside a held frame. Artifacts land in
+  `docs/screenshots/repro-out-ghost/` (`evidence-<label>.json` plus the frames,
+  read by that folder's README). Run the vite harness first (same as above);
+  honors the same `CHROME_PATH` and `HARNESS_URL` overrides.
+
 - `probe-board-touch-scroll.mjs` — the touch-pan grid for issue #328 (the
   phone report: the columns drag around and the board never scrolls). At
   390×844 with `hasTouch` + `isMobile` it drives a real CDP touch pan in both
