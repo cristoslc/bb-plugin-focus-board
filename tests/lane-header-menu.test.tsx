@@ -251,17 +251,34 @@ describe("lane header: the per-lane menu", () => {
     }
   });
 
-  it("the name+caret pair carries the chip's hover affordance", () => {
+  it("the name+caret pair carries the stronger interactive-state hover", () => {
     renderBoard(twoUnread);
-    // The toolbar chips light on hover with bg-accent (components/
-    // board-toolbar.tsx's trigger anatomy); the lane's name is the same kind
-    // of dropdown trigger and must read as one. bb's own rows carry the
-    // pointer cursor as the hover signal (its sidebar rows compute
-    // cursor: pointer, measured live 2026-11-05); Tailwind v4's preflight
-    // resets buttons to the arrow, so the pair names the cursor explicitly.
+    // jsdom computes no :hover, so this pins the class SET rather than a
+    // painted pixel; the harness frames in docs/screenshots/lane-name-hover/
+    // are the picture (rest beside hover, pointer parked on the pair).
+    //
+    // The fill is bb's interactive-state step (`hover:bg-state-active`) and NO
+    // longer the dropdown chips' `hover:bg-accent`: accent is the same weight
+    // as bb's `state-hover`, which measured 1.24:1 against the dark canvas and
+    // 1.35:1 against the light one — near invisible on the plain board, which
+    // is what the operator's stronger-hover ruling names. state-active is bb's
+    // step above it (1.63:1 / 1.60:1 on the same pass) and the fill bb's own
+    // small rounded caret triggers hover with, so it reads as this app's
+    // vocabulary rather than a new tone.
     const trigger = laneMenuTrigger("unread");
-    expect(trigger.className).toContain("hover:bg-accent");
+    expect(trigger.className).toContain("hover:bg-state-active");
+    expect(trigger.className).not.toContain("hover:bg-accent");
     expect(trigger.className).toContain("cursor-pointer");
+    // The caret rides the same hover: rest is muted-foreground at 60%, hover
+    // is full ink — the fill-plus-glyph-tone pair bb's sidebar controls carry.
+    // The group is NAMED because the lane header already owns a plain `group`
+    // (the hide-lane icon), and a bare group-hover would fire from anywhere in
+    // the header.
+    expect(trigger.className).toContain("group/lane-trigger");
+    const caret = trigger.querySelector("svg");
+    expect(caret?.getAttribute("class")).toContain("text-muted-foreground/60");
+    expect(caret?.getAttribute("class")).toContain("group-hover/lane-trigger:text-foreground");
+    expect(caret?.getAttribute("class")).toContain("transition-[color,transform]");
   });
 
   it("Escape closes the lane menu, like every dropdown on the board", () => {
