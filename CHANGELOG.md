@@ -9,6 +9,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+### Fixed
+
+## [1.7.12] - 2026-11-12
+
+### Added
+
+### Changed
+
 #### Groups and family boxes
 
 - **A group's dashed frame now wraps its done cards in the Done lane.** Marking a member done used to drop its card out of the frame, and a group of one lost its frame everywhere once its only member settled. The frame now follows the group into Done, labelled and still a drop target, while a live family's Done projection card keeps its own slot outside it.
