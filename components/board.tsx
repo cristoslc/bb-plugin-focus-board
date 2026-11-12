@@ -90,6 +90,7 @@ import {
   planLaneTransports,
   collapseRunTransports,
   runUnits,
+  withClosingLanes,
   TRANSPORT_BATCH_CAP,
   TRANSPORT_COLLAPSE_MS,
   TRANSPORT_EASE,
@@ -1501,6 +1502,23 @@ function BoardBase({
     }
   }, [transports, prefersReducedMotion, effectiveTransportVariant]);
 
+  // The lanes the board renders: its own columns, plus a frame held open for
+  // every lane a dissolve is still leaving (issue #391). `buildColumns` drops
+  // a lane the moment it holds no cards, which used to take the departing
+  // ghost with it; the held frame is derived from the live plays, so it lives
+  // exactly the transport's own remove clock and no longer. Nothing else
+  // reads it: placement, ordering, drops, and the lane-diff's snapshots all
+  // stay on `columns`.
+  const viewColumns = useMemo(
+    () =>
+      withClosingLanes(columns, transports, ({ id, label }) => ({
+        id,
+        label,
+        threads: [],
+      })),
+    [columns, transports],
+  );
+
   const sweepActive = sweepCandidatesFor !== undefined && onSweepArm !== undefined;
   // Clicking empty board area (anything that is not a card, control, or link)
   // while a thread is open closes the pane. The same surface clears the amber
@@ -2551,7 +2569,7 @@ function BoardBase({
             horizontalLanes && "flex-col",
           )}
         >
-        {columns.map((column) => {
+        {viewColumns.map(({ column, closing }) => {
           const dropHandler = dropHandlerFor(column.id);
           const isDropTarget = dropHandler !== null;
           const sweepKind = sweepColumnKind(column.id);
@@ -2619,6 +2637,12 @@ function BoardBase({
             transports
               .filter((play) => play.fromColumnId === column.id || play.toColumnId === column.id)
               .map((play) => [play.threadId, play]),
+          );
+          // The ghosts departing FROM this lane. A held frame has no cards of
+          // its own, so this is the only content it renders — and the reason
+          // it renders at all (issue #391).
+          const laneOutGhosts = transports.filter(
+            (play) => play.fromColumnId === column.id,
           );
           // Seed on first intent: every card is a reorder target for its OWN
           // lane, whether or not that lane has a stored order yet. The drag
@@ -2934,12 +2958,20 @@ function BoardBase({
               key={column.id}
               data-column-id={column.id}
               data-column-ordered={isOrdered}
+              // A held frame (issue #391): the lane closed underneath a
+              // departing ghost and renders only that dissolve's remainder.
+              data-column-closing={closing ? "" : undefined}
               // The lane's rank key, read by the touch pickup
               // (components/touch-hold-drag) to stamp the same drag type the
               // mouse's dragstart writes: one key, both gestures.
               data-rank-key={rankKey}
               aria-label={`${column.label}, ${column.threads.length} threads`}
               onDragOver={(event) => {
+                // A held frame is not a drop surface: the board's data no
+                // longer has this lane, so a write aimed at it would land in
+                // a place the next commit cannot render. It exists only to
+                // carry its ghost to the dissolve's end.
+                if (closing) return;
                 // A dot drag (issue #249) authorises nowhere but its home
                 // strip: the floor never promises it, so a release over a
                 // column resolves as the refused dragend, and a member can
@@ -2985,6 +3017,7 @@ function BoardBase({
                   : undefined
               }
               onDrop={(event) => {
+                if (closing) return; // a held frame takes no writes (above)
                 const threadId = draggedIdFor(event, draggingIdRef.current);
                 const childOf = threadId === "" ? null : liveParentOf(threadId);
                 const releaseFloor = () => {
@@ -3088,7 +3121,8 @@ function BoardBase({
                   // already preventDefaults a child drag and will accept the
                   // drop (the header is inside it), so nothing semantic
                   // happens here — the amber just follows the cursor up to
-                  // the small element under it.
+                  // the small element under it. A held frame offers nothing.
+                  if (closing) return;
                   const draggedId = draggingIdRef.current;
                   if (draggedId === null || draggedId === "") return;
                   if (onReparent === undefined || liveParentOf(draggedId) === null) return;
@@ -3104,7 +3138,9 @@ function BoardBase({
                   // no floor append. stopPropagation keeps the section's
                   // floor handler (state + rank in one gesture) out of it —
                   // dropping beside the cards (insertion line) stays the way
-                  // to both change state AND place the card.
+                  // to both change state AND place the card. A held frame's
+                  // title takes no write either (issue #391).
+                  if (closing) return;
                   const threadId = draggedIdFor(event, draggingIdRef.current);
                   const childOf = threadId === "" ? null : liveParentOf(threadId);
                   const releaseFloor = () => {
@@ -3209,7 +3245,7 @@ function BoardBase({
                 <span className="text-[11px] tabular-nums text-muted-foreground/60">
                   {column.threads.length}
                 </span>
-                {(sweepActive && sweepKind !== null) || hideLaneHere ? (
+                {!closing && ((sweepActive && sweepKind !== null) || hideLaneHere) ? (
                   <span className="ml-auto flex items-center gap-0.5">
                     {sweepActive && sweepKind !== null ? (
                       <>
@@ -3334,7 +3370,9 @@ function BoardBase({
                     : "overflow-y-auto overflow-x-clip",
                 )}
               >
-                {column.threads.length === 0 && dragOverColumn !== column.id ? (
+                {column.threads.length === 0 &&
+                laneOutGhosts.length === 0 &&
+                dragOverColumn !== column.id ? (
                   column.id === "working" ? (
                     // The ever-present Working lane answers the obvious
                     // question — is anything running? — with words.
@@ -3347,7 +3385,7 @@ function BoardBase({
                     </p>
                   ) : null
                 ) : null}
-                {column.threads.length === 0 ? null : (() => {
+                {column.threads.length === 0 && laneOutGhosts.length === 0 ? null : (() => {
                   // One renderer per card slot, shared by standalone cards
                   // and box members (a boxed run renders INSIDE one real
                   // dashed container, so its members' markup is identical
@@ -4198,10 +4236,9 @@ function BoardBase({
                   // The transport ghosts ride their OLD slot positions in
                   // this lane: the planner snapshots the lane's order, and
                   // insertGhostSlots weaves the ghosts in between the runs
-                  // their slots occupied.
-                  const laneOutGhosts = transports.filter(
-                    (play) => play.fromColumnId === column.id,
-                  );
+                  // their slots occupied. `laneOutGhosts` is read at the top
+                  // of the lane, where the body's render gate needs it — a
+                  // held frame draws its ghosts and nothing else (issue #391).
                   // One display run's markup (the ghost render maps
                   // entries through it — every entry that is not a ghost
                   // is a run of this column).
@@ -5086,7 +5123,7 @@ function BoardBase({
                     </ul>
                   );
                 })()}
-                {column.id === "working" ? (
+                {column.id === "working" && !closing ? (
                   <button
                     type="button"
                     onClick={onNewTask}

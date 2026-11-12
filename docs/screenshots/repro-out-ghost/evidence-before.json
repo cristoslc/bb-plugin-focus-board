@@ -1,0 +1,378 @@
+{
+ "issue": 391,
+ "label": "before",
+ "query": "http://localhost:5173/",
+ "lane": "idle-earlier",
+ "leavingCard": "thr_env_edge",
+ "preRollCard": "thr_icon_lazy",
+ "clocksMs": {
+  "wipeOut": 400,
+  "collapse": 200,
+  "remove": 600
+ },
+ "readings": {
+  "before": {
+   "lane": true,
+   "laneClosing": null,
+   "laneCards": 2,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  "afterPreRoll": {
+   "lane": true,
+   "laneClosing": null,
+   "laneCards": 1,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  }
+ },
+ "verdict": {
+  "ghostSamples": 0,
+  "ghostAppearedAtMs": null,
+  "ghostLeftAtMs": null,
+  "ghostMs": 0,
+  "ghostPhases": [],
+  "ghostLowestOpacity": null,
+  "heldFrameSamples": 0,
+  "laneLeftAtMs": 0,
+  "poppedWithLane": true
+ },
+ "samples": [
+  {
+   "t": 0,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 54,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 76,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 98,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 120,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 143,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 168,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 194,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 219,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 255,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 297,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 326,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 360,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 385,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 408,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 429,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 451,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 474,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 497,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 519,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 543,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 568,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 591,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 615,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 665,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 704,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 728,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 757,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 780,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 805,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 829,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 852,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 874,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 903,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 931,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 955,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  },
+  {
+   "t": 978,
+   "lane": false,
+   "laneClosing": null,
+   "laneCards": 0,
+   "ghost": false,
+   "ghostPhase": null,
+   "ghostOpacity": null
+  }
+ ],
+ "pageProblems": []
+}
