@@ -1,0 +1,104 @@
+# release-pipeline run --dry-run — 2026-11-11 EST, thread thr_3p7dibb9a3, branch bb/hybrid-release-pipeline-the-deterministic-driver-thr_3p7dibb9a3 at cdf78df
+# Nothing below is written, committed, tagged, pushed or published: it is the plan, and every line reproduces on this branch.
+
+release-pipeline: run (dry run — nothing is written, tagged, pushed or published)
+
+==> release-pipeline: preflight
+  ok   clean-tree
+  ok   no-merge-in-flight
+  ok   not-on-main
+  ok   origin-fetched
+  ok   dev-up-to-date
+  ok   version-is-dev-candidate
+  ok   unreleased-non-empty — 4 bullet(s) waiting
+  ok   signing-config-present
+  ok   gh-present
+  preflight: ready to release
+
+==> release-pipeline: finalize
+  plan: release 1.7.12 on 2026-11-11, commit subject "Release 1.7.12: A group's dashed frame now wraps its done cards in the Done lane"
+  plan: rewrite CHANGELOG.md (96341 bytes)
+  plan: rewrite package.json (2462 bytes)
+  plan: rewrite package-lock.json (171425 bytes)
+  plan: rewrite lib/whats-new.ts (16457 bytes)
+  plan: rewrite tests/whats-new.test.ts (22230 bytes)
+  plan: regenerate lib/unreleased-changelog.generated.ts and lib/whats-new.generated.ts
+  plan: git add CHANGELOG.md package.json package-lock.json lib/whats-new.ts tests/whats-new.test.ts lib/unreleased-changelog.generated.ts lib/whats-new.generated.ts
+  plan: git commit -m "Release 1.7.12: A group's dashed frame now wraps its done cards in the Done lane"
+  plan: the finalize commit rides its own PR; run pauses at the merge gate until it is on origin/dev
+
+==> release-pipeline: tag
+  plan: v1.7.12 on the finalize commit it would create — "Release 1.7.12: A group's dashed frame now wraps its done cards in the Done lane"
+  plan: push v1.7.12, then <finalize commit>:refs/heads/main
+  plan: git worktree add --detach /var/folders/05/9j9563qs7k1gj2nw0jv_qlf40000gn/T/focus-board-release-1.7.12 origin/main
+  plan: git -C /var/folders/05/9j9563qs7k1gj2nw0jv_qlf40000gn/T/focus-board-release-1.7.12 merge --ff-only <finalize commit>
+  plan: git -C /var/folders/05/9j9563qs7k1gj2nw0jv_qlf40000gn/T/focus-board-release-1.7.12 tag -a v1.7.12 -m "Release 1.7.12: A group's dashed frame now wraps its done cards in the Done lane"
+  plan: git push origin v1.7.12
+  plan: git push origin <finalize commit>:refs/heads/main
+  plan: git worktree remove --force /var/folders/05/9j9563qs7k1gj2nw0jv_qlf40000gn/T/focus-board-release-1.7.12
+
+==> release-pipeline: publish
+  notes: ## Focus Board 1.7.12 (2026-11-11)
+  compare: v1.7.11...v1.7.12
+  plan: notes body —
+    ## Focus Board 1.7.12 (2026-11-11)
+    
+    ### Added
+    
+    ### Changed
+    
+    #### Groups and family boxes
+    
+    - **A group's dashed frame now wraps its done cards in the Done lane.** Marking a member done used to drop its card out of the frame, and a group of one lost its frame everywhere once its only member settled. The frame now follows the group into Done, labelled and still a drop target, while a live family's Done projection card keeps its own slot outside it.
+    
+    #### The board's lanes
+    
+    - **A lane's name and caret light up as a chip on hover.** The dropdown chips' faint tint read as nothing on the plain canvas; the pair now takes bb's interactive-state fill and its caret sharpens to full ink, so the lane menu reads as a target before you click it.
+    
+    ### Fixed
+    
+    #### Card animations
+    
+    - **A card that empties its lane finishes its dissolve before the lane closes.** The departing ghost used to vanish the instant its lane left the board, so the card popped instead of easing out. The lane now holds its frame until the dissolve's last tick, then closes with the ghost.
+    
+    #### Groups and family boxes
+    
+    - **A Group-filtered board keeps every child of a matched family.** A parent card came up one row short when a child lived in another group. The child now keeps its row inside the card, with its dot and its menu, and is never pulled into its own group's lane.
+    
+    **Full changelog**: https://github.com/cristoslc/bb-plugin-focus-board/compare/v1.7.11...v1.7.12
+  plan: gh release create v1.7.12 --title "Focus Board 1.7.12" --notes-file <notes> --verify-tag
+  plan: no binary assets at create; demo gifs ride upload-demos
+
+==> release-pipeline: upload-demos
+  manifest: docs/releases/1.7.12/storyboard.yaml — 4 demo(s), 0 named skip(s)
+  plan: gif not captured yet: docs/screenshots/release-demos/v1.7.12-group-frame-done.gif
+  plan: gif not captured yet: docs/screenshots/release-demos/v1.7.12-group-filter-child.gif
+  plan: gif not captured yet: docs/screenshots/release-demos/v1.7.12-lane-chip-hover.gif
+  plan: gif not captured yet: docs/screenshots/release-demos/v1.7.12-lane-dissolve.gif
+  plan: gh release upload v1.7.12 docs/screenshots/release-demos/v1.7.12-group-frame-done.gif --clobber
+  plan: gh release upload v1.7.12 docs/screenshots/release-demos/v1.7.12-group-filter-child.gif --clobber
+  plan: gh release upload v1.7.12 docs/screenshots/release-demos/v1.7.12-lane-chip-hover.gif --clobber
+  plan: gh release upload v1.7.12 docs/screenshots/release-demos/v1.7.12-lane-dissolve.gif --clobber
+  plan: gh release edit v1.7.12 --notes-file <section + 4 caption(s)>
+
+==> release-pipeline: re-arm
+  plan: rewrite package.json (2466 bytes)
+  plan: rewrite package-lock.json (171433 bytes)
+  plan: rewrite lib/whats-new.ts (16461 bytes)
+  plan: git commit -m "Re-arm dev at 1.7.13-dev after the 1.7.12 release"
+  plan: the re-arm commit rides its own PR; run reports a gate until origin/dev reads a -dev version
+
+==> release-pipeline: verify
+  plan: gh release view v1.7.12 --json name,tagName,body,assets
+  plan: gh release view v1.7.12 --json body — title "Focus Board 1.7.12", compare link last
+  plan: every bullet of the [1.7.12] section is present in the body
+  plan: HEAD each asset URL and require 200
+  plan: git ls-remote origin refs/heads/main == v1.7.12^{commit}
+  plan: git show origin/dev:package.json carries a -dev version (else a re-arm gate)
+
+release-pipeline: run complete (dry run)
+
+# exit code: 0
+# git status --porcelain after the run: 0 path(s)
+# HEAD after the run: cdf78df
+# package.json version after the run: 1.7.12-dev
