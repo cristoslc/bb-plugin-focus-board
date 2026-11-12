@@ -549,7 +549,11 @@ async function planTag(p) {
 
   // The tag lands on the finalize commit, which is HEAD on the release branch
   // and origin/dev's tip once its PR merges. Both are the same commit; the
-  // second is what a resume after the merge sees.
+  // second is what a resume after the merge sees. A merge-commit PR merge
+  // (gh pr merge --merge) puts the merge itself at dev's tip — the finalize
+  // commit is the merge's second parent, so the resume reads "Merge pull
+  // request #N…" and resolves the target by walking dev's history for the
+  // newest "Release X.Y.Z:" subject, which only the finalize commit carries.
   let target = head;
   let summary = p.state.summary ?? "";
   if (headSubject.startsWith(prefix)) {
@@ -557,14 +561,28 @@ async function planTag(p) {
   } else if (!plannedFinalize) {
     const devTip = git(p, ["rev-parse", "origin/dev"]).stdout.trim();
     const devSubject = git(p, ["log", "-1", "--format=%s", devTip]).stdout.trim();
-    if (!devSubject.startsWith(prefix)) {
+    let found = null;
+    if (devSubject.startsWith(prefix)) {
+      found = { sha: devTip, summary: devSubject.slice(prefix.length) };
+    } else {
+      const walked = git(p, ["log", "-50", "--format=%H %s", devTip]);
+      for (const row of walked.stdout.split("\n")) {
+        const sha = row.slice(0, 40).trim();
+        const subject = row.slice(41).trim();
+        if (subject.startsWith(prefix)) {
+          found = { sha, summary: subject.slice(prefix.length) };
+          break;
+        }
+      }
+    }
+    if (found === null) {
       throw new PipelineFailure(
         "tag:not-finalize-commit",
-        `neither HEAD ("${headSubject}") nor origin/dev's tip ("${devSubject}") is the finalize commit's "${prefix}…"`,
+        `neither HEAD ("${headSubject}") nor origin/dev's recent history carries the finalize commit's "${prefix}…"`,
       );
     }
-    target = devTip;
-    summary = devSubject.slice(prefix.length);
+    target = found.sha;
+    summary = found.summary;
   }
 
   if (!plannedFinalize) {
