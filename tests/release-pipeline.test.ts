@@ -257,6 +257,32 @@ describe("tag", () => {
     await expect(tag(pipeline(fixture, { yes: true }))).rejects.toThrow(/tag:tag-exists/);
     expect(git(fixture.root, ["-c", "tag.gpgSign=false", "tag", "-l", "-n1", "v1.3.0"])).toContain("Release 1.3.0: taken");
   });
+
+  it("resolves the finalize commit through its PR's merge commit at dev's tip", async () => {
+    const fixture = fixtureRepo();
+    const lines = [];
+    await finalize(pipeline(fixture));
+    const finalizeSha = git(fixture.root, ["rev-parse", "HEAD"]);
+    // The PR flow: the finalize commit rides its own branch, the merge
+    // commit becomes dev's tip, and the main checkout fast-forwards to the
+    // merge — so HEAD and dev's tip read "Merge pull request #N…", with the
+    // finalize commit as the merge's second parent.
+    const devBefore = git(fixture.root, ["rev-parse", "origin/dev"]);
+    git(fixture.root, ["push", "-q", "origin", "HEAD:refs/heads/pr-finalize"]);
+    git(fixture.root, ["checkout", "-q", "-B", "dev-side", devBefore]);
+    git(fixture.root, ["merge", "--no-ff", "-m", "Merge pull request #437 from cristoslc/nightly/finalize-1.7.12", "origin/pr-finalize"]);
+    git(fixture.root, ["push", "-q", "origin", "HEAD:dev"]);
+    git(fixture.root, ["checkout", "-q", "dev"]);
+    git(fixture.root, ["merge", "--ff-only", "-q", "origin/dev"]);
+    expect(git(fixture.root, ["log", "-1", "--format=%s"])).toMatch(/^Merge pull request/);
+
+    await tag(pipeline(fixture, { dryRun: true, yes: true, log: (line) => lines.push(line) }));
+    const plan = lines.find((line) => line.includes("v1.3.0 on"));
+    expect(plan, lines.join("\n")).toBeDefined();
+    expect(plan).toContain(finalizeSha.slice(0, 12));
+    expect(plan).toContain(`Release 1.3.0: ${SUMMARY}`);
+    expect(plan).not.toContain("Merge pull request");
+  });
 });
 
 describe("upload-demos", () => {
