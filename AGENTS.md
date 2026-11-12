@@ -26,6 +26,16 @@ Never create or retarget a `node_modules` symlink inside this repo's checkouts. 
 
 ## Release
 
+**The mechanical release steps are one driver:
+`node scripts/release-pipeline.mjs run` (dry-run it first).** It owns
+preflight, the finalize commit, the tag, the release page, the demo uploads,
+the re-arm and the post-release checks, and it pauses at each PR merge instead
+of merging for you. The one judgement call — which bullet gets a gif and what
+the gif shows — is the per-release storyboard manifest at
+`docs/releases/<version>/storyboard.yaml`. The text a nightly run follows is
+`docs/releases/nightly-commission.md`; the contract the driver implements is
+`.agents/agents-md-detail/release.md`.
+
 Landing work on `dev`: **every thread rebases its worktree onto `dev`, then
 ships through a pull request on the remote — no thread merges into `dev`
 directly anymore.** The flow: `git fetch origin && git rebase origin/dev`

@@ -33,6 +33,10 @@ export default defineConfig({
       '**/.{idea,git,cache,output,temp}/**',
       "**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*",
       "**/.worktrees/**",
+      // Fixture trees are inputs, not suites: the release pipeline's fixture
+      // repo carries a `tests/whats-new.test.ts` the finalize step edits, and
+      // collecting it would run a deliberately incomplete file as a test.
+      "**/tests/fixtures/**",
     ],
   },
 });
