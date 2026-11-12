@@ -1,0 +1,48 @@
+# 1.7.12 storyboard manifest
+#
+# One entry per demonstrable bullet of the release section, and a named reason
+# for every bullet that is not demonstrated (the manifest is silent about
+# nothing: `upload-demos` refuses a bullet with neither). The nightly agent
+# authors this file before it calls `node scripts/release-pipeline.mjs run`;
+# the driver reads it at `upload-demos` time and refuses a manifest whose
+# version, bullets or gifs do not line up with the section it is publishing.
+#
+# `gif` is where the capture lands (gitignored — a gif is a release asset, never
+# a repo file), `caption` is the one line that rides under the bullet on the
+# release page, and `steps` is the gesture outline the capture follows: a
+# reference to a storyboard file, or the steps inline. Both demos below name
+# the UAT suite that already walks their gesture, so the capture starts from a
+# proven path instead of a fresh one.
+version: 1.7.12
+demos:
+  - bullet: "**A group's dashed frame now wraps its done cards in the Done lane.**"
+    gif: docs/screenshots/release-demos/v1.7.12-group-frame-done.gif
+    caption: "Marking a member done draws the group's frame in Done."
+    steps:
+      - "goto ?groupBy=status — the base fixture's chat-imagegent group (grp_chat_imagegent)"
+      - "the card's own two-click Mark Done checkbox on thr_column_sort"
+      - "hold the Working frame around the rest of the group, then the Done frame around the settled card"
+      - "suite reference: tests/manual/uat-group-done-fence.yaml"
+  - bullet: "**A Group-filtered board keeps every child of a matched family.**"
+    gif: docs/screenshots/release-demos/v1.7.12-group-filter-child.gif
+    caption: "Filtering to a group keeps its cross-group child nested in the parent card."
+    steps:
+      - "goto ?groupBy=group&groups=grp_gf_alpha&groupfamily=1"
+      - "the Alpha parent card renders both children, the Beta-group child nested in its row"
+      - "suite reference: tests/manual/uat-group-filter-family.yaml"
+  - bullet: "**A lane's name and caret light up as a chip on hover.**"
+    gif: docs/screenshots/release-demos/v1.7.12-lane-chip-hover.gif
+    caption: "The lane's name and caret take the interactive fill on hover."
+    steps:
+      - "goto the base board (?groupBy=status) — no fixture needed, the lanes are the shipped ones"
+      - "g.hover('button[aria-label=\"Unread lane actions\"]') and hold, then glide the pointer off"
+      - "a still cannot show the rest and hover states at once, so this one is a short hover-in/hover-out clip"
+  - bullet: "**A card that empties its lane finishes its dissolve before the lane closes.**"
+    gif: docs/screenshots/release-demos/v1.7.12-lane-dissolve.gif
+    caption: "The lane holds its frame until the departing card's dissolve ends."
+    steps:
+      - "goto the base board (?groupBy=status) and pick a lane holding one card"
+      - "Mark Done on that card, so the lane empties under its out-ghost"
+      - "hold through the dissolve: the ghost wipes and collapses inside the lane's held frame, then the lane closes"
+      - "the transport clock the clip rides is the one tests/card-transport.test.ts drives"
+skips: []

@@ -235,7 +235,10 @@ If your branch doesn't contain `origin/dev` yet, rebase it onto
 `origin/dev` first (section 1's flow) — the rebase always lands before that
 PR is opened, never after. One finalize commit, subject `Release X.Y.Z: <user-facing summary>` (the summary
 condenses the changelog's lead item — same wording rules as the What's-new
-entry below), riding its own PR per the standard flow:
+entry below), riding its own PR per the standard flow.
+`node scripts/release-pipeline.mjs finalize` writes exactly this commit
+(`run` sequences it with the rest; the nightly text is
+`docs/releases/nightly-commission.md`):
 
 1. **Decide the number**: strip the `-dev` suffix and that is the version —
    correct it first if the unreleased work warrants a different bump than

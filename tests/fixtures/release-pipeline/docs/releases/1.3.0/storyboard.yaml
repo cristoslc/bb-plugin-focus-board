@@ -1,0 +1,17 @@
+# The fixture release's storyboard manifest: one demo per demonstrable
+# bullet, the exact step outline the capture follows, and a one-line caption
+# that lands under the bullet on the release page.
+version: 1.3.0
+demos:
+  - bullet: "**A group's frame follows its cards into Done.**"
+    gif: docs/screenshots/release-demos/v1.3.0-group-frame.gif
+    caption: "Marking a member done draws the group's frame in Done."
+    steps:
+      - "goto ?groupBy=status — the base fixture's chat-imagegent group"
+      - "the card's own two-click Mark Done checkbox on thr_column_sort"
+      - "suite reference: tests/manual/uat-group-done-fence.yaml"
+  - bullet: "**A Group-filtered board keeps every child of a matched family.**"
+    gif: docs/screenshots/release-demos/v1.3.0-group-filter-child.gif
+    caption: "Filtering to a group keeps its cross-group child nested."
+    steps: release-demos/v1.3.0.mjs#group-filter-child
+skips: []
