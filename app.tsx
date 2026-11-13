@@ -212,6 +212,7 @@ import { WallpaperActiveProvider } from "./components/wallpaper-contrast";
 import { PaneSheetCoverageProvider } from "./components/pane-sheet-coverage";
 import { WallpaperPaintLayer } from "./components/wallpaper-paint";
 import { EmptyState } from "./components/empty-state";
+import { LoadingView } from "./components/loading-view";
 import { SettingsModal, type SettingsTab } from "./components/settings-modal";
 import { AppearanceSettingsSection } from "./components/settings-section";
 import {
@@ -3781,13 +3782,11 @@ function BoardPage({ subPath }: { subPath: string }) {
 
   // The readiness gate (issue #403): the loading view holds until the mount
   // fan-in has settled (or the ceiling fires) — the board's first paint is
-  // the settled board, not a board that re-renders moments later.
+  // the settled board, not a board that re-renders moments later. The view it
+  // returns carries a small quiet gesture (components/loading-view.tsx); the
+  // gate's condition, exit, and readiness semantics are unchanged.
   if (!mountSettled || (sidebarStatus === "loading" && threads.length === 0)) {
-    return (
-      <div className="p-4">
-        <EmptyState>Loading threads…</EmptyState>
-      </div>
-    );
+    return <LoadingView />;
   }
   if (sidebarStatus === "error") {
     return (
