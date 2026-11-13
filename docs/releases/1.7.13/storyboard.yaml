@@ -1,0 +1,9 @@
+version: 1.7.13
+demos:
+  - bullet: "**The loading screen lands three dots before the board paints.**"
+    gif: docs/screenshots/release-demos/v1.7.13-loading-dots.gif
+    caption: "Three dots deal in left to right and rest while the gate holds."
+    steps:
+      - "scripts/screenshot/capture-loading-view.mjs — the readiness gate's own capture: ?sidebarDelay=60000 holds the gate, the gesture is frozen at 40ms steps, assembled at 25fps"
+      - "the shipped default variant films: the dots land left to right in ~260ms and rest as a row"
+skips: []
