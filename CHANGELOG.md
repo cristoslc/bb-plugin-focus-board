@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+#### The loading screen
+
+- **The loading screen lands three dots before the board paints.** They are the status dot every card carries, arriving left to right in about a quarter second, and they rest there when the gate holds. With reduced motion on, the dots sit still.
+
 ### Fixed
 
 ## [1.7.12] - 2026-11-12

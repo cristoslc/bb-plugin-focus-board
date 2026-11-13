@@ -26,6 +26,7 @@ import {
   seedSimSettings,
 } from "./mock-sdk";
 import { CURRENT_UNRELEASED_FINGERPRINT } from "../../lib/whats-new";
+import { setLoadingViewVariantForCapture } from "../../components/loading-view";
 import { WALLPAPER_KEY, wallpaperStoredValue } from "../../components/preferences";
 import { WALLPAPER_PRESETS } from "../../components/wallpaper-presets";
 
@@ -193,6 +194,17 @@ if (familyStateSeed !== null) {
   uat.seedFamilyState(
     JSON.parse(familyStateSeed) as { collapsedFamilies?: string[]; hideIdleChildren?: string[] },
   );
+}
+
+// `?loadingView=<deal|line|still>` picks the readiness gate's loading treatment
+// for a capture run, so one pull request can show the alternatives side by side
+// (components/loading-view.tsx owns the variants and the seam). Absent → the
+// shipped default, which is what every UAT suite and screenshot sees. An
+// unknown id throws inside the seam: a capture that quietly shot the default
+// would be evidence for the wrong candidate.
+const loadingViewVariant = params.get("loadingView");
+if (loadingViewVariant !== null) {
+  setLoadingViewVariantForCapture(loadingViewVariant);
 }
 
 // `?page=configuration` mounts the registered settings section bare (the
