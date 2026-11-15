@@ -1,0 +1,10 @@
+version: 1.7.14
+demos:
+  - bullet: "**The loading screen's dots keep moving until the board paints.**"
+    gif: docs/screenshots/release-demos/v1.7.14-loading-dot-wave.gif
+    caption: "The dots land left to right, then breathe as a wave that crosses the row until the board paints."
+    steps:
+      - "scripts/screenshot/capture-loading-view.mjs — the readiness gate's own capture: ?sidebarDelay=60000 holds the gate, the gesture is frozen at 40ms steps, assembled at 25fps"
+      - "the shipped default variant films: the dots land in ~260ms, then one full 1.4s cycle crosses the row (troughs at 38/50/62%), and the loop visibly restarts — the motion continues for as long as the gate holds"
+      - "the bullet's reduced-motion facet is asserted, not filmed: the capture's reduced-motion check samples the row under prefers-reduced-motion: reduce and requires the landed row, still"
+skips: []
