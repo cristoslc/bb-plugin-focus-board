@@ -9,6 +9,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+### Fixed
+
+## [1.7.14] - 2026-11-15
+
+### Added
+
+### Changed
+
 #### The loading screen
 
 - **The loading screen's dots keep moving until the board paints.** They still land first, then settle into a slow wave that crosses the row, so a hold that runs long reads as working. With reduced motion on they sit still as before.
