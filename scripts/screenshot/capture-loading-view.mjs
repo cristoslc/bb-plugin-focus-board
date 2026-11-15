@@ -8,27 +8,33 @@
  * many ms, so the gate stays up and its view is photographable. `?loadingView=`
  * picks the candidate; absent is the shipped default.
  *
- * The default runs two beats: a landing that finishes ~260ms in, then a cycle
+ * The default runs two beats: a landing that finishes ~260ms in, then a breath
  * that repeats. Both are CSS animations on one stylesheet, and both are frozen
  * the same way: pause every animation and set its `currentTime` to a wall-clock
  * offset from the view's appearance. Each animation's own `animation-delay`
- * (the dot's landing stagger, then its cycle phase) is inside that timeline, so
- * a paused frame at 900ms is exactly what the compositor would have painted at
- * 900ms. Nothing here depends on a screenshot arriving on time, so two runs
+ * (the dot's landing stagger, then its breath phase) is inside that timeline,
+ * so a paused frame at 270ms is exactly what the compositor would have painted
+ * at 270ms. Nothing here depends on a screenshot arriving on time, so two runs
  * photograph the same phases.
+ *
+ * Frozen stills prove the keyframes exist. They do NOT prove an operator on a
+ * real load sees motion: this view lives ~41ms on a warm load and ~234ms
+ * modeled, and the stills are exactly how a schedule whose first dip landed at
+ * 682ms passed two reviews while the row landed and stopped in use. The
+ * real-time evidence is `capture-loading-view-live.mjs`, and the schedule is
+ * pinned by `LOADING_DIP_TIMES_MS` in tests/loading-view.test.tsx.
  *
  * What lands in docs/screenshots/loading-view/:
  * - `deal-150ms.png`          the default ~150ms in: the first dot has landed
- * - `deal-handoff.png`        ~265ms: the row landed, the cycle just begun
- * - `deal-cycle-early.png`    ~620ms: the first dot's dip
- * - `deal-cycle-mid.png`      ~900ms: the second dot's dip, the wave's middle
- * - `deal-cycle-late.png`     ~1180ms: the third dot's dip, the wave's right edge
- * - `deal-cycle-return.png`   ~1500ms: the row rising back to the landed state
+ * - `deal-dip-first.png`      ~185ms: the first dot's trough (168ms), the wave opening
+ * - `deal-dip-mid.png`        ~265ms: the second dot's trough (258ms), the wave's middle
+ * - `deal-dip-last.png`       ~355ms: the third dot's trough (348ms), the wave's right edge
+ * - `deal-return.png`         ~430ms: the row rising back to the landed state
  * - `deal-ceiling.png`        ~1.9s, past the gate's 1.8s ceiling hold
  * - `deal-reduced-motion.png` the default with prefers-reduced-motion: reduce
  * - `line-70ms.png`           the quiet candidate, mid-gesture at ~70ms
  * - `still-rest.png`          the control (the screen this replaced)
- * - `deal.gif`                the landing and one full cycle, ~40ms per frame
+ * - `deal.gif`                the landing and two waves, ~40ms per frame
  *
  * Usage (boots its own harness, like the load bench):
  *   npm run build
@@ -173,8 +179,8 @@ async function motionReport() {
   for (let t = 0; t <= 1700; t += 100) {
     await freezeAt(t);
     const opacities = await page.evaluate(() =>
-      [...document.querySelectorAll("[data-loading-dot]")].map((dot) =>
-        Number(getComputedStyle(dot).opacity),
+      [...document.querySelectorAll("[data-loading-dot-core]")].map((core) =>
+        Number(getComputedStyle(core).opacity),
       ),
     );
     samples.push({ t, opacities });
@@ -192,11 +198,11 @@ async function motionReport() {
   if (Math.max(...all) < 0.95) {
     throw new Error("motion check: the dots never reach the landed opacity");
   }
-  if (cycleDip > 0.7) {
+  if (cycleDip > 0.6) {
     throw new Error(`motion check: the cycle never dips (lowest after the landing ${cycleDip.toFixed(2)})`);
   }
-  if (cycleDip < 0.4) {
-    throw new Error("motion check: an opacity fell to the landing's start — the landing replayed");
+  if (cycleDip < 0.3) {
+    throw new Error("motion check: an opacity fell below the breath's trough — the landing replayed");
   }
   if (spread < 0.1) {
     throw new Error(`motion check: the three dots move as one (max spread ${spread.toFixed(2)})`);
@@ -216,8 +222,8 @@ async function reducedMotionReport() {
   const opacitiesAt = async (t) => {
     await freezeAt(t);
     return page.evaluate(() =>
-      [...document.querySelectorAll("[data-loading-dot]")].map((dot) =>
-        Number(getComputedStyle(dot).opacity),
+      [...document.querySelectorAll("[data-loading-dot-core]")].map((core) =>
+        Number(getComputedStyle(core).opacity),
       ),
     );
   };
@@ -235,16 +241,14 @@ try {
   console.log(`stills → ${OUT_DIR}`);
   await motionReport();
   await reducedMotionReport();
-  // The landing, its handoff, then four points spread across the row's cycle.
-  // The cycle opens at each dot's landing end (150ms plus its 55ms stagger) and
-  // one period is 1400ms, so the row's own cycle runs 150ms to 1660ms; these
-  // four land on the first dip, the middle dip, the last dip and the return.
+  // The landing, then the wave's three troughs (168/258/348ms from the view's
+  // own first paint, one per dot) and the return to the landed state. These are
+  // LOADING_DIP_TIMES_MS plus a few ms so each frame sits just past the trough.
   await still("deal-150ms.png", "deal", 150);
-  await still("deal-handoff.png", "deal", 265);
-  await still("deal-cycle-early.png", "deal", 620);
-  await still("deal-cycle-mid.png", "deal", 900);
-  await still("deal-cycle-late.png", "deal", 1180);
-  await still("deal-cycle-return.png", "deal", 1500);
+  await still("deal-dip-first.png", "deal", 185);
+  await still("deal-dip-mid.png", "deal", 265);
+  await still("deal-dip-last.png", "deal", 355);
+  await still("deal-return.png", "deal", 430);
   // Past the gate's 1.8s ceiling: the view may hold here just as long, so the
   // row must still be moving rather than landed and stalled.
   await still("deal-ceiling.png", "deal", 1900);
@@ -260,12 +264,12 @@ try {
   await still("deal-reduced-motion.png", "deal", 150);
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "no-preference" }]);
 
-  // The gif: the landing and one full cycle, frozen every 40ms of the timeline
-  // and played back at that rate, so what plays is exactly what the browser
-  // paints. 43 frames reach 1.72s, past the row's 1.66s cycle end, so the loop
-  // visibly starts over instead of stopping on a landed row.
+  // The gif: the landing and two waves, frozen every 40ms of the timeline and
+  // played back at that rate, so what plays is exactly what the browser paints.
+  // 55 frames reach 2.2s, past the second wave's last trough (348ms + 1200ms),
+  // so the loop visibly starts over instead of stopping on a landed row.
   const FRAME_MS = 40;
-  const FRAME_COUNT = 43;
+  const FRAME_COUNT = 55;
   const framesDir = process.env.FRAMES_DIR ?? (await mkdtemp(path.join(os.tmpdir(), "loading-view-gif-")));
   await showLoadingView("deal");
   const clip = await motifFrame();
