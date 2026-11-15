@@ -7,14 +7,20 @@
 // - one injected stylesheet, idempotent across mounts, keyed by a `data-`
 //   attribute, and its exact bytes;
 // - the motif animates on the compositor only (opacity and transform), never a
-//   layout property, and never an endless loop: a one-shot that rests;
+//   layout property;
+// - two beats: the landing, a one-shot that rests landed, then a cycle that
+//   repeats until the view unmounts, starting where the landing ended;
+// - the cycle's dots dip at different points in the period, so the row is a
+//   wave and not three dots strobing in unison;
 // - every animation rule sits inside `prefers-reduced-motion: no-preference`,
-//   so reduced motion renders the resting state itself — the motif is in the
-//   DOM either way, static;
+//   so reduced motion renders the resting state itself, static;
 // - the status stays honest: one `role="status"`, the plain "Loading threads…"
 //   line, and the decoration out of the accessibility tree;
 // - the capture seam refuses an unknown variant instead of silently shooting
 //   the default.
+// jsdom runs no animations, so the stylesheet bytes pinned here are the
+// mechanism; scripts/screenshot/capture-loading-view.mjs is the proof that a
+// browser paints them.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 
@@ -23,9 +29,15 @@ vi.mock("@get-bb/plugin-sdk/app", async () => await import("./helpers/app-fake-s
 import "../app";
 import {
   DEFAULT_LOADING_VIEW_VARIANT,
+  LOADING_CYCLE_ANIMATION_NAMES,
+  LOADING_CYCLE_DURATION_MS,
+  LOADING_CYCLE_TROUGH_PERCENT,
+  LOADING_DEAL_ANIMATION_NAME,
   LOADING_DOT_ATTR,
+  LOADING_DOT_CYCLE_VAR,
   LOADING_DOT_DELAYS_MS,
   LOADING_DOT_DELAY_VAR,
+  LOADING_LANDING_DURATION_MS,
   LOADING_LINE_ATTR,
   LOADING_VIEW_ATTR,
   LOADING_VIEW_STYLE_ID,
@@ -55,6 +67,16 @@ const HOUR = 3_600_000;
 const loadingLine = (): HTMLElement | null => screen.queryByText("Loading threads…");
 const dots = (): Element[] => [...document.querySelectorAll(`[${LOADING_DOT_ATTR}]`)];
 
+/** The injected text of one named keyframe block, so a law about the cycle's
+ *  shape reads as the shape rather than a substring hunt. */
+const keyframeBlock = (name: string): string => {
+  const start = LOADING_VIEW_STYLE_TEXT.indexOf(`@keyframes ${name} {`);
+  expect(start).toBeGreaterThan(-1);
+  const end = LOADING_VIEW_STYLE_TEXT.indexOf("} }", start);
+  expect(end).toBeGreaterThan(start);
+  return LOADING_VIEW_STYLE_TEXT.slice(start, end + 3);
+};
+
 beforeEach(() => {
   vi.stubGlobal("ResizeObserver", StubResizeObserver);
   window.localStorage.clear();
@@ -65,6 +87,7 @@ afterEach(() => {
   releaseRpcHangs();
   stubRpcHang(null);
   setLoadingViewVariantForCapture(null);
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -90,12 +113,61 @@ describe("the loading view's stylesheet", () => {
     );
   });
 
-  it("is a one-shot that rests, never a loop", () => {
-    // `both` fill: the dots land and stay landed, so the twentieth panel open
-    // shows the same short landing the first one did.
-    expect(LOADING_VIEW_STYLE_TEXT).toContain("both");
-    expect(LOADING_VIEW_STYLE_TEXT).not.toContain("infinite");
+  it("keeps the landing as the first beat, unchanged", () => {
+    // The gesture the 1.7.13 release shipped, byte for byte: the same 150ms
+    // bezier, the same `both` fill, the same per-dot stagger.
+    expect(LOADING_VIEW_STYLE_TEXT).toContain(
+      `animation: ${LOADING_DEAL_ANIMATION_NAME} ${LOADING_LANDING_DURATION_MS}ms cubic-bezier(0.34, 1.4, 0.64, 1) both`,
+    );
+    expect(LOADING_VIEW_STYLE_TEXT).toContain(`animation-delay: var(${LOADING_DOT_DELAY_VAR}), `);
+    expect(keyframeBlock(LOADING_DEAL_ANIMATION_NAME)).toBe(
+      `@keyframes ${LOADING_DEAL_ANIMATION_NAME} { from { opacity: 0; transform: translateY(4px) scale(0.5); } }`,
+    );
+  });
+
+  it("hands off to a cycle that repeats until the view unmounts", () => {
+    expect(LOADING_VIEW_STYLE_TEXT).toContain(
+      `var(${LOADING_DOT_CYCLE_VAR}) ${LOADING_CYCLE_DURATION_MS}ms ease-in-out infinite`,
+    );
     expect(LOADING_VIEW_STYLE_TEXT).not.toContain("alternate");
+    // One breath inside the calm band: slow enough to read as working, never a
+    // pulse asking for attention.
+    expect(LOADING_CYCLE_DURATION_MS).toBeGreaterThanOrEqual(1200);
+    expect(LOADING_CYCLE_DURATION_MS).toBeLessThanOrEqual(1800);
+  });
+
+  it("starts the cycle where the landing ended, so the handoff shows no jump", () => {
+    // The cycle's delay is the dot's own landing stagger plus the whole
+    // landing, so the two beats never fight over opacity or transform.
+    expect(LOADING_VIEW_STYLE_TEXT).toContain(
+      `calc(var(${LOADING_DOT_DELAY_VAR}) + ${LOADING_LANDING_DURATION_MS}ms)`,
+    );
+    // Every cycle keyframe writes its trough and nothing else: 0% and 100%
+    // fall back to the landed state (opacity 1, no transform), which both
+    // matches the landing's end frame and keeps the landing from replaying.
+    // Exactly one stop per cycle keyframe is the mechanical proof of that.
+    expect(LOADING_VIEW_STYLE_TEXT.match(/\d+% \{/g)).toHaveLength(LOADING_CYCLE_ANIMATION_NAMES.length);
+    expect(LOADING_VIEW_STYLE_TEXT.match(/from \{/g)).toHaveLength(2);
+    for (const [index, name] of LOADING_CYCLE_ANIMATION_NAMES.entries()) {
+      expect(keyframeBlock(name)).toBe(
+        `@keyframes ${name} { ${LOADING_CYCLE_TROUGH_PERCENT[index]}% { opacity: 0.5; transform: scale(0.94); } }`,
+      );
+    }
+  });
+
+  it("keeps the three dots out of phase, so the row is a wave and not a strobe", () => {
+    expect(LOADING_CYCLE_TROUGH_PERCENT).toHaveLength(LOADING_DOT_DELAYS_MS.length);
+    expect(new Set(LOADING_CYCLE_ANIMATION_NAMES).size).toBe(LOADING_DOT_DELAYS_MS.length);
+    for (const [index, percent] of LOADING_CYCLE_TROUGH_PERCENT.entries()) {
+      if (index > 0) {
+        // Each dot's dip lands later than the one to its left: the trough
+        // travels left to right, the same direction the landing ran.
+        expect(percent).toBeGreaterThan(LOADING_CYCLE_TROUGH_PERCENT[index - 1] ?? 0);
+      }
+      // Never on the handoff itself, or the row would open the cycle mid-dip.
+      expect(percent).toBeGreaterThan(25);
+      expect(percent).toBeLessThan(75);
+    }
   });
 
   it("wraps every animation rule in the motion-safe query, so reduced motion rests", () => {
@@ -125,10 +197,14 @@ describe("the loading view's default treatment", () => {
     const box = document.querySelector(`[${LOADING_VIEW_ATTR}]`);
     expect(box?.getAttribute(LOADING_VIEW_ATTR)).toBe(DEFAULT_LOADING_VIEW_VARIANT);
     expect(DEFAULT_LOADING_VIEW_VARIANT).toBe("deal");
-    // Three of the product's own atoms, staggered left to right.
+    // Three of the product's own atoms, staggered left to right, each carrying
+    // its own cycle name so one stylesheet rule animates all three.
     expect(dots()).toHaveLength(LOADING_DOT_DELAYS_MS.length);
     expect(dots().map((dot) => dot.getAttribute("style"))).toEqual(
-      LOADING_DOT_DELAYS_MS.map((delay) => `${LOADING_DOT_DELAY_VAR}: ${delay}ms;`),
+      LOADING_DOT_DELAYS_MS.map(
+        (delay, index) =>
+          `${LOADING_DOT_DELAY_VAR}: ${delay}ms; ${LOADING_DOT_CYCLE_VAR}: ${LOADING_CYCLE_ANIMATION_NAMES[index]};`,
+      ),
     );
   });
 
@@ -151,6 +227,36 @@ describe("the loading view's default treatment", () => {
     render(<LoadingView />);
     expect(dots()).toHaveLength(3);
     expect(loadingLine()).not.toBeNull();
+  });
+
+  it("runs the cycle from the stylesheet alone: no timer, no re-render", () => {
+    // An animation driven by JS would have to tick something. Nothing ticks:
+    // the row's DOM is identical ten seconds in, and its whole state is the
+    // two custom properties the mount wrote.
+    const interval = vi.spyOn(globalThis, "setInterval");
+    const raf = vi.spyOn(globalThis, "requestAnimationFrame");
+    vi.useFakeTimers();
+    render(<LoadingView />);
+    const mounted = document.body.innerHTML;
+    expect(interval).not.toHaveBeenCalled();
+    expect(raf).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(10_000);
+    expect(document.body.innerHTML).toBe(mounted);
+  });
+
+  it("leaves nothing behind once the board paints", () => {
+    const { unmount } = render(<LoadingView />);
+    // The one stylesheet is document-scoped, so it outlives the view by design.
+    expect(document.querySelectorAll(`#${LOADING_VIEW_STYLE_ID}`)).toHaveLength(1);
+    unmount();
+    // The animation lives on the dots' elements, so removing them is what
+    // stops the cycle: no view, no dots, no status line.
+    expect(document.querySelector(`[${LOADING_VIEW_ATTR}]`)).toBeNull();
+    expect(dots()).toHaveLength(0);
+    expect(loadingLine()).toBeNull();
+    // A remount reuses that one element rather than stacking a second.
+    render(<LoadingView />);
+    expect(document.querySelectorAll(`#${LOADING_VIEW_STYLE_ID}`)).toHaveLength(1);
   });
 });
 
