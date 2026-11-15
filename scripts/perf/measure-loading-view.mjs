@@ -68,12 +68,42 @@ await page.evaluateOnNewDocument(() => {
       window.__dwell.cardAt = now;
     }
   };
+  // The real-time sampler, armed here so its `t=0` is the row's FIRST PAINTED
+  // FRAME. Starting it from the driver instead (after waitForSelector) put the
+  // window a frame or more late, which made a fully-landed dot read 0.63 at
+  // "7ms" and quietly flattered the schedule.
+  window.__trace = null;
+  const startSampling = () => {
+    if (window.__trace !== null) return;
+    const layers = [...document.querySelectorAll("[data-loading-dot]")].map((dot) => ({
+      dot,
+      core: dot.querySelector("[data-loading-dot-core]"),
+    }));
+    if (layers.length !== 3 || layers.some((layer) => layer.core === null)) return;
+    const out = [];
+    window.__trace = out;
+    const read = (element) =>
+      element.isConnected ? Number(Number(getComputedStyle(element).opacity).toFixed(3)) : 0;
+    const t0 = performance.now();
+    const tick = () => {
+      const t = performance.now() - t0;
+      out.push({
+        t: Number(t.toFixed(1)),
+        o: layers.map((layer) => Number((read(layer.dot) * read(layer.core)).toFixed(3))),
+      });
+      if (t < 3000) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
   // Observe the DOCUMENT node, not `document.documentElement`: this script runs
   // before the parser has created the root element, and `observe(null)` throws
   // inside an injected script, which leaves an instrument that silently stamps
   // nothing (the exact trap that made the first version of this probe report
   // three nulls against a page with 40 cards in it).
-  new MutationObserver(note).observe(document, { childList: true, subtree: true });
+  new MutationObserver(() => {
+    note();
+    startSampling();
+  }).observe(document, { childList: true, subtree: true });
 });
 
 /** One load: navigate, let it settle, read the dwell. */
@@ -145,28 +175,16 @@ async function animationState(atMs) {
   });
 }
 
-/** Sample all three dots' computed opacity every frame, in real time. */
+/** Wait for the in-page sampler (armed at document start) and return its first
+ *  `ms` of frames. Nothing is paused and nothing is repositioned: these are the
+ *  compositor's own frames, in the order they painted. */
 async function realTimeTrace(ms) {
-  const trace = await page.evaluate(async (windowMs) => {
-    const dots = [...document.querySelectorAll("[data-loading-dot-core]")];
-    if (dots.length === 0) throw new Error("no dots to sample");
-    const start = performance.now();
-    const out = [];
-    await new Promise((resolve) => {
-      const tick = () => {
-        const t = performance.now() - start;
-        out.push({
-          t: Number(t.toFixed(1)),
-          o: dots.map((dot) => Number(Number(getComputedStyle(dot).opacity).toFixed(3))),
-        });
-        if (t >= windowMs) resolve();
-        else requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    });
-    return out;
-  }, ms);
-  return trace;
+  await page.waitForFunction(
+    (want) => Array.isArray(window.__trace) && window.__trace.length > 8 && window.__trace.at(-1).t >= want,
+    { timeout: 60_000, polling: 50 },
+    Math.min(ms, 1000),
+  );
+  return page.evaluate((windowMs) => window.__trace.filter((frame) => frame.t <= windowMs), ms);
 }
 
 /** What a human sees in a trace row, in words. */
@@ -178,24 +196,51 @@ function readRow(frame) {
   return `${label} (${a}/${b}/${c})`;
 }
 
-/** The trace distilled: how many visible swings, and when. */
+/** The trace distilled into what a person would actually register: per dot, the
+ *  moment its composite first dips below 0.9 (the descent is visible), the
+ *  moment it bottoms out, and how long it stays dim. A "dip count" is the wrong
+ *  unit here: the breaths overlap, so a dot spends most of the first half
+ *  second somewhere between 0.45 and 1. */
 function traceSummary(trace) {
-  const lows = [];
-  let inDip = [false, false, false];
-  for (const frame of trace) {
-    for (let index = 0; index < 3; index += 1) {
-      const value = frame.o[index];
-      if (!inDip[index] && value < 0.95) {
-        inDip[index] = true;
-        lows.push({ dot: index, startMs: frame.t, minOpacity: value });
-      } else if (inDip[index]) {
-        const last = lows.at(-1);
-        if (last && last.dot === index) last.minOpacity = Math.min(last.minOpacity, value);
-        if (value >= 0.995) inDip[index] = false;
+  return [0, 1, 2].map((index) => {
+    const values = trace.map((frame) => ({ t: frame.t, v: frame.o[index] ?? 0 }));
+    // Ignore the frames before this dot has painted at all (composite 0 from
+    // the landing's own start), or "the trough" is the blank first frame.
+    const visibleAt = values.findIndex((sample) => sample.v >= 0.3);
+    const after = visibleAt < 0 ? [] : values.slice(visibleAt);
+    if (after.length === 0) return { dot: index + 1, descentMs: null, troughMs: null, troughValue: null, landedAgainMs: null };
+    // The FIRST local peak and the dip that follows it: the dot arrives, then
+    // breathes. A global minimum would find the blank frame, and a global
+    // maximum would find the landed frame a second later.
+    let phase = "rising";
+    let peak = after[0];
+    let descent = null;
+    let trough = null;
+    for (const sample of after) {
+      if (phase === "rising") {
+        if (sample.v > peak.v) peak = sample;
+        else if (sample.v < peak.v - 0.05) {
+          phase = "falling";
+          descent = sample;
+          trough = sample;
+        }
+        continue;
+      }
+      if (phase === "falling") {
+        if (sample.v < trough.v) trough = sample;
+        else if (sample.v > trough.v + 0.05) break;
       }
     }
-  }
-  return { dips: lows, frames: trace.length };
+    const back =
+      trough === null ? null : (values.find((sample) => sample.t > trough.t && sample.v >= 0.95) ?? null);
+    return {
+      dot: index + 1,
+      descentMs: descent === null ? null : descent.t,
+      troughMs: trough === null ? null : trough.t,
+      troughValue: trough === null ? null : trough.v,
+      landedAgainMs: back === null ? null : back.t,
+    };
+  });
 }
 
 try {
@@ -233,18 +278,30 @@ try {
   await page.goto(`${base}?${holdQuery}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
   await page.waitForSelector("[data-loading-dot]", { timeout: 60_000 });
   const trace = await realTimeTrace(SAMPLE_MS);
-  console.log(`\n  real-time opacity, nothing paused, ${trace.length} frames over ${SAMPLE_MS}ms:`);
-  for (const frame of trace) {
-    // One row per ~100ms so the transcript stays readable; the swings are
-    // slower than that, and every dip is still visible in the summary.
+  console.log(
+    `\n  real-time opacity, nothing paused, ${trace.length} frames over ${SAMPLE_MS}ms ` +
+      `(composite = the dot's landing opacity x its core's breath opacity, i.e. what the eye gets):`,
+  );
+  // The first 400ms frame by frame: this is the window the gate actually keeps
+  // the view up for, so it gets every painted frame rather than a sample.
+  console.log("    first 400ms, every frame:");
+  for (const frame of trace.filter((sample) => sample.t <= 400)) {
+    console.log(`    ${String(Math.round(frame.t)).padStart(4)}ms  ${readRow(frame)}`);
+  }
+  console.log("    after that, one row per 100ms:");
+  for (const frame of trace.filter((sample) => sample.t > 400)) {
     if (Math.round(frame.t / 100) !== Math.round((frame.t - 16) / 100)) {
       console.log(`    ${String(Math.round(frame.t)).padStart(4)}ms  ${readRow(frame)}`);
     }
   }
   const summary = traceSummary(trace);
-  console.log(`    dips seen: ${summary.dips.length}`);
-  for (const dip of summary.dips) {
-    console.log(`      dot ${dip.dot + 1} starts dipping at ${Math.round(dip.startMs)}ms, floor ${dip.minOpacity.toFixed(2)}`);
+  console.log("    per dot (composite): descent starts / bottoms out / landed again");
+  for (const profile of summary) {
+    console.log(
+      `      dot ${profile.dot}: ${profile.descentMs === null ? "no descent" : `${Math.round(profile.descentMs)}ms`}` +
+        ` / ${profile.troughMs === null ? "-" : `${Math.round(profile.troughMs)}ms at ${profile.troughValue.toFixed(2)}`}` +
+        ` / ${profile.landedAgainMs === null ? "not within the window" : `${Math.round(profile.landedAgainMs)}ms`}`,
+    );
   }
 
   console.log("\n  --- summary ---");
@@ -253,7 +310,10 @@ try {
   console.log(
     `  live animations: dot ${early.dotAnimations.length} (${early.dotAnimations.map((a) => `${a.animationName}:${a.playState}`).join(", ")}), core ${early.coreAnimations.length} (${early.coreAnimations.map((a) => `${a.animationName}:${a.playState}`).join(", ")})`,
   );
-  console.log(`  real-time dips in ${SAMPLE_MS}ms: ${summary.dips.length}`);
+  console.log(
+    `  real-time: first descent ${Math.round(Math.min(...summary.map((p) => p.descentMs ?? Infinity)))}ms, ` +
+      `last trough ${Math.round(Math.max(...summary.map((p) => p.troughMs ?? 0)))}ms`,
+  );
 } finally {
   await browser.close();
   child.kill();

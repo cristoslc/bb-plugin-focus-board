@@ -26,10 +26,10 @@
  *
  * What lands in docs/screenshots/loading-view/:
  * - `deal-150ms.png`          the default ~150ms in: the first dot has landed
- * - `deal-dip-first.png`      ~185ms: the first dot's trough (168ms), the wave opening
- * - `deal-dip-mid.png`        ~265ms: the second dot's trough (258ms), the wave's middle
- * - `deal-dip-last.png`       ~355ms: the third dot's trough (348ms), the wave's right edge
- * - `deal-return.png`         ~430ms: the row rising back to the landed state
+ * - `deal-dip-first.png`      ~130ms: the first dot's trough (120ms), the wave opening
+ * - `deal-dip-mid.png`        ~195ms: the second dot's trough (180ms), the wave's middle
+ * - `deal-dip-last.png`       ~255ms: the third dot's trough (240ms), the wave's right edge
+ * - `deal-return.png`         ~370ms: the row back at the landed state
  * - `deal-ceiling.png`        ~1.9s, past the gate's 1.8s ceiling hold
  * - `deal-reduced-motion.png` the default with prefers-reduced-motion: reduce
  * - `line-70ms.png`           the quiet candidate, mid-gesture at ~70ms
@@ -241,14 +241,14 @@ try {
   console.log(`stills → ${OUT_DIR}`);
   await motionReport();
   await reducedMotionReport();
-  // The landing, then the wave's three troughs (168/258/348ms from the view's
+  // The landing, then the wave's three troughs (120/180/240ms from the view's
   // own first paint, one per dot) and the return to the landed state. These are
   // LOADING_DIP_TIMES_MS plus a few ms so each frame sits just past the trough.
   await still("deal-150ms.png", "deal", 150);
-  await still("deal-dip-first.png", "deal", 185);
-  await still("deal-dip-mid.png", "deal", 265);
-  await still("deal-dip-last.png", "deal", 355);
-  await still("deal-return.png", "deal", 430);
+  await still("deal-dip-first.png", "deal", 130);
+  await still("deal-dip-mid.png", "deal", 195);
+  await still("deal-dip-last.png", "deal", 255);
+  await still("deal-return.png", "deal", 370);
   // Past the gate's 1.8s ceiling: the view may hold here just as long, so the
   // row must still be moving rather than landed and stalled.
   await still("deal-ceiling.png", "deal", 1900);
@@ -266,7 +266,7 @@ try {
 
   // The gif: the landing and two waves, frozen every 40ms of the timeline and
   // played back at that rate, so what plays is exactly what the browser paints.
-  // 55 frames reach 2.2s, past the second wave's last trough (348ms + 1200ms),
+  // 55 frames reach 2.2s, past the second wave's last trough (240ms + 1200ms),
   // so the loop visibly starts over instead of stopping on a landed row.
   const FRAME_MS = 40;
   const FRAME_COUNT = 55;
