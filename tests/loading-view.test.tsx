@@ -338,6 +338,13 @@ describe("the row moves inside the dwell the browser measured", () => {
     expect(Math.min(...LOADING_DIP_TIMES_MS)).toBeLessThanOrEqual(MODELED_DWELL_MS);
   });
 
+  it("bottoms the leftmost dot out before the landing finishes its own sweep", () => {
+    // The operator's bar stated in arithmetic: the first dip has to be readable
+    // while the row is still arriving, because the gate can release before the
+    // landing completes (41ms measured warm).
+    expect(Math.min(...LOADING_DIP_TIMES_MS)).toBeLessThanOrEqual(LOADING_LANDING_DURATION_MS);
+  });
+
   it("leaves no still gap between the landing and the breath", () => {
     // The landing ends at 150ms; the first trough must arrive within a frame or
     // two of it, or a load that lands mid-dwell shows a landed, still row.

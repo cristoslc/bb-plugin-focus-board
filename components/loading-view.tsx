@@ -23,9 +23,11 @@
 // this file must keep are in `LOADING_DIP_TIMES_MS` and the test beside it.
 //
 // So the breath now starts at the first paint (no landing-wide delay), bottoms
-// the first dot out at 168ms and the third at 348ms, and is back to the landed
-// state by 540ms: inside the dwell the gate actually gets. It repeats every
+// the first dot out at 120ms and the third at 240ms, and is back to the landed
+// state by 360ms: inside the dwell the gate actually gets. It repeats every
 // 1200ms, so a held gate (the 1.8s ceiling) still shows a second full wave.
+// The descent starts on the view's first frame, so no painted frame of this
+// view is ever a landed, still row.
 //
 // The rules, borrowed from `components/dot-pulse.ts` (the precedent: one
 // injected stylesheet keyed by a `data-` attribute, compositor-only properties,
@@ -107,10 +109,11 @@ export const LOADING_LINE_ANIMATION_NAME = "focus-board-loading-line";
  *  total (the third dot's 110ms start plus its 150ms landing). */
 export const LOADING_DOT_DELAYS_MS: readonly number[] = [0, 55, 110];
 
-/** Each dot's breath phase, in ms. The wave runs left to right over 180ms,
- *  which is a sixth of the period: wide enough that three dots never share a
- *  trough, small enough that the whole wave is done in 348ms. */
-export const LOADING_DOT_PHASES_MS: readonly number[] = [0, 90, 180];
+/** Each dot's breath phase, in ms. The wave runs left to right over 120ms,
+ *  which is a tenth of the period: wide enough that three dots never share a
+ *  trough, small enough that the fresh trough of the leftmost dot is on screen
+ *  before the eye has finished reading the landing. */
+export const LOADING_DOT_PHASES_MS: readonly number[] = [0, 60, 120];
 
 /** How long the landing runs, in ms. Unchanged from the 1.7.13 release: the
  *  same bezier, the same `both` fill, the same per-dot stagger. */
@@ -121,13 +124,17 @@ export const LOADING_LANDING_DURATION_MS = 150;
  *  what puts the second wave inside the gate's 1.8s ceiling. */
 export const LOADING_BREATH_DURATION_MS = 1200;
 
-/** Where the breath bottoms out, as a percentage of the period: 168ms in, which
- *  is one dot's landing plus a frame, so there is no still gap between the land
- *  and the breath. */
-export const LOADING_BREATH_TROUGH_PERCENT = 14;
+/** Where the breath bottoms out, as a percentage of the period: 120ms in, which
+ *  is before the landing's own 150ms sweep has finished for the leftmost dot, so
+ *  the first readable dip is inside the first 130ms of the view rather than
+ *  after it. That is the whole point: the gate releases at a measured 41ms warm
+ *  and 234ms modeled, so a trough scheduled later than this never paints. */
+export const LOADING_BREATH_TROUGH_PERCENT = 10;
 
-/** Where the breath is back to the landed state, as a percentage: 360ms in. The
- *  rest of the period rests at the landed state, which is the "calm" part. */
+/** Where the breath is back to the landed state, as a percentage: 30%, i.e.
+ *  360ms in. The rest of the period rests at the landed state, which is the
+ *  "calm" part, and the long rest is what keeps a fast first dip from reading
+ *  as a strobe. */
 export const LOADING_BREATH_LANDED_PERCENT = 30;
 
 /** The trough's opacity and scale. Deep enough to read on an 8px dot that is
