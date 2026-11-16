@@ -22,7 +22,7 @@ Every entry gets one class.
 - **KEEP**: still a gap on 0.49.0, with the probe or source reading that shows it.
 - **UNKNOWN**: needs a condition the harness cannot fake. The entry says what the operator would have to do.
 
-A note on where upstream notes live. `gh release view desktop-v0.49.0 --repo get-bb/bb` returns the release's assets and a one-line body. The actual notes are `CHANGELOG.md` in the get-bb/bb repository, read here at each release tag (`git show desktop-v0.49.0:CHANGELOG.md` for the 0.43.4 through 0.48.1 tags, and the GitHub contents API for 0.49.0, since the local bb checkout stops at 0.48.1). A note that does not mention a gap proves nothing: only the probe does.
+A note on where upstream notes live, because this is easy to get wrong in both directions. The release **bodies** are empty: `gh release view desktop-v0.47.0 --json body` returns 17 characters, which is just the title, and the same holds for 0.48.0, 0.48.1 and 0.49.0. There are still notes to read. bb keeps them in `CHANGELOG.md` in the get-bb/bb repository, so they are read here at each release tag: `git show <tag>:CHANGELOG.md` for 0.43.4 through 0.48.1 from the local bb checkout, and the GitHub contents API for 0.49.0, since that checkout stops at 0.48.1. Those sections are real: 0.49.0's is 120 lines with Usability, Plugins, Bug fixes and experiments subsections, and two of its bullets decide entries 2 and 8 below. The one release that genuinely has no notes is 0.48.1, which 0.49.0's own summary says "shipped without notes". A note that does not mention a gap still proves nothing: only the probe does.
 
 ## 3. Inventory and upstream check
 
@@ -223,6 +223,28 @@ The dialog paints the plugin's floating button and the host's own "New project" 
 
 **Source readings, no probe needed**: entries 5, 7, 12 and 13 turn on a line of host source or a still-present symbol, quoted above with its file and line at `desktop-v0.49.0`. Each entry says so, so a reader can tell a probe from a reading.
 
+### 5a. Corroboration from the installed build
+
+The probes above ran against the installed app, so they are already the strongest evidence. One more check was run afterwards because the published tag and the installed binary are not the same artifact: the routing code was read out of the build that is actually running.
+
+Start with where that build lives, since the obvious guess is wrong. `/Applications/bb.app/Contents/Resources/app.asar` is the 22 MB desktop bundle and it carries no renderer code: grepping it for `Ask anything`, `whitespace-nowrap` or `data-clipboard-inline-code` returns zero hits on all three. The app the browser talks to is served from the unpacked bb package, `/Applications/bb.app/Contents/Resources/app.asar.unpacked/node_modules/bb-app/app/dist/assets/` (1,509 chunks), and that is where the routing lives.
+
+Three readings from those chunks, all on the installed 0.49.0:
+
+- `canUseHostFileNavigation` appears in **none** of the 1,509 installed chunks. That is the gate the pane's comments name. It exists in the published source for 0.43.4 through 0.48.1, so its absence is the floor boundary showing up in the binary.
+- `PluginThreadChat-CHvX4Yi2.js` mounts the navigation provider with the opener passed straight through: `jsx(me,{environmentId:T.environmentId,hostId:Ze,onOpenLocalFileLink:Ue,resolveMentionLink:G,threadId:T.id,workspaceRootPath:Ge,children:Z})`, with `Ue` computed unconditionally. That is entries 2 and 3 closed in the shipped build.
+- `thread-detail-DObhspNc.js` carries the inline-code file link and its existence gate: `function YL(e){…if(!Br(i,s.link.path))return n;…jsx(WL,{"data-clipboard-inline-code":"",href:s.href,…children:r})}`, where `Br` is the host path-existence hook and `WL` is the markdown anchor. That is entry 2's replacement, and the reason the missing-file fixture stayed a plain `<code>` in the probe.
+
+### 5b. What the SDK surface now offers, and what it does not replace
+
+The plugin SDK's bundled declarations ship in this checkout (`node_modules/@get-bb/plugin-sdk/bundled-types/`, 0.6.19: 20,968 lines for `bb-plugin-sdk-app.d.ts` and 23,509 for `bb-plugin-sdk.d.ts`). Three families there looked like they might make some of this obsolete outright, so each was read and checked against where the pane actually renders.
+
+- **`experimental_FileLink`** (`ExperimentalFileLinkProps`, `bb-plugin-sdk.d.ts:20736`): "Props for BB's host-rendered semantic file link. Valid targets receive a scheme-safe anchor href; traversal paths, ill-formed Unicode, and other malformed runtime targets remain inert." This is a component a plugin renders in **its own** markdown. The pane does not render its own transcript markdown; it embeds the host's `ThreadChat` and paints onto the host's DOM. The component therefore replaces nothing here. It is the right tool for a plugin surface that renders markdown itself, and this plugin has none of those in the scope of entries 1 through 4.
+- **`PluginMessageDirectiveProps.openWorkspaceFile`** (`bb-plugin-sdk.d.ts:18363`): "Opens a worktree-relative file in the host's workspace file viewer. Null when the message surface has no workspace viewer available", delivered to a registered `messageDirective` component with the message it appeared in. This *is* a host-rendered path inside the real transcript, which makes it the most interesting of the three. It still does not reach entries 2 through 5: a directive is something an agent writes as a directive, and the gaps here are markdown inline code, markdown links and `@` tokens that agents already write. Adopting directives would mean asking for new agent output, not reading existing output. Worth remembering as a design option for entry 5 if the project ever wants chips that survive a host restyle.
+- **`experimental_openFilePreview` and `experimental_openFileExternally`** (`bb-plugin-sdk.d.ts:20806` and `:20808`): the pane already uses the first (`openWorkspacePreview`). The second is new to the audit and opens "a live file in this client's preferred external file target". It is a candidate for **simplifying**, not removing, `components/workspace-open-menu.tsx`: that menu enumerates targets and opens the workspace *folder*, which it does through the plugin server's `workspace_open_targets` and `workspace_open_in_target` RPCs and the loopback host daemon (`lib/workspace-open.ts`). The SDK call takes a file target and the client's preferred app, with no enumeration, so replacing the menu with it would drop the picker rather than simplify it. Not a host-gap workaround, so not an entry, but the next person to touch that menu should know the SDK grew a one-call external open.
+
+No verdict in section 3 changed after reading these. The three families either serve a surface this plugin does not have, or answer a question nobody is asking the transcript.
+
 ## 6. Count by class
 
 Thirteen entries.
@@ -291,6 +313,6 @@ This is filed as a decision for the operator rather than assumed, because the bl
 
 ## 11. Method note
 
-bb-side citations are paths at `desktop-v0.49.0` in get-bb/bb, read from a source tarball of the tag; versions below 0.49.0 were read from the local bb checkout's tags (`desktop-v0.43.4` through `desktop-v0.48.1`), which is where the per-version `grep -c` counts in entries 2 and 8 come from. Release-note quotes are from `CHANGELOG.md` at each tag, because the desktop release pages carry no notes. Focus Board citations are `file:line` at `dev` `9c030ae` (1.7.16-dev). Live probe results are from bb 0.49.0 on macOS with the system Chrome, recorded in `docs/screenshots/probe-pane-host-markdown/`, `docs/screenshots/probe-new-project-control/` and `docs/screenshots/repro-context-row-0-49/`. One scratch thread was used for the pane probe and deleted afterwards.
+bb-side citations are paths at `desktop-v0.49.0` in get-bb/bb, read from a source tarball of the tag; versions below 0.49.0 were read from the local bb checkout's tags (`desktop-v0.43.4` through `desktop-v0.48.1`), which is where the per-version `grep -c` counts in entries 2 and 8 come from. Release-note quotes are from `CHANGELOG.md` at each tag, because the desktop release bodies are 17-byte titles. The installed build was read from `/Applications/bb.app/Contents/Resources/app.asar.unpacked/node_modules/bb-app/app/dist/assets/`, not from the desktop `app.asar`, which holds no renderer code. The SDK surface was read from `node_modules/@get-bb/plugin-sdk/bundled-types/` (0.6.19). Focus Board citations are `file:line` at `dev` `9c030ae` (1.7.16-dev). Live probe results are from bb 0.49.0 on macOS with the system Chrome, recorded in `docs/screenshots/probe-pane-host-markdown/`, `docs/screenshots/probe-new-project-control/` and `docs/screenshots/repro-context-row-0-49/`. One scratch thread was used for the pane probe and deleted afterwards.
 
 > AGENT GENERATED CONTENT
