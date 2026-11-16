@@ -9,6 +9,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+### Fixed
+
+## [1.7.15] - 2026-11-16
+
+### Added
+
+### Changed
+
 #### The loading screen
 
 - **The loading screen's dots move while they are actually on screen.** The wave used to wait for the dots to land and dip first at 680ms, by which point a warm open had already painted the board, so the row looked frozen. It now starts dipping at 75ms and crosses the row by 240ms, with a deeper dip, so a short hold reads as working and a long one keeps looping.
