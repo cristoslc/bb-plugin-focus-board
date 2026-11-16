@@ -1,0 +1,10 @@
+version: 1.7.15
+demos:
+  - bullet: "**The loading screen's dots move while they are actually on screen.**"
+    gif: docs/screenshots/release-demos/v1.7.15-loading-dot-wave.gif
+    caption: "Real-time recording of a held load: the dots dip left to right from about 75ms on screen and keep cycling."
+    steps:
+      - "scripts/screenshot/capture-loading-view-live.mjs — the CDP screencast recorder: real compositor frames with Chrome's own timestamps, starting at the view's first paint, so the gif's timing is the load's timing"
+      - "HOLD_MS=5000 over the ?sidebarDelay=60000 held gate films the shipped default variant (deal): the wave dips first at ~75ms of on-screen time and crosses the row by ~240ms, then keeps looping"
+      - "the frozen 40ms-step reel (capture-loading-view.mjs, 1.7.14's recorder) cannot prove this bullet: its stills say nothing about what a live load shows while the view is on screen"
+skips: []
