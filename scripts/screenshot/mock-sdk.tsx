@@ -1751,6 +1751,69 @@ const FILE_CHANGE_FIXTURE =
   new URLSearchParams(window.location.search).has("fileChange");
 
 /**
+ * Does this harness run carry the host mention-anchor fixture? Captured at
+ * module load like the other fixtures; `?mentionAnchor=1`. The frame behind
+ * the "File not found." regression (2026-11-17): bb 0.49.0 renders an
+ * agent-written `@thread:…` token as an anchor whose href is the
+ * percent-encoded token resolved into a `file://` URL under the workspace
+ * root, and its own click routing opens that "path" in the file preview.
+ * The pane's click capture must claim the anchor and open the thread.
+ */
+const MENTION_ANCHOR_FIXTURE =
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).has("mentionAnchor");
+
+/**
+ * The host's mention anchor, shaped from the live bb 0.49.0 DOM (captured on
+ * the thr_msyjn52jwr pane): the label is the resolved thread title, the
+ * href is the encoded token under the workspace root, and the host's
+ * ExternalLink icon sits inside its own nowrap glue unit. The fixture is a
+ * harness fixture only; the board's stored threads are untouched.
+ */
+function MockMentionAnchor(): ReactNode {
+  return (
+    <div
+      style={{
+        borderRadius: 10,
+        padding: "7px 10px",
+        fontSize: 12.5,
+        lineHeight: 1.45,
+        background: "var(--secondary)",
+        color: "var(--secondary-foreground)",
+      }}
+    >
+      Open{" "}
+      <a
+        href="file:///Users/sim/projects/web/%40thread%3Athr_glyph_glue"
+        rel="noopener noreferrer"
+        target="_blank"
+        style={{ textDecoration: "underline" }}
+      >
+        Wrap check: long path with the open glyph
+        <span style={{ whiteSpace: "nowrap" }}>
+          <span data-focus-board-host-glue="">
+            h
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              aria-hidden="true"
+              data-icon="ExternalLink"
+              data-icon-root=""
+              style={{ marginLeft: 4, display: "inline", width: 12, height: 12 }}
+            />
+          </span>
+        </span>
+      </a>{" "}
+      next.
+    </div>
+  );
+}
+
+/**
  * A host-faithful file-change row title (the pane-parity audit's Gap 4
  * frames): the path segment is a plain span with the timeline's file accent
  * class inside the title view's tooltip wrapper — the dead-click shape the
@@ -1809,6 +1872,7 @@ function MockChat({ threadId, focusRequest }: { threadId: string; focusRequest?:
           Today
         </div>
         {messages.map((message, index) => bubble(message.role, inlineMarkup(message.text), String(index)))}
+        {MENTION_ANCHOR_FIXTURE ? <MockMentionAnchor /> : null}
         {FILE_CHANGE_FIXTURE ? <MockFileChangeTitle /> : null}
       </div>
       {QUEUED_SEND_FIXTURE ? <MockQueuedSendRow /> : null}
