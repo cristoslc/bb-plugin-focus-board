@@ -186,16 +186,24 @@ describe("what a click does", () => {
     });
   });
 
-  it("opens beside the board when there is no split yet", () => {
-    expect(planNativeCardPlacement(null, null, "thr_a", LIVE)).toEqual({ kind: "open" });
+  it("opens the board's own pane when there is no split yet", () => {
+    // bb's hook answers null for a one-pane layout, which is where every
+    // session starts, so the board cannot name a pane: a split request here
+    // would grow one native pane per click (the 2026-11-17 report).
+    expect(planNativeCardPlacement(null, null, "thr_a", LIVE)).toEqual({
+      kind: "in-board",
+      reason: "unowned",
+    });
     expect(planNativeCardPlacement(null, OWNED, "thr_b", LIVE)).toEqual({
-      kind: "open",
+      kind: "in-board",
+      reason: "unowned",
     });
   });
 
-  it("opens when the board owns no pane", () => {
+  it("opens the board's own pane when the board owns no pane", () => {
     expect(planNativeCardPlacement(BOARD_AND_OWNED, null, "thr_b", LIVE)).toEqual({
-      kind: "open",
+      kind: "in-board",
+      reason: "unowned",
     });
   });
 
@@ -205,7 +213,8 @@ describe("what a click does", () => {
       { paneId: "pane-7", threadId: "thr_theirs", isFocused: false },
     ]);
     expect(planNativeCardPlacement(operatorPane, OWNED, "thr_b", LIVE)).toEqual({
-      kind: "open",
+      kind: "in-board",
+      reason: "unowned",
     });
   });
 
@@ -215,7 +224,7 @@ describe("what a click does", () => {
     // on the app's fallback route: the click must open, and leave that pane be.
     expect(
       planNativeCardPlacement(BOARD_AND_OWNED, OWNED, "thr_b", ["thr_b", "thr_c"]),
-    ).toEqual({ kind: "open" });
+    ).toEqual({ kind: "in-board", reason: "unowned" });
   });
 
   it("still focuses a pane whose thread has left the list when it is the clicked one", () => {

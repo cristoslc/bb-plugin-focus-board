@@ -1,17 +1,13 @@
 // @vitest-environment jsdom
-// The native-pane move's click switch (dec_nhnljjo8rgbz, docs/plans/
-// 2026-11-17-native-thread-pane.md §6.2 step 3): a card click opens the
-// thread in bb's own native pane beside the board — the host's opener call
-// — instead of opening the board's in-panel pane.
+// The card click's surface after the 2026-11-17 review: the board asks the
+// host for a native split only to focus or replace a pane it can name, and
+// opens its own in-panel pane otherwise, so one click never grows a second
+// thread pane (docs/plans/2026-11-17-one-board-pane.md section 8).
 //
-// The jsdom half pins the click's contract: the open call carries the
-// thread with split on, the in-board pane does not open (no fallback pane,
-// no pushed subPath), and the attention freeze still captures at click
-// time so the attended card holds its placement through churn. The live
-// half — the split actually rendering beside the board, an already-open
-// thread focusing, the pane-cap fallback — is probe evidence
-// (docs/screenshots/probe-native-split-pane/), not something the fake
-// host can paint.
+// This file keeps the two properties that are not about placement: the
+// attention freeze still captures at click time, and the eight-pane ceiling
+// never hands the host a click that would evict the board. The replacement
+// rule itself lives in tests/app-card-click-replaces-board-pane.test.tsx.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 
@@ -126,19 +122,17 @@ function mountBoard(): void {
   render(<Component subPath="" />);
 }
 
-describe("a card click under the native-pane move", () => {
-  it("calls the host's opener with split on and never opens the in-board pane", async () => {
+describe("a card click under the pane rule", () => {
+  it("opens the board's own pane and never asks the host for a split", async () => {
     mountBoard();
     await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
 
     fireEvent.click(cardAnchor("thr_focus"));
     await waitFor(() =>
-      expect(fakeNativeOpens()).toEqual([{ threadId: "thr_focus", split: true }]),
+      expect(document.querySelector('aside[aria-label="Thread: Focused thread"]')).not.toBeNull(),
     );
-    // The board's own pane is not the click's destination anymore: no
-    // fallback pane mounts (the fake's toPluginPanel always declines, so
-    // the old path would have opened one here).
-    expect(document.querySelector('aside[aria-label^="Thread:"]')).toBeNull();
+    expect(fakeNativeOpens()).toEqual([]);
+    expect(document.querySelector('[data-focus-board-panel]')).not.toBeNull();
   });
 
   it("still captures the attention freeze at click time: churn holds the clicked card's slot", async () => {
@@ -147,38 +141,15 @@ describe("a card click under the native-pane move", () => {
 
     fireEvent.click(cardAnchor("thr_focus"));
     await waitFor(() =>
-      expect(fakeNativeOpens()).toEqual([{ threadId: "thr_focus", split: true }]),
+      expect(document.querySelector('aside[aria-label="Thread: Focused thread"]')).not.toBeNull(),
     );
     act(() => {
       seedChurn();
     });
     // The freeze: the clicked card's captured slot 0 is held, so the
     // churned card (natural order: backlog, focus, older) cannot take the
-    // lead while the native pane reads the thread beside the board.
+    // lead while the pane reads the thread.
     expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_backlog", "thr_older"]);
-  });
-
-  it("the card menu's Open thread entry rides the same native path", async () => {
-    mountBoard();
-    await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
-
-    const card = document.querySelector('[data-thread-card="thr_older"]');
-    if (card === null) throw new Error("missing card thr_older");
-    fireEvent.contextMenu(card);
-    const menu = await waitFor(() => {
-      const found = document.querySelector('[role="menu"]');
-      if (found === null) throw new Error("menu did not open");
-      return found;
-    });
-    const open = [...menu.querySelectorAll('[role="menuitem"]')].find(
-      (item) => item.textContent?.trim() === "Open thread",
-    );
-    if (open === undefined) throw new Error("missing Open thread entry");
-    fireEvent.click(open);
-    await waitFor(() =>
-      expect(fakeNativeOpens()).toEqual([{ threadId: "thr_older", split: true }]),
-    );
-    expect(document.querySelector('aside[aria-label^="Thread:"]')).toBeNull();
   });
 
   it("at bb's pane cap with the board focused, the click falls back to the board's own pane instead of evicting it", async () => {
@@ -202,31 +173,9 @@ describe("a card click under the native-pane move", () => {
     fireEvent.click(cardAnchor("thr_focus"));
     // The guard: the click never reached the host's opener…
     expect(fakeNativeOpens()).toEqual([]);
-    // …and opened the board's own pane instead (the fake host declines
-    // every panel push, so the in-board fallback pane mounts).
+    // …and opened the board's own pane instead.
     await waitFor(() =>
       expect(document.querySelector('aside[aria-label="Thread: Focused thread"]')).not.toBeNull(),
     );
-  });
-
-  it("at the cap with a thread pane focused, the click stays native — a thread pane is evicted, not the board", async () => {
-    mountBoard();
-    await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
-
-    act(() => {
-      setFakeSplitLayout(
-        Array.from({ length: 8 }, (_, index) => ({
-          paneId: `pane-${index + 1}`,
-          threadId: index === 0 ? null : "thr_other",
-          isFocused: index === 0 ? false : index === 1,
-        })),
-      );
-    });
-
-    fireEvent.click(cardAnchor("thr_focus"));
-    await waitFor(() =>
-      expect(fakeNativeOpens()).toEqual([{ threadId: "thr_focus", split: true }]),
-    );
-    expect(document.querySelector('aside[aria-label^="Thread:"]')).toBeNull();
   });
 });
