@@ -1,25 +1,52 @@
 // @vitest-environment jsdom
 // The board's "/" shortcut: with no pane open, "/" moves focus to the
 // toolbar search field. It stays inert while a pane is open, while the
-// user is typing in an editable target, inside a dialog (which owns the
-// keys while it is up), and under modifier chords that carry their own
-// platform meanings.
+// user is typing in an editable target (inputs and rich-text editors), in
+// another pane's surface, inside a dialog (which owns the keys while it is
+// up), and under modifier chords that carry their own platform meanings.
+// The ownership rules live in lib/shortcut-ownership.ts.
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { useRef, type RefObject } from "react";
 import { useSearchFocusOnSlash } from "../hooks/use-search-focus";
 import { BoardToolbar } from "../components/board-toolbar";
 
-afterEach(cleanup);
+/** Scratch DOM the tests append to document.body; removed per test so one
+ *  case's surface never owns the next one's keys. */
+const scratch: HTMLElement[] = [];
+
+afterEach(() => {
+  cleanup();
+  for (const node of scratch.splice(0)) node.remove();
+});
+
+function mount(element: HTMLElement): HTMLElement {
+  document.body.appendChild(element);
+  scratch.push(element);
+  return element;
+}
+
+function element<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  attributes: Record<string, string> = {},
+  parent?: HTMLElement,
+): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, value);
+  if (parent !== undefined) parent.appendChild(node);
+  return node;
+}
 
 function Harness({
   enabled,
   searchInputRef,
+  threadPaneFocused = false,
 }: {
   enabled: boolean;
   searchInputRef: RefObject<HTMLInputElement | null>;
+  threadPaneFocused?: boolean;
 }) {
-  useSearchFocusOnSlash({ enabled, searchInputRef });
+  useSearchFocusOnSlash({ enabled, searchInputRef, threadPaneFocused });
   return <input ref={searchInputRef} aria-label="Search threads" />;
 }
 
@@ -79,6 +106,53 @@ describe("useSearchFocusOnSlash", () => {
       'input[placeholder="type here"]',
     ) as HTMLInputElement;
     const event = pressSlash(scratch);
+    expect(event.defaultPrevented).toBe(false);
+    expect(document.activeElement).not.toBe(searchInput);
+  });
+
+  it("a '/' typed inside a rich-text editor stays text input", () => {
+    const { searchInput } = harnessWithSearch(true);
+    const panel = mount(element("div", { "data-focus-board-panel": "" }));
+    const editor = element("div", { contenteditable: "true" }, panel);
+    const event = pressSlash(editor);
+    expect(event.defaultPrevented).toBe(false);
+    expect(document.activeElement).not.toBe(searchInput);
+  });
+
+  it("a '/' typed into a rich-text editor's inner block stays text input", () => {
+    const { searchInput } = harnessWithSearch(true);
+    const panel = mount(element("div", { "data-focus-board-panel": "" }));
+    const editor = element("div", { contenteditable: "true" }, panel);
+    const event = pressSlash(element("p", {}, editor));
+    expect(event.defaultPrevented).toBe(false);
+    expect(document.activeElement).not.toBe(searchInput);
+  });
+
+  it("a '/' pressed in a pane that is not the board's does not jump to search", () => {
+    // The sibling hole the letter had: a document listener hears the other
+    // pane's keystrokes, and focusing the board's search field from there
+    // yanks the caret out of what the operator is working on.
+    const { searchInput } = harnessWithSearch(true);
+    const pane = mount(element("div", { "data-testid": "foreign-pane" }));
+    const event = pressSlash(element("div", {}, pane));
+    expect(event.defaultPrevented).toBe(false);
+    expect(document.activeElement).not.toBe(searchInput);
+  });
+
+  it("a '/' on the board's own surface still focuses search", () => {
+    const { searchInput } = harnessWithSearch(true);
+    const panel = mount(element("div", { "data-focus-board-panel": "" }));
+    const event = pressSlash(element("div", {}, panel));
+    expect(event.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(searchInput);
+  });
+
+  it("with a native thread pane focused beside the board, '/' on nothing does nothing", () => {
+    const utils = render(
+      <Harness enabled searchInputRef={searchRef()} threadPaneFocused />,
+    );
+    const searchInput = utils.getByLabelText("Search threads");
+    const event = pressSlash();
     expect(event.defaultPrevented).toBe(false);
     expect(document.activeElement).not.toBe(searchInput);
   });

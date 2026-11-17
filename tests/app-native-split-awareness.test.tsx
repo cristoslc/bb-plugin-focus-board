@@ -214,3 +214,43 @@ describe("the board's split-layout awareness", () => {
     expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]);
   });
 });
+
+describe("the board's shortcuts and the native pane", () => {
+  /** The document-level letter the board listens for: nothing focused, so
+   *  the event lands on the body the way a stray keystroke does. */
+  function pressLetter(): void {
+    act(() => {
+      document.body.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "c",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+  }
+
+  it("a focused native thread pane takes the New Thread key away from the board", async () => {
+    // The letter opened the composer from inside another pane: the in-board
+    // pane's `openThread` gate cannot see a native pane, so the layout read
+    // is what tells the app the keyboard is parked beside the board.
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
+
+    focusNativePane("thr_focus");
+    pressLetter();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("with no native thread pane focused the letter still opens the composer", async () => {
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
+
+    // Closing the native pane hands the keyboard back to the board: the
+    // feature the operator has today survives the guard.
+    focusNativePane("thr_focus");
+    focusNativePane(null);
+    pressLetter();
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+  });
+});

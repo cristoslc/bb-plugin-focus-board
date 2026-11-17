@@ -2745,19 +2745,35 @@ function BoardPage({ subPath }: { subPath: string }) {
           ? false
           : archivedThreads.some((thread) => thread.id === openThreadId));
 
+  // Both board shortcuts are document listeners, and a document listener
+  // hears every pane's typing. The in-board pane's `openThread` gate covers
+  // the dense pane; a native thread pane beside the board needs its own
+  // read, because a card click hands the thread to the host and leaves
+  // `openThread` null. The focused native pane's thread is exactly that
+  // condition (lib/shortcut-ownership.ts decides it per keystroke: with
+  // anything focused the event target names the owning surface, so the
+  // layout read only settles the keystroke that lands on nothing at all).
+  const nativeThreadPaneFocused = nativeSplitThreadId !== null;
+
   // "/" is the board's search gesture, live only with no pane open (the
   // pane's chat input owns keystrokes while it is up).
   const searchInputRef = useRef<HTMLInputElement>(null);
-  useSearchFocusOnSlash({ enabled: openThread === null, searchInputRef });
+  useSearchFocusOnSlash({
+    enabled: openThread === null,
+    searchInputRef,
+    threadPaneFocused: nativeThreadPaneFocused,
+  });
 
   // The configured New Thread shortcut key, live only from the overview
   // board with no pane open (the hotkey's guards own the rest: editable
-  // targets, dialogs, modifier chords). While the composer itself is open
-  // the hotkey drops, so a stray second press cannot reseed the preset.
+  // targets, foreign panes, dialogs, modifier chords). While the composer
+  // itself is open the hotkey drops, so a stray second press cannot reseed
+  // the preset.
   useNewThreadComposerShortcut({
     enabled: openThread === null && !newThreadOpen,
     hotkey: newThreadShortcutKey ?? "",
     onActivate: openNewThread,
+    threadPaneFocused: nativeThreadPaneFocused,
   });
 
   // Opening (or switching) a pane pushes a panel route, so every pane is one
