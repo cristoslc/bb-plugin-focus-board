@@ -1,0 +1,265 @@
+{
+  "evidence": {
+    "fresh": {
+      "before": {
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": ""
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": null,
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "cards": [
+        {
+          "threadId": "thr_8nbzpbmm3c",
+          "title": "Homelab Security Orchestrator",
+          "x": 128,
+          "y": 202,
+          "visible": true
+        },
+        {
+          "threadId": "thr_29gxjg77x4",
+          "title": "Homelab Application Services Orchestrator",
+          "x": 125,
+          "y": 410,
+          "visible": true
+        },
+        {
+          "threadId": "thr_r282wvvnkf",
+          "title": "HomeLab Infrastructure orchestrator",
+          "x": 128,
+          "y": 617,
+          "visible": true
+        },
+        {
+          "threadId": "thr_9hvf4kvdnn",
+          "title": "BV Brain2 Orchestrator (L0)",
+          "x": 125,
+          "y": 808,
+          "visible": true
+        }
+      ],
+      "firstClick": {
+        "threadId": "thr_8nbzpbmm3c",
+        "title": "Homelab Security Orchestrator",
+        "x": 128,
+        "y": 202,
+        "visible": true
+      },
+      "afterFirstClick": {
+        "route": "/plugins/focus-board/board/t/thr_8nbzpbmm3c",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_8nbzpbmm3c"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: Homelab Security Orchestrator",
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": [
+          "[\"[focus-board:native-open]\",{\"threadId\":\"thr_8nbzpbmm3c\",\"branch\":\"in-board: host will not split\",\"compactViewport\":true,\"layout\":null,\"record\":null}]"
+        ]
+      },
+      "closedAfterFirst": true,
+      "secondClick": {
+        "threadId": "thr_29gxjg77x4",
+        "title": "Homelab Application Services Orchestrator",
+        "x": 125,
+        "y": 410,
+        "visible": true
+      },
+      "afterSecondClick": {
+        "route": "/plugins/focus-board/board/t/thr_29gxjg77x4",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_29gxjg77x4"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: Homelab Application Services Orchestrator",
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": [
+          "[\"[focus-board:native-open]\",{\"threadId\":\"thr_8nbzpbmm3c\",\"branch\":\"in-board: host will not split\",\"compactViewport\":true,\"layout\":null,\"record\":null}]",
+          "[\"[focus-board:native-open]\",{\"threadId\":\"thr_29gxjg77x4\",\"branch\":\"in-board: host will not split\",\"compactViewport\":true,\"layout\":null,\"record\":null}]"
+        ]
+      },
+      "closedAfterSecond": true,
+      "doubleClickCard": {
+        "threadId": "thr_29gxjg77x4",
+        "title": "Homelab Application Services Orchestrator",
+        "x": 125,
+        "y": 410,
+        "visible": true
+      },
+      "afterDoubleClick": {
+        "route": "/plugins/focus-board/board/t/thr_29gxjg77x4",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_29gxjg77x4"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: Homelab Application Services Orchestrator",
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": [
+          "[\"[focus-board:native-open]\",{\"threadId\":\"thr_8nbzpbmm3c\",\"branch\":\"in-board: host will not split\",\"compactViewport\":true,\"layout\":null,\"record\":null}]",
+          "[\"[focus-board:native-open]\",{\"threadId\":\"thr_29gxjg77x4\",\"branch\":\"in-board: host will not split\",\"compactViewport\":true,\"layout\":null,\"record\":null}]",
+          "[\"[focus-board:native-open]\",{\"threadId\":\"thr_29gxjg77x4\",\"branch\":\"in-board: host will not split\",\"compactViewport\":true,\"layout\":null,\"record\":null}]"
+        ]
+      }
+    },
+    "recorded": {
+      "before": {
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": ""
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": null,
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "afterFirstClick": {
+        "route": "/plugins/focus-board/board/t/thr_8nbzpbmm3c",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_8nbzpbmm3c"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: Homelab Security Orchestrator",
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": [
+          "[\"[focus-board:native-open]\",{\"threadId\":\"thr_8nbzpbmm3c\",\"branch\":\"in-board: host will not split\",\"compactViewport\":true,\"layout\":null,\"record\":null}]"
+        ]
+      },
+      "afterSecondClick": {
+        "route": "/plugins/focus-board/board/t/thr_8nbzpbmm3c",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_8nbzpbmm3c"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: Homelab Security Orchestrator",
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": [
+          "[\"[focus-board:native-open]\",{\"threadId\":\"thr_8nbzpbmm3c\",\"branch\":\"in-board: host will not split\",\"compactViewport\":true,\"layout\":null,\"record\":null}]"
+        ]
+      },
+      "afterDoubleClick": {
+        "route": "/plugins/focus-board/board/t/thr_8nbzpbmm3c",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_8nbzpbmm3c"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: Homelab Security Orchestrator",
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": [
+          "[\"[focus-board:native-open]\",{\"threadId\":\"thr_8nbzpbmm3c\",\"branch\":\"in-board: host will not split\",\"compactViewport\":true,\"layout\":null,\"record\":null}]"
+        ]
+      }
+    }
+  },
+  "verdict": {
+    "freshFirstClickOpenedAPane": false,
+    "freshThreadPanes": [],
+    "freshRouteAfterFirstClick": "/plugins/focus-board/board/t/thr_8nbzpbmm3c",
+    "freshBoardMountedAfterFirstClick": true,
+    "secondClickThreadPanes": [],
+    "secondClickPaneCount": 1,
+    "doubleClickThreadPanes": [],
+    "doubleClickRoute": "/plugins/focus-board/board/t/thr_29gxjg77x4",
+    "doubleClickBoardMounted": true,
+    "doubleClickPaneCount": 1,
+    "recordedFirstClickThreadPanes": [],
+    "recordedSecondClickThreadPanes": [],
+    "recordedDoubleClickThreadPanes": [],
+    "recordedDoubleClickRoute": "/plugins/focus-board/board/t/thr_8nbzpbmm3c",
+    "inBoardPaneAfterFirstClick": "Thread: Homelab Security Orchestrator",
+    "inBoardPaneAfterSecondClick": "Thread: Homelab Application Services Orchestrator",
+    "compactViewport": true,
+    "viewportWidth": 700,
+    "routeAfterFirstClick": "/plugins/focus-board/board/t/thr_8nbzpbmm3c"
+  }
+}

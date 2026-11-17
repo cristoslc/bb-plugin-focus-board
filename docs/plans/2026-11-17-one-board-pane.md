@@ -64,7 +64,7 @@ Consequences, stated so they are not surprises:
 ## 4. What the rule does not change
 
 - The eight-pane ceiling guard (`lib/split-pane-cap.ts`) stays where it was: a click at the ceiling with the board focused opens the board's own in-panel pane, because the host's opener would replace the board itself.
-- The phone path is unchanged: with splits off, `useSidebarSplitLayout()` answers null, the plan answers "open", and the host degrades the split to plain navigation.
+- The phone path is unchanged in its guard but not in its outcome: with splits off the host answers a split with plain navigation, so the click must not ask (see §7).
 - A click on the thread the board's pane already shows goes to the host's opener, which focuses that pane — no replacement, nothing moves.
 
 ## 5. The regression the first version shipped with
@@ -88,3 +88,55 @@ What changed, all three in `lib/native-pane-ownership.ts` and `app.tsx`:
 ## 6. The residue
 
 The replacement's first navigation is a real route change, so the pane's previous thread keeps a history entry: back from the clicked thread steps through the threads the pane showed. That is the same shape the host's own navigation produces everywhere else, and the board's pane (and its in-panel back-arrow trail) is untouched by it.
+
+## 7. The second regression: where the host will not split
+
+The next report was the same sentence with the mechanism named: "clicking is still taking me to home + opening the full-window thread composer." That is not a pane opening badly. It is bb's opener plainly navigating: the plugin panel that held the board is replaced by the thread page, which carries the composer, and the board's route is gone.
+
+### The predicate, from bb's source
+
+Installed bb is 0.49.0; its renderer lives at `/Applications/bb.app/Contents/Resources/app.asar.unpacked/node_modules/bb-app/app/dist/assets/index-UJHlXnMg.js`. The split open is `jQ` (`openThreadInSplit`), asset offset ~675506:
+
+```js
+function jQ({store, navigate, projectId, threadId, isCompact, state}) {
+  let route = threadRoute({projectId, threadId}), layout = store.get(splitLayoutAtom);
+  if (isCompact || layout === null) { navigate(route, ...); return; }
+  ...
+}
+```
+
+Two disjuncts, two different causes:
+
+- `isCompact` comes from `mk()` (`useIsCompactViewport`), which answers `matchMedia("(max-width: 767px)").matches` unless a React context overrides it (the query constant is at asset offset ~312790, the hook at ~317659). The plugin-facing `experimental_useSidebarThreadActions().open` passes the same value (`plugin-frontend-0dkOuthv.js`, ~287951).
+- `layout === null` is the host's split-layout atom: no split has been created for this window yet.
+
+So "splits are off" is exactly: **a viewport at or under 767px wide, or no split layout yet**. Either way `split: true` is a plain navigation.
+
+### What the operator's window was doing
+
+The report's tell is the whole-window thread page with its composer, which only the plain-navigation branch produces. The board's own pane would have shown the board beside it. The compact half is visible in the same report's evidence: the probe re-ran at `COMPACT=1` (a 700px browser window, so `(max-width: 767px)` matches) against the un-fixed 0.49.0 and reproduced it in one click: board unmounted, route `/projects/<id>/threads/<threadId>`, zero cards left (`docs/screenshots/probe-native-one-click/compact/before/evidence.json`). A 1600px window on the same build usually splits; a freshly loaded panel can still hit the null-atom half and plainly navigate, which is what the `wide/before` run records as "no card click opened a pane".
+
+### What a plugin can read
+
+The compact half, fully: this repo already vendors the identical query in `components/ui/hooks/use-compact-viewport.tsx`, used today as `paneCoversBoard`. The atom half, not at all: `useSidebarSplitLayout()` answers null both for "compact" and for "no split yet", so null cannot be read ahead of the click.
+
+### The branch
+
+`planNativeCardPlacement` now takes the environment and returns `in-board` before any pane reasoning where `nativeSplitUnavailable({ compactViewport })` holds, which is compact only (`lib/native-pane-ownership.ts`). In `app.tsx`, `openThreadCardNative` checks it first and calls `openThreadCard(threadId)`: the board's own in-panel pane, the surface the deep link and the cap fallback already use, so the board keeps its place and no route leaves the plugin panel.
+
+Where the unreadable half bites, the click asks the host for the split and repairs itself: `scheduleNativeRepair(threadId, branch)` is a module-level timer (it must outlive the panel it repairs) that at 500ms checks whether the board's marker is gone and the route is now `/threads/<threadId>`; if so it calls `navigate.toPluginPanel("board", { subPath: "t/<threadId>" })`, which brings the board back with that thread in its own pane. The route comes back even though the request could not be predicted.
+
+### The trace
+
+The click logs one `console.debug("[focus-board:native-open]", {...})` line with the thread, the branch, `compactViewport`, the host's layout, the board's record, and after the repair window an `outcome` line. It ships off, behind a new server setting `nativeOpenDebug` ("Developer: trace the card click's pane placement (debug)", default false), the same shape as the existing `scrollDebugInstrumentation`.
+
+### Evidence
+
+| State | Build | After one click |
+|---|---|---|
+| 700px window | pre-fix 0.49.0 | board unmounted, route is the thread page, no cards (`compact/before`) |
+| 700px window | fixed | board mounted, route `/plugins/focus-board/board/t/<id>`, thread in the board's own pane (`compact/after`) |
+| 1600px window | pre-fix 0.49.0 | "no card click opened a pane" on a freshly loaded panel (`wide/before`) |
+| 1600px window | fixed | two panes, board kept, second click replaces (`after`) |
+
+`docs/screenshots/probe-native-one-click/{compact/{before,after},wide/before,after}/evidence.json` carry the route, layout, board marker and in-board pane label per step. The wide `after` run carries the trace: `"branch":"open: new pane"` then `"outcome":"host plainly navigated: restoring the board's route"`, which is the guard doing its job where the layout atom was not ready yet.

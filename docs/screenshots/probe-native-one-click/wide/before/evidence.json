@@ -1,0 +1,304 @@
+{
+  "evidence": {
+    "fresh": {
+      "before": {
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": ""
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": null,
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "cards": [
+        {
+          "threadId": "thr_9hvf4kvdnn",
+          "title": "BV Brain2 Orchestrator (L0)",
+          "x": 445,
+          "y": 192,
+          "visible": true
+        },
+        {
+          "threadId": "thr_8nbzpbmm3c",
+          "title": "Homelab Security Orchestrator",
+          "x": 448,
+          "y": 636,
+          "visible": true
+        },
+        {
+          "threadId": "thr_29gxjg77x4",
+          "title": "Homelab Application Services Orchestrator",
+          "x": 445,
+          "y": 844,
+          "visible": true
+        },
+        {
+          "threadId": "thr_r282wvvnkf",
+          "title": "HomeLab Infrastructure orchestrator",
+          "x": 448,
+          "y": 1051,
+          "visible": true
+        }
+      ],
+      "firstClick": {
+        "threadId": "thr_9hvf4kvdnn",
+        "title": "BV Brain2 Orchestrator (L0)",
+        "x": 445,
+        "y": 192,
+        "visible": true
+      },
+      "afterFirstClick": {
+        "route": "/projects/proj_9da9h742i7/threads/thr_9hvf4kvdnn",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": ""
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_9hvf4kvdnn",
+            "panelPath": null,
+            "subPath": null
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": null,
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": "{\"paneId\":null,\"threadId\":\"thr_9hvf4kvdnn\",\"priorPaneIds\":[]}",
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "closedAfterFirst": false,
+      "secondClick": {
+        "threadId": "thr_8nbzpbmm3c",
+        "title": "Homelab Security Orchestrator",
+        "x": 448,
+        "y": 636,
+        "visible": true
+      },
+      "afterSecondClick": {
+        "route": "/projects/proj_yjxm446dtc/threads/thr_8nbzpbmm3c",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": ""
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_8nbzpbmm3c",
+            "panelPath": null,
+            "subPath": null
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": null,
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_8nbzpbmm3c\",\"priorPaneIds\":[]}",
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "closedAfterSecond": false,
+      "doubleClickCard": {
+        "threadId": "thr_8nbzpbmm3c",
+        "title": "Homelab Security Orchestrator",
+        "x": 448,
+        "y": 636,
+        "visible": true
+      },
+      "afterDoubleClick": {
+        "route": "/projects/proj_yjxm446dtc/threads/thr_8nbzpbmm3c",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": ""
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_8nbzpbmm3c",
+            "panelPath": null,
+            "subPath": null
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": null,
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_8nbzpbmm3c\",\"priorPaneIds\":[]}",
+        "consoleErrors": [],
+        "nativeTrace": []
+      }
+    },
+    "recorded": {
+      "before": {
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": ""
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": null,
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "afterFirstClick": {
+        "route": "/projects/proj_9da9h742i7/threads/thr_9hvf4kvdnn",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": ""
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_9hvf4kvdnn",
+            "panelPath": null,
+            "subPath": null
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": null,
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": "{\"paneId\":null,\"threadId\":\"thr_9hvf4kvdnn\",\"priorPaneIds\":[]}",
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "afterSecondClick": {
+        "route": "/projects/proj_yjxm446dtc/threads/thr_8nbzpbmm3c",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": ""
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_8nbzpbmm3c",
+            "panelPath": null,
+            "subPath": null
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": null,
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_8nbzpbmm3c\",\"priorPaneIds\":[]}",
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "afterDoubleClick": {
+        "route": "/projects/proj_yjxm446dtc/threads/thr_8nbzpbmm3c",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": ""
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_8nbzpbmm3c",
+            "panelPath": null,
+            "subPath": null
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": null,
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_8nbzpbmm3c\",\"priorPaneIds\":[]}",
+        "consoleErrors": [],
+        "nativeTrace": []
+      }
+    }
+  },
+  "verdict": {
+    "freshFirstClickOpenedAPane": true,
+    "freshThreadPanes": [
+      "thr_9hvf4kvdnn"
+    ],
+    "freshRouteAfterFirstClick": "/projects/proj_9da9h742i7/threads/thr_9hvf4kvdnn",
+    "freshBoardMountedAfterFirstClick": true,
+    "secondClickThreadPanes": [
+      "thr_8nbzpbmm3c"
+    ],
+    "secondClickPaneCount": 2,
+    "doubleClickThreadPanes": [
+      "thr_8nbzpbmm3c"
+    ],
+    "doubleClickRoute": "/projects/proj_yjxm446dtc/threads/thr_8nbzpbmm3c",
+    "doubleClickBoardMounted": true,
+    "doubleClickPaneCount": 2,
+    "recordedFirstClickThreadPanes": [
+      "thr_9hvf4kvdnn"
+    ],
+    "recordedSecondClickThreadPanes": [
+      "thr_8nbzpbmm3c"
+    ],
+    "recordedDoubleClickThreadPanes": [
+      "thr_8nbzpbmm3c"
+    ],
+    "recordedDoubleClickRoute": "/projects/proj_yjxm446dtc/threads/thr_8nbzpbmm3c",
+    "inBoardPaneAfterFirstClick": null,
+    "inBoardPaneAfterSecondClick": null,
+    "compactViewport": false,
+    "viewportWidth": 1600,
+    "routeAfterFirstClick": "/projects/proj_9da9h742i7/threads/thr_9hvf4kvdnn"
+  }
+}

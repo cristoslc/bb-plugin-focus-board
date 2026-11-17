@@ -980,6 +980,20 @@ export default async function plugin(bb: BbPluginApi) {
         "Logs the pane chat transcript's scroll writes with calling stacks, plus scroll/wheel/touch events, to the browser console with a __focusBoardScrollDebug.dump() window handle. Debug use only; keep off otherwise.",
       default: false,
     },
+
+    // Debug-mode trace for the card click's pane placement (2026-11-17: two
+    // reports in a row could not be attributed from a screenshot). Ships OFF,
+    // like the scroll instrumentation above: while on, every card click logs
+    // one `[focus-board:native-open]` console.debug line naming the branch it
+    // took, the host's split layout, the board's pane record, and the outcome
+    // after the repair window.
+    nativeOpenDebug: {
+      type: "boolean",
+      label: "Developer: trace the card click's pane placement (debug)",
+      description:
+        "Logs one [focus-board:native-open] line per card click to the browser console: the branch the click took, the host's split layout, the board's pane record, and whether the host plainly navigated. Debug use only; keep off otherwise.",
+      default: false,
+    },
   });
 
   // Workspace-open state for the pane header's open menu. The local host
