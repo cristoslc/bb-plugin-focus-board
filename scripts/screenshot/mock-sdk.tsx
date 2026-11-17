@@ -1454,6 +1454,56 @@ const simRpcBase = async (method: string, args?: unknown): Promise<unknown> => {
     const known = new Set(SIM_WORKSPACE_FILES);
     return { existence: Object.fromEntries(paths.map((path) => [path, known.has(path)])) };
   }
+  if (method === "workspace_path_kind") {
+    // The pane's `file://` anchor classification (2026-11-17): the fixture
+    // directory reads as a directory, the markdown fixture as a file, and
+    // anything else as outside the workspace.
+    const { href } = args as { href: string };
+    if (href.endsWith("/.worktrees")) return { kind: "directory", path: ".worktrees" };
+    if (href.includes("/docs/")) {
+      return {
+        kind: "file",
+        path: "docs/rfcs/rfc-support-triage-process-workflow-acceptance-checklist.md",
+      };
+    }
+    return { kind: "outside", path: null };
+  }
+  if (method === "workspace_open_targets") {
+    return {
+      status: "available",
+      reason: null,
+      root: "/Users/sim/projects/web",
+      targets: [
+        {
+          id: "vscode",
+          label: "Visual Studio Code",
+          kind: "editor",
+          icon: null,
+          capabilities: {
+            openDirectory: true,
+            openFile: true,
+            openFileAtLine: true,
+            openFileAtColumn: true,
+          },
+        },
+        {
+          id: "finder",
+          label: "Finder",
+          kind: "file-manager",
+          icon: null,
+          capabilities: {
+            openDirectory: true,
+            openFile: false,
+            openFileAtLine: false,
+            openFileAtColumn: null,
+          },
+        },
+      ],
+    };
+  }
+  if (method === "workspace_open_in_target") {
+    return { ok: true, message: null };
+  }
   if (method === "rank_move") {
     // The server's move semantics via the REAL shared op —
     // applyRankMoveFractions (lib/rank-fractions.ts), the function the live
@@ -1764,6 +1814,63 @@ const MENTION_ANCHOR_FIXTURE =
   new URLSearchParams(window.location.search).has("mentionAnchor");
 
 /**
+ * Does this harness run carry the directory-anchor fixture? `?directoryAnchor=1`.
+ * The operator's 2026-11-16 report: bb links an inline code path that exists
+ * as a directory into a `file://` anchor, and its file preview answers
+ * "Path is not a regular file". The pane claims the click, classifies the
+ * destination, and opens the folder in the preferred editor instead.
+ */
+const DIRECTORY_ANCHOR_FIXTURE =
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).has("directoryAnchor");
+
+/** The host's directory anchor, the shape bb 0.49.0 renders for an inline
+ *  code path that exists on disk as a folder (captured live on the
+ *  chat-relay orchestrator pane). */
+function MockDirectoryAnchor(): ReactNode {
+  return (
+    <div
+      style={{
+        borderRadius: 10,
+        padding: "7px 10px",
+        fontSize: 12.5,
+        lineHeight: 1.45,
+        background: "var(--secondary)",
+        color: "var(--secondary-foreground)",
+      }}
+    >
+      Branches live in{" "}
+      <a
+        href="file:///Users/sim/projects/web/.worktrees"
+        rel="noopener noreferrer"
+        target="_blank"
+        style={{ textDecoration: "underline" }}
+      >
+        .worktrees
+        <span style={{ whiteSpace: "nowrap" }}>
+          <span data-focus-board-host-glue="">
+            s
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              aria-hidden="true"
+              data-icon="ExternalLink"
+              data-icon-root=""
+              style={{ marginLeft: 4, display: "inline", width: 12, height: 12 }}
+            />
+          </span>
+        </span>
+      </a>{" "}
+      today.
+    </div>
+  );
+}
+
+/**
  * The host's mention anchor, shaped from the live bb 0.49.0 DOM (captured on
  * the thr_msyjn52jwr pane): the label is the resolved thread title, the
  * href is the encoded token under the workspace root, and the host's
@@ -1873,6 +1980,7 @@ function MockChat({ threadId, focusRequest }: { threadId: string; focusRequest?:
         </div>
         {messages.map((message, index) => bubble(message.role, inlineMarkup(message.text), String(index)))}
         {MENTION_ANCHOR_FIXTURE ? <MockMentionAnchor /> : null}
+        {DIRECTORY_ANCHOR_FIXTURE ? <MockDirectoryAnchor /> : null}
         {FILE_CHANGE_FIXTURE ? <MockFileChangeTitle /> : null}
       </div>
       {QUEUED_SEND_FIXTURE ? <MockQueuedSendRow /> : null}

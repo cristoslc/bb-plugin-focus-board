@@ -58,7 +58,10 @@ host app involved.
   pending user_question fixture for the pane-gap frames; `?queuedSend=1`
   remains MockQueuedSendRow's own flag; `?mentionAnchor=1` mounts the host's
   `file://` thread-mention anchor (the "File not found." regression frame,
-  2026-11-17) so a capture can click it and watch the pane's claim routing.
+  2026-11-17) so a capture can click it and watch the pane's claim routing;
+  `?directoryAnchor=1` mounts the host's directory anchor (the "Path is not
+  a regular file" frame) so a capture can click it and read the
+  `workspace_open_in_target` trace from `window.__uat.calls()`.
   Honors `CHROME_PATH`, `HARNESS_URL`, and `OUT_DIR`.
 - `repro-touch-reveal-cascade.mjs` — runtime re-verification of the queued-send
   touch-reveal overrides (#296/#297) against the LIVE bb app (the

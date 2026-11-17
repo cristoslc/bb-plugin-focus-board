@@ -17,6 +17,7 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { HEADER_ICON_BUTTON_CLASS } from "@/lib/pane-chrome";
+import { pickEditorTarget, pickTargetOfKind } from "@/lib/workspace-open-pick";
 
 type WorkspaceOpenTargets = z.infer<
 	(typeof rpcContract)["workspace_open_targets"]["output"]
@@ -58,49 +59,6 @@ interface WorkspaceOpenMenuProps {
  * the default width comes straight out of an already-truncating title.
  */
 export const OPEN_LABEL_MIN_PANE_WIDTH = 560;
-
-/** The app's own workspace-target preference key (workspace-open-target-preference). */
-const WORKSPACE_TARGET_PREFERENCE_KEY = "bb.workspaceOpenTarget";
-
-function readPreferredTargetId(): string | null {
-	try {
-		const raw = window.localStorage.getItem(WORKSPACE_TARGET_PREFERENCE_KEY);
-		return raw === null ? null : JSON.parse(raw);
-	} catch {
-		return null;
-	}
-}
-
-function targetsOfKind(
-	targets: readonly WorkspaceOpenTarget[],
-	kind: string,
-): WorkspaceOpenTarget[] {
-	return targets.filter((target) => target.kind === kind);
-}
-
-/**
- * The editor entry follows the operator's own workspace-target preference
- * when it names an available editor; otherwise the first editor target.
- */
-function pickEditorTarget(
-	targets: readonly WorkspaceOpenTarget[],
-): WorkspaceOpenTarget | null {
-	const editors = targetsOfKind(targets, "editor");
-	if (editors.length === 0) return null;
-	const preferredId = readPreferredTargetId();
-	if (preferredId !== null) {
-		const preferred = editors.find((target) => target.id === preferredId);
-		if (preferred !== undefined) return preferred;
-	}
-	return editors[0] ?? null;
-}
-
-function pickTargetOfKind(
-	targets: readonly WorkspaceOpenTarget[],
-	kind: string,
-): WorkspaceOpenTarget | null {
-	return targetsOfKind(targets, kind)[0] ?? null;
-}
 
 /** Registry icon per daemon target kind; unknown kinds fall back to a folder. */
 const ICON_FOR_KIND: Record<string, string> = {
