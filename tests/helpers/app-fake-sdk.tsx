@@ -184,6 +184,8 @@ export function resetFakeNativeOpens(): void {
 const fakeActions = {
   open: (threadId: string, options?: { split?: boolean }) => {
     nativeOpens.push({ threadId, split: options?.split });
+    fakeRouteThreadId = threadId;
+    fakeRouteIsFallback = false;
     if (options?.split === true) placeSplitOpen(threadId);
   },
   openNewThread: () => {},
@@ -281,6 +283,25 @@ export function setFakeSplitsOff(off: boolean): void {
 export function fakeSplitPanes(): FakeSplitPane[] {
   return structuredClone([...fakeHostPanes]);
 }
+/** bb's route reconciliation, placement only. */
+function reconcileFakeRoute(threadId: string): void {
+  if (fakeSplitsOff || fakeHostPanes.length < 2) return;
+  const panes = fakeHostPanes;
+  const existing = panes.find((pane) => pane.threadId === threadId);
+  if (existing !== undefined) {
+    setHostPanes(focusPane(panes, existing.paneId));
+    return;
+  }
+  const focused = focusedPane(panes);
+  if (focused === undefined) return;
+  setHostPanes(
+    panes.map((pane) =>
+      pane.paneId === focused.paneId
+        ? { ...pane, threadId, isFocused: true }
+        : { ...pane, isFocused: false },
+    ),
+  );
+}
 function focusedPane(
   panes: readonly FakeSplitPane[],
 ): FakeSplitPane | undefined {
@@ -338,6 +359,29 @@ export function fakeThreadNavigations(): string[] {
 export function resetFakeThreadNavigations(): void {
   threadNavigations.splice(0, threadNavigations.length);
 }
+/**
+ * The app's route, as the host's router sees it. Two properties matter to the
+ * board's click rule and both are measured live:
+ *
+ * - Navigating to the route the app is ALREADY on is a no-op: react-router
+ *   pushes no entry, bb's reconciliation never runs, and the focused pane does
+ *   not change. A click whose focus step is that navigation therefore stalls.
+ * - Navigating to a thread the host cannot resolve leaves the app on its
+ *   fallback route instead of focusing a pane: the click disappears.
+ */
+let fakeRouteThreadId: string | null = null;
+let fakeRouteIsFallback = false;
+export function setFakeRouteThread(threadId: string | null): void {
+  fakeRouteThreadId = threadId;
+  fakeRouteIsFallback = false;
+}
+/** True once a navigation left the app on its unresolved-thread fallback. */
+export function fakeRouteFellBack(): boolean {
+  return fakeRouteIsFallback;
+}
+function liveThreadIds(): readonly string[] {
+  return store.threads.map((thread) => thread.id);
+}
 export function useSidebarSplitLayout(): unknown {
   return useSyncExternalStore(
     subscribeSplitLayout,
@@ -372,25 +416,20 @@ const fakeNavigate = {
   // bb's route reconciliation (SplitThreadArea's effect →
   // `reconcileLayoutForContent`): the route's content lands in the pane that
   // already holds it (focusing it), else it replaces the FOCUSED pane. Where
-  // splits are off the route simply navigates.
+  // splits are off the route simply navigates. A route the app is already on
+  // is a no-op, and a thread the host cannot resolve falls back instead of
+  // reaching a pane.
   toThread: (threadId: string) => {
     threadNavigations.push(threadId);
-    if (fakeSplitsOff || fakeHostPanes.length < 2) return;
-    const panes = fakeHostPanes;
-    const existing = panes.find((pane) => pane.threadId === threadId);
-    if (existing !== undefined) {
-      setHostPanes(focusPane(panes, existing.paneId));
+    if (threadId === fakeRouteThreadId) return;
+    if (!liveThreadIds().includes(threadId)) {
+      fakeRouteThreadId = null;
+      fakeRouteIsFallback = true;
       return;
     }
-    const focused = focusedPane(panes);
-    if (focused === undefined) return;
-    setHostPanes(
-      panes.map((pane) =>
-        pane.paneId === focused.paneId
-          ? { ...pane, threadId, isFocused: true }
-          : { ...pane, isFocused: false },
-      ),
-    );
+    fakeRouteThreadId = threadId;
+    fakeRouteIsFallback = false;
+    reconcileFakeRoute(threadId);
   },
   toPluginPanel: (path: string, options?: { subPath?: string; replace?: boolean }): boolean => {
     panelPushes.push({ path, subPath: options?.subPath ?? "", replace: options?.replace === true });

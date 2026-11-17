@@ -67,6 +67,24 @@ Consequences, stated so they are not surprises:
 - The phone path is unchanged: with splits off, `useSidebarSplitLayout()` answers null, the plan answers "open", and the host degrades the split to plain navigation.
 - A click on the thread the board's pane already shows goes to the host's opener, which focuses that pane — no replacement, nothing moves.
 
-## 5. The residue
+## 5. The regression the first version shipped with
+
+The rule above worked in the probe and in jsdom, and failed on the operator's machine the day it landed: "thread pane doesn't open on first click. Double-clicking switches to home, doesn't open as split." `scripts/screenshot/probe-native-one-click.mjs` and its instrumented twin `probe-native-one-click-trace.mjs` drive the board's own cards on the installed 0.49.0 and read the host's layout every 100ms; evidence in `docs/screenshots/probe-native-one-click/{before,after}/`.
+
+Three separate causes came out of the trace, not one:
+
+1. **The record did not survive the host's own re-render.** The board's DOM marker is gone 100ms after the first click: bb re-creates the plugin panel's subtree when it splits for the first time. The record was written only once the layout confirmed the new pane, which happens after that re-render, so a fresh window never recorded anything. The next click had nothing to replace and split a second pane (`before/fresh-3-after-second-click.png`: three panes).
+2. **The focus step could be a no-op forever.** Focusing the board's pane by navigating to the thread it already showed does nothing when the app is already on that route: react-router pushes no entry, the host's reconciliation never runs, the layout keeps its identity, and the confirmation the rule waited for never arrives. The click did nothing at all, silently.
+3. **A stale record navigated into nothing.** With a record naming a thread the host could no longer resolve, the focus navigation went down the host's unresolved-thread fallback instead of opening anything, which reads as "switches to home".
+
+What changed, all three in `lib/native-pane-ownership.ts` and `app.tsx`:
+
+- The record is written **at click time**, before the host is asked for anything, so a re-render cannot lose it. A record may now carry `paneId: null` ("the board opened this thread; claim whichever pane shows it that was not there when the click happened"), and its pane id is filled in on the next use.
+- The focus step is `actions.open(paneThread, { split: true })`: the host's own opener, which focuses a pane **by id** and never depends on route equality.
+- The confirmation waits on the **layout** (`the focused pane is the board's`), never on object identity, and has a 400ms deadline. When the deadline passes without the pane gaining focus, the click falls back to `actions.open(clickedThread, { split: true })`, which opens a pane by the host's own rules and is then recorded. One click always opens something.
+- A record whose pane is gone, whose pane shows another thread, or whose thread has left the board's list is treated as stale: the click opens a pane instead of navigating, and the record is overwritten with what the host produced. There is no `focused` shortcut any more, because a stale snapshot of the focus made that shortcut replace the board.
+- A second click naming the same thread while a replacement is in flight re-asks for the focus and returns; it never re-plans against a layout that is mid-replacement and never touches the board's route.
+
+## 6. The residue
 
 The replacement's first navigation is a real route change, so the pane's previous thread keeps a history entry: back from the clicked thread steps through the threads the pane showed. That is the same shape the host's own navigation produces everywhere else, and the board's pane (and its in-panel back-arrow trail) is untouched by it.

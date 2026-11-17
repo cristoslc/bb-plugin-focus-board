@@ -24,6 +24,7 @@ import {
   resetFakeNativeOpens,
   seedFakeLinks,
   seedFakeThreads,
+  setFakeRouteThread,
   setFakeSplitLayout,
 } from "./helpers/app-fake-sdk";
 
@@ -53,6 +54,7 @@ beforeEach(() => {
   seedFakeLinks({});
   seedFakeThreads(fixtureThreads());
   resetFakeNativeOpens();
+  setFakeRouteThread(null);
 });
 
 afterEach(() => {

@@ -3,8 +3,8 @@
 //
 // bb's opener (`openThreadInSplit`, apps/app/src/lib/split-layout) gives every
 // thread that is not already open a NEW right-hand pane beside the focused one,
-// so a board whose cards open native panes grows one pane per click until bb's
-// eight-pane ceiling. The operator's rule (2026-11-17, after a four-pane
+// so a board whose cards open native panes would grow one pane per click until
+// bb's eight-pane ceiling. The operator's rule (2026-11-17, after a four-pane
 // window: board, then one thread pane per card click) is one board-opened
 // thread pane that later clicks replace in place.
 //
@@ -23,43 +23,64 @@
 // otherwise REPLACES THE FOCUSED pane (`SplitThreadArea`'s
 // `reconcileLayoutForContent` → `replacePaneContent(layout,
 // layout.focusedPaneId, content)`; the same logic ships in 0.49.0 as `LP`/`IN`
-// in the renderer bundle). That gives the replacement in two navigations and
-// no close: navigate to the thread the board's pane already shows (the host
-// focuses that pane, content untouched, board still on screen), then navigate
-// to the clicked thread (it is in no pane, so the focused pane — the board's
-// own thread pane, never the board — takes it). Nothing is unmounted in
-// between, so there is no empty half and no gap to see.
+// in the renderer bundle). So a replacement is: focus the board's own pane with
+// the host's opener (its documented rule focuses a pane that already shows the
+// thread), then navigate to the clicked thread, which is in no pane and so
+// lands in the focused one. Nothing is unmounted in between, so there is no
+// empty half and no gap to see.
 //
-// Recognition rule: a pane is the board's while the board's RECORD names it —
-// the paneId the host created for a card click plus the thread the board last
-// put there — and the record still matches the live layout. Both halves are
-// needed:
+// ## The 2026-11-17 regression this rule shipped with, and what it changed
 //
-//   - paneId alone would let a recycled id (bb names panes `pane-N` and reuses
-//     the lowest free number) claim a pane the operator opened;
-//   - threadId alone would forget the pane the moment the board replaced its
-//     thread, so clicking back and forth between two cards would open a
-//     second pane on the way back.
+// The first version of this module recognised the board's pane by
+// `{ paneId, threadId }` only, wrote the record AFTER the open was confirmed
+// from a re-render, and confirmed a replacement's focus step by watching for a
+// layout object whose identity differed from the click's snapshot. Three live
+// failures came out of that, each measured with
+// scripts/screenshot/probe-native-one-click-trace.mjs:
+//
+//   1. bb re-creates the plugin panel's subtree when it splits for the first
+//      time (the board's DOM marker is gone by +100ms), so the click's React
+//      state — including the record it was about to write — is destroyed
+//      before the confirmation can run. The record never existed, and the next
+//      click opened a second pane.
+//   2. A focus step built on `toThread(paneThread)` does nothing when the app
+//      is already on that route: react-router pushes no entry, no
+//      reconciliation runs, the layout keeps its identity, and the click
+//      stalls with no pane opened and no error.
+//   3. A record naming a thread the host can no longer resolve sent
+//      `toThread` down its own fallback route instead of opening anything,
+//      which reads as "switches to home".
+//
+// So the record is now written AT CLICK TIME (before the host is asked for
+// anything), a null pane id means "claim whichever pane shows this thread that
+// was not there when the click happened", the focus step is the host's opener
+// (id-based, never a route-equality assumption), and a replacement that is not
+// confirmed inside its window falls back to the opener. There is no `focused`
+// shortcut and no identity comparison anywhere.
+//
+// ## Recognition rule
+//
+// A pane is the board's while the record names it and the live layout agrees:
+//
+//   - `paneId` set: that pane must still exist AND still show `threadId`;
+//   - `paneId` null: some pane shows `threadId` and was not one of the panes
+//     present when the board opened it (`priorPaneIds`), so a pane the
+//     operator opened from bb's own sidebar is never adopted.
+//
+// Either way the record is dropped, and the click opens a pane instead of
+// navigating anywhere, when the pane is gone, its thread changed, or the
+// thread is no longer in the board's live list (the host could not resolve it).
 //
 // Consequences, stated so they are not surprises:
 //
-//   - The operator DRAGS the board's pane (to the left of the board, or into
-//     another row). bb's `movePane` keeps the paneId, so the pane is still the
-//     board's and the next click replaces it where the operator put it. Moving
-//     a pane is arranging, not taking it over.
-//   - The operator opens a THREAD in that pane themselves (sidebar click, a
-//     mention, a link). The pane now shows a thread the board never put
-//     there, the record no longer matches, and the board forgets it: the next
-//     card click opens its own pane instead of discarding what the operator
-//     opened. The board never closes a pane either — the layout keeps whatever
-//     the operator arranged.
-//   - The pane is closed. The record stops matching, ownership lapses, and the
+//   - The operator DRAGS the board's pane: bb's `movePane` keeps the paneId, so
+//     the pane is still the board's and the next click replaces it where the
+//     operator put it.
+//   - The operator opens a THREAD in that pane themselves: the pane shows a
+//     thread the board never put there, the record stops matching, and the next
+//     click opens its own pane instead of discarding what the operator opened.
+//   - The pane is closed, or bb renumbers it: the record stops matching and the
 //     next click opens a fresh pane that the board then owns.
-//   - The record is per browser (bb's own split layout persists, so a reload
-//     must not cost the operator a second pane). A record that no longer
-//     matches — a recycled id, a re-threaded pane, a layout from an older
-//     build — is ignored, and ignoring it is always safe: the click falls back
-//     to the opener, which is what the click did before this rule existed.
 //
 // Pure module: no host, no SDK, no React, no DOM.
 
@@ -67,25 +88,37 @@ import type { SplitPaneLayoutView } from "./split-pane-cap";
 
 /** The pane the board opened, and the thread the board last put in it. */
 export interface BoardNativePane {
-  readonly paneId: string;
+  /** The host's pane id, or null while the board knows only the thread it put
+   *  there (the host picks the id, so a click cannot know it in advance). */
+  readonly paneId: string | null;
   readonly threadId: string;
+  /** The pane ids that existed when the board opened `threadId`. A pane in
+   *  this list was the operator's, never the board's. */
+  readonly priorPaneIds: readonly string[];
 }
 
-/** What one card click should do, given the layout and the board's record. */
+/** The record against the live layout: a real pane, its thread, its focus. */
+export interface ResolvedBoardNativePane {
+  readonly paneId: string;
+  readonly threadId: string;
+  readonly isFocused: boolean;
+}
+
+/** What one card click should do. */
 export type NativeCardPlacement =
-  /** Focus the pane `paneId` (the host focuses a pane that already shows the
-   *  route's content) and then navigate to the clicked thread, which lands in
-   *  that pane. `threadId` is the thread the pane shows NOW — the focus step
-   *  navigates to it. `focused` is true when that pane already has the focus,
-   *  so the click can navigate straight through. */
+  /** The clicked thread is already in the board's pane: the host's opener
+   *  focuses that pane and nothing moves. */
+  | { readonly kind: "focus"; readonly paneId: string }
+  /** Focus `paneId` — the host focuses a pane that already shows `threadId`,
+   *  the thread it holds NOW — then navigate to the clicked thread, which the
+   *  host lands in that pane. */
   | {
       readonly kind: "replace";
       readonly paneId: string;
       readonly threadId: string;
-      readonly focused: boolean;
     }
-  /** Hand the thread to the host's opener, which splits a pane beside the
-   *  board — or focuses, or replaces at the ceiling, by bb's own rules. */
+  /** Hand the thread to the host's opener: a pane beside the board, a focus,
+   *  or the ceiling's replace, by bb's own rules. */
   | { readonly kind: "open" };
 
 /** The plugin-scoped localStorage key for the board's pane record. */
@@ -98,16 +131,22 @@ export function boardNativePaneStoredValue(
   pane: BoardNativePane | null,
 ): string {
   if (pane === null) return "";
-  return JSON.stringify({ paneId: pane.paneId, threadId: pane.threadId });
+  return JSON.stringify({
+    paneId: pane.paneId,
+    threadId: pane.threadId,
+    priorPaneIds: [...pane.priorPaneIds],
+  });
 }
 
 /**
  * A stored record parses back as a record, or as null.
  *
- * Anything malformed — not JSON, not an object, a blank or non-string half —
- * answers null, which reads as "the board owns no pane" and takes the safe
- * fallback (the host's opener). A stale record is never repaired into a
- * guess: guessing here decides whose pane gets replaced.
+ * Anything malformed — not JSON, not an object, a blank or non-string thread,
+ * a pane id that is neither a string nor null — answers null, which reads as
+ * "the board owns no pane" and takes the safe path (the host's opener). A
+ * record written by the first version of this rule carries no
+ * `priorPaneIds`; it parses with an empty list, which is right for its
+ * concrete pane id.
  */
 export function parseBoardNativePaneStored(
   raw: string | null,
@@ -120,75 +159,66 @@ export function parseBoardNativePaneStored(
     return null;
   }
   if (typeof parsed !== "object" || parsed === null) return null;
-  const { paneId, threadId } = parsed as {
+  const { paneId, threadId, priorPaneIds } = parsed as {
     paneId?: unknown;
     threadId?: unknown;
+    priorPaneIds?: unknown;
   };
-  if (typeof paneId !== "string" || paneId === "") return null;
   if (typeof threadId !== "string" || threadId === "") return null;
-  return { paneId, threadId };
+  if (paneId !== null && (typeof paneId !== "string" || paneId === "")) {
+    return null;
+  }
+  if (priorPaneIds !== undefined && !Array.isArray(priorPaneIds)) return null;
+  const prior = Array.isArray(priorPaneIds)
+    ? priorPaneIds.filter((id): id is string => typeof id === "string")
+    : [];
+  return { paneId, threadId, priorPaneIds: prior };
 }
 
 /**
- * The board's pane as the live layout shows it, or null when the record no
- * longer matches.
+ * The record against the live layout, or null when it no longer matches.
  *
  * A null layout (one pane, a compact viewport, splits off) answers null: there
  * is no thread pane beside the board to own.
  */
-export function boardNativePaneInLayout(
+export function resolveBoardNativePane(
   layout: SplitPaneLayoutView | null,
   record: BoardNativePane | null,
-): BoardNativePane | null {
+): ResolvedBoardNativePane | null {
   if (layout === null || record === null) return null;
-  const pane = layout.panes.find((candidate) => candidate.paneId === record.paneId);
+  const pane =
+    record.paneId !== null
+      ? layout.panes.find((candidate) => candidate.paneId === record.paneId)
+      : layout.panes.find(
+          (candidate) =>
+            candidate.threadId === record.threadId &&
+            !record.priorPaneIds.includes(candidate.paneId),
+        );
   if (pane === undefined || pane.threadId !== record.threadId) return null;
-  return record;
+  return {
+    paneId: pane.paneId,
+    threadId: record.threadId,
+    isFocused: pane.isFocused,
+  };
 }
 
 /**
- * What a card click does, given the layout and the board's record.
+ * What a card click does, given the layout, the board's record, the clicked
+ * thread, and the threads the board still lists.
  *
- * A null layout keeps the click on the host's opener: a single-pane or
- * compact window has no pane of the board's to replace, and the host's opener
- * is where splits degrade to plain navigation.
+ * `liveThreadIds` is the board's own sidebar list. A record naming a thread
+ * that has left it is stale, because the host's navigation cannot resolve that
+ * thread either; the click opens a pane instead of navigating into nothing.
  */
 export function planNativeCardPlacement(
   layout: SplitPaneLayoutView | null,
   record: BoardNativePane | null,
   threadId: string,
+  liveThreadIds: readonly string[],
 ): NativeCardPlacement {
-  const owned = boardNativePaneInLayout(layout, record);
+  const owned = resolveBoardNativePane(layout, record);
   if (owned === null) return { kind: "open" };
-  // The clicked thread is already in the board's pane: the host's opener
-  // focuses a pane that shows the thread, and nothing moves.
-  if (owned.threadId === threadId) return { kind: "open" };
-  const focusedPane = layout?.panes.find((pane) => pane.isFocused);
-  return {
-    kind: "replace",
-    paneId: owned.paneId,
-    threadId: owned.threadId,
-    focused: focusedPane !== undefined && focusedPane.paneId === owned.paneId,
-  };
-}
-
-/**
- * The pane the host just created for `threadId`, or null when it created none.
- *
- * Ownership is claimed from the layout rather than assumed: the host picks the
- * pane id, so the board learns its pane by watching which pane started showing
- * the thread it asked for. A pane that already showed that thread before the
- * click was the operator's, and is never adopted.
- */
-export function newlyOpenedPane(
-  layout: SplitPaneLayoutView | null,
-  threadId: string,
-  priorPaneIds: readonly string[],
-): BoardNativePane | null {
-  if (layout === null) return null;
-  const pane = layout.panes.find(
-    (candidate) =>
-      candidate.threadId === threadId && !priorPaneIds.includes(candidate.paneId),
-  );
-  return pane === undefined ? null : { paneId: pane.paneId, threadId };
+  if (owned.threadId === threadId) return { kind: "focus", paneId: owned.paneId };
+  if (!liveThreadIds.includes(owned.threadId)) return { kind: "open" };
+  return { kind: "replace", paneId: owned.paneId, threadId: owned.threadId };
 }

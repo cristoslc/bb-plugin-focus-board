@@ -16,6 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 #### bb's thread pages
 
 - **Clicking a card opens the thread in bb's own pane beside the board.** The thread opens as a split pane that keeps the board in view, and a click on an already-open thread just focuses it. The board's in-panel pane stays reachable through shared links and its own reference chips for now.
+  - A click always opens the pane, even the first one on a fresh board. A double click neither closes it nor sends the board to another route.
   - The board keeps one thread pane. A second card click replaces the thread the board's pane was showing, instead of splitting another pane off the board, and a pane you opened yourself or pointed at another thread is left alone.
   - At bb's eight-pane ceiling the click opens the board's own pane instead, because the host's split placement would otherwise replace the board's pane, the very surface the click was made on.
 
