@@ -11,7 +11,7 @@ So a patch for a gap that upstream closed in 0.44, 0.47 or 0.49 is still load-be
 
 ## 1. The answer in one paragraph
 
-Thirteen host compensations are in the tree. Six of them are obsolete on bb 0.49.0 and were proven obsolete by running the live host, not by reading notes: the pane's inline-code link decoration, its relative-link rescue, its click capture for both, the ExternalLink glyph glue, and the New Thread dialog's own New project button with its folder-picker flow. Removing those six deletes about 1,180 production lines and about 950 test and harness lines. Seven compensations still earn their place on 0.49.0, each with a probe or a source reading below. Nothing is removable today without raising the floor, because every obsolete patch answers a gap that 0.43 through 0.48 still have.
+Thirteen host compensations are in the tree. Six of them are obsolete on bb 0.49.0 and were proven obsolete by running the live host, not by reading notes: the pane's inline-code link decoration, its relative-link rescue, its click capture for both, the ExternalLink glyph glue, and the New Thread dialog's own New project button with its folder-picker flow. Those six are now gated rather than deleted: they stay in the tree for bb 0.43 through 0.48 and switch themselves off when the host reports 0.49.0 or later, which is what the operator ruled on `dec_kyuduwmr8w7g` (section 9). Deleting them outright would remove about 1,180 production lines and about 950 test and harness lines, and that stays available the day the support floor rises. Seven compensations still earn their place on 0.49.0, each with a probe or a source reading below.
 
 ## 2. How entries are classified
 
@@ -21,6 +21,7 @@ Every entry gets one class.
 - **REMOVABLE IF THE FLOOR RISES**: obsolete on 0.49.0, still needed below it. The entry names the version that fixed it, so raising the floor is an explicit choice.
 - **KEEP**: still a gap on 0.49.0, with the probe or source reading that shows it.
 - **UNKNOWN**: needs a condition the harness cannot fake. The entry says what the operator would have to do.
+- **GATED**: the audit's fifth class, added by the operator's ruling on `dec_kyuduwmr8w7g`. The compensation stays in the tree because `engines.bb` stays at `>=0.43`, and it switches itself off when the host reports 0.49.0 or later. A gated entry is still a future removal: the code is what would be deleted if the floor ever rises, so each one keeps its "REMOVABLE IF THE FLOOR RISES" reading as its removal condition. The gate lives in `lib/host-capabilities.ts` and is fed by the `host_version` RPC. Section 9 records the ruling and what landed.
 
 A note on where upstream notes live, because this is easy to get wrong in both directions. The release **bodies** are empty: `gh release view desktop-v0.47.0 --json body` returns 17 characters, which is just the title, and the same holds for 0.48.0, 0.48.1 and 0.49.0. There are still notes to read. bb keeps them in `CHANGELOG.md` in the get-bb/bb repository, so they are read here at each release tag: `git show <tag>:CHANGELOG.md` for 0.43.4 through 0.48.1 from the local bb checkout, and the GitHub contents API for 0.49.0, since that checkout stops at 0.48.1. Those sections are real: 0.49.0's is 120 lines with Usability, Plugins, Bug fixes and experiments subsections, and two of its bullets decide entries 2 and 8 below. The one release that genuinely has no notes is 0.48.1, which 0.49.0's own summary says "shipped without notes". A note that does not mention a gap still proves nothing: only the probe does.
 
@@ -37,7 +38,7 @@ One row per compensation. "Gap" quotes the tree's own comment verbatim.
 - **Written**: `8d70d91`, 2026-09-29.
 - **Upstream check**: no 0.44 through 0.48 note mentions link glyph wrapping. On 0.49.0, `apps/app/src/components/ui/markdown-preview.tsx` gains `appendMarkdownLinkIcon`, which wraps the icon with the link text's final grapheme in `span.whitespace-nowrap` (the same technique, from the host side). The 0.49.0 notes do not mention it either. The probe is what settles it.
 - **Probe**: `scripts/screenshot/probe-pane-host-markdown.mjs` reads the live 0.49.0 pane. Every host anchor reports `"hostIcon": true, "hostIconInNowrap": true`, and every one also reports `"pluginHostGlue": true` (`pluginHostGlueCount: 5`), so the content script is still running and nesting its own nowrap unit inside the host's.
-- **Class**: **REMOVABLE IF THE FLOOR RISES** (0.49.0).
+- **Class**: **GATED** on 0.49.0 (removable if the floor ever rises).
 
 ### Entry 2: inline-code file links painted by the pane
 
@@ -48,7 +49,7 @@ One row per compensation. "Gap" quotes the tree's own comment verbatim.
 - **Written**: `373d48d`, 2026-09-29.
 - **Upstream check**: 0.49.0 Usability says "Inline code that looks like a file name becomes a link only when the file exists." In source, `markdown-preview.tsx` gains `resolveInlineCodeFileTarget` and `MarkdownInlineCodeFileLink`, gated on `useHostPathExists(hostId, path)`. `PluginThreadChat.tsx` also stops gating `onOpenLocalFileLink` on the panel's environment: at 0.48.1 it is `const onOpenLocalFileLink = canUseHostFileNavigation ? timelineNavigation.onOpenLocalFileLink : undefined;`, and at 0.49.0 it is `useThreadFileLinkOpener({ environment, openFilePreview, threadId }).openLink`, passed unconditionally through a `ThreadTimelineNavigationProvider` the plugin chat now mounts itself.
 - **Probe**: `probe-pane-host-markdown.mjs` on the live host with four inline-code fixtures. `docs/test-coverage-matrix.md` (exists, markdown) rendered as an anchor with `href: "file:///…/docs/test-coverage-matrix.md"`. `components/thread-pane.tsx` (exists, not markdown) rendered as an anchor too. `docs/no-such-file.md` stayed a plain `<code>`, which is the host's existence gate working. No `<code>` element in the pane carried `data-focus-board-path-link`, so the plugin decoration had nothing left to paint.
-- **Class**: **REMOVABLE IF THE FLOOR RISES** (0.49.0).
+- **Class**: **GATED** on 0.49.0 (removable if the floor ever rises).
 
 ### Entry 3: relative markdown link rescue
 
@@ -59,7 +60,7 @@ One row per compensation. "Gap" quotes the tree's own comment verbatim.
 - **Written**: `074f032`, 2026-09-29.
 - **Upstream check**: 0.45.0 Fixes lists "Fix Claude permission handling, Pi model discovery, OpenCode questions, mobile submit taps, timeline history, file links, and plugin popup focus." That "file links" line is unscoped, and the 0.48.1 source still lacked the routing, so it did not close this gap. 0.49.0's `PluginThreadChat` change above is the one that does: the plugin chat now supplies `onOpenLocalFileLink` itself, so `useMessageLinkRouting` produces `localFile` routing for transcript rows.
 - **Probe**: same fixture run. `[the changelog](CHANGELOG.md)` rendered as `href: "file:///…/bb-plugin-focus-board/CHANGELOG.md"`, i.e. the host resolved the relative href against the workspace root before the browser saw it.
-- **Class**: **REMOVABLE IF THE FLOOR RISES** (0.49.0).
+- **Class**: **GATED** on 0.49.0, and removable if the floor ever rises.
 
 ### Entry 4: the pane's click capture for anchors and code spans
 
@@ -70,7 +71,7 @@ One row per compensation. "Gap" quotes the tree's own comment verbatim.
 - **Written**: the handler predates the 2026-11-04 rewrite (`960c130`) that added the reference-chip and file-change-title branches.
 - **Upstream check**: same as entries 2 and 3. With the host rewriting hrefs to `file://` and painting its own anchors, `isExternalHref` now returns true for every host-routed link, so the pane's anchor branch no longer fires on them.
 - **Probe**: `probe-pane-host-markdown.mjs` read zero anchors with a relative href inside the pane, so the branch that claims them cannot match. The click itself was not driven; the branch is unreachable given the hrefs the host now emits.
-- **Class**: **REMOVABLE IF THE FLOOR RISES** (0.49.0). The file-change-title branch (pane-parity Gap 4) and the reference-chip branch stay.
+- **Class**: **GATED** on 0.49.0: only the link halves stand down. The file-change-title branch (pane-parity Gap 4) and the reference-chip branch stay.
 
 ### Entry 5: pane reference chips
 
@@ -114,7 +115,7 @@ One row per compensation. "Gap" quotes the tree's own comment verbatim.
 - **Written**: `0447e50`, 2026-11-04 (issue #355).
 - **Upstream check**: 0.49.0 Plugins lists "and New project in `experimental_NewThreadComposer`" among new surfaces. In source, `apps/app/src/components/plugin/PluginNewThreadComposer.tsx:85` passes `createProject: { onCreate: () => quickCreateProject.openCreateDialogThen(setPickedProjectId), … }`, and `apps/app/src/components/pickers/ProjectSelector.tsx:307` renders a `CommandItem` for it labeled "New project". The capability is absent at 0.48.1 and every earlier tag checked (`grep -c createProject` over `PluginNewThreadComposer.tsx` returns 0 at 0.43.4, 0.46.0, 0.47.0, 0.48.0 and 0.48.1).
 - **Probe**: `scripts/screenshot/probe-new-project-control.mjs` against the live 0.49.0 app. It opens the board's own New Thread dialog and reads `{"pluginButtons":[{"side":"plugin","text":"","anchored":true}],"hostProjectPicker":{"label":"Project: No project"},"footerRowMounted":true}` and, with the project picker open, `{"menuItemCount":59,"createEntries":["New project"]}`. Two New project affordances, one per side.
-- **Class**: **REMOVABLE IF THE FLOOR RISES** (0.49.0).
+- **Class**: **GATED** on 0.49.0 (removable if the floor ever rises).
 
 ### Entry 9: the folder-picker create flow
 
@@ -125,7 +126,7 @@ One row per compensation. "Gap" quotes the tree's own comment verbatim.
 - **Written**: `0447e50`, 2026-11-04, the same change as entry 8.
 - **Upstream check**: the host's own `createProject` path (entry 8) owns folder selection now, inside the host, where the client host id is known.
 - **Probe**: covered by entry 8's probe. The host entry exists and is enabled (`disabled: !quickCreateProject.isAvailable || isCreating`).
-- **Class**: **REMOVABLE IF THE FLOOR RISES** (0.49.0), with entry 8.
+- **Class**: **GATED** on 0.49.0, with entry 8 (removable if the floor ever rises).
 
 ### Entry 10: needs-you flag guard
 
@@ -250,58 +251,66 @@ No verdict in section 3 changed after reading these. The three families either s
 Thirteen entries.
 
 - **REMOVABLE NOW**: 0.
-- **REMOVABLE IF THE FLOOR RISES**: 6 (entries 1, 2, 3, 4, 8, 9), all for the same version, bb 0.49.0.
+- **GATED** (was "removable if the floor rises", now switched at runtime): 6 (entries 1, 2, 3, 4, 8, 9), all on the same line, bb 0.49.0.
 - **KEEP**: 6 (entries 5, 6, 7, 11, 12, 13).
 - **UNKNOWN**: 1 (entry 10).
 
 The zero on REMOVABLE NOW is the audit's main finding. Every obsolete patch in this tree answers a gap bb 0.43 through 0.48 still has, so nothing here can be deleted by a maintenance pass alone. The unit of work is the floor, and the six removals follow it.
 
-## 7. Ranked removals: payoff, risk, and the exact edit
+## 7. The three gate sites: what the gate does, what a removal would still delete, and the risk
 
-Ordered by what I would ship first. Every one of them is blocked behind the floor decision in section 9; none can land on `dev` while `engines.bb` says `>=0.43`, because on a 0.43 host each removal would ship a regression.
+The operator ruled for a runtime switch instead of a floor bump (`dec_kyuduwmr8w7g`, section 9), so the six gated entries are now three gate sites. Each site still names the code a later floor bump would delete, because that is what the gate is holding back. The order is the order the gates landed in.
 
-### First: the ExternalLink glyph glue (about 307 lines)
+The gate reads one value. `lib/host-capabilities.ts` parses the host version from the `host_version` RPC, compares it against `HOST_LOCAL_FILE_SURFACE_VERSION = "0.49.0"`, and publishes three flags: `gluesLinkGlyph`, `routesLocalFileLinks`, `composerCreatesProjects`. Every flag describes what the HOST does, so each call site stands down when its flag is true. The unknown state is the lacking set: until the version arrives, and if the read fails, every compensation runs exactly as it did on 0.43, and the failed read is logged rather than swallowed. `hooks/use-host-capabilities.ts` is the React view (`useSyncExternalStore` over the same store), so a pane and a dialog read one answer and one RPC serves the whole app generation.
+
+### Site 1: the ExternalLink glyph glue (about 307 lines to delete later)
 
 - **Edit**: delete `components/host-link-glue.ts` (134 lines) and `tests/host-link-glue.test.ts` (162 lines). In `app.tsx`, delete the `host-link-glue` registration and the seven-line comment above it, and the `installHostLinkGlue` import.
 - **Payoff**: about 145 production lines and 162 test lines, plus a document-wide MutationObserver that runs a rAF-coalesced sweep on every DOM change in the app shell, in every window where the plugin is loaded.
 - **Risk if the removal is wrong**: cosmetic on an older host, where the link glyph can wrap onto its own line at some pane widths. No dead click, no broken contract. The probe already shows the host's own nowrap unit is the one doing the work on 0.49.0.
 
-### Second: inline-code and relative-link routing (about 1,020 lines)
+### Site 2: inline-code and relative-link routing (about 1,020 lines to delete later)
 
 - **Edit**: delete `components/decorate-inline-code.ts` (225), `components/chat-link-intercept.ts` (98), `tests/decorate-inline-code.test.ts` (259), `tests/chat-link-intercept.test.ts` (157) and `tests/workspace-paths.test.ts` (39). In `components/thread-pane.tsx`, delete `openWorkspacePreview`, `checkWorkspacePaths`, the decoration effect (`useEffect` at about line 843 through 910), the anchor and code branches of `onChatClickCapture` (about lines 640 through 660), and the now-unused imports. In `server.ts`, delete the `workspace_files_exist` contract (about lines 473 through 483) and its implementation (about lines 2713 through 2747). In `scripts/screenshot/`, drop the mocked RPC from `mock-sdk.tsx:1450` and its fixture list from `data.ts:32`, and the matching rows in `tests/rpc-contract-hardening.test.ts`.
 - **Payoff**: the largest single cut in the tree, about 550 production lines and 475 test and fixture lines, one RPC, one host `pathsExist` call per pane scan, and one mutation-driven decoration pass that runs on every frame the transcript changes.
 - **Risk if the removal is wrong**: the exact bugs this code was written for come back on an older host. Inline-code `.md` spans stop being links, and a relative markdown link opens an error page against the bb app's origin instead of the file. This is the one removal where a wrong guess is user-visible, so it should land with the floor bump in the same release, not ahead of it.
 
-### Third: the New Thread dialog's New project button (about 800 lines)
+### Site 3: the New Thread dialog's New project button (about 800 lines to delete later)
 
 - **Edit**: delete `lib/composer-row-anchor.ts` (122), `components/use-footer-row-anchor.ts` (108), `lib/project-create-flow.ts` (96), `tests/composer-row-anchor.test.tsx` (148) and `tests/project-create-flow.test.ts` (143). In `components/new-thread-modal.tsx`, delete the `onCreateProject` and `onCreateProjectFromPicker` props, the `newProjectName`, `createPending`, `pickingPending` and `creatingProject` state, `startCreateProject`, `submitCreateProject`, the `useFooterRowAnchor` call, the floating button block and the inline name-field block (about lines 425 through 510), and the `composer-row-anchor` imports. In `app.tsx`, delete `pickedFolderCreate` and the `onCreateProjectFromPicker` prop, keep `createProject` (the board toolbar's group dialog still uses it), and drop it from the modal's props. Retire `scripts/screenshot/repro-new-project-row.mjs` and the `?folderPick=` mock with it.
 - **Payoff**: about 486 production lines and 311 test and harness lines, plus a duplicated control in the dialog today and a per-render geometry measurement of the host's footer row.
 - **Risk if the removal is wrong**: on an older host the dialog loses project creation, since the guest composer there has no `createProject` at all. On 0.49.0 nothing is lost: the host's entry creates the project and selects it in the picker, which is exactly what the plugin's button did.
 
-The other three floor-gated entries ride with these. Entry 3's module is deleted as part of the second removal, and entry 4's two branches with it; entry 9 goes with the third.
+What the gate does at each site, as landed:
+
+- **Site 1** (`components/host-link-glue.ts`): `installHostLinkGlue` waits for the capability store, then starts the sweep-and-observe loop only when `gluesLinkGlyph` is false. On 0.49.0 nothing runs and no document-wide MutationObserver is left behind.
+- **Site 2** (`components/thread-pane.tsx`): the decoration effect returns right after the reference chips when `routesLocalFileLinks` is true, which also stops the per-pane `workspace_files_exist` batch and the thread lookup it needs; the click capture returns before the anchor and code branches on the same flag. The chip branch and the file-change-title branch keep running on every host.
+- **Site 3** (`components/new-thread-modal.tsx`): the dialog's New project affordance renders only when `composerCreatesProjects` is false, which also parks the footer-row measurement (`useFooterRowAnchor`) and the folder-picker flow on hosts that do not need them.
+
+Entries 3 and 9 have no site of their own: entry 3's module is called only from site 2, and entry 9's flow only from site 3, so each is inert exactly when its site is.
 
 ## 8. What is still load-bearing on 0.49.0, and the proof
 
 Four of the seven KEEP entries carry a probe or a source reading that names the live gap.
 
 - **Composer context row** (entry 6): the live 0.49.0 run reads the host footer at height 0 on desktop with no chip painted, and unmounted on a touch viewport, while the fallback row renders in both. Artifacts in `docs/screenshots/repro-context-row-0-49/`.
-- **New project duplicate** (entry 8, removed only by the same floor bump): the live dialog carries both controls. Until the floor moves, the duplicate is the shipped state.
+- **New project duplicate** (entry 8): the live dialog carried both controls before the gate, which is what the probe recorded. With the gate in place the dialog draws one on 0.49.0 and the button returns on any host below it, so the probe still reads both controls on a pre-0.49 host.
 - **Reference chips** (entry 5): the host still autolinks `@thread` only, so `@project:proj_…` is dead text in every surface, and the board still wants its own routing for tokens that name a thread the board lists.
 - **`rank_move` spread** (entry 13) and **open in browser** (entry 12): both rest on a symbol that is still present at 0.49.0, quoted in their entries.
 
 The plainest statement of the floor's cost: the plugin's own pane is at parity with the main thread view on 0.49.0 for the two surfaces it patches most (inline file links and relative links), and those two patches are the largest block of compensation code in the repository.
 
-## 9. The decision this audit hands to the operator
+## 9. What the operator ruled, and what landed
 
-The six REMOVABLE IF THE FLOOR RISES entries exist because `package.json` says `engines.bb: ">=0.43"`. Raising that line to `>=0.49` is what makes them deletable. Three consequences have to be weighed together.
+The audit handed the operator one decision: raise `engines.bb` to `>=0.49` and delete the six, or keep 0.43 supported. The operator ruled for neither of the two ends and gave a third instruction, verbatim: "can we feature-toggle the code so it only kicks in if on bb <0.49?" That is recorded on `dec_kyuduwmr8w7g` and it turned the six REMOVABLE IF THE FLOOR RISES entries into the GATED class above.
 
-1. **Reach**: bb installs a plugin by semver range, so a floor of 0.49 means a 0.43 through 0.48 host refuses to load or update the plugin until it upgrades bb. Nobody can tell from this repository how many installs sit on those versions.
-2. **Payoff**: about 1,180 production lines and 950 test and harness lines, one RPC, one content script, one document-wide observer, and two host behaviours the plugin duplicates.
-3. **Reversibility**: the floor is one line and can be lowered again in a later release, but an install that already updated into a floor bump has no way back to an older plugin version through bb's own update path.
+What that choice trades, stated plainly, because it is not the audit's original recommendation:
 
-There is a fourth option that does not require the floor to move: runtime feature detection. The pane already proves it can read the host's rendered behaviour (`usePaneContextRowMissing` walks the paint). A detection pass could check whether the host painted a `file://` anchor for a relative link and skip the plugin's modules when it did. That keeps 0.43 support and still lets the compensation code be deleted, at the cost of one more probe on a path that already carries several.
+- **What it buys**: a 0.43 through 0.48 host keeps working with no change, and on 0.49.0 the compensations stop running. The pane no longer stats workspace paths for inline code, no longer resolves the thread's environment for that purpose, and no longer carries a document-wide observer for the glyph glue; the dialog no longer draws a second New project control.
+- **What it does not buy**: nothing is deleted. The 1,180 production lines and 950 test and harness lines stay in the tree and in the bundle, so the maintenance surface is unchanged and the tests still run on every host. The floor is still 0.43, so this plugin still answers to every host from 0.43 up. If the operator later raises the floor, the gate makes the deletion mechanical: each site's flag becomes a constant and the modules listed in section 7 go.
+- **What it costs to keep**: one RPC (`host_version`), one store, one hook, and a conditional at three sites. The failure mode is one-sided: an unreadable version keeps every compensation on, which is today's behaviour on every supported host, and logs the reason.
 
-This is filed as a decision for the operator rather than assumed, because the blast radius is every install of the plugin rather than this thread's work.
+Two consequences the gate cannot fix on its own. The gate reads a version, so it trusts that the version names the build whose DOM it decorates; that holds because bb serves the renderer, and the server answers `system.version()` for the build it serves. And a host that backports the 0.49 surfaces into a 0.4x release would keep running the compensations, which is the safe direction (redundant decoration, not a broken link).
 
 ## 10. Cross-references, not second investigations
 

@@ -16,6 +16,10 @@ import {
   glueSweep,
   installHostLinkGlue,
 } from "../components/host-link-glue";
+import {
+  resetHostCapabilitiesForTests,
+  resolveHostCapabilities,
+} from "../lib/host-capabilities";
 
 function hostAnchor(html: string): HTMLAnchorElement {
   const anchor = document.createElement("a");
@@ -33,6 +37,7 @@ function hostIcon(): string {
 
 afterEach(() => {
   document.body.replaceChildren();
+  resetHostCapabilitiesForTests();
 });
 
 describe("glueHostLinkIcon", () => {
@@ -139,7 +144,9 @@ describe("glueSweep", () => {
 });
 
 describe("installHostLinkGlue", () => {
-  it("sweeps immediately, observes later mutations, and disconnects on dispose", () => {
+  it("sweeps immediately, observes later mutations, and disconnects on dispose", async () => {
+    // A host below 0.49 owns no glyph fuse, so the script runs there.
+    await resolveHostCapabilities(async () => "0.48.1");
     const panel = document.createElement("div");
     panel.setAttribute(HOST_PANEL_ATTR, "");
     document.body.appendChild(panel);
@@ -147,6 +154,8 @@ describe("installHostLinkGlue", () => {
     panel.appendChild(anchor);
     const signal = new AbortController().signal;
     const dispose = installHostLinkGlue({ signal });
+    // The installer starts one task after the capability store answers.
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(anchor.querySelector("[data-focus-board-host-glue]")).not.toBeNull();
 
     // A mutation (a second host-rendered anchor appearing) is glued.
@@ -155,9 +164,31 @@ describe("installHostLinkGlue", () => {
     anchor2.innerHTML = `other/later.md${hostIcon()}`;
     panel.appendChild(anchor2);
     // MutationObserver callbacks fire on a microtask checkpoint; flush it.
-    return new Promise<void>((resolve) => setTimeout(resolve, 50)).then(() => {
-      expect(anchor2.querySelector("[data-focus-board-host-glue]")).not.toBeNull();
-      dispose();
-    });
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+    expect(anchor2.querySelector("[data-focus-board-host-glue]")).not.toBeNull();
+    dispose();
+  });
+
+  it("stays entirely out of the page on a host that fuses the glyph itself", async () => {
+    // bb 0.49.0 wraps the icon in its own nowrap unit, so the script must
+    // glue nothing and leave no observer behind (lib/host-capabilities).
+    await resolveHostCapabilities(async () => "0.49.0");
+    const panel = document.createElement("div");
+    panel.setAttribute(HOST_PANEL_ATTR, "");
+    document.body.appendChild(panel);
+    const anchor = hostAnchor(`docs/notes.md${hostIcon()}`);
+    panel.appendChild(anchor);
+    const dispose = installHostLinkGlue({ signal: new AbortController().signal });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(anchor.querySelector("[data-focus-board-host-glue]")).toBeNull();
+
+    // A later mutation stays untouched too: nothing is observing.
+    const anchor2 = document.createElement("a");
+    anchor2.setAttribute("href", "file:///workspace/docs/other.md");
+    anchor2.innerHTML = `other/later.md${hostIcon()}`;
+    panel.appendChild(anchor2);
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+    expect(anchor2.querySelector("[data-focus-board-host-glue]")).toBeNull();
+    dispose();
   });
 });

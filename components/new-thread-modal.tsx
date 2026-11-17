@@ -15,6 +15,7 @@ import {
   measureFooterRowAnchor,
   type FooterRowPlacement,
 } from "@/lib/composer-row-anchor";
+import { useHostCapabilities } from "@/hooks/use-host-capabilities";
 import type { ThreadPaneThread } from "@/components/thread-pane";
 
 /**
@@ -191,17 +192,25 @@ export function NewThreadModal({
   // (the app side runs bb's hosts.pickFolder) the affordance disables —
   // bb's isCreating slot does the same for its own pick.
   const [pickingPending, setPickingPending] = useState(false);
+  // bb 0.49.0's plugin new-thread composer offers New project itself (the host
+  // hands `createProject` to its own picker row), so the dialog stops drawing
+  // a second one there. Below 0.49 the host composer has no such capability
+  // and this button is the only way to create a project while composing
+  // (lib/host-capabilities; entry 8 of the host-workaround audit).
+  const host = useHostCapabilities();
+  const newProjectOffered =
+    onCreateProject !== undefined && !host.composerCreatesProjects;
   // The host composer's pickers row, measured for the floating New project
   // button (components/use-footer-row-anchor): desktop viewports place the
   // button on the row's line, out of flow; compact viewports and any
   // unmeasurable row keep the stacked shape. The anchor follows the dialog
   // being open — closed mounts no composer, so the anchor rests at null.
   const { setWrapperElement, placement: footerRowPlacement } =
-    useFooterRowAnchor(open && onCreateProject !== undefined);
+    useFooterRowAnchor(open && newProjectOffered);
   // The resting button floats only when the row is anchored to. While the
   // name field is armed the button is swapped for the field either way.
   const floatingOption =
-    onCreateProject !== undefined && !creatingProject && footerRowPlacement !== null;
+    newProjectOffered && !creatingProject && footerRowPlacement !== null;
   useEffect(() => {
     if (!open) {
       setSpawnFailed(false);
@@ -444,7 +453,7 @@ export function NewThreadModal({
             </button>
           ) : null}
         </div>
-        {onCreateProject !== undefined && !floatingOption ? (
+        {newProjectOffered && !floatingOption ? (
           <div data-new-project-footer="" className="mt-1 flex flex-col items-start gap-0.5">
             {creatingProject ? (
               <div className="flex items-center gap-1 px-1 py-1">

@@ -105,6 +105,9 @@ vi.mock("@get-bb/plugin-sdk/app", () => ({
     );
   },
   useSdk: () => ({ threads: { spawn } }),
+  // lib/host-capabilities reads the host version through this RPC; the
+  // suites settle the capability store themselves, so it never fires here.
+  useRpc: () => ({ call: async () => ({ version: "0.48.1" }) }),
 }));
 
 beforeEach(() => {

@@ -17,6 +17,7 @@
  * pane's own decoration already glued, and never a second pass over the
  * same anchor (idempotent marker attribute).
  */
+import { waitForHostCapabilities } from "@/lib/host-capabilities";
 /** Marks the nowrap glue unit this module creates. */
 export const HOST_GLUE_ATTR = "data-focus-board-host-glue";
 
@@ -113,8 +114,35 @@ export function glueSweep(owner: Document): void {
  * Mount-time installer for the plugin's content script: one immediate
  * sweep, then a rAF-coalesced observer over the app shell. Returns a
  * disposer (also wired to `context.signal`) that stops watching.
+ *
+ * The installer waits for the capability store before it starts anything.
+ * bb 0.49.0 fuses the glyph with the link's last character itself
+ * (`appendMarkdownLinkIcon` in the host's markdown renderer), so on those
+ * hosts this script has nothing to do and must not leave a document-wide
+ * MutationObserver running. The pane it decorates cannot exist before the
+ * board mounts and starts the version read, so the wait costs nothing; if
+ * the read never happens there is no pane to glue either.
  */
 export function installHostLinkGlue(context: { signal: AbortSignal }): () => void {
+	let stopGlue: (() => void) | null = null;
+	let cancelled = false;
+	void waitForHostCapabilities().then((host) => {
+		// The flag describes the HOST, so the script runs when the host does
+		// not fuse the glyph itself.
+		if (cancelled || host.gluesLinkGlyph) return;
+		stopGlue = startGlue();
+	});
+	const dispose = () => {
+		cancelled = true;
+		stopGlue?.();
+		stopGlue = null;
+	};
+	context.signal.addEventListener("abort", dispose, { once: true });
+	return dispose;
+}
+
+/** The sweep-and-observe loop itself, for a host that needs it. */
+function startGlue(): () => void {
 	const sweep = () => glueSweep(document);
 	sweep();
 	let raf = 0;
@@ -126,10 +154,8 @@ export function installHostLinkGlue(context: { signal: AbortSignal }): () => voi
 		});
 	});
 	observer.observe(document.body, { childList: true, subtree: true });
-	const dispose = () => {
+	return () => {
 		observer.disconnect();
 		if (raf !== 0) window.cancelAnimationFrame(raf);
 	};
-	context.signal.addEventListener("abort", dispose, { once: true });
-	return dispose;
 }
