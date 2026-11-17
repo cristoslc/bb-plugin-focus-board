@@ -28,8 +28,9 @@ harness:
 steps:
   - id: dragging-the-pane-wide-keeps-the-board-lane-floor
     title: Dragging the pane's edge as wide as it goes leaves the board its lane floor
-    goto: "?groupBy=status"
-    click: { card: thr_uat_queue }
+    # The native-pane move: the pane is entered by its deep link now that
+    # card clicks open bb's own pane.
+    goto: "?groupBy=status#/plugins/focus-board/board/t/thr_uat_queue"
     # Push the pane wider until it stops. On this 1000px panel the board's floor
     # bites: without it the pane would reach PANE_MAX_WIDTH (900) and leave a
     # 100px board.
@@ -40,9 +41,8 @@ steps:
 
   - id: the-floor-holds-when-the-band-borrows-the-collapsed-header
     title: The board keeps its floor with the collapsed header's filter ribbon in play
-    goto: "?groupBy=status"
+    goto: "?groupBy=status#/plugins/focus-board/board/t/thr_uat_queue"
     resize: { width: 880, height: 900 }
-    click: { card: thr_uat_queue }
     resize_pane: {}
     assert:
       - pane_board_floor: {}

@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-11-07T04:06:15.790Z by `npm run uat`._
+_Generated 2026-11-17T19:16:18.186Z by `npm run uat`._
 
 ## tap-latency
 
@@ -8,5 +8,6 @@ Source: `tests/manual/uat-tap-latency.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
-| On a throttled phone with 478 cards, a tap opens the pane inside the latency budget | pass | ✓ pane shows thr_uat_queue; ✓ gesture_budget click ≤600ms |
+| On a throttled phone with 478 cards, a tap hands the thread to bb's own pane | pass | ✓ native open thr_uat_queue with split; ✓ pane closed; ✓ no refusal banner |
 | Tapping Back to board closes the pane inside the latency budget | pass | ✓ pane closed; ✓ gesture_budget click_aria ≤600ms |
+| With the board visible beside the pane, the tap's attention freeze paints inside the latency budget | pass | ✓ native open thr_uat_queue with split; ✓ gesture_budget click ≤1500ms |

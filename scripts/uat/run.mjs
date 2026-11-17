@@ -3012,6 +3012,24 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
         `last call args ${JSON.stringify(last)}`,
       );
     }
+    if (rule.native_open !== undefined) {
+      // The native-pane move's click switch: a card click's contract is the
+      // host's own opener call (experimental_useSidebarThreadActions().open
+      // with split on). The harness has no native pane to render, so the
+      // recorded call IS the observable; the live split behaviour rides the
+      // probe evidence in docs/screenshots/probe-native-split-pane/.
+      const want = rule.native_open;
+      const last = await page.evaluate(() => globalThis.__uat.nativeOpens()[0] ?? null);
+      const hit =
+        last !== null &&
+        last.threadId === want.threadId &&
+        (want.split === undefined || last.split === want.split);
+      expect(
+        `native open ${want.threadId}${want.split === false ? " without split" : " with split"}`,
+        hit,
+        `last open call ${JSON.stringify(last)}`,
+      );
+    }
     if (rule.column_card_visible !== undefined) {
       const got = await page.evaluate(pageColumnCardVisible, rule.column_card_visible);
       expect(

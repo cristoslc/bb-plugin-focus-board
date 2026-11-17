@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-11-07T03:21:09.128Z by `npm run uat`._
+_Generated 2026-11-17T17:51:31.770Z by `npm run uat`._
 
 ## attended-lane
 
