@@ -19,6 +19,7 @@ import {
 } from "../lib/native-pane-ownership";
 import {
   fakeNativeOpens,
+  fakeRouteFellBack,
   fakeSplitPanes,
   fakeThreadNavigations,
   registeredNavPanel,
@@ -26,12 +27,29 @@ import {
   resetFakeThreadNavigations,
   seedFakeLinks,
   seedFakeThreads,
+  setFakeRouteThread,
   setFakeSplitLayout,
   setFakeSplitsOff,
 } from "./helpers/app-fake-sdk";
 
 const HOUR = 3_600_000;
 const PLUGIN_ID = "focus-board";
+
+/** The record the board keeps, as stored: the pane it owns and its thread. */
+function storedRecord(): {
+  paneId: string | null;
+  threadId: string;
+  priorPaneIds: readonly string[];
+} | null {
+  const raw = window.localStorage.getItem(nativePaneStorageKey(PLUGIN_ID));
+  return raw === null
+    ? null
+    : (JSON.parse(raw) as {
+        paneId: string | null;
+        threadId: string;
+        priorPaneIds: readonly string[];
+      });
+}
 
 /** jsdom has no ResizeObserver; the board's fit effects need one to exist. */
 class StubResizeObserver {
@@ -57,6 +75,7 @@ beforeEach(() => {
   seedFakeLinks({});
   seedFakeThreads(fixtureThreads());
   resetFakeNativeOpens();
+  setFakeRouteThread(null);
   resetFakeThreadNavigations();
   setFakeSplitsOff(false);
   setFakeSplitLayout(null);
@@ -113,10 +132,10 @@ function cardAnchor(threadId: string): HTMLElement {
   return anchor as HTMLElement;
 }
 
-function mountBoard(): void {
+function mountBoard() {
   const Component = registeredNavPanel.component;
   if (Component === undefined) throw new Error("app-fake-sdk: no nav panel registered");
-  render(<Component subPath="" />);
+  return render(<Component subPath="" />);
 }
 
 /** The thread panes beside the board, in layout order. */
@@ -204,7 +223,7 @@ describe("a pane the board did not open", () => {
   it("keeps the board: the replacement never navigates while the board is focused", async () => {
     window.localStorage.setItem(
       nativePaneStorageKey(PLUGIN_ID),
-      boardNativePaneStoredValue({ paneId: "pane-2", threadId: "thr_focus" }),
+      boardNativePaneStoredValue({ paneId: "pane-2", threadId: "thr_focus", priorPaneIds: [] }),
     );
     act(() => {
       setFakeSplitLayout([
@@ -219,15 +238,17 @@ describe("a pane the board did not open", () => {
     // The board pane is still the first pane, still non-thread content.
     expect(fakeSplitPanes()[0]).toMatchObject({ paneId: "pane-1", threadId: null });
     expect(threadPanes()).toEqual(["thr_older"]);
-    // Two navigations: the first moved the focus onto the board's own pane
-    // (the thread it showed), the second landed the click in it.
-    expect(fakeThreadNavigations()).toEqual(["thr_focus", "thr_older"]);
+    // One navigation, and it is the landing one: the focus step is the host's
+    // opener (a pane id, never a route), so no navigation can be swallowed by
+    // the app already being on that route.
+    expect(fakeThreadNavigations()).toEqual(["thr_older"]);
+    expect(fakeNativeOpens()).toEqual([{ threadId: "thr_focus", split: true }]);
   });
 
   it("navigates once when the board's pane already has the focus", async () => {
     window.localStorage.setItem(
       nativePaneStorageKey(PLUGIN_ID),
-      boardNativePaneStoredValue({ paneId: "pane-2", threadId: "thr_focus" }),
+      boardNativePaneStoredValue({ paneId: "pane-2", threadId: "thr_focus", priorPaneIds: [] }),
     );
     act(() => {
       setFakeSplitLayout([
@@ -248,7 +269,7 @@ describe("ownership across a reload and across operator edits", () => {
   it("a recorded pane survives a reload: the first click replaces instead of growing a pane", async () => {
     window.localStorage.setItem(
       nativePaneStorageKey(PLUGIN_ID),
-      boardNativePaneStoredValue({ paneId: "pane-2", threadId: "thr_focus" }),
+      boardNativePaneStoredValue({ paneId: "pane-2", threadId: "thr_focus", priorPaneIds: [] }),
     );
     act(() => {
       setFakeSplitLayout([
@@ -269,7 +290,7 @@ describe("ownership across a reload and across operator edits", () => {
     // the operator navigated it themselves after the board opened it.
     window.localStorage.setItem(
       nativePaneStorageKey(PLUGIN_ID),
-      boardNativePaneStoredValue({ paneId: "pane-2", threadId: "thr_focus" }),
+      boardNativePaneStoredValue({ paneId: "pane-2", threadId: "thr_focus", priorPaneIds: [] }),
     );
     act(() => {
       setFakeSplitLayout([
@@ -289,7 +310,7 @@ describe("ownership across a reload and across operator edits", () => {
   it("a dragged pane is still the board's: position does not decide ownership", async () => {
     window.localStorage.setItem(
       nativePaneStorageKey(PLUGIN_ID),
-      boardNativePaneStoredValue({ paneId: "pane-3", threadId: "thr_focus" }),
+      boardNativePaneStoredValue({ paneId: "pane-3", threadId: "thr_focus", priorPaneIds: [] }),
     );
     // The operator moved the board's pane to the left of the board; bb keeps
     // the pane id through a move (`movePane`), so it stays the board's.
@@ -309,7 +330,7 @@ describe("ownership across a reload and across operator edits", () => {
   it("the recorded pane closing forgets the record: the next click opens a fresh pane", async () => {
     window.localStorage.setItem(
       nativePaneStorageKey(PLUGIN_ID),
-      boardNativePaneStoredValue({ paneId: "pane-9", threadId: "thr_focus" }),
+      boardNativePaneStoredValue({ paneId: "pane-9", threadId: "thr_focus", priorPaneIds: [] }),
     );
     act(() => {
       setFakeSplitLayout([
@@ -348,5 +369,91 @@ describe("the phone path", () => {
     // No route-driven replacement: the board never navigates on the phone.
     expect(fakeThreadNavigations()).toEqual([]);
     expect(threadPanes()).toEqual([]);
+  });
+});
+
+// The 2026-11-17 regression, after #465 shipped: "thread pane doesn't open on
+// first click. Double-clicking switches to home, doesn't open as split." Each
+// case below is a live measurement from
+// scripts/screenshot/probe-native-one-click-trace.mjs, modelled in the fake.
+describe("the shipped one-pane rule's regressions", () => {
+  it("a fresh click's pane survives the host remounting the panel", async () => {
+    const view = mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+
+    fireEvent.click(cardAnchor("thr_focus"));
+    await waitFor(() => expect(threadPanes()).toEqual(["thr_focus"]));
+
+    // Measured live: bb re-creates the plugin panel's subtree when it splits
+    // for the first time, so every piece of React state the click set is gone
+    // by the next frame. Only what the click persisted survives.
+    view.unmount();
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_older"));
+
+    fireEvent.click(cardAnchor("thr_older"));
+    await waitFor(() => expect(threadPanes()).toEqual(["thr_older"]));
+    expect(fakeSplitPanes()).toHaveLength(2);
+  });
+
+  it("a click lands when the route already names the pane's thread", async () => {
+    window.localStorage.setItem(
+      nativePaneStorageKey(PLUGIN_ID),
+      boardNativePaneStoredValue({ paneId: "pane-2", threadId: "thr_focus", priorPaneIds: [] }),
+    );
+    act(() => {
+      setFakeSplitLayout([
+        { paneId: "pane-1", threadId: null, isFocused: true },
+        { paneId: "pane-2", threadId: "thr_focus", isFocused: false },
+      ]);
+      // The app is already on the pane's thread, the state the operator is in
+      // after any card click: navigating there again is a router no-op, so a
+      // focus step built on that navigation never moves the focus.
+      setFakeRouteThread("thr_focus");
+    });
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_older"));
+
+    fireEvent.click(cardAnchor("thr_older"));
+    await waitFor(() => expect(threadPanes()).toEqual(["thr_older"]));
+    expect(fakeSplitPanes()).toHaveLength(2);
+  });
+
+  it("a double click on one card leaves one pane showing it, and keeps the record", async () => {
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_older"));
+
+    fireEvent.click(cardAnchor("thr_older"));
+    fireEvent.click(cardAnchor("thr_older"));
+    await waitFor(() => expect(threadPanes()).toEqual(["thr_older"]));
+    expect(fakeSplitPanes()).toHaveLength(2);
+    // The second click must not drop ownership: the record is what keeps the
+    // next click replacing instead of splitting.
+    expect(storedRecord()).toMatchObject({ paneId: "pane-2", threadId: "thr_older" });
+  });
+
+  it("a record naming a thread the board no longer lists self-heals instead of navigating nowhere", async () => {
+    window.localStorage.setItem(
+      nativePaneStorageKey(PLUGIN_ID),
+      boardNativePaneStoredValue({ paneId: "pane-2", threadId: "thr_gone", priorPaneIds: [] }),
+    );
+    act(() => {
+      setFakeSplitLayout([
+        { paneId: "pane-1", threadId: null, isFocused: true },
+        { paneId: "pane-2", threadId: "thr_gone", isFocused: false },
+      ]);
+    });
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_older"));
+
+    fireEvent.click(cardAnchor("thr_older"));
+    // A pane beside the pane the board no longer recognises: the click opens
+    // its own, and never touches theirs.
+    await waitFor(() => expect(threadPanes()).toEqual(["thr_older", "thr_gone"]));
+    // thr_gone is not in the simulated sidebar: navigating to it would leave
+    // the app on its unresolved-thread fallback, which reads as "switches to
+    // home". The click must never do that.
+    expect(fakeRouteFellBack()).toBe(false);
+    expect(fakeNativeOpens()).toEqual([{ threadId: "thr_older", split: true }]);
   });
 });

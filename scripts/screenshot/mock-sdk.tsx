@@ -268,8 +268,19 @@ export function useBbNavigate(): unknown {
   return {
     // bb's route reconciliation lands the route's content in the pane that
     // already holds it (focusing it), else in the focused pane — the rule the
-    // board's one-pane replacement is built on.
+    // board's one-pane replacement is built on. Two properties of the real
+    // router matter and are modelled here: a navigation to the route the app
+    // is already on is a no-op (no reconciliation, no focus change), and a
+    // thread the host cannot resolve leaves the app on its fallback route.
     toThread: (threadId: string) => {
+      if (threadId === mockRouteThreadId) return;
+      if (!simThreads.some((thread) => thread.id === threadId)) {
+        mockRouteThreadId = null;
+        mockRouteFellBack = true;
+        return;
+      }
+      mockRouteThreadId = threadId;
+      mockRouteFellBack = false;
       mockReconcileRoute(threadId);
     },
     toProject: () => {},
@@ -320,6 +331,10 @@ const mockSplitsEnabled = new URLSearchParams(
   typeof location === "undefined" ? "" : location.search,
 ).has("nativeSplit");
 let mockHostPanes: readonly MockSplitPane[] = BOARD_ONLY_PANES;
+/** The app's route thread, and whether a navigation fell back because the
+ *  host could not resolve the thread. */
+let mockRouteThreadId: string | null = null;
+let mockRouteFellBack = false;
 let mockSplitSnapshot: { panes: readonly MockSplitPane[] } | null = null;
 const splitLayoutListenerSet = new Set<() => void>();
 function refreshMockSplit(): void {
@@ -747,6 +762,8 @@ export function experimental_useSidebarThreadActions(): unknown {
   return {
     open: (threadId: string, options?: { split?: boolean }) => {
       nativeOpenLog.push({ threadId, split: options?.split });
+      mockRouteThreadId = threadId;
+      mockRouteFellBack = false;
       if (options?.split === true) mockPlaceSplitOpen(threadId);
     },
     openNewThread: () => {},
@@ -1324,6 +1341,9 @@ function adoptHostOp(op: HostOp): void {
   /** The simulated host's panes, in layout order: what the one-pane rule is
    *  about (how many thread panes a click leaves beside the board). */
   nativePanes: () => structuredClone([...mockHostPanes]),
+  /** True when a navigation landed on the host's unresolved-thread fallback,
+   *  the state that reads as "switched to home". */
+  nativeRouteFellBack: () => mockRouteFellBack,
   /** The thread ids the harness's mock moved into the archived set — the
    *  sweep's visible write, for the parent-view sweep suite. */
   sweepArchived: () => simArchived.map((thread) => thread.id),
