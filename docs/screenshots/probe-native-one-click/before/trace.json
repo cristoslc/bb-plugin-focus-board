@@ -1,0 +1,1841 @@
+{
+  "first": {
+    "threadId": "thr_29gxjg77x4",
+    "x": 445,
+    "y": 206
+  },
+  "second": {
+    "threadId": "thr_r282wvvnkf",
+    "x": 448,
+    "y": 413
+  },
+  "trace": [
+    {
+      "t": 7505,
+      "route": "/plugins/focus-board/board",
+      "paneCount": 1,
+      "focused": "pane-1",
+      "threads": [],
+      "boardMounted": true,
+      "markerSurvived": true,
+      "record": null,
+      "label": "1-first:before",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 8017,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": false,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+100ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 8126,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": false,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+200ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 8230,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": false,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+300ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 8333,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": false,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+400ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 8439,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": false,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+500ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 8543,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": false,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+600ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 8645,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": false,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+700ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 8941,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+800ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 9043,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+900ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 9145,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+1000ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 9246,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+1100ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 9349,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+1200ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 9452,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+1300ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 9553,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+1400ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 9656,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+1500ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 9760,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+1600ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 9862,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+1700ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 9963,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+1800ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 10065,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+1900ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 10168,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+2000ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 10270,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+2100ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 10373,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+2200ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 10475,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+2300ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 10577,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+2400ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 10689,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+2500ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 10793,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+2600ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 10895,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+2700ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 10997,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+2800ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 11099,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+2900ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 11201,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "1-first:+3000ms",
+      "thread": "thr_29gxjg77x4"
+    },
+    {
+      "t": 11723,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "paneCount": 2,
+      "focused": "pane-2",
+      "threads": [
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": null,
+      "label": "2-second:before",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 12779,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+100ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 12958,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+200ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 13060,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+300ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 13162,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+400ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 13263,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+500ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 13365,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+600ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 13467,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+700ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 13569,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+800ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 13670,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+900ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 13772,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+1000ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 13874,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+1100ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 13975,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+1200ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 14077,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+1300ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 14179,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+1400ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 14281,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+1500ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 14383,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+1600ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 14484,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+1700ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 14586,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+1800ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 14688,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+1900ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 14790,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+2000ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 14891,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+2100ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 14993,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+2200ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 15095,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+2300ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 15197,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+2400ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 15299,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+2500ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 15401,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+2600ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 15503,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+2700ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 15603,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+2800ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 15705,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+2900ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 15806,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "2-second:+3000ms",
+      "thread": "thr_r282wvvnkf"
+    },
+    {
+      "t": 16328,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-3",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:before",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 16753,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+100ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 16854,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+200ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 16956,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+300ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 17058,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+400ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 17159,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+500ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 17261,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+600ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 17363,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+700ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 17465,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+800ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 17567,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+900ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 17668,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+1000ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 17770,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+1100ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 17871,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+1200ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 17973,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+1300ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 18075,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+1400ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 18176,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+1500ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 18277,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+1600ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 18379,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+1700ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 18482,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+1800ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 18584,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+1900ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 18686,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+2000ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 18787,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+2100ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 18888,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+2200ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 18990,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+2300ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 19091,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+2400ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 19193,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+2500ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 19294,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+2600ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 19396,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+2700ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 19498,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+2800ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 19600,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+2900ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 19720,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "3-replace:+3000ms",
+      "thread": "thr_8nbzpbmm3c"
+    },
+    {
+      "t": 20302,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:before",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 20528,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+100ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 20631,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+200ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 20732,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+300ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 20834,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+400ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 20936,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+500ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 21037,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+600ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 21138,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+700ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 21240,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+800ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 21342,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+900ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 21444,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+1000ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 21545,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+1100ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 21647,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+1200ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 21755,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+1300ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 21857,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+1400ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 21958,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+1500ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 22060,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+1600ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 22162,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+1700ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 22264,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+1800ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 22365,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+1900ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 22467,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+2000ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 22569,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+2100ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 22670,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+2200ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 22772,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+2300ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 22874,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+2400ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 22976,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+2500ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 23077,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+2600ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 23179,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+2700ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 23280,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+2800ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 23381,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+2900ms",
+      "thread": "thr_9hvf4kvdnn"
+    },
+    {
+      "t": 23482,
+      "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+      "paneCount": 3,
+      "focused": "pane-1",
+      "threads": [
+        "thr_r282wvvnkf@pane-3",
+        "thr_29gxjg77x4@pane-2"
+      ],
+      "boardMounted": true,
+      "markerSurvived": false,
+      "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_r282wvvnkf\"}",
+      "label": "4-double:+3000ms",
+      "thread": "thr_9hvf4kvdnn"
+    }
+  ],
+  "errors": []
+}

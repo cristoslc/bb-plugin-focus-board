@@ -55,6 +55,20 @@ steps:
     assert:
       - native_panes: [thr_review_pr]
       - pane: { open: false }
+  - id: a-double-click-does-not-cost-the-next-click-its-pane
+    title: After a double click, the next card still replaces the pane instead of splitting another
+    goto: "?groupBy=status&nativeSplit=1"
+    gestures:
+      - click: { card: thr_uat_queue }
+      # The double click: the second press must be harmless, and must not drop
+      # the board's claim on the pane it opened.
+      - click: { card: thr_uat_queue }
+      - click: { card: thr_review_pr }
+    assert:
+      - native_panes: [thr_review_pr]
+      - native_route_fell_back: false
+      - pane: { open: false }
+
   - id: the-card-menu-open-thread-entry-rides-the-same-path
     title: The card menu's "Open thread" entry opens the same native pane
     goto: "?groupBy=status&nativeSplit=1"

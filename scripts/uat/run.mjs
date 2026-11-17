@@ -3046,6 +3046,16 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
         `thread panes ${JSON.stringify(threads)} of ${panes.length} panes`,
       );
     }
+    if (rule.native_route_fell_back !== undefined) {
+      // The host's unresolved-thread fallback: the state the operator reported
+      // as "switches to home". No card click may land there.
+      const got = await page.evaluate(() => globalThis.__uat.nativeRouteFellBack());
+      expect(
+        `route ${rule.native_route_fell_back ? "fell back" : "stayed on a thread"}`,
+        got === rule.native_route_fell_back,
+        got ? "route fell back" : "route stayed on a thread",
+      );
+    }
     if (rule.column_card_visible !== undefined) {
       const got = await page.evaluate(pageColumnCardVisible, rule.column_card_visible);
       expect(
