@@ -54,6 +54,23 @@ export function definePluginApp(setup: (app: unknown) => void): unknown {
         registeredNavPanel.path = config.path;
         registeredNavPanel.component = config.component;
       },
+      // The thread-header action slot (the native-pane move): captured so
+      // the verify script can assert the registration, exactly as it
+      // asserts the sidebar-footer gear. The harness renders no host thread
+      // page, so the component itself never mounts here.
+      experimental_threadHeaderAction: (
+        config: {
+          id: string;
+          title: string;
+          component: ComponentType<{
+            threadId: string;
+            projectId: string;
+            isCompactViewport: boolean;
+          }>;
+        },
+      ) => {
+        registeredThreadHeaderAction = { ...config };
+      },
       // The sidebar-footer settings gear (0.5.21): no sidebar renders in
       // the harness, but the registration is captured so the verify script
       // can assert the title (the "configuration" noun rule).
@@ -270,6 +287,16 @@ export function useBbNavigate(): unknown {
 /** The plugin id the real SDK resolves from the host registration. */
 export function experimental_usePluginId(): string {
   return MOCK_PLUGIN_ID;
+}
+
+/**
+ * The split layout the board's native-pane awareness reads. The harness
+ * mounts the board as the only pane, so the host-real answer is "no
+ * split": null, statically. A future harness fixture that simulates a
+ * native thread pane beside the board would make this controllable.
+ */
+export function useSidebarSplitLayout(): unknown {
+  return null;
 }
 
 export function experimental_useSidebarThreads(): unknown {
@@ -1004,6 +1031,9 @@ export function seedSimSettings(seed: Record<string, string | number | boolean>)
 // The sidebar-footer action's captured registration (its title is the
  // "configuration" noun the verify script asserts).
 let registeredSidebarFooterAction: Record<string, unknown> | null = null;
+// The thread-header action registration (the native-pane move): captured so
+// the verify script can assert the id and title.
+let registeredThreadHeaderAction: Record<string, unknown> | null = null;
 // The captured settings sections (the Appearance mirror), keyed by id, so
 // `?page=configuration` can mount one standalone for the headless verify.
 const registeredSettingsSections: Record<
@@ -1173,6 +1203,14 @@ function adoptHostOp(op: HostOp): void {
   sweepArchived: () => simArchived.map((thread) => thread.id),
   sidebarFooterAction: () => {
     const registration = registeredSidebarFooterAction;
+    if (registration === null) return null;
+    const { id, title } = registration as { id: unknown; title: unknown };
+    return { id, title };
+  },
+  /** The thread-header action registration (the native-pane move), so the
+   *  verify script can assert the slot registered with its id and title. */
+  threadHeaderAction: () => {
+    const registration = registeredThreadHeaderAction;
     if (registration === null) return null;
     const { id, title } = registration as { id: unknown; title: unknown };
     return { id, title };
