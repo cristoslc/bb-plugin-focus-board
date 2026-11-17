@@ -5,13 +5,19 @@
 # opening the board's in-panel pane, so the thread opens in bb's native pane
 # beside the board.
 #
-# The harness half pins the click's contract: the open call is recorded (the
-# harness has no native pane to render), the board's own pane does NOT open,
-# and the card menu's "Open thread" entry rides the same path. The live half
-# — the split actually opening beside the board, an already-open thread
-# focusing rather than duplicating, and the pane-cap fallback — is probe
-# evidence in docs/screenshots/probe-native-split-pane/ plus the follow-up
-# cap probe, not something the mocked harness can render.
+# The harness half pins the click's contract: the open call is recorded, the
+# board's own pane does NOT open, and the card menu's "Open thread" entry
+# rides the same path. The harness's simulated host ALSO places panes by bb's
+# own rules (scripts/screenshot/mock-sdk.tsx models `openThreadInSplit` and the
+# route reconciliation; `&nativeSplit=1` asks for that window, so every other
+# suite keeps the single-pane one it was written against), so the one-pane rule
+# is asserted here: a second click replaces the pane beside the board instead of
+# splitting another off it (lib/native-pane-ownership.ts). The live half — the split rendering beside
+# the board, an already-open thread focusing rather than duplicating, and the
+# pane-cap fallback — is probe evidence in
+# docs/screenshots/probe-native-split-pane/,
+# docs/screenshots/probe-native-pane-replace/ plus the cap probe, not
+# something the mocked harness can render.
 #
 # Run: npm run uat -- tests/manual/uat-native-open.yaml
 suite: native-open
@@ -24,21 +30,41 @@ defaults:
 steps:
   - id: a-card-click-calls-the-native-opener-with-split
     title: Clicking a card opens the thread in bb's native pane beside the board
-    goto: "?groupBy=status"
+    goto: "?groupBy=status&nativeSplit=1"
     click: { card: thr_uat_queue }
     assert:
       - native_open: { threadId: thr_uat_queue, split: true }
       - pane: { open: false }
+      - native_panes: [thr_uat_queue]
+  - id: a-second-card-click-replaces-the-pane-not-splits-another
+    title: A second card click replaces that pane's thread instead of opening a second pane
+    goto: "?groupBy=status&nativeSplit=1"
+    gestures:
+      - click: { card: thr_uat_queue }
+      - click: { card: thr_rpc_auth }
+    assert:
+      - native_panes: [thr_rpc_auth]
+      - pane: { open: false }
+  - id: a-third-card-click-still-leaves-one-pane
+    title: A third card click still leaves one thread pane beside the board
+    goto: "?groupBy=status&nativeSplit=1"
+    gestures:
+      - click: { card: thr_uat_queue }
+      - click: { card: thr_rpc_auth }
+      - click: { card: thr_review_pr }
+    assert:
+      - native_panes: [thr_review_pr]
+      - pane: { open: false }
   - id: the-card-menu-open-thread-entry-rides-the-same-path
     title: The card menu's "Open thread" entry opens the same native pane
-    goto: "?groupBy=status"
+    goto: "?groupBy=status&nativeSplit=1"
     menu: { card: thr_rpc_auth, item: "Open thread" }
     assert:
       - native_open: { threadId: thr_rpc_auth, split: true }
       - pane: { open: false }
   - id: a-child-row-click-rides-the-same-path
     title: Clicking a nested child row opens that child in the native pane
-    goto: "?groupBy=status"
+    goto: "?groupBy=status&nativeSplit=1"
     click: { card: thr_gutter_family_c0 }
     assert:
       - native_open: { threadId: thr_gutter_family_c0, split: true }

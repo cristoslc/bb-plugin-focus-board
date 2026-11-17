@@ -3030,6 +3030,22 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
         `last open call ${JSON.stringify(last)}`,
       );
     }
+    if (rule.native_panes !== undefined) {
+      // The one-pane rule (lib/native-pane-ownership.ts): the harness's
+      // simulated host places panes by bb's own rules, so this reads how many
+      // thread panes the clicks left beside the board and which threads they
+      // show — one pane, replaced in place, not one more pane per click.
+      const want = rule.native_panes;
+      const panes = await page.evaluate(() => globalThis.__uat.nativePanes());
+      const threads = panes
+        .filter((pane) => pane.threadId !== null)
+        .map((pane) => pane.threadId);
+      expect(
+        `native panes ${JSON.stringify(want)}`,
+        JSON.stringify(threads) === JSON.stringify(want),
+        `thread panes ${JSON.stringify(threads)} of ${panes.length} panes`,
+      );
+    }
     if (rule.column_card_visible !== undefined) {
       const got = await page.evaluate(pageColumnCardVisible, rule.column_card_visible);
       expect(

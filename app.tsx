@@ -82,6 +82,15 @@ import { applyUnitMoveVisible } from "./lib/rank-unit-move";
 import { doneAtToEpochMs } from "./lib/done-metadata";
 import { projectDisplayName } from "./lib/project-name";
 import { nativeOpenWouldEvictBoard } from "./lib/split-pane-cap";
+import type { SplitPaneLayoutView } from "./lib/split-pane-cap";
+import {
+  boardNativePaneStoredValue,
+  nativePaneStorageKey,
+  newlyOpenedPane,
+  parseBoardNativePaneStored,
+  planNativeCardPlacement,
+  type BoardNativePane,
+} from "./lib/native-pane-ownership";
 import { createProjectFromPickedFolder } from "./lib/project-create-flow";
 import { paneContextInfo } from "./lib/pane-context";
 import type { ReferenceMentions } from "./components/decorate-reference-mentions";
@@ -353,6 +362,31 @@ const BOARD_STATE_MOUNT_KEYS = [
   "snoozes",
   "groups",
 ] as const satisfies readonly MountListKey[];
+
+/**
+ * One card click's native placement, held until the host's split layout
+ * confirms it (lib/native-pane-ownership.ts carries the rule):
+ *
+ * - `split` waits for the pane the host creates, then claims it.
+ * - `replace` has already navigated to the thread the board's own pane shows
+ *   (the host focuses a pane holding the route's content). It waits for that
+ *   focus write, then navigates to the clicked thread, which the host lands in
+ *   the focused pane — the board's, never the board itself. `fromLayout` is
+ *   the snapshot the click was decided on: until the layout changes identity,
+ *   the focus write has not landed.
+ */
+type NativePlacementIntent =
+  | {
+      kind: "split";
+      threadId: string;
+      priorPaneIds: readonly string[];
+    }
+  | {
+      kind: "replace";
+      paneId: string;
+      threadId: string;
+      fromLayout: SplitPaneLayoutView | null;
+    };
 
 function BoardPage({ subPath }: { subPath: string }) {
   const {
@@ -1287,6 +1321,59 @@ function BoardPage({ subPath }: { subPath: string }) {
   // pane — never wakes the memoized Board through its prop handoff.
   const splitLayoutRef = useRef<Parameters<typeof nativeOpenWouldEvictBoard>[0]>(null);
   splitLayoutRef.current = splitLayout;
+  // The pane the board opened, and the thread the board last put there
+  // (lib/native-pane-ownership.ts carries the rule and its evidence). One
+  // board-opened thread pane, replaced in place: without the record every
+  // card click would split another pane off the board, which is the pane
+  // column the operator rejected. Persisted beside the board's other
+  // plugin-scoped keys because bb persists its split layout too — a reload
+  // must not cost a second pane.
+  const boardNativePaneKey = nativePaneStorageKey(pluginId);
+  const [boardNativePane, setBoardNativePaneState] = useState<BoardNativePane | null>(
+    () => {
+      try {
+        return parseBoardNativePaneStored(
+          window.localStorage.getItem(boardNativePaneKey),
+        );
+      } catch {
+        // localStorage can throw in embedded contexts; no record is the safe
+        // answer (the click falls back to the host's opener).
+        return null;
+      }
+    },
+  );
+  // The record as a ref for the identity-stable click callback, the same
+  // latest-value bridge splitLayoutRef is.
+  const boardNativePaneRef = useRef(boardNativePane);
+  boardNativePaneRef.current = boardNativePane;
+  const setBoardNativePane = useCallback(
+    (pane: BoardNativePane | null) => {
+      setBoardNativePaneState(pane);
+      try {
+        const stored = boardNativePaneStoredValue(pane);
+        if (stored === "") {
+          window.localStorage.removeItem(boardNativePaneKey);
+        } else {
+          window.localStorage.setItem(boardNativePaneKey, stored);
+        }
+      } catch {
+        // A throw here costs the record's persistence, never the gesture.
+      }
+    },
+    [boardNativePaneKey],
+  );
+  // The click's placement in flight. A replacement is two navigations on the
+  // host's own reconciliation (see the module header): focus the board's pane
+  // by navigating to the thread it already shows, then navigate to the
+  // clicked thread. The window between them is visible to React as one commit
+  // in which the pane's PREVIOUS thread is focused, so the intent is held in
+  // state until the layout confirms the focus landed.
+  const [nativePlacement, setNativePlacement] = useState<NativePlacementIntent | null>(null);
+  // The intent whose fallback opener has already fired: a second effect pass
+  // over the same intent must not open a second pane.
+  const nativeFallbackRef = useRef<NativePlacementIntent | null>(null);
+  // The replacement intent whose second navigation has already been issued.
+  const nativeNavigationRef = useRef<NativePlacementIntent | null>(null);
   // Split-layout awareness (docs/plans/2026-11-17-native-thread-pane.md §3):
   // the board panel is itself a pane in bb’s split layout, and threads can
   // be open beside it in the host’s own native panes. The FOCUSED pane’s
@@ -1300,10 +1387,20 @@ function BoardPage({ subPath }: { subPath: string }) {
     const focused = splitLayout?.panes.find((pane) => pane.isFocused);
     return focused?.threadId ?? null;
   }, [splitLayout]);
+  // While a replacement lands, the board reads the clicked thread as the
+  // pane's. bb focuses the board's pane on its PREVIOUS thread for the commit
+  // between the two navigations, and that thread would otherwise drive the
+  // follow — scrolling the board to a card the operator already left, then
+  // back. The intent is the click's, so the board follows it.
+  const landingThreadId =
+    nativePlacement !== null && nativePlacement.kind === "replace"
+      ? nativePlacement.threadId
+      : null;
+  const nativePaneThreadId = landingThreadId ?? nativeSplitThreadId;
   // The thread the board treats as open: the in-board pane’s when it is
   // showing one (the denser surface, and the pane’s own capture flow owns
   // the freeze), else the focused native pane’s.
-  const boardActiveThreadId = openThreadId ?? nativeSplitThreadId;
+  const boardActiveThreadId = openThreadId ?? nativePaneThreadId;
   // The native open’s attention lifecycle, mirroring the pane’s own rules
   // (capture once per open or focus change, release on close) but only
   // while the in-board pane is closed, so the two owners never fight over
@@ -1311,7 +1408,7 @@ function BoardPage({ subPath }: { subPath: string }) {
   // strips exactly that thread’s freeze — never a pin the pane’s click-open
   // just wrote.
   const nativeCaptureRef = useRef<string | null>(null);
-  const nativeAttentionThreadId = openThreadId === null ? nativeSplitThreadId : null;
+  const nativeAttentionThreadId = openThreadId === null ? nativePaneThreadId : null;
   // Sweep arm state: at most one armed column at a time. The candidate id
   // list is captured at arm time and frozen — late arrivals never join.
   const [armedSweep, setArmedSweep] = useState<ArmedSweep | null>(null);
@@ -1627,6 +1724,88 @@ function BoardPage({ subPath }: { subPath: string }) {
       );
     }
   }, [nativeAttentionThreadId, capturePaneAttention, openThreadId]);
+  // The card click's native placement (lib/native-pane-ownership.ts): land the
+  // click's replacement navigation, and claim the pane the host created for
+  // it.
+  //
+  // A replacement is verified before its second navigation, because that
+  // navigation replaces whatever pane is FOCUSED — and the board is the
+  // focused pane whenever the click came from inside it. The verification is
+  // the safety story of the whole rule: navigate only once the host's focus
+  // write has landed on the board's own thread pane.
+  useEffect(() => {
+    if (nativePlacement === null) return;
+    if (nativePlacement.kind === "split") {
+      if (splitLayout === null) return; // the host has not split yet
+      const opened = newlyOpenedPane(
+        splitLayout,
+        nativePlacement.threadId,
+        nativePlacement.priorPaneIds,
+      );
+      setNativePlacement(null);
+      setBoardNativePane(opened);
+      return;
+    }
+    if (splitLayout === nativePlacement.fromLayout) {
+      // Still the click's own snapshot: the host's focus write has not
+      // arrived yet. Waiting, not deciding — the focused pane in this
+      // snapshot is the board, and navigating now would replace it.
+      return;
+    }
+    const focused = splitLayout?.panes.find((pane) => pane.isFocused) ?? null;
+    if (focused !== null && focused.paneId === nativePlacement.paneId) {
+      if (focused.threadId === nativePlacement.threadId) {
+        // Landed: the board's pane shows the clicked thread and has the
+        // focus. The intent retires here, so the board's follow never falls
+        // back to the thread the pane held a moment ago.
+        setNativePlacement(null);
+        setBoardNativePane({
+          paneId: nativePlacement.paneId,
+          threadId: nativePlacement.threadId,
+        });
+        return;
+      }
+      if (nativeNavigationRef.current === nativePlacement) return;
+      nativeNavigationRef.current = nativePlacement;
+      // The focus landed on the board's own pane; the clicked thread is in
+      // no pane, so this navigation replaces the focused pane's content in
+      // place. The intent stays until the layout shows it — the board's
+      // follow reads the clicked thread throughout, never the pane's
+      // previous one.
+      navigate.toThread(nativePlacement.threadId);
+      return;
+    }
+    // The focus never reached the board's pane: it was closed between the
+    // click and this commit. Fall back to the host's opener — one new pane,
+    // never a replaced board — exactly once.
+    if (nativeFallbackRef.current === nativePlacement) return;
+    nativeFallbackRef.current = nativePlacement;
+    setNativePlacement({
+      kind: "split",
+      threadId: nativePlacement.threadId,
+      priorPaneIds: (splitLayout?.panes ?? []).map((pane) => pane.paneId),
+    });
+    setBoardNativePane(null);
+    actions.open(nativePlacement.threadId, { split: true });
+  }, [nativePlacement, splitLayout, actions, navigate, setBoardNativePane]);
+  // Ownership lapses when the recorded pane is gone from the layout: the
+  // operator closed it, or the host renumbered it. A record that still names
+  // a pane showing some other thread is judged by the placement plan instead —
+  // clearing it here would race the replacement's own record write.
+  useEffect(() => {
+    if (boardNativePane === null) return;
+    if (nativePlacement !== null) return;
+    if (splitLayout === null) {
+      setBoardNativePane(null);
+      return;
+    }
+    if (
+      splitLayout.panes.some((pane) => pane.paneId === boardNativePane.paneId)
+    ) {
+      return;
+    }
+    setBoardNativePane(null);
+  }, [splitLayout, boardNativePane, nativePlacement, setBoardNativePane]);
   // On attention: capture the entered card's rendered placement (its lane
   // and slot; on the parent view, its lane order slot and row). The capture
   // replaces nothing — a per-thread map, so sibling cards (nested rows
@@ -2825,9 +3004,16 @@ function BoardPage({ subPath }: { subPath: string }) {
   // the click falls back to the board's own pane, which still ships in
   // this slice: the thread opens inside the board's slot and the board
   // never leaves the layout.
+  //
+  // Above the ceiling the click must also stop growing panes: one
+  // board-opened thread pane, replaced in place, is the operator's rule
+  // (2026-11-17). lib/native-pane-ownership.ts carries the recognition rule,
+  // what the host's placement API actually allows, and why the replacement is
+  // two navigations rather than a close-then-open.
   const openThreadCardNative = useCallback(
     (threadId: string) => {
-      if (nativeOpenWouldEvictBoard(splitLayoutRef.current)) {
+      const layout = splitLayoutRef.current;
+      if (nativeOpenWouldEvictBoard(layout)) {
         // The board's own pane, the one surface that opens a thread without
         // touching the layout: the host's opener here would replace the
         // focused board pane with the thread.
@@ -2835,9 +3021,39 @@ function BoardPage({ subPath }: { subPath: string }) {
         return;
       }
       capturePaneAttention(threadId);
+      const placement = planNativeCardPlacement(
+        layout,
+        boardNativePaneRef.current,
+        threadId,
+      );
+      if (placement.kind === "replace") {
+        if (placement.focused) {
+          // Already focused: the host's reconciliation lands the clicked
+          // thread in it without a focus step of its own.
+          setBoardNativePane({ paneId: placement.paneId, threadId });
+          navigate.toThread(threadId);
+          return;
+        }
+        // Step one: navigate to the thread the board's pane already shows.
+        // bb focuses the pane that holds the route's content, so this write
+        // moves the focus off the board and changes nothing else.
+        setNativePlacement({
+          kind: "replace",
+          paneId: placement.paneId,
+          threadId,
+          fromLayout: layout,
+        });
+        navigate.toThread(placement.threadId);
+        return;
+      }
+      setNativePlacement({
+        kind: "split",
+        threadId,
+        priorPaneIds: (layout?.panes ?? []).map((pane) => pane.paneId),
+      });
       actions.open(threadId, { split: true });
     },
-    [actions, capturePaneAttention, openThreadCard],
+    [actions, capturePaneAttention, navigate, openThreadCard, setBoardNativePane],
   );
 
   // Reference chips in the pane (issue #161): labels resolve from the board's

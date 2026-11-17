@@ -166,10 +166,14 @@ function mutateThread(threadId: string, patch: (thread: FakeSidebarThread) => Fa
 }
 
 // One stable actions object across renders (same identity lesson as rpc).
-// `open` records every call (the native-pane move's click switch): the
-// card click's contract is now "the host's own opener, split on", and the
-// fake has no native pane to render, so the recorded call is the
-// observable the tests assert.
+// `open` records every call (the native-pane move's click switch) AND runs
+// bb's own placement rules against the simulated split layout
+// (apps/app/src/lib/split-layout/openThreadInSplit.ts): a thread already in a
+// pane focuses that pane, a split inserts a right-hand pane beside the
+// focused one, and the eight-pane ceiling replaces the focused pane's
+// content. The board's click rule is about how many panes the layout ends up
+// with, so the fake has to place panes the way the host does, not only
+// record the call.
 const nativeOpens: Array<{ threadId: string; split?: boolean }> = [];
 export function fakeNativeOpens(): Array<{ threadId: string; split?: boolean }> {
   return structuredClone(nativeOpens);
@@ -180,6 +184,7 @@ export function resetFakeNativeOpens(): void {
 const fakeActions = {
   open: (threadId: string, options?: { split?: boolean }) => {
     nativeOpens.push({ threadId, split: options?.split });
+    if (options?.split === true) placeSplitOpen(threadId);
   },
   openNewThread: () => {},
   setPinned: (threadId: string, pinned: boolean) =>
@@ -221,12 +226,32 @@ export function experimental_useSidebarThreadActions(): unknown {
 // thread pane and read the board’s follow (attention capture, active card)
 // exactly as it follows its own pane’s open thread, and so the click tests can
 // drive the ceiling layouts the guard exists for.
+//
+// The HOST's own layout is kept apart from what the hook reports, the way bb's
+// are: `splitLayoutAtom` holds a single pane for a one-pane window while
+// `useSidebarSplitLayout()` answers null below two panes
+// (apps/app/src/lib/plugin-sidebar-split.ts, `countPanes(layout.root) < 2`).
+// Splitting from "no split" therefore still has a pane to split away from.
 interface FakeSplitPane {
   paneId: string;
   threadId: string | null;
   isFocused: boolean;
 }
-let fakeSplitLayout: { panes: readonly FakeSplitPane[] } | null = null;
+/** A one-pane window: the board's own pane, focused. */
+const BOARD_ONLY_PANES: readonly FakeSplitPane[] = [
+  { paneId: "pane-1", threadId: null, isFocused: true },
+];
+let fakeHostPanes: readonly FakeSplitPane[] = BOARD_ONLY_PANES;
+/** Splits off (a phone viewport, or the operator's setting): the host's split
+ *  placement degrades to plain navigation and no second pane ever opens. */
+let fakeSplitsOff = false;
+/** The hook's snapshot, cached: `useSyncExternalStore` requires a stable value
+ *  per revision, exactly as bb's own `useMemo` over the layout atom gives it. */
+let fakeSplitSnapshot: { panes: readonly FakeSplitPane[] } | null = null;
+function refreshSplitSnapshot(): void {
+  fakeSplitSnapshot =
+    fakeSplitsOff || fakeHostPanes.length < 2 ? null : { panes: fakeHostPanes };
+}
 const splitLayoutListeners = new Set<() => void>();
 function subscribeSplitLayout(listener: () => void): () => void {
   splitLayoutListeners.add(listener);
@@ -235,12 +260,90 @@ function subscribeSplitLayout(listener: () => void): () => void {
 function emitSplitLayout(): void {
   for (const listener of [...splitLayoutListeners]) listener();
 }
-export function setFakeSplitLayout(panes: readonly FakeSplitPane[] | null): void {
-  fakeSplitLayout = panes === null ? null : { panes };
+function setHostPanes(panes: readonly FakeSplitPane[]): void {
+  fakeHostPanes = panes;
+  refreshSplitSnapshot();
   emitSplitLayout();
 }
+export function setFakeSplitLayout(panes: readonly FakeSplitPane[] | null): void {
+  setHostPanes(panes ?? BOARD_ONLY_PANES);
+}
+/** Turn bb's split placement off, the compact-viewport (phone) shape. */
+export function setFakeSplitsOff(off: boolean): void {
+  fakeSplitsOff = off;
+  if (off) setHostPanes(BOARD_ONLY_PANES);
+  else {
+    refreshSplitSnapshot();
+    emitSplitLayout();
+  }
+}
+/** The simulated host's own pane list, what the panel layout renders. */
+export function fakeSplitPanes(): FakeSplitPane[] {
+  return structuredClone([...fakeHostPanes]);
+}
+function focusedPane(
+  panes: readonly FakeSplitPane[],
+): FakeSplitPane | undefined {
+  return panes.find((pane) => pane.isFocused) ?? panes[0];
+}
+function focusPane(panes: readonly FakeSplitPane[], paneId: string): FakeSplitPane[] {
+  return panes.map((pane) => ({ ...pane, isFocused: pane.paneId === paneId }));
+}
+function nextFakePaneId(panes: readonly FakeSplitPane[]): string {
+  const ids = new Set(panes.map((pane) => pane.paneId));
+  let sequence = 1;
+  while (ids.has(`pane-${sequence}`)) sequence += 1;
+  return `pane-${sequence}`;
+}
+/** bb's `openThreadInSplit`, as far as placement goes. */
+function placeSplitOpen(threadId: string): void {
+  if (fakeSplitsOff) return; // plain navigation: no pane change
+  const panes = fakeHostPanes;
+  const existing = panes.find((pane) => pane.threadId === threadId);
+  if (existing !== undefined) {
+    setHostPanes(focusPane(panes, existing.paneId));
+    return;
+  }
+  const focused = focusedPane(panes);
+  if (focused === undefined) return;
+  if (panes.length >= 8) {
+    setHostPanes(
+      panes.map((pane) =>
+        pane.paneId === focused.paneId
+          ? { ...pane, threadId, isFocused: true }
+          : { ...pane, isFocused: false },
+      ),
+    );
+    return;
+  }
+  const inserted: FakeSplitPane = {
+    paneId: nextFakePaneId(panes),
+    threadId,
+    isFocused: true,
+  };
+  const unfocused = focusPane(panes, inserted.paneId);
+  const index = unfocused.findIndex((pane) => pane.paneId === focused.paneId);
+  setHostPanes([
+    ...unfocused.slice(0, index + 1),
+    inserted,
+    ...unfocused.slice(index + 1),
+  ]);
+}
+
+/** Every `toThread` navigation the app asked for, in order. */
+const threadNavigations: string[] = [];
+export function fakeThreadNavigations(): string[] {
+  return structuredClone(threadNavigations);
+}
+export function resetFakeThreadNavigations(): void {
+  threadNavigations.splice(0, threadNavigations.length);
+}
 export function useSidebarSplitLayout(): unknown {
-  return useSyncExternalStore(subscribeSplitLayout, () => fakeSplitLayout);
+  return useSyncExternalStore(
+    subscribeSplitLayout,
+    // bb reports the layout only once it splits; a single pane is null.
+    () => fakeSplitSnapshot,
+  );
 }
 
 const fakeProvidersSnapshot = {
@@ -266,7 +369,29 @@ export function resetFakePanelPushes(): void {
   panelPushes.splice(0, panelPushes.length);
 }
 const fakeNavigate = {
-  toThread: () => {},
+  // bb's route reconciliation (SplitThreadArea's effect →
+  // `reconcileLayoutForContent`): the route's content lands in the pane that
+  // already holds it (focusing it), else it replaces the FOCUSED pane. Where
+  // splits are off the route simply navigates.
+  toThread: (threadId: string) => {
+    threadNavigations.push(threadId);
+    if (fakeSplitsOff || fakeHostPanes.length < 2) return;
+    const panes = fakeHostPanes;
+    const existing = panes.find((pane) => pane.threadId === threadId);
+    if (existing !== undefined) {
+      setHostPanes(focusPane(panes, existing.paneId));
+      return;
+    }
+    const focused = focusedPane(panes);
+    if (focused === undefined) return;
+    setHostPanes(
+      panes.map((pane) =>
+        pane.paneId === focused.paneId
+          ? { ...pane, threadId, isFocused: true }
+          : { ...pane, isFocused: false },
+      ),
+    );
+  },
   toPluginPanel: (path: string, options?: { subPath?: string; replace?: boolean }): boolean => {
     panelPushes.push({ path, subPath: options?.subPath ?? "", replace: options?.replace === true });
     return false;

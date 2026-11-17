@@ -266,7 +266,12 @@ export function mountRegisteredConfigSection(): void {
 
 export function useBbNavigate(): unknown {
   return {
-    toThread: () => {},
+    // bb's route reconciliation lands the route's content in the pane that
+    // already holds it (focusing it), else in the focused pane — the rule the
+    // board's one-pane replacement is built on.
+    toThread: (threadId: string) => {
+      mockReconcileRoute(threadId);
+    },
     toProject: () => {},
     toPluginPanel: (
       _path: string,
@@ -291,12 +296,120 @@ export function experimental_usePluginId(): string {
 
 /**
  * The split layout the board's native-pane awareness reads. The harness
- * mounts the board as the only pane, so the host-real answer is "no
- * split": null, statically. A future harness fixture that simulates a
- * native thread pane beside the board would make this controllable.
+ * mounts the board as the only pane, and simulates bb's placement rules on
+ * top of it: `experimental_useSidebarThreadActions().open(id, { split: true })`
+ * inserts a right-hand pane beside the focused one (the board, at first) and
+ * `useBbNavigate().toThread(id)` runs bb's route reconciliation — a thread
+ * already in a pane focuses it, any other replaces the FOCUSED pane. That is
+ * the machinery the board's one-pane rule drives
+ * (lib/native-pane-ownership.ts), so the harness can assert how many panes a
+ * click leaves behind, not only which host call it made.
  */
+interface MockSplitPane {
+  paneId: string;
+  threadId: string | null;
+  isFocused: boolean;
+}
+const BOARD_ONLY_PANES: readonly MockSplitPane[] = [
+  { paneId: "pane-1", threadId: null, isFocused: true },
+];
+/** The harness window has no split unless a suite asks for one
+ *  (`?nativeSplit=1`): every other suite was written against a single-pane
+ *  window, and bb reports no layout there either. */
+const mockSplitsEnabled = new URLSearchParams(
+  typeof location === "undefined" ? "" : location.search,
+).has("nativeSplit");
+let mockHostPanes: readonly MockSplitPane[] = BOARD_ONLY_PANES;
+let mockSplitSnapshot: { panes: readonly MockSplitPane[] } | null = null;
+const splitLayoutListenerSet = new Set<() => void>();
+function refreshMockSplit(): void {
+  mockSplitSnapshot =
+    !mockSplitsEnabled || mockHostPanes.length < 2 ? null : { panes: mockHostPanes };
+  for (const listener of [...splitLayoutListenerSet]) listener();
+}
+function setMockHostPanes(panes: readonly MockSplitPane[]): void {
+  mockHostPanes = panes;
+  refreshMockSplit();
+}
+function focusedMockPane(
+  panes: readonly MockSplitPane[],
+): MockSplitPane | undefined {
+  return panes.find((pane) => pane.isFocused) ?? panes[0];
+}
+function focusMockPane(
+  panes: readonly MockSplitPane[],
+  paneId: string,
+): MockSplitPane[] {
+  return panes.map((pane) => ({ ...pane, isFocused: pane.paneId === paneId }));
+}
+/** bb's `openThreadInSplit`, placement only. */
+function mockPlaceSplitOpen(threadId: string): void {
+  if (!mockSplitsEnabled) return; // a single-pane window: plain navigation
+  const panes = mockHostPanes;
+  const existing = panes.find((pane) => pane.threadId === threadId);
+  if (existing !== undefined) {
+    setMockHostPanes(focusMockPane(panes, existing.paneId));
+    return;
+  }
+  const focused = focusedMockPane(panes);
+  if (focused === undefined) return;
+  if (panes.length >= 8) {
+    setMockHostPanes(
+      panes.map((pane) =>
+        pane.paneId === focused.paneId
+          ? { ...pane, threadId, isFocused: true }
+          : { ...pane, isFocused: false },
+      ),
+    );
+    return;
+  }
+  const ids = new Set(panes.map((pane) => pane.paneId));
+  let sequence = 1;
+  while (ids.has(`pane-${sequence}`)) sequence += 1;
+  const inserted: MockSplitPane = {
+    paneId: `pane-${sequence}`,
+    threadId,
+    isFocused: true,
+  };
+  const unfocused = focusMockPane(panes, inserted.paneId);
+  const index = unfocused.findIndex((pane) => pane.paneId === focused.paneId);
+  setMockHostPanes([
+    ...unfocused.slice(0, index + 1),
+    inserted,
+    ...unfocused.slice(index + 1),
+  ]);
+}
+/** bb's route reconciliation: focus the pane holding the content, else
+ *  replace the focused pane. */
+function mockReconcileRoute(threadId: string): void {
+  if (!mockSplitsEnabled || mockHostPanes.length < 2) return; // plain navigation
+  const panes = mockHostPanes;
+  const existing = panes.find((pane) => pane.threadId === threadId);
+  if (existing !== undefined) {
+    setMockHostPanes(focusMockPane(panes, existing.paneId));
+    return;
+  }
+  const focused = focusedMockPane(panes);
+  if (focused === undefined) return;
+  setMockHostPanes(
+    panes.map((pane) =>
+      pane.paneId === focused.paneId
+        ? { ...pane, threadId, isFocused: true }
+        : { ...pane, isFocused: false },
+    ),
+  );
+}
 export function useSidebarSplitLayout(): unknown {
-  return null;
+  useSyncExternalStore(
+    (onStoreChange) => {
+      splitLayoutListenerSet.add(onStoreChange);
+      return () => {
+        splitLayoutListenerSet.delete(onStoreChange);
+      };
+    },
+    () => mockSplitSnapshot,
+  );
+  return mockSplitSnapshot;
 }
 
 export function experimental_useSidebarThreads(): unknown {
@@ -634,6 +747,7 @@ export function experimental_useSidebarThreadActions(): unknown {
   return {
     open: (threadId: string, options?: { split?: boolean }) => {
       nativeOpenLog.push({ threadId, split: options?.split });
+      if (options?.split === true) mockPlaceSplitOpen(threadId);
     },
     openNewThread: () => {},
     setPinned: async (threadId: string, pinned: boolean) => {
@@ -1207,6 +1321,9 @@ function adoptHostOp(op: HostOp): void {
   /** The card clicks' native opens (the native-pane move): the last open
    *  call first — the freshest gesture is what a step asserts. */
   nativeOpens: () => [...nativeOpenLog].reverse(),
+  /** The simulated host's panes, in layout order: what the one-pane rule is
+   *  about (how many thread panes a click leaves beside the board). */
+  nativePanes: () => structuredClone([...mockHostPanes]),
   /** The thread ids the harness's mock moved into the archived set — the
    *  sweep's visible write, for the parent-view sweep suite. */
   sweepArchived: () => simArchived.map((thread) => thread.id),
