@@ -9,14 +9,15 @@
 // tests/app-pane-covered-sheet-capture.test.tsx (the freeze is the
 // observable: a captured card holds its slot through churn):
 // - a focused native thread pane captures attention exactly like the
-//   pane's own click-open: churn holds the attended card's slot;
+//   pane's own open: churn holds the attended card's slot;
 // - closing the native pane (focus leaving every thread pane) releases
 //   the pin: churn moves the card again;
 // - ownership: while the board's own pane is open it owns the attention
 //   lifecycle — a native pin captured before the pane opened is released
-//   by the pane's open, and never the pane's own click-open capture.
+//   by the pane's open (which arrives by deep link now that a card click
+//   hands the host the thread), and never the pane's own capture.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 
 vi.mock("@get-bb/plugin-sdk/app", async () => await import("./helpers/app-fake-sdk"));
 
@@ -123,18 +124,19 @@ function columnCardIds(columnId: string): string[] {
     .map((el) => (el instanceof HTMLElement ? el.getAttribute("data-thread-card") : ""));
 }
 
-function cardAnchor(threadId: string): HTMLElement {
-  const card = document.querySelector(`[data-thread-card="${threadId}"]`);
-  if (card === null) throw new Error(`missing card ${threadId}`);
-  const anchor = card.querySelector("a");
-  if (anchor === null) throw new Error(`missing title anchor on ${threadId}`);
-  return anchor as HTMLElement;
-}
-
-function mountBoard(): void {
+function mountBoard(): ReturnType<typeof render> {
   const Component = registeredNavPanel.component;
   if (Component === undefined) throw new Error("app-fake-sdk: no nav panel registered");
-  render(<Component subPath="" />);
+  return render(<Component subPath="" />);
+}
+
+/** The in-board pane's deep-link entry: a subPath rerender is the state a
+ *  shared URL lands on, the entry the pane keeps now that a card click
+ *  hands the thread to bb's own native pane. */
+function openPaneByDeepLink(view: ReturnType<typeof render>, threadId: string): void {
+  const Component = registeredNavPanel.component;
+  if (Component === undefined) throw new Error("app-fake-sdk: no nav panel registered");
+  view.rerender(<Component subPath={`t/${threadId}`} />);
 }
 
 function focusNativePane(threadId: string | null): void {
@@ -189,13 +191,15 @@ describe("the board's split-layout awareness", () => {
   });
 
   it("the board's own pane owns attention while open: a native pin is released, the pane's capture survives", async () => {
-    mountBoard();
+    const view = mountBoard();
     await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
 
     // A native focus first (its capture is the native path's own), then the
-    // board's pane opens on another thread through the fallback pane flow.
+    // board's pane opens on another thread. The click no longer opens the
+    // pane — it hands the host the thread — so the pane arrives the way its
+    // remaining entries arrive: the deep link, an external route change.
     focusNativePane("thr_older");
-    fireEvent.click(cardAnchor("thr_focus"));
+    openPaneByDeepLink(view, "thr_focus");
     await waitFor(() => expect(screen.getByLabelText("Close thread pane")).toBeTruthy());
 
     act(() => {

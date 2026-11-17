@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-11-17T18:53:56.583Z by `npm run uat`._
+_Generated 2026-11-17T20:52:35.173Z by `npm run uat`._
 
 ## parent-lanes
 

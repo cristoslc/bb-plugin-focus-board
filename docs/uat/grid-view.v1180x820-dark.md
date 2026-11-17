@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-11-17T18:21:26.633Z by `npm run uat`._
+_Generated 2026-11-17T20:51:51.734Z by `npm run uat`._
 
 ## grid-view (v1180x820-dark)
 
