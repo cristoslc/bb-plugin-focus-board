@@ -18,7 +18,7 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "bb's thread pages"
   },
   {
-    "text": "**The board's keys stay on the board.** A letter or `/` typed anywhere you can type now inserts text instead of opening the New Thread composer or jumping the board's search field. A keystroke in another pane, or with a thread pane focused beside the board, leaves the board alone.",
+    "text": "**The board's keys stay on the board.** A letter or `/` typed anywhere you can type inserts text instead of opening the New Thread composer or jumping the search field. Both keys fire only while the board's own pane holds focus, so another pane's keystrokes leave the board alone.",
     "children": [],
     "group": "The board's shortcuts"
   },

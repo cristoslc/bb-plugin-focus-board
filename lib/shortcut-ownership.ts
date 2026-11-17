@@ -1,46 +1,61 @@
 // Which surface owns a single-key shortcut's keystroke.
 //
 // The board's shortcuts ("/" focuses board search, a configurable letter opens
-// the New Thread composer) listen on `document`, because the board is the
-// whole panel and its gestures fire while nothing inside it holds focus. A
+// the New Thread composer) listen on `document`, because the board is the whole
+// panel and its gestures fire while nothing inside it holds focus. A
 // `document` listener hears every keystroke the whole bb window produces, so
-// ownership has to be decided per event, not per mount:
+// arming and ownership are decided per event:
 //
-//   1. An editable surface owns it. Inputs, textareas and selects were the
-//      original guards; bb's composers and message editors are rich text
-//      (`contenteditable`, ARIA textboxes), which are not any of those, and
-//      the letter the operator typed there was swallowed into a modal. The
-//      `contenteditable` walk skips `contenteditable="false"` islands because
-//      an editing host's own text still belongs to the host around them.
-//   2. A dialog or an open dropdown owns it — radix portals focus inside
-//      them and every board modal renders through one.
-//   3. The board's own panel root owns it when the keystroke happens inside
-//      it. A plugin app mounted in bb shares the document with every other
-//      pane, so DOM containment is the only exact answer to "which pane is
-//      typing": the host's split layout reports a plugin pane as a non-thread
-//      pane (`threadId === null`), the same shape as the board's own pane, so
-//      it cannot name the board. The panel root can.
-//   4. Nothing has focus at all (the event lands on `document.body` or the
-//      document itself): no surface is receiving text, so the board takes the
-//      key — unless the host's split layout says a native thread pane is
-//      focused, because then the keyboard is parked beside the board and the
-//      board is not what the operator is looking at. The layout read is
-//      `threadPaneFocused` (app.tsx derives it from the focused pane's
-//      thread, the same read the click path uses), and a null layout means a
-//      single pane, which is the board.
-//   5. Anything else — another pane's non-editable chrome, a foreign window's
-//      surface, an unknown target — belongs to nobody the board can name, and
-//      the board leaves it alone.
+// ARMED (both halves are load bearing — the operator's ruling, 2026-11-17):
 //
-// One residual ambiguity is deliberate: a *non-thread* pane focused while
-// document focus sits on `body` (another plugin app, a settings pane) reads
-// like the board's own pane in the host layout, so the board's key can still
-// claim there. Nothing is typing in that state, so the keystroke only lands
-// on a surface that would otherwise ignore it.
+//   1. The board's own pane is the focused pane in the host's split layout.
+//      A `useSidebarSplitLayout()` read cannot name the board by content: it
+//      reports `threadId: null` for every non-thread pane, so the board's pane
+//      and any other plugin pane look alike. bb's pane containers carry the
+//      pane id the layout reports (`data-split-pane-id`, observed on the
+//      installed 0.49.0 build by
+//      `scripts/screenshot/probe-native-split-pane.mjs`: the board's pane was
+//      `pane-1`, matching the persisted layout), so the board's pane is named
+//      by walking from its panel root to the nearest pane container and
+//      comparing with the focused pane's id.
+//      A null layout means the host reports no split (a single pane, a compact
+//      viewport, splits off), which is the board: it is the only panel there.
+//      A layout that names no focused pane, or a panel outside every pane
+//      container, means the board cannot prove it holds focus, and it stands
+//      down rather than guess: the failure this rule exists to stop is a
+//      letter stolen from a surface the operator is actually using.
+//   2. The keystroke happens in the board's own surface: inside the panel root,
+//      or on the document body while the board's pane holds host focus. The
+//      body case is the deliberate reading of "focused": with the board's pane
+//      focused and nothing clicked yet, no element anywhere owns the keyboard,
+//      so requiring an element inside the panel would leave the hotkey dead
+//      until the operator clicked the board. The pane half is what makes the
+//      body keystroke the board's; the panel half still refuses every other
+//      surface.
+//
+// The listener cannot outlive the board being on screen: a plugin panel leaves
+// the document when the route leaves it (observed live by
+// `scripts/screenshot/probe-board-mount-lifetime.mjs`), so the single-pane
+// case cannot fire from a board nobody can see.
+//
+// OWNERSHIP, once armed (a separate hole from arming):
+//
+//   3. An editable surface owns the key. Inputs, textareas and selects were
+//      the original guards; bb's composers and message editors are rich text
+//      (`contenteditable`, ARIA textboxes), which are not any of those, and the
+//      letter typed there was swallowed into a modal. The `contenteditable`
+//      walk skips `contenteditable="false"` islands because an editing host's
+//      own text still belongs to the host around them.
+//   4. A dialog or an open dropdown owns it, unchanged from the start: radix
+//      portals focus inside them and every board modal renders through one.
 //
 // Pure module: no host, no SDK, no React.
 
 import { HOST_PANEL_ATTR } from "@/components/host-link-glue";
+
+/** bb's pane container attribute: the pane id the split layout reports under
+ *  the same name (a host contract, observed by the native-pane probes). */
+const HOST_SPLIT_PANE_ATTR = "data-split-pane-id";
 
 /** The board's own panel root (app.tsx sets the attribute). */
 const BOARD_PANEL_SELECTOR = `[${HOST_PANEL_ATTR}]`;
@@ -54,6 +69,17 @@ const CLAIMING_ANCESTOR_SELECTOR =
  *  keystroke. */
 const EDITABLE_ANCESTOR_SELECTOR =
   '[contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="searchbox"]';
+
+/** The slice of the host's split layout this rule reads. */
+export interface SplitPaneLayoutView {
+  readonly panes: readonly {
+    /** The host's pane id, also carried by the pane's container element. */
+    readonly paneId: string;
+    /** The thread this pane shows, or null for a non-thread pane. */
+    readonly threadId: string | null;
+    readonly isFocused: boolean;
+  }[];
+}
 
 /** Does this target insert text (so its keystroke is a letter, not a
  *  gesture)? */
@@ -71,27 +97,59 @@ export function editableTargetOwnsKey(target: EventTarget | null): boolean {
 }
 
 /**
+ * Is the board's own pane the focused pane in the host's split layout?
+ *
+ * `panel` is the board's panel root (`[data-focus-board-panel]`); the pane it
+ * sits in is the pane the board occupies. Null means the board is not mounted,
+ * which is never a surface that owns a keystroke.
+ */
+export function boardPaneIsFocused(
+  layout: SplitPaneLayoutView | null,
+  panel: Element | null,
+): boolean {
+  if (panel === null) return false;
+  // No split reported: one pane, and this listener belongs to it.
+  if (layout === null) return true;
+  const focused = layout.panes.find((pane) => pane.isFocused);
+  // A layout mid-update names no focused pane; the board cannot prove focus.
+  if (focused === undefined) return false;
+  const paneId =
+    panel.closest(`[${HOST_SPLIT_PANE_ATTR}]`)?.getAttribute(HOST_SPLIT_PANE_ATTR) ??
+    null;
+  // A host that does not name its pane containers cannot be asked which pane
+  // holds focus, so the board stands down instead of guessing.
+  if (paneId === null) return false;
+  return paneId === focused.paneId;
+}
+
+/**
  * Does the board own this keystroke?
  *
- * `threadPaneFocused` is the host layout's answer to "is a native thread pane
- * focused beside the board" (app.tsx derives it from the focused pane's
- * thread). It only decides the no-focus case: with any element focused, the
- * event target already names the owning surface exactly.
+ * `panel` and `layout` are read at event time (app.tsx passes its refs), so a
+ * pane-focus change needs no listener re-subscription.
  */
 export function boardOwnsKeystroke(
   event: KeyboardEvent,
-  { threadPaneFocused }: { threadPaneFocused: boolean },
+  {
+    panel,
+    layout,
+  }: { panel: Element | null; layout: SplitPaneLayoutView | null },
 ): boolean {
   const target = event.target;
+  // Ownership first: a typed letter belongs to the surface being typed in,
+  // even on a board that is armed.
   if (editableTargetOwnsKey(target)) return false;
-  // A keystroke with no element behind it (dispatched at the document, or at
-  // a window): no surface is typing, so the layout decides.
-  if (!(target instanceof Element)) return !threadPaneFocused;
-  if (target.closest(CLAIMING_ANCESTOR_SELECTOR) !== null) return false;
+  if (target instanceof Element && target.closest(CLAIMING_ANCESTOR_SELECTOR) !== null) {
+    return false;
+  }
+  // Arming: the board's pane must hold host focus.
+  if (!boardPaneIsFocused(layout, panel)) return false;
+  // A keystroke with no element behind it (dispatched at the document, or at a
+  // window) has no owner below the board: with the board's pane focused it is
+  // the board's.
+  if (!(target instanceof Element)) return true;
   if (target.closest(BOARD_PANEL_SELECTOR) !== null) return true;
   // Nothing focused: the browser aims the key at the body (or the root).
-  if (target === document.body || target === document.documentElement) {
-    return !threadPaneFocused;
-  }
+  if (target === document.body || target === document.documentElement) return true;
   return false;
 }

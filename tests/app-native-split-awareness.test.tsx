@@ -130,6 +130,18 @@ function mountBoard(): ReturnType<typeof render> {
   return render(<Component subPath="" />);
 }
 
+/** The board mounted inside the host's pane container for it, the way bb
+ *  renders a plugin panel inside a split pane. */
+function mountBoardInPane(paneId: string): ReturnType<typeof render> {
+  const Component = registeredNavPanel.component;
+  if (Component === undefined) throw new Error("app-fake-sdk: no nav panel registered");
+  return render(
+    <div data-split-pane-id={paneId}>
+      <Component subPath="" />
+    </div>,
+  );
+}
+
 /** The in-board pane's deep-link entry: a subPath rerender is the state a
  *  shared URL lands on, the entry the pane keeps now that a card click
  *  hands the thread to bb's own native pane. */
@@ -252,5 +264,48 @@ describe("the board's shortcuts and the native pane", () => {
     focusNativePane(null);
     pressLetter();
     await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+  });
+
+  it("the board's own pane focused in a split keeps the letter", async () => {
+    // The positive half of the narrowing: the layout names pane-1 focused and
+    // the board is mounted in pane-1's container, so the letter is the
+    // board's even with a thread page open in the other pane.
+    mountBoardInPane("pane-1");
+    await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
+
+    act(() => {
+      setFakeSplitLayout([
+        { paneId: "pane-1", threadId: null, isFocused: true },
+        { paneId: "pane-2", threadId: "thr_older", isFocused: false },
+      ]);
+    });
+    pressLetter();
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+  });
+
+  it("a keystroke inside the board's panel is not the board's while another pane is focused", async () => {
+    // Either half failing stands the hotkey down, including a board that is
+    // on screen in a pane nobody has focused.
+    mountBoardInPane("pane-1");
+    await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
+
+    act(() => {
+      setFakeSplitLayout([
+        { paneId: "pane-1", threadId: null, isFocused: false },
+        { paneId: "pane-2", threadId: "thr_older", isFocused: true },
+      ]);
+    });
+    const panel = document.querySelector("[data-focus-board-panel]");
+    if (panel === null) throw new Error("the board's panel is not mounted");
+    act(() => {
+      panel.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "c",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

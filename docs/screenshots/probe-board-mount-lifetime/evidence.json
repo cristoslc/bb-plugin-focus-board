@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-11-17T21:23:08.515Z",
+  "boardRoute": {
+    "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+    "boardPanelInDocument": true,
+    "boardPanelPaneId": "pane-1",
+    "paneContainers": [
+      "pane-1"
+    ],
+    "firstThreadRow": {
+      "href": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr",
+      "x": 170,
+      "y": 98
+    }
+  },
+  "threadRoute": {
+    "url": "http://127.0.0.1:38886/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr",
+    "boardPanelInDocument": false,
+    "boardPanelPaneId": null,
+    "paneContainers": [
+      "pane-1"
+    ],
+    "firstThreadRow": {
+      "href": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr",
+      "x": 170,
+      "y": 98
+    }
+  },
+  "verdict": {
+    "boardPanelLeavesTheDocument": true,
+    "boardPaneNamedByPaneAttribute": true
+  }
+}
