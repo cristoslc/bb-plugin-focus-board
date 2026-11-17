@@ -209,18 +209,23 @@ describe("the grid's order", () => {
 });
 
 describe("a card in the grid", () => {
-  it("opens its thread in bb's native pane on click, not the board's own", async () => {
-    // The native-pane move (dec_nhnljjo8rgbz): a card click calls the host's
-    // own opener with split on; the board's in-panel pane does not open.
+  it("opens its thread in the board's own pane on click", async () => {
+    // The 2026-11-17 review: the board asks for a native split only to focus
+    // or replace a pane it can name, and opens its own pane otherwise
+    // (docs/plans/2026-11-17-one-board-pane.md section 8).
     await mountApp();
     resetFakeNativeOpens();
+    resetFakePanelPushes();
     const card = document.querySelector('[data-grid-card="thr_alpha"] a');
     if (card === null) throw new Error("grid card not found");
     fireEvent.click(card);
     await waitFor(() =>
-      expect(fakeNativeOpens()).toEqual([{ threadId: "thr_alpha", split: true }]),
+      expect(document.querySelector('aside[aria-label="Thread: Alpha release notes"]')).not.toBeNull(),
     );
-    expect(document.querySelector('aside[aria-label^="Thread:"]')).toBeNull();
+    expect(fakeNativeOpens()).toEqual([]);
+    await waitFor(() =>
+      expect(fakePanelPushes().at(-1)).toMatchObject({ path: "board", subPath: "t/thr_alpha" }),
+    );
   });
 
   it("closes the pane on a click in the empty grid, never on a card", async () => {
@@ -248,8 +253,12 @@ describe("a card in the grid", () => {
     resetFakeNativeOpens();
     fireEvent.click(card);
     expect(document.querySelector('aside[aria-label^="Thread:"]')).not.toBeNull();
-    expect(fakePanelPushes()).toEqual([]);
-    expect(fakeNativeOpens()).toEqual([{ threadId: "thr_alpha", split: true }]);
+    expect(fakeNativeOpens()).toEqual([]);
+    // A card click moves the board's own pane to that thread; it is not the
+    // background click that closes it.
+    await waitFor(() =>
+      expect(fakePanelPushes().at(-1)).toMatchObject({ path: "board", subPath: "t/thr_alpha" }),
+    );
 
     const board = document.querySelector("[data-card-grid-board]");
     if (board === null) throw new Error("grid board not found");

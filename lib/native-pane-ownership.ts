@@ -153,12 +153,17 @@ export type NativeCardPlacement =
       readonly paneId: string;
       readonly threadId: string;
     }
-  /** Hand the thread to the host's opener: a pane beside the board, a focus,
-   *  or the ceiling's replace, by bb's own rules. */
-  | { readonly kind: "open" }
-  /** The host would plainly navigate (its compact predicate is on), taking the
-   *  board with it: open the board's own in-panel pane instead. */
-  | { readonly kind: "in-board" };
+  /**
+   * Open the board's own in-panel pane: the only surface that can show a
+   * thread without asking the host to place a pane the board cannot reason
+   * about.
+   *
+   * Two states answer here. `compact`: bb's opener would plainly navigate and
+   * take the board with it. `unowned`: the board cannot name a pane it owns,
+   * so a split request would grow one native pane per click (the operator's
+   * 2026-11-17 report: "still opening new, not replacing, panes").
+   */
+  | { readonly kind: "in-board"; readonly reason: "compact" | "unowned" };
 
 /** The plugin-scoped localStorage key for the board's pane record. */
 export function nativePaneStorageKey(pluginId: string): string {
@@ -259,10 +264,23 @@ export function planNativeCardPlacement(
   // First, before any pane reasoning: where the host will not split, a split
   // request is a plain navigation that replaces the board. The board's own
   // pane is the only surface that keeps it.
-  if (nativeSplitUnavailable(environment)) return { kind: "in-board" };
+  if (nativeSplitUnavailable(environment)) return { kind: "in-board", reason: "compact" };
+  // A native split is only ever asked for to FOCUS OR REPLACE a pane the board
+  // can name. Creating one is the blind ask that stacked panes on the
+  // operator's machine: `useSidebarSplitLayout()` answers null for a one-pane
+  // layout (bb's hook requires more than one pane), which is exactly the
+  // state every session starts in, so the board could not learn a pane id and
+  // every click asked for a fresh split. The board's own pane is the
+  // known-good surface instead: one pane, never stacked.
+  //
+  // Docs: docs/plans/2026-11-17-one-board-pane.md section 8.
   const owned = resolveBoardNativePane(layout, record);
-  if (owned === null) return { kind: "open" };
+  if (owned === null) return { kind: "in-board", reason: "unowned" };
   if (owned.threadId === threadId) return { kind: "focus", paneId: owned.paneId };
-  if (!liveThreadIds.includes(owned.threadId)) return { kind: "open" };
+  // A record naming a thread the board no longer lists is stale: the host's
+  // navigation cannot resolve that thread either. Its pane is left alone, and
+  // the click shows the thread in the board's own pane rather than stranding
+  // it in a pane the board cannot name.
+  if (!liveThreadIds.includes(owned.threadId)) return { kind: "in-board", reason: "unowned" };
   return { kind: "replace", paneId: owned.paneId, threadId: owned.threadId };
 }

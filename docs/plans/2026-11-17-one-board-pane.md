@@ -140,3 +140,29 @@ The click logs one `console.debug("[focus-board:native-open]", {...})` line with
 | 1600px window | fixed | two panes, board kept, second click replaces (`after`) |
 
 `docs/screenshots/probe-native-one-click/{compact/{before,after},wide/before,after}/evidence.json` carry the route, layout, board marker and in-board pane label per step. The wide `after` run carries the trace: `"branch":"open: new pane"` then `"outcome":"host plainly navigated: restoring the board's route"`, which is the guard doing its job where the layout atom was not ready yet.
+
+## 8. The third report: "still opening new, not replacing, panes"
+
+The merged rule (#466 plus #467) still stacked panes on the operator's machine. The question this section answers, with the click trace from a real window, is whether the plugin can read the host's layout at all.
+
+### The read is null exactly where every session starts
+
+`useSidebarSplitLayout()` is `rP` in the renderer bundle: it returns the layout only when `EN(root) > 1`, so a ONE-PANE layout reads null. That is the state of a freshly opened board, and therefore of the first card click of every session. It is not a broken reader: the same hook answers fully once a second pane exists, measured live on the installed 0.49.0 with `nativeOpenDebug` on and three panes up:
+
+```json
+["[focus-board:native-open]",{"threadId":"thr_9hvf4kvdnn","branch":"focus: already in the board's pane","compactViewport":false,"layout":[{"paneId":"pane-1","threadId":null,"focused":true},{"paneId":"pane-3","threadId":"thr_6yqnhfqhmm","focused":false},{"paneId":"pane-2","threadId":"thr_9hvf4kvdnn","focused":false}],"record":{"paneId":null,"threadId":"thr_9hvf4kvdnn","priorPaneIds":[]}}]
+```
+
+and a first click reads null because there is nothing to read yet:
+
+```json
+["[focus-board:native-open]",{"threadId":"thr_9hvf4kvdnn","branch":"open: new pane","compactViewport":false,"layout":null,"record":null}]
+```
+
+### What that means for the rule
+
+Creating a pane is the only ask the board makes while blind, and it is the ask that cannot be followed: the record is written with no pane id, so the next click re-plans from a layout the board could not name, and each click that cannot resolve a record opens another pane. On my window the second and third clicks did replace (trace branch `replace`, pane ids intact), which is why the probe kept disagreeing with the report; the difference is state, not code, and a rule that depends on state the panel cannot see is a rule that fails quietly.
+
+So the rule changed: **a native split is only asked for to focus or replace a pane the board can name.** Everything else opens the board's own in-panel pane, which is one pane that changes thread and cannot be lost. The creation branch is gone, the replacement's deadline fallback opens the board's pane instead of asking the opener for a new one, and #467's repair stays wired into the replacement as a safety net. It now also checks that no pane holds the thread before restoring the route, because bb re-creates the plugin panel's subtree on a split that worked (the marker is briefly absent after a successful replace).
+
+Option 1 from the review (count panes from the DOM, `data-split-pane-id` plus the focused pane's marker) is the way back to native creation, and it is not in this change: proving it against bb's own count for 1, 2, 5 and 8 panes needs a live matrix this change does not have.

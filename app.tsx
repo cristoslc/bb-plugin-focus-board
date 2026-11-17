@@ -1429,7 +1429,14 @@ function BoardPage({ subPath }: { subPath: string }) {
         nativeRepairTimer = null;
         const boardMounted = document.querySelector(BOARD_PANEL_SELECTOR) !== null;
         const route = window.location.pathname;
-        const hostPlainlyNavigated = !boardMounted && route.includes(`/threads/${threadId}`);
+        // bb re-creates the plugin panel's subtree when it splits, so the
+        // marker is briefly absent on a split that WORKED. A pane holding the
+        // thread is the difference: only a host that never made one has
+        // plainly navigated.
+        const threadPane =
+          splitLayoutRef.current?.panes.some((pane) => pane.threadId === threadId) ?? false;
+        const hostPlainlyNavigated =
+          !boardMounted && !threadPane && route.includes(`/threads/${threadId}`);
         traceNativeOpen(nativeOpenDebugRef.current, {
           threadId,
           branch,
@@ -3075,12 +3082,17 @@ function BoardPage({ subPath }: { subPath: string }) {
         { compactViewport: compactViewportRef.current },
       );
       if (placement.kind === "in-board") {
-        // bb's compact viewport: its opener would PLAINLY NAVIGATE, which
-        // replaces the board's own pane with the thread page and leaves the
-        // plugin panel — the operator's "takes me home, full-window
-        // composer". The board's own pane keeps the board and still shows the
-        // thread.
-        trace("in-board: host will not split");
+        // Two states, one surface. On bb's compact viewport its opener would
+        // PLAINLY NAVIGATE and take the board with it (the operator's "takes
+        // me home, full-window composer"). And where the board cannot name a
+        // pane it owns, asking for a split is the blind ask that grew one
+        // native pane per click ("still opening new, not replacing, panes").
+        // The board's own pane keeps the board and still shows the thread.
+        trace(
+          placement.reason === "compact"
+            ? "in-board: host will not split"
+            : "in-board: no pane of the board's to replace",
+        );
         openThreadCard(threadId);
         return;
       }
@@ -3120,32 +3132,22 @@ function BoardPage({ subPath }: { subPath: string }) {
           replaceTimerRef.current = null;
           if (nativeReplaceRef.current !== intent) return;
           // The host never focused the board's pane inside the window. One
-          // click must still open a pane, so hand it to the opener and record
-          // whatever it produces.
+          // click must still open the thread, and it must not cost a new
+          // pane: the board's own pane shows it, and the record is dropped so
+          // the next click re-plans from what the host actually holds.
           setNativeReplace(null);
-          setBoardNativePane({
-            paneId: null,
-            threadId,
-            priorPaneIds: (splitLayoutRef.current?.panes ?? []).map((pane) => pane.paneId),
-          });
-          actions.open(threadId, { split: true });
-          scheduleNativeRepair(threadId, "replace: deadline fallback");
+          setBoardNativePane(null);
+          trace("in-board: replacement not confirmed");
+          openThreadCard(threadId);
         }, REPLACE_CONFIRM_MS);
         // The focus step: the pane's CURRENT thread, which the host focuses.
         actions.open(placement.threadId, { split: true });
+        // The safety net stays wired: if the host took the click as a plain
+        // navigation after all, the board's route comes back with the thread
+        // in its own pane. It is not the mechanism; the pane above is.
+        scheduleNativeRepair(threadId, "replace");
         return;
       }
-      // No pane of the board's to replace: claim the thread now, with the
-      // panes that already existed, and let the host place it. The pane id is
-      // resolved from the layout on the next click.
-      trace("open: new pane");
-      setBoardNativePane({
-        paneId: null,
-        threadId,
-        priorPaneIds: (layout?.panes ?? []).map((pane) => pane.paneId),
-      });
-      actions.open(threadId, { split: true });
-      scheduleNativeRepair(threadId, "open: new pane");
     },
     [
       actions,

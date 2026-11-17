@@ -1,23 +1,19 @@
-# Operator-assisted E2E: the card click's new contract — the native-pane
-# move's step 3 (dec_nhnljjo8rgbz, docs/plans/2026-11-17-native-thread-pane.md
-# §6.2). A card click calls the host's own opener
-# (experimental_useSidebarThreadActions().open with split on) instead of
-# opening the board's in-panel pane, so the thread opens in bb's native pane
-# beside the board.
+# Operator-assisted E2E: the card click's current contract (2026-11-17, third
+# revision after "still opening new, not replacing, panes").
 #
-# The harness half pins the click's contract: the open call is recorded, the
-# board's own pane does NOT open, and the card menu's "Open thread" entry
-# rides the same path. The harness's simulated host ALSO places panes by bb's
-# own rules (scripts/screenshot/mock-sdk.tsx models `openThreadInSplit` and the
-# route reconciliation; `&nativeSplit=1` asks for that window, so every other
-# suite keeps the single-pane one it was written against), so the one-pane rule
-# is asserted here: a second click replaces the pane beside the board instead of
-# splitting another off it (lib/native-pane-ownership.ts). The live half — the split rendering beside
-# the board, an already-open thread focusing rather than duplicating, and the
-# pane-cap fallback — is probe evidence in
-# docs/screenshots/probe-native-split-pane/,
-# docs/screenshots/probe-native-pane-replace/ plus the cap probe, not
-# something the mocked harness can render.
+# The rule (lib/native-pane-ownership.ts, docs/plans/2026-11-17-one-board-pane.md
+# section 8): a native split is only asked for to focus or replace a pane the
+# board can name. bb's `useSidebarSplitLayout()` answers null below two panes,
+# which is where a fresh board starts, so a click from there opens the board's
+# OWN in-panel pane: one pane, replaced in place, never one new host pane per
+# click.
+#
+# The harness mounts the real app.tsx against the mocked SDK. What the mocked
+# host cannot render is bb's own split, so the live side of the rule (a pane
+# the board owns being replaced) is probe evidence in
+# docs/screenshots/probe-native-one-click/, and the harness half pins what the
+# panel itself does: no host open call, the board's pane opening, and the
+# board's own route carrying the thread.
 #
 # Run: npm run uat -- tests/manual/uat-native-open.yaml
 suite: native-open
@@ -28,58 +24,50 @@ defaults:
   groupBy: status
   theme: dark
 steps:
-  - id: a-card-click-calls-the-native-opener-with-split
-    title: Clicking a card opens the thread in bb's native pane beside the board
+  - id: a-card-click-opens-the-boards-own-pane
+    title: Clicking a card opens the thread in the board's own pane, never a host split
     goto: "?groupBy=status&nativeSplit=1"
     click: { card: thr_uat_queue }
     assert:
-      - native_open: { threadId: thr_uat_queue, split: true }
-      - pane: { open: false }
-      - native_panes: [thr_uat_queue]
-  - id: a-second-card-click-replaces-the-pane-not-splits-another
-    title: A second card click replaces that pane's thread instead of opening a second pane
+      - native_panes: []
+      - pane: { threadId: thr_uat_queue }
+      - url: { suffix: "/board/t/thr_uat_queue" }
+
+  - id: a-second-click-replaces-the-thread-in-that-pane
+    title: A second card click replaces the thread in the board's pane, one pane only
     goto: "?groupBy=status&nativeSplit=1"
     gestures:
       - click: { card: thr_uat_queue }
       - click: { card: thr_rpc_auth }
     assert:
-      - native_panes: [thr_rpc_auth]
-      - pane: { open: false }
-  - id: a-third-card-click-still-leaves-one-pane
-    title: A third card click still leaves one thread pane beside the board
-    goto: "?groupBy=status&nativeSplit=1"
-    gestures:
-      - click: { card: thr_uat_queue }
-      - click: { card: thr_rpc_auth }
-      - click: { card: thr_review_pr }
-    assert:
-      - native_panes: [thr_review_pr]
-      - pane: { open: false }
-  - id: a-double-click-does-not-cost-the-next-click-its-pane
-    title: After a double click, the next card still replaces the pane instead of splitting another
-    goto: "?groupBy=status&nativeSplit=1"
-    gestures:
-      - click: { card: thr_uat_queue }
-      # The double click: the second press must be harmless, and must not drop
-      # the board's claim on the pane it opened.
-      - click: { card: thr_uat_queue }
-      - click: { card: thr_review_pr }
-    assert:
-      - native_panes: [thr_review_pr]
+      - native_panes: []
+      - pane: { threadId: thr_rpc_auth }
+      - url: { suffix: "/board/t/thr_rpc_auth" }
       - native_route_fell_back: false
-      - pane: { open: false }
+
+  - id: a-third-click-still-leaves-one-pane
+    title: A third card click still leaves one thread pane showing the last thread
+    goto: "?groupBy=status&nativeSplit=1"
+    gestures:
+      - click: { card: thr_uat_queue }
+      - click: { card: thr_rpc_auth }
+      - click: { card: thr_review_pr }
+    assert:
+      - native_panes: []
+      - pane: { threadId: thr_review_pr }
 
   - id: the-card-menu-open-thread-entry-rides-the-same-path
-    title: The card menu's "Open thread" entry opens the same native pane
+    title: The card menu's "Open thread" entry opens the same pane
     goto: "?groupBy=status&nativeSplit=1"
     menu: { card: thr_rpc_auth, item: "Open thread" }
     assert:
-      - native_open: { threadId: thr_rpc_auth, split: true }
-      - pane: { open: false }
+      - native_panes: []
+      - pane: { threadId: thr_rpc_auth }
+
   - id: a-child-row-click-rides-the-same-path
-    title: Clicking a nested child row opens that child in the native pane
+    title: Clicking a nested child row opens that child in the board's pane
     goto: "?groupBy=status&nativeSplit=1"
     click: { card: thr_gutter_family_c0 }
     assert:
-      - native_open: { threadId: thr_gutter_family_c0, split: true }
-      - pane: { open: false }
+      - native_panes: []
+      - pane: { threadId: thr_gutter_family_c0 }
