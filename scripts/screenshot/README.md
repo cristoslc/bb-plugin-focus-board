@@ -56,8 +56,10 @@ host app involved.
   to open the named thread's pane on the harness and capture the pane's
   aside as `<OUT_DIR>/<stem>.png`. `QUERY=pendingQuestion=1` mounts the
   pending user_question fixture for the pane-gap frames; `?queuedSend=1`
-  remains MockQueuedSendRow's own flag. Honors `CHROME_PATH`, `HARNESS_URL`,
-  and `OUT_DIR`.
+  remains MockQueuedSendRow's own flag; `?mentionAnchor=1` mounts the host's
+  `file://` thread-mention anchor (the "File not found." regression frame,
+  2026-11-17) so a capture can click it and watch the pane's claim routing.
+  Honors `CHROME_PATH`, `HARNESS_URL`, and `OUT_DIR`.
 - `repro-touch-reveal-cascade.mjs` — runtime re-verification of the queued-send
   touch-reveal overrides (#296/#297) against the LIVE bb app (the
   pane-parity audit's Gap 10, 2026-11-04; bb 0.48.1): stages nothing itself —

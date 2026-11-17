@@ -34,6 +34,9 @@ import {
 import {
   decorateReferenceMentions,
   decoratedReferencePaneTarget,
+  mentionReferenceInText,
+  mentionShaped,
+  type PaneReferenceTarget,
   type ReferenceMentions,
 } from "@/components/decorate-reference-mentions";
 import type { rpcContract } from "@/server";
@@ -462,6 +465,31 @@ function ActionsMenu({
   return <div className="relative">{control}</div>;
 }
 
+/** A host-rendered anchor's mention destination: the reference it stands for,
+ *  `"unresolvable"` when the destination is mention-shaped but its token does
+ *  not parse, or null for an ordinary link. bb links an agent-written
+ *  `@thread:…` / `@project:…` token into a percent-encoded `file://` href
+ *  under the thread's workspace root, and its own click routing opens that
+ *  "path" in the file preview — the operator's "File not found." pane. Only
+ *  the destination decides (the label is prose the host resolved), and a
+ *  malformed escape stays raw so the shape test still sees the token. */
+function mentionReferenceInAnchor(
+  anchor: Element,
+): PaneReferenceTarget | "unresolvable" | null {
+  const href = anchor.getAttribute("href") ?? "";
+  if (href === "") return null;
+  let decoded = href;
+  try {
+    decoded = decodeURIComponent(href);
+  } catch {
+    // A malformed percent escape is not a reference; keep the raw text for
+    // the shape test below.
+  }
+  const target = mentionReferenceInText(decoded);
+  if (target !== null) return target;
+  return mentionShaped(decoded) ? "unresolvable" : null;
+}
+
 export function ThreadPane({
   thread,
   isArchived,
@@ -650,6 +678,25 @@ export function ThreadPane({
       const anchor = target.closest("a[href]");
       if (anchor !== null) {
         const href = anchor.getAttribute("href") ?? "";
+        // A mention-shaped destination claims the click outright (the "File
+        // not found." regression, 2026-11-17): bb renders an agent-written
+        // `@thread:…`/`@project:…` token as a percent-encoded file:// href
+        // under the thread's workspace root, and the host's own routing then
+        // opens that "path" in the file preview. The pane owns its
+        // transcript's mention clicks, so a resolvable reference opens
+        // through the same opener the painted chips use, and a destination
+        // that is mention-shaped but unparseable stays inert. Neither may
+        // fall through to the preview; ordinary links keep the routing
+        // below untouched.
+        const mention = mentionReferenceInAnchor(anchor);
+        if (mention !== null) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (mention !== "unresolvable" && referenceMentions !== undefined) {
+            referenceMentions.onOpen(mention);
+          }
+          return;
+        }
         if (href === "" || isExternalHref(href)) return;
         const path = workspacePathFromHref(href);
         if (path === null) return;

@@ -3,5 +3,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
   {
     "text": "**On bb 0.49 the pane and the New Thread dialog stop duplicating the host.** The host now routes file links in a plugin chat and offers New project in its composer, so the board's own file-link patches and its second New project button stand down there; hosts below 0.49 keep them.",
     "children": []
+  },
+  {
+    "text": "**Thread and project references in a pane message open the thread or project again.** bb renders an agent-written `@thread:…` mention as a link into the workspace's file preview, which read \"File not found.\"; the pane now claims those clicks itself, and a malformed mention does nothing instead.",
+    "children": [],
+    "group": "The thread pane"
   }
 ];
