@@ -153,10 +153,17 @@ function openPaneByDeepLink(view: ReturnType<typeof render>, threadId: string): 
 
 function focusNativePane(threadId: string | null): void {
   act(() => {
+    // A native thread pane sits BESIDE the board: two panes, the thread's
+    // focused. bb reports no layout at all for a single pane
+    // (plugin-sidebar-split.ts: `countPanes(layout.root) < 2` → null), so a
+    // lone thread pane is not a state the host can paint.
     setFakeSplitLayout(
       threadId === null
         ? null
-        : [{ paneId: "pane-2", threadId, isFocused: true }],
+        : [
+            { paneId: "pane-1", threadId: null, isFocused: false },
+            { paneId: "pane-2", threadId, isFocused: true },
+          ],
     );
   });
 }
