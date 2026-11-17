@@ -143,6 +143,33 @@ function targetFromToken(kind: string, id: string, seq: string | undefined): Pan
 	};
 }
 
+/** The first serialized reference token in `text`, or null when none parses.
+ *  Reads the same grammar as the decorator, for destinations that carry the
+ *  token instead of a rendered chip: bb links an agent-written `@thread:…`
+ *  into a percent-encoded `file://` href under the thread's workspace root,
+ *  and the pane's click capture parses that decoded destination here before
+ *  the host's file-preview fallback can claim it (the "File not found."
+ *  regression, 2026-11-17). Malformed tokens — an id under the wrong prefix —
+ *  return null so the caller can keep the click inert rather than routing
+ *  it anywhere. */
+export function mentionReferenceInText(text: string): PaneReferenceTarget | null {
+	const probe = new RegExp(TOKEN.source, "u");
+	const match = probe.exec(text);
+	return match === null ? null : targetFromMatch(match);
+}
+
+/** The loosest mention shape: a thread or project token's opening, whatever
+ *  its id parses to. A destination matching this must never fall through to
+ *  a file preview even when `mentionReferenceInText` refuses it; the click
+ *  ends inert instead. `#msg=N` is swallowed like the decorator swallows it. */
+const MENTION_SHAPE =
+	/@(?:thread|project):[A-Za-z0-9_-]*(?:#msg=\d+)?|@(?:thr|proj)_[A-Za-z0-9_-]*(?:#msg=\d+)?/u;
+
+/** True when `text` carries a mention token shape, parseable or not. */
+export function mentionShaped(text: string): boolean {
+	return MENTION_SHAPE.test(text);
+}
+
 /** The chip a click landed on (or is part of), read back as its target —
  *  what the pane's click-capture handler routes. */
 export function decoratedReferencePaneTarget(

@@ -13,6 +13,8 @@ import { describe, expect, it } from "vitest";
 import {
   decorateReferenceMentions,
   decoratedReferencePaneTarget,
+  mentionReferenceInText,
+  mentionShaped,
 } from "../components/decorate-reference-mentions";
 import type { ReferenceLabeler } from "../components/decorate-reference-mentions";
 
@@ -272,5 +274,40 @@ describe("decorateReferenceMentions", () => {
     decorateReferenceMentions(root, labels);
     expect(decoratedReferencePaneTarget(null)).toBeNull();
     expect(decoratedReferencePaneTarget(root.querySelector("span"))).toBeNull();
+  });
+});
+
+describe("mention tokens read from a destination", () => {
+  // bb renders an agent-written mention as a percent-encoded token resolved
+  // into a file:// href under the workspace root; the pane's click capture
+  // parses that decoded destination (the "File not found." regression).
+  it("parses the host's file:// destination and the raw serialized forms", () => {
+    expect(
+      mentionReferenceInText(
+        decodeURIComponent(
+          "file:///Users/cristos/Documents/projects/bv-brain2/%40thread%3Athr_cvvvkw6rjz",
+        ),
+      ),
+    ).toEqual({ kind: "thread", id: "thr_cvvvkw6rjz", messageSeq: null });
+    expect(mentionReferenceInText("@project:proj_api")).toEqual({
+      kind: "project",
+      id: "proj_api",
+      messageSeq: null,
+    });
+    expect(mentionReferenceInText("@thr_glyph_glue#msg=12")).toEqual({
+      kind: "thread",
+      id: "thr_glyph_glue",
+      messageSeq: 12,
+    });
+  });
+
+  it("refuses a malformed token but still reports the mention shape", () => {
+    expect(mentionReferenceInText("@thread:proj_nope")).toBeNull();
+    expect(mentionShaped("@thread:proj_nope")).toBe(true);
+    expect(mentionReferenceInText("docs/erd.md")).toBeNull();
+    expect(mentionShaped("docs/erd.md")).toBe(false);
+    // A route-style thread href is not a token: the pane leaves it to the
+    // host's own routing.
+    expect(mentionShaped("/projects/web/threads/thr_review_pr")).toBe(false);
   });
 });
