@@ -1,0 +1,51 @@
+# Operator-assisted E2E: the card click where bb will not split (the second
+# regression report, 2026-11-17: "clicking is still taking me to home +
+# opening the full-window thread composer").
+#
+# bb's opener gates its split on `isCompact || store.get(splitLayoutAtom) ===
+# null` (renderer `jQ`/openThreadInSplit, installed 0.49.0; the citation lives
+# in lib/native-pane-ownership.ts). Where that holds it PLAINLY NAVIGATES: the
+# board's own plugin panel is replaced by the thread page, which is the
+# operator's "takes me home". This suite pins the board's answer: on a compact
+# viewport (700px, inside bb's `(max-width: 767px)`) a card click opens the
+# board's own in-panel pane and never asks the host for a split.
+#
+# The viewport IS the state: the board reads the same media query bb does
+# (components/ui/hooks/use-compact-viewport.tsx), so the suite needs no harness
+# switch for it. What the harness cannot render is bb's layout atom, so the
+# live proof rides docs/screenshots/probe-native-one-click/compact/
+# {before,after}/.
+#
+# Run: npm run uat -- tests/manual/uat-native-open-compact.yaml
+suite: native-open-compact
+harness:
+  config: scripts/screenshot/vite.config.ts
+  port: 5184
+defaults:
+  groupBy: status
+  theme: dark
+  # bb's compact predicate: at or under 767px wide, its opener will not split.
+  viewport:
+    width: 700
+    height: 900
+steps:
+  - id: a-click-where-the-host-will-not-split-keeps-the-board
+    title: On a compact viewport a card click opens the board's own pane, not the host's
+    goto: "?groupBy=status&nativeSplit=1"
+    click: { card: thr_uat_queue }
+    assert:
+      # The host is never asked: on this viewport a split request is a plain
+      # navigation that takes the board away.
+      - native_panes: []
+      - pane: { threadId: thr_uat_queue }
+      # The board stayed, and its own route carries the thread.
+      - url: { suffix: "/board/t/thr_uat_queue" }
+
+  - id: the-card-menu-open-thread-entry-keeps-the-board-too
+    title: The card menu's "Open thread" entry takes the same in-board path
+    goto: "?groupBy=status&nativeSplit=1"
+    menu: { card: thr_rpc_auth, item: "Open thread" }
+    assert:
+      - native_panes: []
+      - pane: { threadId: thr_rpc_auth }
+      - url: { suffix: "/board/t/thr_rpc_auth" }

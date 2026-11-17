@@ -10,7 +10,8 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "children": [
       "A click always opens the pane, even the first one on a fresh board. A double click neither closes it nor sends the board to another route.",
       "The board keeps one thread pane. A second card click replaces the thread the board's pane was showing, instead of splitting another pane off the board, and a pane you opened yourself or pointed at another thread is left alone.",
-      "At bb's eight-pane ceiling the click opens the board's own pane instead, because the host's split placement would otherwise replace the board's pane, the very surface the click was made on."
+      "At bb's eight-pane ceiling the click opens the board's own pane instead, because the host's split placement would otherwise replace the board's pane, the very surface the click was made on.",
+      "A narrow window no longer costs you the board. At 767 pixels wide or less bb answers a split request by navigating, which replaced the board with the thread's own page; the click now recognizes that window and opens the board's own pane, so the board stays and the thread appears inside it."
     ],
     "group": "bb's thread pages"
   },

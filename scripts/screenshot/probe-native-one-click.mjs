@@ -22,6 +22,13 @@ const OUT_DIR = process.env.OUT_DIR ?? "docs/screenshots/probe-native-one-click"
 const CHROME =
   process.env.CHROME_PATH ??
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+/** The window bb sees. `COMPACT=1` boots at 700px, where bb's own compact
+ *  predicate (`(max-width: 767px)`) matches and its opener plainly navigates
+ *  instead of splitting. */
+const VIEWPORT =
+  process.env.COMPACT === "1"
+    ? { width: 700, height: 900 }
+    : { width: 1600, height: 1200 };
 
 mkdirSync(OUT_DIR, { recursive: true });
 
@@ -60,6 +67,13 @@ const READ_STATE = `(function () {
       subPath: pane.content && pane.content.kind === 'plugin-panel' ? pane.content.subPath : null,
     })),
     boardMounted: board !== null,
+    /** The board's OWN in-panel pane, the surface the compact path uses. */
+    inBoardPane: (() => {
+      const pane = document.querySelector('aside[aria-label^="Thread:"]');
+      return pane === null ? null : pane.getAttribute('aria-label');
+    })(),
+    compactViewport: window.matchMedia("(max-width: 767px)").matches,
+    viewportWidth: window.innerWidth,
     pluginRecord: record,
   };
 })();`;
@@ -87,20 +101,37 @@ const LIST_CARDS = `(function () {
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: "new",
-  args: ["--window-size=1600,1200", "--disable-gpu", "--disable-dev-shm-usage"],
-  defaultViewport: { width: 1600, height: 1200 },
+  args: [
+    `--window-size=${VIEWPORT.width},${VIEWPORT.height}`,
+    "--disable-gpu",
+    "--disable-dev-shm-usage",
+  ],
+  defaultViewport: VIEWPORT,
 });
 let page = null;
 let context = null;
 const consoleErrors = [];
+/** The board's own decision trace, when its developer setting is on. */
+const nativeTrace = [];
 
 async function startPhase() {
   if (context !== null) await context.close();
   consoleErrors.length = 0;
+  nativeTrace.length = 0;
   context = await browser.createBrowserContext();
   page = await context.newPage();
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text().slice(0, 300));
+  page.on("console", async (message) => {
+    const text = message.text();
+    if (message.type() === "error") consoleErrors.push(text.slice(0, 300));
+    if (!text.includes("[focus-board:native-open]")) return;
+    // The trace argument is an object; `text()` flattens it to
+    // "[object Object]", so read the args themselves.
+    try {
+      const args = await Promise.all(message.args().map((arg) => arg.jsonValue()));
+      nativeTrace.push(JSON.stringify(args));
+    } catch {
+      nativeTrace.push(text.slice(0, 500));
+    }
   });
   page.on("pageerror", (error) => consoleErrors.push(String(error).slice(0, 300)));
   await page.goto(APP, { waitUntil: "networkidle2", timeout: 30000 });
@@ -110,6 +141,7 @@ async function startPhase() {
 async function read(label) {
   const state = await page.evaluate(READ_STATE);
   state.consoleErrors = [...consoleErrors];
+  state.nativeTrace = [...nativeTrace];
   console.log(`=== ${label} ===`);
   console.log(JSON.stringify(state, null, 2));
   await page.screenshot({ path: `${OUT_DIR}/${label}.png` });
@@ -124,7 +156,10 @@ async function listCards() {
 async function clickCard(index, { double = false } = {}) {
   const cards = await listCards();
   const card = cards[index];
-  if (card === undefined) throw new Error(`no card at index ${index} (${cards.length} cards)`);
+  // No card on screen: the host took the board away, which is itself the
+  // measurement (the compact report's whole complaint). Record it and read on
+  // rather than aborting the run.
+  if (card === undefined) return null;
   await page.evaluate((threadId) => {
     const el = document.querySelector(`[data-thread-card="${threadId}"] a`);
     if (el !== null) el.scrollIntoView({ block: "center", inline: "center" });
@@ -146,6 +181,22 @@ async function clickCard(index, { double = false } = {}) {
   return card;
 }
 
+/** Close the board's own in-panel pane, where one is up: on a compact viewport
+ *  it covers the board, so the next card click needs it gone (the phone
+ *  sheet's own pattern). */
+async function closeInBoardPane() {
+  const closed = await page.evaluate(() => {
+    const pane = document.querySelector('aside[aria-label^="Thread:"]');
+    if (pane === null) return false;
+    const close = pane.querySelector('[aria-label="Close thread pane"]');
+    if (close === null) return false;
+    close.click();
+    return true;
+  });
+  if (closed) await sleep(800);
+  return closed;
+}
+
 await startPhase();
 
 const evidence = { fresh: {}, recorded: {} };
@@ -158,11 +209,14 @@ evidence.fresh.cards = cards.slice(0, 4);
 evidence.fresh.firstClick = await clickCard(0);
 evidence.fresh.afterFirstClick = await read("fresh-2-after-first-click");
 
-// 2. A second card, one click.
+// 2. A second card, one click. On a compact viewport the board's own pane
+// covers the board, so it is closed first, the way a phone does.
+evidence.fresh.closedAfterFirst = await closeInBoardPane();
 evidence.fresh.secondClick = await clickCard(1);
 evidence.fresh.afterSecondClick = await read("fresh-3-after-second-click");
 
 // 3. Two clicks in quick succession on the same card.
+evidence.fresh.closedAfterSecond = await closeInBoardPane();
 evidence.fresh.doubleClickCard = await clickCard(1, { double: true });
 evidence.fresh.afterDoubleClick = await read("fresh-4-after-double-click");
 
@@ -196,6 +250,13 @@ const verdict = {
   recordedSecondClickThreadPanes: threadPanes(evidence.recorded.afterSecondClick),
   recordedDoubleClickThreadPanes: threadPanes(evidence.recorded.afterDoubleClick),
   recordedDoubleClickRoute: evidence.recorded.afterDoubleClick.route,
+  // The compact window: the board must stay, and the thread must arrive in the
+  // board's own pane instead of the whole window.
+  inBoardPaneAfterFirstClick: evidence.fresh.afterFirstClick.inBoardPane,
+  inBoardPaneAfterSecondClick: evidence.fresh.afterSecondClick.inBoardPane,
+  compactViewport: evidence.fresh.before.compactViewport,
+  viewportWidth: evidence.fresh.before.viewportWidth,
+  routeAfterFirstClick: evidence.fresh.afterFirstClick.route,
 };
 console.log("=== verdict ===");
 console.log(JSON.stringify(verdict, null, 2));

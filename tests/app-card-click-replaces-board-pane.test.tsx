@@ -19,15 +19,18 @@ import {
 } from "../lib/native-pane-ownership";
 import {
   fakeNativeOpens,
+  fakePanelPushes,
   fakeRouteFellBack,
   fakeSplitPanes,
   fakeThreadNavigations,
   registeredNavPanel,
   resetFakeNativeOpens,
+  resetFakePanelPushes,
   resetFakeThreadNavigations,
   seedFakeLinks,
   seedFakeThreads,
   setFakeRouteThread,
+  setFakeSettings,
   setFakeSplitLayout,
   setFakeSplitsOff,
 } from "./helpers/app-fake-sdk";
@@ -59,10 +62,11 @@ class StubResizeObserver {
   disconnect(): void {}
 }
 
-beforeEach(() => {
-  vi.stubGlobal("ResizeObserver", StubResizeObserver);
+/** bb's compact predicate is a media query; the board reads the same one
+ *  (`components/ui/hooks/use-compact-viewport.tsx`). */
+function stubCompactViewport(compact: boolean): void {
   vi.stubGlobal("matchMedia", (query: string) => ({
-    matches: false,
+    matches: compact && query === "(max-width: 767px)",
     media: query,
     onchange: null,
     addEventListener: () => {},
@@ -71,6 +75,13 @@ beforeEach(() => {
     removeListener: () => {},
     dispatchEvent: () => false,
   }) as unknown as MediaQueryList);
+}
+
+beforeEach(() => {
+  vi.stubGlobal("ResizeObserver", StubResizeObserver);
+  stubCompactViewport(false);
+  setFakeSettings(null);
+  resetFakePanelPushes();
   window.localStorage.clear();
   seedFakeLinks({});
   seedFakeThreads(fixtureThreads());
@@ -455,5 +466,94 @@ describe("the shipped one-pane rule's regressions", () => {
     // home". The click must never do that.
     expect(fakeRouteFellBack()).toBe(false);
     expect(fakeNativeOpens()).toEqual([{ threadId: "thr_older", split: true }]);
+  });
+});
+
+// The second regression report (same day): "clicking is still taking me to home
+// + opening the full-window thread composer". That is bb's opener PLAINLY
+// NAVIGATING, which it does where its compact predicate is on: the board's own
+// pane is replaced by the thread page and the plugin panel is gone.
+describe("where the host will not split", () => {
+  it("opens the board's own pane instead of asking for a split that replaces the board", async () => {
+    stubCompactViewport(true);
+    act(() => {
+      // The host's half of the same state: no split available, so its opener
+      // navigates plainly.
+      setFakeSplitsOff(true);
+    });
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_older"));
+
+    fireEvent.click(cardAnchor("thr_older"));
+
+    // The host is never asked: a split request here is a navigation that takes
+    // the board with it.
+    expect(fakeNativeOpens()).toEqual([]);
+    await waitFor(() =>
+      expect(fakePanelPushes().at(-1)).toMatchObject({
+        path: "board",
+        subPath: "t/thr_older",
+      }),
+    );
+    expect(document.querySelector('aside[aria-label="Thread: Older thread"]')).not.toBeNull();
+    expect(threadPanes()).toEqual([]);
+  });
+
+  it("restores the board's route when the host plainly navigates anyway", async () => {
+    // Not compact, but the host will not split either (its layout atom is the
+    // half of the predicate a plugin cannot read), so the open we do ask for
+    // turns into a plain navigation.
+    act(() => {
+      setFakeSplitsOff(true);
+    });
+    const view = mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_older"));
+
+    fireEvent.click(cardAnchor("thr_older"));
+    await waitFor(() =>
+      expect(fakeNativeOpens()).toEqual([{ threadId: "thr_older", split: true }]),
+    );
+
+    // What the host did: replaced the plugin panel with the thread page.
+    window.history.pushState({}, "", "/projects/proj_a/threads/thr_older");
+    view.unmount();
+
+    await waitFor(
+      () =>
+        expect(fakePanelPushes().at(-1)).toMatchObject({
+          path: "board",
+          subPath: "t/thr_older",
+        }),
+      { timeout: 3000 },
+    );
+    window.history.pushState({}, "", "/");
+  });
+});
+
+describe("the developer trace", () => {
+  it("logs one line naming the branch when the setting is on", async () => {
+    setFakeSettings({ nativeOpenDebug: true });
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_older"));
+
+    fireEvent.click(cardAnchor("thr_older"));
+    expect(debug).toHaveBeenCalledWith(
+      "[focus-board:native-open]",
+      expect.objectContaining({ threadId: "thr_older", branch: "open: new pane" }),
+    );
+    debug.mockRestore();
+  });
+
+  it("stays silent when the setting is off", async () => {
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_older"));
+
+    fireEvent.click(cardAnchor("thr_older"));
+    expect(
+      debug.mock.calls.filter((call) => call[0] === "[focus-board:native-open]"),
+    ).toEqual([]);
+    debug.mockRestore();
   });
 });

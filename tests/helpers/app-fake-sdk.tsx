@@ -919,7 +919,18 @@ export function useSdk(): unknown {
   return fakeSdk;
 }
 
-const fakeSettingsSnapshot = { values: undefined };
+let fakeSettingsValues: Record<string, unknown> | undefined = undefined;
+let fakeSettingsSnapshot: { values: Record<string, unknown> | undefined } = {
+  values: fakeSettingsValues,
+};
+
+/** Seed the host-declared settings the board reads (e.g. a developer trace
+ *  switch). Null clears them, the unloaded state every other suite sees. */
+export function setFakeSettings(values: Record<string, unknown> | null): void {
+  fakeSettingsValues = values ?? undefined;
+  fakeSettingsSnapshot = { values: fakeSettingsValues };
+  emit();
+}
 
 export function useSettings(): { values: Record<string, unknown> | undefined } {
   return fakeSettingsSnapshot;

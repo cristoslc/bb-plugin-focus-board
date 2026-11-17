@@ -89,6 +89,7 @@ import {
   planNativeCardPlacement,
   type BoardNativePane,
 } from "./lib/native-pane-ownership";
+import type { SplitPaneLayoutView } from "./lib/split-pane-cap";
 import { createProjectFromPickedFolder } from "./lib/project-create-flow";
 import { paneContextInfo } from "./lib/pane-context";
 import type { ReferenceMentions } from "./components/decorate-reference-mentions";
@@ -379,6 +380,40 @@ interface NativeReplaceIntent {
 
 /** How long a replacement waits for the host to focus the board's pane. */
 const REPLACE_CONFIRM_MS = 400;
+
+/** How long a native open waits before checking the host did not just replace
+ *  the board with the thread page. */
+const NATIVE_OPEN_REPAIR_MS = 500;
+
+/** The board's own root element: its presence is how the click knows whether
+ *  the plugin panel survived the open. */
+const BOARD_PANEL_SELECTOR = "[data-focus-board-panel]";
+
+/**
+ * The card click's decision trace (2026-11-17: two reports in a row could not
+ * be attributed from a screenshot). Off unless the developer setting
+ * "trace the card click's pane placement" is on; one line per click.
+ */
+function traceNativeOpen(
+  enabled: boolean,
+  event: Record<string, unknown>,
+): void {
+  if (!enabled) return;
+  console.debug("[focus-board:native-open]", event);
+}
+
+/** The repair timer, module-scoped: it must outlive the panel it repairs. */
+let nativeRepairTimer: number | null = null;
+
+/** A compact trace of the host's split layout, for the debug line. */
+function splitLayoutTrace(layout: SplitPaneLayoutView | null): unknown {
+  if (layout === null) return null;
+  return layout.panes.map((pane) => ({
+    paneId: pane.paneId,
+    threadId: pane.threadId,
+    focused: pane.isFocused,
+  }));
+}
 
 function BoardPage({ subPath }: { subPath: string }) {
   const {
@@ -1369,6 +1404,48 @@ function BoardPage({ subPath }: { subPath: string }) {
   // because the host's navigation cannot resolve it either.
   const liveThreadIdsRef = useRef<readonly string[]>([]);
   liveThreadIdsRef.current = threads.map((thread) => thread.id);
+  // bb's compact predicate, the one its opener gates splits on
+  // (lib/native-pane-ownership.ts cites the renderer constant): where it is
+  // true, a split request is a plain navigation that replaces the board.
+  const compactViewportRef = useRef(false);
+  compactViewportRef.current = paneCoversBoard;
+  // The developer trace switch (server.ts's `nativeOpenDebug`).
+  const nativeOpenDebugRef = useRef(false);
+  nativeOpenDebugRef.current = settingValues?.nativeOpenDebug === true;
+  /**
+   * The repair for the half of bb's split predicate a plugin cannot read: if
+   * the host plainly navigated anyway (no layout atom yet, or its own compact
+   * override), the plugin panel is unmounted and the route is the thread page.
+   * Put the board's route back with that thread in its own pane, so one click
+   * still leaves the thread open beside the board.
+   *
+   * The timer outlives the panel on purpose: the failure mode is the panel
+   * being unmounted, so the code that notices cannot live inside it.
+   */
+  const scheduleNativeRepair = useCallback(
+    (threadId: string, branch: string) => {
+      if (nativeRepairTimer !== null) window.clearTimeout(nativeRepairTimer);
+      nativeRepairTimer = window.setTimeout(() => {
+        nativeRepairTimer = null;
+        const boardMounted = document.querySelector(BOARD_PANEL_SELECTOR) !== null;
+        const route = window.location.pathname;
+        const hostPlainlyNavigated = !boardMounted && route.includes(`/threads/${threadId}`);
+        traceNativeOpen(nativeOpenDebugRef.current, {
+          threadId,
+          branch,
+          outcome: hostPlainlyNavigated
+            ? "host plainly navigated: restoring the board's route"
+            : "host kept the board",
+          boardMounted,
+          route,
+          layout: splitLayoutTrace(splitLayoutRef.current),
+        });
+        if (!hostPlainlyNavigated) return;
+        navigate.toPluginPanel(PANEL_PATH, { subPath: paneSubPathFor(threadId) });
+      }, NATIVE_OPEN_REPAIR_MS);
+    },
+    [navigate],
+  );
   const clearReplaceDeadline = useCallback(() => {
     if (replaceTimerRef.current !== null) {
       window.clearTimeout(replaceTimerRef.current);
@@ -2971,28 +3048,51 @@ function BoardPage({ subPath }: { subPath: string }) {
   const openThreadCardNative = useCallback(
     (threadId: string) => {
       const layout = splitLayoutRef.current;
+      const debug = nativeOpenDebugRef.current;
+      const trace = (branch: string, extra: Record<string, unknown> = {}) =>
+        traceNativeOpen(debug, {
+          threadId,
+          branch,
+          compactViewport: compactViewportRef.current,
+          layout: splitLayoutTrace(layout),
+          record: boardNativePaneRef.current,
+          ...extra,
+        });
       if (nativeOpenWouldEvictBoard(layout)) {
         // The board's own pane, the one surface that opens a thread without
         // touching the layout: the host's opener here would replace the
         // focused board pane with the thread.
+        trace("in-board: pane cap");
         openThreadCard(threadId);
         return;
       }
       capturePaneAttention(threadId);
-      // The second click of a double click: same thread, work already in
-      // flight. Re-ask for the focus (idempotent) and let the first click
-      // land. Re-planning here would read a layout that is mid-replacement.
-      const inFlight = nativeReplaceRef.current;
-      if (inFlight !== null && inFlight.threadId === threadId) {
-        actions.open(threadId, { split: true });
-        return;
-      }
       const placement = planNativeCardPlacement(
         layout,
         boardNativePaneRef.current,
         threadId,
         liveThreadIdsRef.current,
+        { compactViewport: compactViewportRef.current },
       );
+      if (placement.kind === "in-board") {
+        // bb's compact viewport: its opener would PLAINLY NAVIGATE, which
+        // replaces the board's own pane with the thread page and leaves the
+        // plugin panel — the operator's "takes me home, full-window
+        // composer". The board's own pane keeps the board and still shows the
+        // thread.
+        trace("in-board: host will not split");
+        openThreadCard(threadId);
+        return;
+      }
+      // The second click of a double click: same thread, work already in
+      // flight. Re-ask for the focus (idempotent) and let the first click
+      // land. Re-planning here would read a layout that is mid-replacement.
+      const inFlight = nativeReplaceRef.current;
+      if (inFlight !== null && inFlight.threadId === threadId) {
+        trace("focus: replacement in flight");
+        actions.open(threadId, { split: true });
+        return;
+      }
       if (placement.kind === "focus") {
         // Already in the board's pane: the host's opener focuses it and
         // nothing moves. A record that only knew the thread learns its pane
@@ -3005,10 +3105,12 @@ function BoardPage({ subPath }: { subPath: string }) {
             priorPaneIds: [],
           });
         }
+        trace("focus: already in the board's pane");
         actions.open(threadId, { split: true });
         return;
       }
       if (placement.kind === "replace") {
+        trace("replace", { paneId: placement.paneId, from: placement.threadId });
         setBoardNativePane({ paneId: placement.paneId, threadId, priorPaneIds: [] });
         nativeNavigationRef.current = null;
         const intent: NativeReplaceIntent = { paneId: placement.paneId, threadId };
@@ -3027,6 +3129,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             priorPaneIds: (splitLayoutRef.current?.panes ?? []).map((pane) => pane.paneId),
           });
           actions.open(threadId, { split: true });
+          scheduleNativeRepair(threadId, "replace: deadline fallback");
         }, REPLACE_CONFIRM_MS);
         // The focus step: the pane's CURRENT thread, which the host focuses.
         actions.open(placement.threadId, { split: true });
@@ -3035,18 +3138,21 @@ function BoardPage({ subPath }: { subPath: string }) {
       // No pane of the board's to replace: claim the thread now, with the
       // panes that already existed, and let the host place it. The pane id is
       // resolved from the layout on the next click.
+      trace("open: new pane");
       setBoardNativePane({
         paneId: null,
         threadId,
         priorPaneIds: (layout?.panes ?? []).map((pane) => pane.paneId),
       });
       actions.open(threadId, { split: true });
+      scheduleNativeRepair(threadId, "open: new pane");
     },
     [
       actions,
       capturePaneAttention,
       clearReplaceDeadline,
       openThreadCard,
+      scheduleNativeRepair,
       setBoardNativePane,
     ],
   );

@@ -104,6 +104,42 @@ export interface ResolvedBoardNativePane {
   readonly isFocused: boolean;
 }
 
+/**
+ * bb's compact-viewport predicate, the one its opener gates splits on.
+ *
+ * Installed 0.49.0 renderer: `var pk = \`(max-width: 767px)\`` plus `mk()`,
+ * which answers `matchMedia(pk).matches` unless a React context overrides it
+ * (`index-UJHlXnMg.js` in the app bundle, asset offsets ~312790 and ~317659).
+ * The split open itself is `jQ` (offset ~675506):
+ *
+ * ```js
+ * if (isCompact || store.get(splitLayoutAtom) === null) { navigate(route); return; }
+ * ```
+ *
+ * and the plugin-facing `experimental_useSidebarThreadActions().open` passes
+ * `isCompact` from that same hook (plugin-frontend bundle, offset ~287951). So
+ * "splits are off" means exactly: a viewport at or under 767px wide, or no
+ * split layout yet. Where it is off, `split: true` is a PLAIN NAVIGATION: the
+ * board's own pane is replaced by the thread page and the board is gone, which
+ * the operator reads as "taken to home".
+ *
+ * The board can read the first half for itself, because this repo already
+ * vendors the same hook (`components/ui/hooks/use-compact-viewport.tsx`, same
+ * `(max-width: 767px)` query). The second half — the host's layout atom — is
+ * not readable through the SDK (`useSidebarSplitLayout` answers null for a
+ * one-pane layout too, so null cannot tell "compact" from "no split yet"), so
+ * a click that is not compact still asks for the split and repairs itself if
+ * the host plainly navigated anyway.
+ */
+export function nativeSplitUnavailable({
+  compactViewport,
+}: {
+  /** `useIsCompactViewport()`, the host's own predicate. */
+  readonly compactViewport: boolean;
+}): boolean {
+  return compactViewport;
+}
+
 /** What one card click should do. */
 export type NativeCardPlacement =
   /** The clicked thread is already in the board's pane: the host's opener
@@ -119,7 +155,10 @@ export type NativeCardPlacement =
     }
   /** Hand the thread to the host's opener: a pane beside the board, a focus,
    *  or the ceiling's replace, by bb's own rules. */
-  | { readonly kind: "open" };
+  | { readonly kind: "open" }
+  /** The host would plainly navigate (its compact predicate is on), taking the
+   *  board with it: open the board's own in-panel pane instead. */
+  | { readonly kind: "in-board" };
 
 /** The plugin-scoped localStorage key for the board's pane record. */
 export function nativePaneStorageKey(pluginId: string): string {
@@ -215,7 +254,12 @@ export function planNativeCardPlacement(
   record: BoardNativePane | null,
   threadId: string,
   liveThreadIds: readonly string[],
+  environment: { readonly compactViewport: boolean } = { compactViewport: false },
 ): NativeCardPlacement {
+  // First, before any pane reasoning: where the host will not split, a split
+  // request is a plain navigation that replaces the board. The board's own
+  // pane is the only surface that keeps it.
+  if (nativeSplitUnavailable(environment)) return { kind: "in-board" };
   const owned = resolveBoardNativePane(layout, record);
   if (owned === null) return { kind: "open" };
   if (owned.threadId === threadId) return { kind: "focus", paneId: owned.paneId };
