@@ -21,6 +21,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "bb's thread pages"
   },
   {
+    "text": "**Splitting or unsplitting the window no longer reloads the board.** bb rebuilds the panel when the pane layout changes, which used to flash the loading screen and drop the scroll position. The board now repaints what you were looking at, where you left it, and the refetch that follows lands behind it.",
+    "children": [],
+    "group": "The board's frame"
+  },
+  {
     "text": "**The board's keys stay on the board.** A letter or `/` typed anywhere you can type inserts text instead of opening the New Thread composer or jumping the search field. Both keys fire only while the board's own pane holds focus, so another pane's keystrokes leave the board alone.",
     "children": [],
     "group": "The board's shortcuts"

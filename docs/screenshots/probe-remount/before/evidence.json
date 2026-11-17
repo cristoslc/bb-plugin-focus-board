@@ -1,0 +1,523 @@
+{
+  "checkedAt": "2026-11-17T23:13:30.484Z",
+  "app": "http://127.0.0.1:38886/plugins/focus-board/board",
+  "row": {
+    "x": 170,
+    "y": 98,
+    "href": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+  },
+  "initial": {
+    "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+    "boardInDocument": true,
+    "boardPaneId": "pane-1",
+    "paneContainers": [
+      {
+        "id": "pane-1",
+        "focused": null,
+        "hasBoard": true,
+        "box": {
+          "x": 320,
+          "y": 0,
+          "w": 1280,
+          "h": 1200
+        }
+      }
+    ],
+    "boardBox": {
+      "x": 320,
+      "y": 48,
+      "w": 1280,
+      "h": 1152
+    },
+    "cards": 86,
+    "scroll": {
+      "x": 0,
+      "y": 0,
+      "laneDirection": "vertical"
+    },
+    "laneScroll": {
+      "pinned": {
+        "x": 0,
+        "y": 0
+      },
+      "unread": {
+        "x": 0,
+        "y": 0
+      },
+      "working": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-recent": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-today": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-earlier": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-awhile": {
+        "x": 0,
+        "y": 0
+      },
+      "done": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "counters": {
+      "mounts": 1,
+      "loadingTransitions": 2,
+      "requests": 57
+    },
+    "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}"
+  },
+  "scrolledRead": {
+    "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+    "boardInDocument": true,
+    "boardPaneId": "pane-1",
+    "paneContainers": [
+      {
+        "id": "pane-1",
+        "focused": null,
+        "hasBoard": true,
+        "box": {
+          "x": 320,
+          "y": 0,
+          "w": 1280,
+          "h": 1200
+        }
+      }
+    ],
+    "boardBox": {
+      "x": 320,
+      "y": 48,
+      "w": 1280,
+      "h": 1152
+    },
+    "cards": 86,
+    "scroll": {
+      "x": 260,
+      "y": 0,
+      "laneDirection": "vertical"
+    },
+    "laneScroll": {
+      "pinned": {
+        "x": 0,
+        "y": 120
+      },
+      "unread": {
+        "x": 0,
+        "y": 0
+      },
+      "working": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-recent": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-today": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-earlier": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-awhile": {
+        "x": 0,
+        "y": 0
+      },
+      "done": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "counters": {
+      "mounts": 1,
+      "loadingTransitions": 2,
+      "requests": 57
+    },
+    "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}"
+  },
+  "afterSplit": {
+    "url": "http://127.0.0.1:38886/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr",
+    "boardInDocument": true,
+    "boardPaneId": "pane-1",
+    "paneContainers": [
+      {
+        "id": "pane-1",
+        "focused": "false",
+        "hasBoard": true,
+        "box": {
+          "x": 320,
+          "y": 0,
+          "w": 640,
+          "h": 1200
+        }
+      },
+      {
+        "id": "pane-2",
+        "focused": "true",
+        "hasBoard": false,
+        "box": {
+          "x": 961,
+          "y": 0,
+          "w": 640,
+          "h": 1200
+        }
+      }
+    ],
+    "boardBox": {
+      "x": 320,
+      "y": 48,
+      "w": 640,
+      "h": 1152
+    },
+    "cards": 91,
+    "scroll": {
+      "x": 0,
+      "y": 0,
+      "laneDirection": "vertical"
+    },
+    "laneScroll": {
+      "pinned": {
+        "x": 0,
+        "y": 752
+      },
+      "unread": {
+        "x": 0,
+        "y": 0
+      },
+      "working": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-recent": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-today": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-earlier": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-awhile": {
+        "x": 0,
+        "y": 0
+      },
+      "done": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "counters": {
+      "mounts": 2,
+      "loadingTransitions": 4,
+      "requests": 113
+    },
+    "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_xkd2gczj6w\",\"threadId\":\"thr_p7udn6q2mr\"}}]},\"focusedPaneId\":\"pane-2\"}}"
+  },
+  "splitCounters": {
+    "mounts": [
+      {
+        "at": 10676,
+        "paneId": "pane-1",
+        "paneIsNewNode": true,
+        "url": "http://127.0.0.1:38886/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      }
+    ],
+    "loading": [
+      {
+        "at": 8943,
+        "visible": true
+      },
+      {
+        "at": 10676,
+        "visible": false
+      }
+    ],
+    "rpcCount": 55,
+    "rpcByPath": {
+      "/api/v1/plugins/focus-board/rpc/rank_list": 2,
+      "/api/v1/threads": 1,
+      "/api/v1/projects": 2,
+      "/api/v1/plugins/focus-board/rpc/board_state_get": 1,
+      "/api/v1/plugins/focus-board/rpc/sweep_config_get": 1,
+      "/api/v1/plugins/focus-board/rpc/family_state_list": 2,
+      "/api/v1/plugins/focus-board/rpc/pulse_rates": 1,
+      "/api/v1/threads/thr_p7udn6q2mr": 4,
+      "/api/v1/threads/thr_p7udn6q2mr/plugin-metadata": 1,
+      "/api/v1/threads/thr_p7udn6q2mr/timeline": 1,
+      "/api/v1/plugins/workflows/rpc/workflowActiveRuns": 1,
+      "/api/v1/plugins/iris/rpc/pins.list": 1,
+      "/api/v1/plugins/bb--github-pr-status/settings": 1,
+      "/api/v1/plugins/contributions": 1,
+      "/api/v1/threads/thr_p7udn6q2mr/default-execution-options": 2,
+      "/api/v1/threads/thr_p7udn6q2mr/queued-messages": 2,
+      "/api/v1/threads/thr_p7udn6q2mr/prompt-history": 1,
+      "/api/v1/system/execution-options": 1,
+      "/api/v1/threads/thr_p7udn6q2mr/interactions": 1,
+      "/api/v1/threads/thr_p7udn6q2mr/tabs": 1,
+      "/api/v1/system/providers": 1,
+      "/api/v1/system/environment-providers": 1,
+      "/api/v1/system/machine-providers": 1,
+      "/api/v1/environments/env_y2rgvmnuv7": 1,
+      "/api/v1/threads/thr_p7udn6q2mr/thread-storage/location": 1,
+      "/api/v1/plugins/bb--git/rpc/status": 2,
+      "/api/v1/threads/resolve-mentions": 1,
+      "/api/v1/plugins/bb--github-pr-status/rpc/refresh": 1,
+      "/api/v1/plugins/bb--github-pr-status/rpc/pullRequests": 1,
+      "/api/v1/plugins/focus-board/rpc/tracker_validate": 1,
+      "/api/v1/plugins/focus-board/rpc/tracker_status": 16
+    }
+  },
+  "afterUnsplit": {
+    "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+    "boardInDocument": true,
+    "boardPaneId": "pane-1",
+    "paneContainers": [
+      {
+        "id": "pane-1",
+        "focused": null,
+        "hasBoard": true,
+        "box": {
+          "x": 320,
+          "y": 0,
+          "w": 1280,
+          "h": 1200
+        }
+      }
+    ],
+    "boardBox": {
+      "x": 320,
+      "y": 48,
+      "w": 1280,
+      "h": 1152
+    },
+    "cards": 91,
+    "scroll": {
+      "x": 0,
+      "y": 0,
+      "laneDirection": "vertical"
+    },
+    "laneScroll": {
+      "pinned": {
+        "x": 0,
+        "y": 0
+      },
+      "unread": {
+        "x": 0,
+        "y": 0
+      },
+      "working": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-recent": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-today": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-earlier": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-awhile": {
+        "x": 0,
+        "y": 0
+      },
+      "done": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "counters": {
+      "mounts": 3,
+      "loadingTransitions": 6,
+      "requests": 145
+    },
+    "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}"
+  },
+  "unsplitCounters": {
+    "mounts": [
+      {
+        "at": 16918,
+        "paneId": "pane-1",
+        "paneIsNewNode": true,
+        "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+      }
+    ],
+    "loading": [
+      {
+        "at": 16058,
+        "visible": true
+      },
+      {
+        "at": 16918,
+        "visible": false
+      }
+    ],
+    "rpcCount": 32,
+    "rpcByPath": {
+      "/api/v1/plugins/focus-board/rpc/rank_list": 2,
+      "/api/v1/threads": 1,
+      "/api/v1/projects": 1,
+      "/api/v1/plugins/focus-board/rpc/board_state_get": 1,
+      "/api/v1/plugins/focus-board/rpc/sweep_config_get": 1,
+      "/api/v1/plugins/focus-board/rpc/family_state_list": 1,
+      "/api/v1/plugins/focus-board/rpc/pulse_rates": 1,
+      "/api/v1/plugins/focus-board/rpc/tracker_validate": 1,
+      "/api/v1/plugins/focus-board/rpc/tracker_status": 16,
+      "/api/v1/system/config": 1,
+      "/api/v1/plugins": 2,
+      "/api/v1/plugins/focus-board/settings": 1,
+      "/api/v1/plugins/push-notifications/settings": 1,
+      "/api/v1/plugins/bb--git/settings": 1,
+      "/api/v1/plugins/safe-mode": 1
+    }
+  },
+  "verdict": {
+    "mountsOnSplit": 1,
+    "mountsOnUnsplit": 1,
+    "loadingFlashesOnSplit": 1,
+    "loadingFlashesOnUnsplit": 1,
+    "boardNodeReplacedOnSplit": true,
+    "boardNodeReplacedOnUnsplit": true,
+    "rpcOnSplit": 55,
+    "rpcOnUnsplit": 32,
+    "boardScrollBefore": {
+      "x": 260,
+      "y": 0,
+      "laneDirection": "vertical"
+    },
+    "boardScrollAfterSplit": {
+      "x": 0,
+      "y": 0,
+      "laneDirection": "vertical"
+    },
+    "boardScrollAfterUnsplit": {
+      "x": 0,
+      "y": 0,
+      "laneDirection": "vertical"
+    },
+    "laneScrollBefore": {
+      "pinned": {
+        "x": 0,
+        "y": 120
+      },
+      "unread": {
+        "x": 0,
+        "y": 0
+      },
+      "working": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-recent": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-today": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-earlier": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-awhile": {
+        "x": 0,
+        "y": 0
+      },
+      "done": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "laneScrollAfterSplit": {
+      "pinned": {
+        "x": 0,
+        "y": 752
+      },
+      "unread": {
+        "x": 0,
+        "y": 0
+      },
+      "working": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-recent": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-today": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-earlier": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-awhile": {
+        "x": 0,
+        "y": 0
+      },
+      "done": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "laneScrollAfterUnsplit": {
+      "pinned": {
+        "x": 0,
+        "y": 0
+      },
+      "unread": {
+        "x": 0,
+        "y": 0
+      },
+      "working": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-recent": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-today": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-earlier": {
+        "x": 0,
+        "y": 0
+      },
+      "idle-awhile": {
+        "x": 0,
+        "y": 0
+      },
+      "done": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "boardPaneIdBefore": "pane-1",
+    "boardPaneIdAfterSplit": "pane-1",
+    "boardPaneIdAfterUnsplit": "pane-1",
+    "cardCountStable": false
+  }
+}

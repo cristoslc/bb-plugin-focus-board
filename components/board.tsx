@@ -512,6 +512,15 @@ interface BoardProps {
    * them today.
    */
   reveal?: { threadId: string; seq: number } | null;
+  /**
+   * This mount is bb re-creating the panel, and the operator's own scroll was
+   * restored from the remount bridge (lib/board-snapshot). The board then
+   * skips its mount-time fit of the active card, because a re-creation is not
+   * an open: yanking the operator off the position they were reading is the
+   * very thing the restore exists to prevent. Width changes AFTER this mount
+   * still fit, exactly as they always did.
+   */
+  restoredView?: boolean;
   /** Right-click menu actions for one thread, sidebar-menu style. */
   menuActionsFor: (thread: PluginSidebarThread) => readonly CardMenuAction[];
   /**
@@ -699,6 +708,7 @@ function BoardBase({
   onDropPinned,
   onHideLane,
   reveal = null,
+  restoredView = false,
   menuActionsFor,
   snoozeFor,
   pulseRateFor,
@@ -855,6 +865,10 @@ function BoardBase({
     }
     return null;
   }, [columns, activeThreadId]);
+  // The mount-time fit is skipped exactly once on a restored view (the
+  // `restoredView` prop): a ref, not the prop, so a later re-run of this
+  // effect — a lane-direction flip, a grouping switch — still fits as usual.
+  const mountFitPendingRef = useRef(!restoredView);
   useEffect(() => {
     const container = scrollRef.current;
     if (container === null || activeThreadId === null) return;
@@ -888,7 +902,10 @@ function BoardBase({
         }
       }
     };
-    keepActiveCardInView();
+    if (mountFitPendingRef.current) {
+      mountFitPendingRef.current = false;
+      keepActiveCardInView();
+    }
     // Pane opening and drag-resizing both change the container's width; the
     // observer re-runs the adjustment for each size change. The re-fit gates
     // on WIDTH: mobile browser chrome (URL bar hide/show, keyboard), banners,
