@@ -23,6 +23,7 @@ import { describeWakeAt } from "@/lib/snooze";
 import type { SnoozeMenuAction } from "@/lib/snooze";
 import {
   isExternalHref,
+  isFileHref,
   workspacePathFromHref,
 } from "@/components/chat-link-intercept";
 import type { PaneContextInfo } from "@/lib/pane-context";
@@ -47,6 +48,7 @@ import { WorkspaceOpenMenu, OPEN_LABEL_MIN_PANE_WIDTH } from "@/components/works
 import { usePaneContextRowMissing, PaneContextRow } from "@/components/pane-context-row";
 import { useHostCapabilities } from "@/hooks/use-host-capabilities";
 import { HEADER_ICON_BUTTON_CLASS } from "@/lib/pane-chrome";
+import { pickDirectoryTarget } from "@/lib/workspace-open-pick";
 import type {
   AutotitleFallbackState,
   AutotitleTarget,
@@ -638,6 +640,49 @@ export function ThreadPane({
     [sdk, navigate, thread.id],
   );
 
+  // A `file://` anchor names a workspace entry BB's preview cannot always
+  // render: a directory errors with "Path is not a regular file" (the
+  // operator's 2026-11-16 report), and a path outside the workspace has no
+  // business opening at all. Classify the destination server-side and route
+  // it: a workspace file keeps BB's preview, a directory opens in the
+  // operator's preferred editor (file manager next), and anything else stays
+  // inert instead of opening an error pane.
+  const openFileReference = useCallback(
+    (href: string) => {
+      void rpc
+        .call("workspace_path_kind", { threadId: thread.id, href })
+        .then((result) => {
+          const path = result.path;
+          if (path === null) return;
+          if (result.kind === "file") {
+            openWorkspacePreview(path);
+            return;
+          }
+          if (result.kind !== "directory") return;
+          return rpc
+            .call("workspace_open_targets", { threadId: thread.id })
+            .then((state) => {
+              if (state.status !== "available") return;
+              const target = pickDirectoryTarget(state.targets);
+              if (target === null) return;
+              return rpc
+                .call("workspace_open_in_target", {
+                  threadId: thread.id,
+                  targetId: target.id,
+                  path,
+                })
+                .then(() => undefined);
+            });
+        })
+        .catch(() => {
+          // Without a resolvable workspace or an open target there is
+          // nothing to route to; swallowing keeps the dead click from also
+          // being an error pane.
+        });
+    },
+    [rpc, thread.id, openWorkspacePreview],
+  );
+
   const onChatClickCapture = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
       if (event.button !== 0) return;
@@ -696,6 +741,20 @@ export function ThreadPane({
           }
           return;
         }
+        // A `file:` destination is the other shape BB's preview cannot
+        // render: a directory errors with "Path is not a regular file" (the
+        // operator's 2026-11-16 report). Claim it here, before the
+        // host-surface gate below, because bb 0.49.0 routes real files
+        // itself and a directory still lands in an error pane there. The
+        // classification decides: file → BB's preview, directory → the
+        // operator's preferred editor, outside the workspace → inert.
+        const href = anchor.getAttribute("href") ?? "";
+        if (isFileHref(href)) {
+          event.preventDefault();
+          event.stopPropagation();
+          openFileReference(href);
+          return;
+        }
       }
       // Markdown links and code spans, the rest of the 0.44-era rescue: a
       // plugin chat used to receive no local-file routing, so this pane
@@ -724,7 +783,7 @@ export function ThreadPane({
       event.stopPropagation();
       openWorkspacePreview(path);
     },
-    [openWorkspacePreview, onMaximize, referenceMentions, host.routesLocalFileLinks],
+    [openWorkspacePreview, openFileReference, onMaximize, referenceMentions, host.routesLocalFileLinks],
   );
 
   const endDrag = useCallback((event: PointerEvent) => {

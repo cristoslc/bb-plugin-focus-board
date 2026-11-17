@@ -58,6 +58,15 @@ export function workspacePathFromHref(href: string): string | null {
 }
 
 /**
+ * True when the href is a local file URL (`file:` scheme). The browser cannot
+ * render one through this surface, and BB's preview refuses directories, so
+ * the pane claims these clicks and classifies the destination first.
+ */
+export function isFileHref(href: string): boolean {
+	return /^file:/iu.test(href);
+}
+
+/**
  * The host's own thread view linkifies inline code that names a workspace
  * markdown file: the rendered `code` element's text is re-parsed as a local
  * file link and turned into an anchor. That behavior lives in the host's

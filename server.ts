@@ -11,6 +11,7 @@
 // Plugin metadata writes emit no thread realtime event, so the explicit
 // done-changed publish stays.
 import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
+import { basename, dirname } from "node:path";
 import { createThreadPulseTracker } from "./lib/thread-pulse";
 import {
   PluginCliError,
@@ -102,6 +103,11 @@ import { createTrackerFreshnessJudge } from "./lib/tracker-refresh";
 import { resolveRepoSlug } from "./lib/tickets";
 import { validateTrackerUrls } from "./lib/tracker-validate";
 import { resolveWithinRoot } from "./lib/workspace-paths";
+import {
+	fileHrefPath,
+	listedEntryKind,
+	workspaceRelativeFromAbsolute,
+} from "./lib/workspace-link";
 import {
 	createWorkspaceOpenTargetsCache,
 	openWorkspaceInTarget,
@@ -533,13 +539,30 @@ export const rpcContract = defineRpcContract({
   },
   // Open the thread's workspace folder in one of the discovered targets.
   // Errors come back as { ok: false, message } — the menu shows them
-  // inline rather than dying silently.
+  // inline rather than dying silently. `path` names a workspace-relative
+  // directory to open instead of the root, which is how a directory link in
+  // a message reaches the operator's editor or file manager.
   workspace_open_in_target: {
     input: z.object({
       threadId: z.string().min(1),
       targetId: z.string().min(1),
+      path: z.string().min(1).optional(),
     }),
     output: z.object({ ok: z.boolean(), message: z.string().nullable() }),
+  },
+  // Classify a file:// href from a message against the thread's workspace:
+  // the pane routes directories to the open-target flow (BB's preview cannot
+  // render them) and everything else stays where it is. A destination
+  // outside the workspace reads as "outside" and never reaches the preview.
+  workspace_path_kind: {
+    input: z.object({
+      threadId: z.string().min(1),
+      href: z.string().min(1).max(4096),
+    }),
+    output: z.object({
+      kind: z.enum(["file", "directory", "missing", "outside"]),
+      path: z.string().nullable(),
+    }),
   },
 
   sweep_config_get: {
@@ -2776,7 +2799,7 @@ export default async function plugin(bb: BbPluginApi) {
       const state = await resolveThreadWorkspaceOpen(threadId);
       return state;
     },
-    workspace_open_in_target: async ({ threadId, targetId }) => {
+    workspace_open_in_target: async ({ threadId, targetId, path }) => {
       const state = await resolveThreadWorkspaceOpen(threadId);
       if (
         state.status !== "available" ||
@@ -2788,12 +2811,20 @@ export default async function plugin(bb: BbPluginApi) {
           message: state.reason ?? "This workspace cannot be opened here.",
         };
       }
+      // A directory link passes a workspace-relative path; the daemon opens
+      // that folder (or file) instead of the root. The path is re-validated
+      // here because the frontend sent it.
+      const absolute =
+        path === undefined ? state.root : resolveWithinRoot(state.root, path);
+      if (absolute === null) {
+        return { ok: false, message: "That path is outside the workspace." };
+      }
       try {
         const daemon = await requireLocalDaemon();
         if (daemon === null) {
           return { ok: false, message: "Local host daemon is unavailable." };
         }
-        await openWorkspaceInTarget(daemon.port, state.root, targetId, {
+        await openWorkspaceInTarget(daemon.port, absolute, targetId, {
           fetchImpl: fetch,
           timeoutMs: 10_000,
         });
@@ -2804,6 +2835,42 @@ export default async function plugin(bb: BbPluginApi) {
           message: error instanceof Error ? error.message : String(error),
         };
       }
+    },
+    workspace_path_kind: async ({ threadId, href }) => {
+      const thread = await bb.sdk.threads.get({ threadId });
+      const environmentId = "environmentId" in thread ? thread.environmentId : null;
+      if (environmentId === null) return { kind: "outside" as const, path: null };
+      const environment = await bb.sdk.environments.get({ environmentId });
+      const root = environment.path;
+      if (root === null) return { kind: "outside" as const, path: null };
+      const absolute = fileHrefPath(href);
+      if (absolute === null) return { kind: "outside" as const, path: null };
+      const relative = workspaceRelativeFromAbsolute(root, absolute);
+      // The pane only ever routes workspace-internal paths; an escape or an
+      // unrelated absolute path is reported as outside and left inert.
+      if (relative === null || relative === "") {
+        return { kind: "outside" as const, path: null };
+      }
+      const verified = resolveWithinRoot(root, relative);
+      if (verified === null) return { kind: "outside" as const, path: null };
+      // The type comes from the environment host's own directory listing, the
+      // same authority bb's file explorer uses; a missing parent or entry
+      // reads as missing rather than guessing.
+      let entries: { name: string; kind: string }[];
+      try {
+        const listing = await bb.sdk.hosts.directory({
+          hostId: environment.hostId,
+          path: dirname(verified),
+        });
+        entries = listing.entries;
+      } catch {
+        // An unreadable parent (missing, permissions, host offline) is not a
+        // classification: the click stays inert rather than guessing.
+        return { kind: "missing" as const, path: relative };
+      }
+      const kind = listedEntryKind(entries, basename(verified));
+      if (kind === null) return { kind: "missing" as const, path: relative };
+      return { kind, path: relative };
     },
     sweep_config_get: async () => {
       const values = await settings.get();
