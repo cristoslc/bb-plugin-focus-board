@@ -1,0 +1,111 @@
+{
+  "threadId": "thr_j6vpfixgij",
+  "stateA": {
+    "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+    "boardVisible": true,
+    "boardBox": {
+      "x": 320,
+      "y": 48,
+      "w": 1280,
+      "h": 1152
+    },
+    "panes": [
+      {
+        "id": "pane-1",
+        "x": 320,
+        "y": 0,
+        "w": 1280,
+        "h": 1200,
+        "hasBoard": true,
+        "threadHeaderActions": true,
+        "sample": "flex min-h-0 min-w-0 flex-1 flex-col transition-op"
+      }
+    ],
+    "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}",
+    "viewport": {
+      "w": 1600,
+      "h": 1200
+    }
+  },
+  "stateB": {
+    "url": "http://127.0.0.1:38886/projects/proj_p4562js7v2/threads/thr_j6vpfixgij",
+    "boardVisible": true,
+    "boardBox": {
+      "x": 320,
+      "y": 48,
+      "w": 640,
+      "h": 1152
+    },
+    "panes": [
+      {
+        "id": "pane-1",
+        "x": 320,
+        "y": 0,
+        "w": 640,
+        "h": 1200,
+        "hasBoard": true,
+        "threadHeaderActions": true,
+        "sample": "relative flex min-h-0 min-w-0 flex-1 overflow-hidd"
+      },
+      {
+        "id": "pane-2",
+        "x": 961,
+        "y": 0,
+        "w": 640,
+        "h": 1200,
+        "hasBoard": false,
+        "threadHeaderActions": true,
+        "sample": "relative flex min-h-0 min-w-0 flex-1 overflow-hidd"
+      }
+    ],
+    "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_p4562js7v2\",\"threadId\":\"thr_j6vpfixgij\"}}]},\"focusedPaneId\":\"pane-2\"}}",
+    "viewport": {
+      "w": 1600,
+      "h": 1200
+    }
+  },
+  "stateC": {
+    "url": "http://127.0.0.1:38886/projects/proj_p4562js7v2/threads/thr_j6vpfixgij",
+    "boardVisible": true,
+    "boardBox": {
+      "x": 320,
+      "y": 48,
+      "w": 640,
+      "h": 1152
+    },
+    "panes": [
+      {
+        "id": "pane-1",
+        "x": 320,
+        "y": 0,
+        "w": 640,
+        "h": 1200,
+        "hasBoard": true,
+        "threadHeaderActions": true,
+        "sample": "relative flex min-h-0 min-w-0 flex-1 overflow-hidd"
+      },
+      {
+        "id": "pane-2",
+        "x": 961,
+        "y": 0,
+        "w": 640,
+        "h": 1200,
+        "hasBoard": false,
+        "threadHeaderActions": true,
+        "sample": "relative flex min-h-0 min-w-0 flex-1 overflow-hidd"
+      }
+    ],
+    "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_p4562js7v2\",\"threadId\":\"thr_j6vpfixgij\"}}]},\"focusedPaneId\":\"pane-2\"}}",
+    "viewport": {
+      "w": 1600,
+      "h": 1200
+    }
+  },
+  "verdict": {
+    "boardVisibleAfterSplit": true,
+    "boardVisibleAfterPlainOpen": true,
+    "paneCountAfterSplit": 2,
+    "boardAndNativePaneCoexist": true,
+    "plainOpenReplacedBoard": false
+  }
+}
