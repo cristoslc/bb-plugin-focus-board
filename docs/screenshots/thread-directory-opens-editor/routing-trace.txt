@@ -1,0 +1,9 @@
+Click on the host's directory anchor in the pane, harness run ?directoryAnchor=1
+(window.__uat.calls(), workspace_* methods only, in order):
+
+workspace_open_targets  { threadId: "thr_review_pr" }        <- pane header menu discovery on mount
+workspace_path_kind     { threadId: "thr_review_pr", href: "file:///Users/sim/projects/web/.worktrees" }
+workspace_open_targets  { threadId: "thr_review_pr" }
+workspace_open_in_target { threadId: "thr_review_pr", targetId: "vscode", path: ".worktrees" }
+
+No experimental_openFilePreview call: the preview pane never opens.

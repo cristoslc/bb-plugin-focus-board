@@ -16,6 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 #### The thread pane
 
 - **Thread and project references in a pane message open the thread or project again.** bb renders an agent-written `@thread:…` mention as a link into the workspace's file preview, which read "File not found."; the pane now claims those clicks itself, and a malformed mention does nothing instead.
+- **A directory reference in a pane message opens in your editor instead of an error pane.** bb's file preview cannot show a folder, so the click lands in your preferred editor, its file manager next, and a path outside the workspace does nothing.
 
 ## [1.7.15] - 2026-11-16
 
