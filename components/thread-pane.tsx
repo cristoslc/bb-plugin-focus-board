@@ -669,15 +669,8 @@ export function ThreadPane({
         onMaximize();
         return;
       }
-      // Markdown links and code spans, the rest of the 0.44-era rescue: a
-      // plugin chat used to receive no local-file routing, so this pane
-      // reopened relative hrefs and decorated inline code against the
-      // thread's workspace. bb 0.49.0 routes both itself, so the rescue
-      // stands down there (lib/host-capabilities).
-      if (host.routesLocalFileLinks) return;
       const anchor = target.closest("a[href]");
       if (anchor !== null) {
-        const href = anchor.getAttribute("href") ?? "";
         // A mention-shaped destination claims the click outright (the "File
         // not found." regression, 2026-11-17): bb renders an agent-written
         // `@thread:…`/`@project:…` token as a percent-encoded file:// href
@@ -686,8 +679,14 @@ export function ThreadPane({
         // transcript's mention clicks, so a resolvable reference opens
         // through the same opener the painted chips use, and a destination
         // that is mention-shaped but unparseable stays inert. Neither may
-        // fall through to the preview; ordinary links keep the routing
-        // below untouched.
+        // fall through to the preview.
+        //
+        // This claim runs BEFORE the host-surface gate below on purpose: bb
+        // 0.49.0 gained local-file routing for real files, not for mention
+        // tokens, so a host that routes local file links still sends a
+        // mention into its preview. Gating this with the rest of the rescue
+        // would put the "File not found." pane back on exactly the hosts the
+        // operator runs.
         const mention = mentionReferenceInAnchor(anchor);
         if (mention !== null) {
           event.preventDefault();
@@ -697,6 +696,15 @@ export function ThreadPane({
           }
           return;
         }
+      }
+      // Markdown links and code spans, the rest of the 0.44-era rescue: a
+      // plugin chat used to receive no local-file routing, so this pane
+      // reopened relative hrefs and decorated inline code against the
+      // thread's workspace. bb 0.49.0 routes both itself, so the rescue
+      // stands down there (lib/host-capabilities).
+      if (host.routesLocalFileLinks) return;
+      if (anchor !== null) {
+        const href = anchor.getAttribute("href") ?? "";
         if (href === "" || isExternalHref(href)) return;
         const path = workspacePathFromHref(href);
         if (path === null) return;
