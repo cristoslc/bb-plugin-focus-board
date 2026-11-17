@@ -426,6 +426,23 @@ npx vite preview --config scripts/screenshot/vite.probe.config.ts --strictPort
   the number of `pulse_rates` calls inside the measurement window. Reads
   `PROBE_GROUPS`, `PROBE_VIEWPORTS`, `PROBE_CPU`.
 - `probe-pinned-child.mjs`, `probe-chips.mjs` — the older one-shot DOM probes.
+- `probe-board-remount-on-split.mjs` — the host-shape probe behind the remount
+  bridge (`lib/board-snapshot.ts`): does the board's app re-mount when bb's
+  window splits or unsplits? Drives the LIVE bb app in a browser this script
+  opens, splits through bb's own sidebar "Open in split", unsplits through the
+  pane's Close control, and counts per transition what the operator sees: the
+  distinct `[data-focus-board-panel]` nodes (a re-mount; a re-render reuses the
+  node), the `[data-loading-view]` appear/disappear pairs (the flash), bb's
+  `/api/` requests by path (the refetch), the pane container's identity and
+  `data-split-pane-id`, and the board's and every lane's scroll offsets. Writes
+  `evidence.json`, per-phase screenshots and a `split-unsplit.gif`. `SERVE_BUNDLE`
+  points it at a candidate build: the probe sniffs which
+  `plugin-app-assets/<hash>/app.js` is Focus Board's and answers that one
+  request from the given file, so a worktree build can be measured against the
+  installed host without touching the install. Exits 0 only when the transition
+  is invisible (no loading view, scroll kept).
 
 Each honors `CHROME_PATH`, `HARNESS_URL`, `OUT_DIR`, and `PROBE_CPU`; evidence
-lands in `docs/screenshots/probe-*/`.
+lands in `docs/screenshots/probe-*/`. `probe-board-remount-on-split.mjs` is the
+one probe that drives bb itself rather than the harness, so it reads `BB_APP`
+instead of `HARNESS_URL` and takes `SERVE_BUNDLE` for a candidate build.
