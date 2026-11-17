@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+#### bb's thread pages
+
+- **Focus Board actions ride along on bb's own thread pages.** A small control in the thread header carries the board's Mark Done, Snooze and New child thread gestures to any thread pane, so a thread you read beside the board keeps its board state within reach.
+
 ### Changed
 
 #### bb's thread pages

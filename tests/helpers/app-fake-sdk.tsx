@@ -64,6 +64,17 @@ export function fakeThreads(): readonly FakeSidebarThread[] {
   return store.threads;
 }
 
+// Per-thread plugin-metadata namespaces for the sdk-side reads (the
+// thread-header action's getPluginMetadata): done and snooze records land
+// here the way the real bridge serves them off the thread's namespace.
+const fakeThreadMetadata: Record<string, Record<string, unknown>> = {};
+export function seedFakeThreadMetadata(
+  threadId: string,
+  metadata: Record<string, unknown>,
+): void {
+  fakeThreadMetadata[threadId] = metadata;
+}
+
 interface FakeSidebarProject {
   id: string;
   name: string;
@@ -77,6 +88,14 @@ export const registeredNavPanel: {
   component?: (props: { subPath: string }) => ReactNode;
 } = {};
 
+// The registered thread-header action slot (the native-pane move): captured
+// so tests assert the registration and mount the component directly.
+export const registeredThreadHeaderAction: {
+  id?: string;
+  title?: string;
+  component?: (props: { threadId: string; projectId: string; isCompactViewport: boolean }) => ReactNode;
+} = {};
+
 export function definePluginApp(setup: (app: unknown) => void): unknown {
   setup({
     contentScripts: {
@@ -86,6 +105,17 @@ export function definePluginApp(setup: (app: unknown) => void): unknown {
       navPanel: (config: { path: string; component: (props: { subPath: string }) => ReactNode }) => {
         registeredNavPanel.path = config.path;
         registeredNavPanel.component = config.component;
+      },
+      experimental_threadHeaderAction: (
+        config: {
+          id: string;
+          title: string;
+          component: (props: { threadId: string; projectId: string; isCompactViewport: boolean }) => ReactNode;
+        },
+      ) => {
+        registeredThreadHeaderAction.id = config.id;
+        registeredThreadHeaderAction.title = config.title;
+        registeredThreadHeaderAction.component = config.component;
       },
       sidebarFooterAction: () => {},
       settingsSection: () => {},
@@ -185,8 +215,11 @@ export function experimental_useSidebarThreadActions(): unknown {
   return fakeActions;
 }
 
-// The split layout the pane-cap guard reads (the native-pane move): null
-// means "no split" — a single-pane board route. Controllable so tests can
+// The split layout the board’s native-pane awareness reads, and the pane-cap
+// guard the card click consults: null means "no split" — what a single-pane
+// board route reports on a real host. Controllable so a test can focus a native
+// thread pane and read the board’s follow (attention capture, active card)
+// exactly as it follows its own pane’s open thread, and so the click tests can
 // drive the ceiling layouts the guard exists for.
 interface FakeSplitPane {
   paneId: string;
@@ -484,6 +517,26 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     }
     case "snooze_list":
       return { snoozes: {} };
+    case "snooze_set": {
+      // The header action's write path (the native-pane move): answers like
+      // the real handler, and the metadata read reflects it so a follow-up
+      // realtime refetch paints the wake.
+      const { threadId, wakeAt } = args as { threadId: string; wakeAt: string };
+      fakeThreadMetadata[threadId] = {
+        ...(fakeThreadMetadata[threadId] ?? {}),
+        snooze: { wakeAt, setAt: new Date().toISOString() },
+      };
+      fireRealtime("snooze-changed", { threadId });
+      return { threadId, wakeAt };
+    }
+    case "snooze_clear": {
+      const { threadId } = args as { threadId: string };
+      const namespace = fakeThreadMetadata[threadId] ?? {};
+      delete namespace["snooze"];
+      fakeThreadMetadata[threadId] = namespace;
+      fireRealtime("snooze-changed", { threadId });
+      return { threadId, cleared: true };
+    }
     case "rank_list":
       return { orders: structuredClone(ordersFromFractionStore(fakeRanks)) };
     case "rank_move": {
@@ -561,8 +614,19 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     case "done_set": {
       // The board tracks done-ness in its own state (done_list + the write's
       // own echo); the fake only has to answer, like the real handler does.
+      // The metadata write + signal serve the sdk-side readers (the thread
+      // header action's refetch), mirroring the real server's fan-out.
       const { threadId, done } = args as { threadId: string; done: boolean };
+      const namespace = fakeThreadMetadata[threadId] ?? {};
+      if (done) {
+        namespace["done"] = { doneAt: new Date().toISOString() };
+        fakeThreadMetadata[threadId] = namespace;
+      } else {
+        delete namespace["done"];
+        fakeThreadMetadata[threadId] = namespace;
+      }
       publishThreadChanged();
+      fireRealtime("done-changed", { threadId });
       return { threadId, done };
     }
     case "thread_reparent": {
@@ -642,8 +706,14 @@ const fakeSdk = {
         : {
             environmentId:
               (found.environment as { id?: string } | null | undefined)?.id ?? null,
+            displayTitle: found.displayTitle,
           };
     },
+    // The plugin-bound metadata read the thread-header action uses (the
+    // native-pane move): serves the per-thread namespace seeded through
+    // seedFakeThreadMetadata, like the host's bridge serves the real one.
+    getPluginMetadata: async ({ threadId }: { threadId: string }) =>
+      structuredClone(fakeThreadMetadata[threadId] ?? {}),
     interactions: {
       list: async () => [],
       respond: async () => ({}),

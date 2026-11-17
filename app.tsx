@@ -29,6 +29,7 @@ import { Board } from "./components/board";
 import { BoardToolbar } from "./components/board-toolbar";
 import { useBoardPanRouter } from "./components/board-pan";
 import { ThreadPane } from "./components/thread-pane";
+import { FocusBoardThreadHeaderAction } from "./components/thread-header-actions";
 import type { ThreadPaneThread } from "./components/thread-pane";
 import { useSearchFocusOnSlash } from "./hooks/use-search-focus";
 import { useNewThreadComposerShortcut } from "./hooks/use-new-thread-shortcut";
@@ -1279,13 +1280,38 @@ function BoardPage({ subPath }: { subPath: string }) {
   // handoff — the gesture the covered-sheet quiet open exists to silence.
   const openThreadIdRef = useRef(openThreadId);
   openThreadIdRef.current = openThreadId;
+  const splitLayout = useSidebarSplitLayout();
   // The split layout the pane-cap guard reads, as a ref: the click callback
   // stays identity-stable (the same ref-holding lesson the openThreadId
   // bridge above is), so a layout churn — every native open re-focuses a
   // pane — never wakes the memoized Board through its prop handoff.
-  const splitLayout = useSidebarSplitLayout();
   const splitLayoutRef = useRef<Parameters<typeof nativeOpenWouldEvictBoard>[0]>(null);
   splitLayoutRef.current = splitLayout;
+  // Split-layout awareness (docs/plans/2026-11-17-native-thread-pane.md §3):
+  // the board panel is itself a pane in bb’s split layout, and threads can
+  // be open beside it in the host’s own native panes. The FOCUSED pane’s
+  // thread is the native analogue of "the open thread": it drives the same
+  // board behaviors the in-board pane’s open thread does — the keep-in-view
+  // follow of its card, the attention freeze at its placement, and the
+  // chip-repaint fingerprint’s open-thread term. Null when no native thread
+  // pane is focused (single pane, a non-thread pane focused, compact —
+  // where splits are off entirely).
+  const nativeSplitThreadId = useMemo(() => {
+    const focused = splitLayout?.panes.find((pane) => pane.isFocused);
+    return focused?.threadId ?? null;
+  }, [splitLayout]);
+  // The thread the board treats as open: the in-board pane’s when it is
+  // showing one (the denser surface, and the pane’s own capture flow owns
+  // the freeze), else the focused native pane’s.
+  const boardActiveThreadId = openThreadId ?? nativeSplitThreadId;
+  // The native open’s attention lifecycle, mirroring the pane’s own rules
+  // (capture once per open or focus change, release on close) but only
+  // while the in-board pane is closed, so the two owners never fight over
+  // the pin. The ref names the thread THIS effect captured, so a release
+  // strips exactly that thread’s freeze — never a pin the pane’s click-open
+  // just wrote.
+  const nativeCaptureRef = useRef<string | null>(null);
+  const nativeAttentionThreadId = openThreadId === null ? nativeSplitThreadId : null;
   // Sweep arm state: at most one armed column at a time. The candidate id
   // list is captured at arm time and frozen — late arrivals never join.
   const [armedSweep, setArmedSweep] = useState<ArmedSweep | null>(null);
@@ -1566,6 +1592,41 @@ function BoardPage({ subPath }: { subPath: string }) {
       hoverLaneCapturesRef.current = next;
     }
   }, []);
+  // The native open's attention lifecycle, mirroring the pane's own rules
+  // (capture once per open or focus change, release on close) but only while
+  // the in-board pane is closed, so the two owners never fight over the
+  // pin. The ref names the thread THIS effect captured, so a release strips
+  // exactly that thread's freeze — never a pin the pane's click-open just
+  // wrote.
+  useEffect(() => {
+    const captured = nativeCaptureRef.current;
+    if (nativeAttentionThreadId !== null && nativeAttentionThreadId !== captured) {
+      nativeCaptureRef.current = nativeAttentionThreadId;
+      capturePaneAttention(nativeAttentionThreadId);
+      return;
+    }
+    if (nativeAttentionThreadId === null && captured !== null) {
+      nativeCaptureRef.current = null;
+      // The pane's own settle-close semantics: a pruned capture, not a
+      // strip — a strip is resurrected by the attention recapture pass
+      // below (its contract is gesture in-flight holds, then re-pin the
+      // settled placement), so the pin would survive the close. The guards
+      // keep the pane's ownership intact: while the in-board pane is open
+      // this branch fires for the pane's open, and the pane's own capture
+      // (a different focus, or the same thread's replacement capture) must
+      // survive it — the native pin already died in that replacement.
+      setPaneCapture((current) =>
+        current !== null && current.focusId === captured && openThreadId === null
+          ? null
+          : current,
+      );
+      setPaneLaneCapture((current) =>
+        current !== null && current.focusId === captured && openThreadId === null
+          ? null
+          : current,
+      );
+    }
+  }, [nativeAttentionThreadId, capturePaneAttention, openThreadId]);
   // On attention: capture the entered card's rendered placement (its lane
   // and slot; on the parent view, its lane order slot and row). The capture
   // replaces nothing — a per-thread map, so sibling cards (nested rows
@@ -2226,14 +2287,15 @@ function BoardPage({ subPath }: { subPath: string }) {
     [liveThreads, repoBaseByProject, linksByThread],
   );
   // The operator-moment fingerprint for the chip snapshot (issue #205):
-  // pane open/close, a card's lane (threadState under the current error
-  // acks), and every display container's order — the assembled columns,
-  // the nested and done child rows, and the parent view's lanes. A lane
-  // transition or a re-sort changes the join, so the hook refetches with
-  // the ref set unchanged; a fingerprint-equal render (the common case)
-  // borrows the settled snapshot. "" mirrors the empty ref set.
-  // The pane term skips under the covered sheet (issue #406): opening and
-  // closing the pane behind the opaque sheet changes nothing any card
+  // pane open/close — the board's OWN open thread or the focused native
+  // pane's, whichever the board is following — a card's lane (threadState
+  // under the current error acks), and every display container's order —
+  // the assembled columns, the nested and done child rows, and the parent
+  // view's lanes. A lane transition or a re-sort changes the join, so the
+  // hook refetches with the ref set unchanged; a fingerprint-equal render
+  // (the common case) borrows the settled snapshot. "" mirrors the empty
+  // ref set. The term skips under the covered sheet (issue #406): opening
+  // and closing the pane behind the opaque sheet changes nothing any card
   // paints, but the term's flip refetched the whole snapshot — every open
   // and close paid its own tracker_status wave plus two whole-board
   // comparator sweeps on it. The poll, the focus catch-up, and the card's
@@ -2241,7 +2303,7 @@ function BoardPage({ subPath }: { subPath: string }) {
   const chipRepaintSignal = useMemo(() => {
     if (visibleRefKey === "") return "";
     const parts: string[] = [];
-    if (!paneCoversBoard) parts.push(`pane:${openThreadId ?? "closed"}`);
+    if (!paneCoversBoard) parts.push(`pane:${boardActiveThreadId ?? "closed"}`);
     const paint = (thread: PluginSidebarThread) => {
       parts.push(
         `${thread.id}:${threadState(thread, errorAckIds)}${doneIds.has(thread.id) ? ":done" : ""}`,
@@ -2270,7 +2332,7 @@ function BoardPage({ subPath }: { subPath: string }) {
       }
     }
     return parts.join(",");
-  }, [visibleRefKey, columns, nestedChildrenByParent, parentLanes, openThreadId, errorAckIds, doneIds, assembly, paneCoversBoard]);
+  }, [visibleRefKey, columns, nestedChildrenByParent, parentLanes, boardActiveThreadId, errorAckIds, doneIds, assembly, paneCoversBoard]);
   // Text-ref hrefs across visible threads, the tracker_validate batch (the
   // chip rule: a #N/URL in text chips only when the item is confirmed).
   // Sorted-join mirrors visibleRefKey: cheap string equality as the effect
@@ -3916,7 +3978,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         {groupBy === "parent" ? (
           <ParentLaneBoard
             lanes={parentLanes ?? []}
-            activeThreadId={paneCoversBoard ? null : openThreadId}
+            activeThreadId={paneCoversBoard ? null : boardActiveThreadId}
             doneIds={doneIds}
             errorAckIds={errorAckIds}
             dimmedIds={dimmedIds}
@@ -3961,7 +4023,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           <Board
             columns={columns}
             groupBy={groupBy}
-            activeThreadId={paneCoversBoard ? null : openThreadId}
+            activeThreadId={paneCoversBoard ? null : boardActiveThreadId}
             cardTransport={cardTransport}
             motionPref={motionFollow ? "system" : "manual"}
             motionPacing={motionPacing}
@@ -4270,6 +4332,20 @@ export default definePluginApp((app) => {
     // the open pane participates in browser history — bb's back arrow
     // reopens the pane state the user left, and deep links restore it.
     component: BoardPage,
+  });
+  // The Focus Board control in bb's own thread-page header
+  // (experimental_threadHeaderAction, one instance per visible thread pane).
+  // The native-pane move's additive half: the board's Done, Snooze and New
+  // child actions travel with the thread onto every host-rendered thread
+  // page, on this host and a split pane alike, while the board's own pane
+  // still exists (docs/plans/2026-11-17-native-thread-pane.md §6.2 step 2).
+  // One inline trigger plus a popover — the host's constraint for the 48px
+  // chrome row — carrying only what the board owns: rename, read, pin and
+  // archive live on the native page already.
+  app.slots.experimental_threadHeaderAction({
+    id: "thread-actions",
+    title: "Focus Board thread actions",
+    component: FocusBoardThreadHeaderAction,
   });
   // A gear icon in the sidebar footer (beside the built-in Settings and
   // bug-report buttons) that jumps to this plugin's detail page in Tools,
