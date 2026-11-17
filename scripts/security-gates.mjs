@@ -23,20 +23,97 @@ const violation = (line) => {
 };
 
 // ---- 1. npm audit, production and dev trees ----
-for (const args of [["--omit=dev"], []]) {
+//
+// A named advisory may be excepted for a bounded time when all four hold:
+// nothing that SHIPS is affected, upstream has published no patched version,
+// the reach is a named toolchain path, and the exception carries an expiry so
+// the gate fails again by itself. An exception is a recorded decision, not a
+// silenced check: the gate names it on every run, and the moment the expiry
+// passes the finding is a violation again. Nothing else may be excepted —
+// an unlisted advisory, or a listed one past its date, fails the gate.
+const ADVISORY_EXCEPTIONS = [
+  {
+    id: "GHSA-fc5q-39xc-vjpf",
+    until: "2026-12-08",
+    note:
+      "picomatch ReDoS through repeated extglobs; vulnerable range <=4.0.7 and 4.0.7 is the newest published version, so no upgrade exists. Reach is the dev toolchain only (vite, vitest, tinyglobby, fdir); `npm audit --omit=dev` is clean, and nothing that ships imports it.",
+  },
+];
+
+const exceptionsInForce = (today = new Date()) =>
+  ADVISORY_EXCEPTIONS.filter((exception) => new Date(exception.until) >= today);
+
+/** Every GHSA id the audit reported, from `npm audit --json`. */
+function reportedAdvisoryIds() {
+  let raw = "";
   try {
-    const output = execFileSync("npm", ["audit", "--audit-level=low", ...args], {
+    raw = execFileSync("npm", ["audit", "--json"], {
       encoding: "utf8",
       stdio: ["pipe", "pipe", "pipe"],
     });
-    report(`npm audit ${args.join(" ") || "(all trees)"}: clean`);
+  } catch (error) {
+    // A non-zero exit is the normal case when there is something to report;
+    // the JSON body is still on stdout.
+    raw = error.stdout ?? "";
+  }
+  const ids = new Set();
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  for (const entry of Object.values(parsed.vulnerabilities ?? {})) {
+    for (const via of entry.via ?? []) {
+      if (typeof via !== "object" || via === null) continue;
+      const match = /GHSA-[0-9a-z-]+/i.exec(via.url ?? "");
+      if (match !== null) ids.add(match[0]);
+    }
+  }
+  return ids;
+}
+
+const exceptionsFor = (ids) => {
+  const inForce = exceptionsInForce();
+  const covered = [];
+  const uncovered = [];
+  for (const id of ids) {
+    const exception = inForce.find((candidate) => candidate.id === id);
+    if (exception === undefined) uncovered.push(id);
+    else covered.push(exception);
+  }
+  return { covered, uncovered };
+};
+
+for (const args of [["--omit=dev"], []]) {
+  const label = args.join(" ") || "(all trees)";
+  try {
+    execFileSync("npm", ["audit", "--audit-level=low", ...args], {
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    report(`npm audit ${label}: clean`);
   } catch (error) {
     const stdout = error.stdout ?? "";
     const summary =
       stdout.split("\n").find((line) => /vulnerabilit/i.test(line)) ?? "";
-    violation(
-      `npm audit ${args.join(" ") || "(all trees)"} reported vulnerabilities. ${summary.trim()}`,
-    );
+    // The all-trees pass may be carried by a live exception; the production
+    // pass never is, because a shipped advisory has no exception to stand on.
+    const ids = args.length === 0 ? reportedAdvisoryIds() : null;
+    const { covered, uncovered } = ids === null
+      ? { covered: [], uncovered: [] }
+      : exceptionsFor(ids);
+    if (ids !== null && uncovered.length === 0 && covered.length > 0) {
+      for (const exception of covered) {
+        report(
+          `npm audit ${label}: ${exception.id} excepted until ${exception.until} — ${exception.note}`,
+        );
+      }
+      continue;
+    }
+    const names =
+      ids === null ? "" : ` Uncovered advisories: ${uncovered.join(", ") || "(none named)"}.`;
+    violation(`npm audit ${label} reported vulnerabilities. ${summary.trim()}${names}`);
   }
 }
 
@@ -153,7 +230,13 @@ for (const hit of findLines("\\bfetch\\(")) {
 report(
   failed
     ? "security gates FAILED"
-    : `security gates passed: audit clean (both trees), sink scan over ${files.length} shipped files with the documented allowlists`,
+    : `security gates passed: audit clean (both trees)${
+        exceptionsInForce().length === 0
+          ? ""
+          : ` with ${exceptionsInForce().length} dated advisory exception(s): ${exceptionsInForce()
+              .map((exception) => `${exception.id} until ${exception.until}`)
+              .join(", ")}`
+      }, sink scan over ${files.length} shipped files with the documented allowlists`,
 );
 if (failed) {
   // The release notification contract (release.md §2b): name the failed gate
