@@ -35,6 +35,7 @@ const validInputs: Record<Method, unknown> = {
   workspace_files_exist: { threadId: "thr_x", paths: ["docs/a.md"] },
   workspace_open_targets: { threadId: "thr_x" },
   workspace_open_in_target: { threadId: "thr_x", targetId: "tgt" },
+  workspace_path_kind: { threadId: "thr_x", href: "file:///w/app/docs/a.md" },
   sweep_config_get: null,
   sweep_keep_set: { threadId: "thr_x", keep: true },
   thread_reparent: { threadId: "thr_x", parentThreadId: null },
