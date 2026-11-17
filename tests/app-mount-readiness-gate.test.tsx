@@ -35,6 +35,7 @@ import {
 } from "./helpers/app-fake-sdk";
 import { MOUNT_SETTLE_CEILING_MS } from "../lib/idle-callback";
 import { REFETCH_COALESCE_MS } from "../lib/refetch-coalescer";
+import { forgetBoardSnapshot } from "../lib/board-snapshot";
 
 const HOUR = 3_600_000;
 
@@ -110,6 +111,13 @@ const FIXTURE_CARD_COUNT = 3;
 beforeEach(() => {
   vi.stubGlobal("ResizeObserver", StubResizeObserver);
   window.localStorage.clear();
+  // This file's subject is the COLD mount (no previous instance in the
+  // document). In production a cold mount is a fresh page load, where the
+  // remount bridge's slot is empty by construction (lib/board-snapshot); here
+  // several boards mount in one jsdom document, so the slot is cleared by hand
+  // or the second mount would be seeded by the first — which is the behaviour
+  // tests/app-remount-snapshot.test.tsx pins deliberately.
+  forgetBoardSnapshot();
   seedFakeThreads(fixtureThreads());
   vi.useFakeTimers();
 });

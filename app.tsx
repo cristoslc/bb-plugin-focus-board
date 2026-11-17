@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   definePluginApp,
   experimental_usePluginId,
@@ -15,6 +15,14 @@ import {
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { findTicketRefs, forgejoItemBase, resolveRepoSlug } from "./lib/tickets";
 import { MOUNT_SETTLE_CEILING_MS, scheduleIdleCallback } from "./lib/idle-callback";
+import {
+  applyBoardScroll,
+  hasRestoredPosition,
+  readBoardScroll,
+  recallBoard,
+  rememberBoardData,
+  rememberBoardScroll,
+} from "./lib/board-snapshot";
 import {
   cardTicketRefs,
   linkedRefKeys,
@@ -528,12 +536,27 @@ function BoardPage({ subPath }: { subPath: string }) {
     [sidebarThreads, interactionFlags],
   );
 
-  const [doneIds, setDoneIds] = useState<ReadonlySet<string>>(new Set());
+  // The remount bridge (lib/board-snapshot carries the measurement and the
+  // host code that forces it): bb re-creates this panel's React subtree on the
+  // first split and again on the last unsplit, so every mount after the first
+  // is a re-mount inside the same document. The snapshot the previous instance
+  // left behind seeds this one's state, which is what makes the re-creation
+  // invisible: no loading view (the gate starts released), no
+  // empty-then-refilled lanes, and the scroll position restored on the first
+  // paint. The fan-in below still fires — a re-mount can follow any gap, and
+  // only the server knows what changed during it.
+  const [boardSeed] = useState(() => recallBoard());
+  const seeded = boardSeed === null ? null : boardSeed.data;
+  const [doneIds, setDoneIds] = useState<ReadonlySet<string>>(
+    () => new Set(seeded === null ? [] : seeded.doneIds),
+  );
   // The board's own GitHub links (metadata "linkedIssues"): the chip surface
   // for items a thread's text never names (issue #13 — no cross-plugin read
   // of the GitHub plugin's link rows exists). Record<string, ThreadLink[]>;
   // a thread absent from it carries no linked chips.
-  const [linksByThread, setLinksByThread] = useState<Record<string, ThreadLink[]>>({});
+  const [linksByThread, setLinksByThread] = useState<Record<string, ThreadLink[]>>(
+    () => (seeded === null ? {} : { ...seeded.linksByThread }),
+  );
   // tracker_validate's confirmed-href set, declared above the filter pass so
   // the ticket-aware search callback (ticketRefsFor, below) can read it: the
   // chip rule gates text refs identically in render and in search.
@@ -561,13 +584,17 @@ function BoardPage({ subPath }: { subPath: string }) {
   // RPC) so the writes that bring the card back to the operator — Mark Not
   // Done, Mark Unread — can restore it. Local optimistic state drives the
   // restore decisions; the server record is the cross-reload truth.
-  const [parkIds, setParkIds] = useState<ReadonlySet<string>>(new Set());
+  const [parkIds, setParkIds] = useState<ReadonlySet<string>>(
+    () => new Set(seeded === null ? [] : seeded.parkIds),
+  );
   // Clear-error acknowledgments (issue #157): threads whose error signals the
   // operator acknowledged. Local set drives the optimistic display (dot,
   // accent, lane); the server record (plugin metadata "errorAck") is the
   // cross-reload truth. The stale sweep below drops an ack on any turn that
   // leaves the error status, so a later error claims attention fresh.
-  const [errorAckIds, setErrorAckIds] = useState<ReadonlySet<string>>(new Set());
+  const [errorAckIds, setErrorAckIds] = useState<ReadonlySet<string>>(
+    () => new Set(seeded === null ? [] : seeded.errorAckIds),
+  );
   // The ack's ride ends when the thread's status leaves "error" — a new turn
   // started, so the next error must claim attention fresh and cannot inherit
   // an acknowledgment given to an earlier one (issue #157). The board owns
@@ -589,19 +616,31 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Done ages + sweep overrides come from the per-thread plugin-metadata
   // records: doneAt is the ISO stamp, keep the sweep override. The epoch
   // adapter (lib/done-metadata) feeds the sweep's injected `now` contract.
-  const [doneExtras, setDoneExtras] = useState<Record<string, { doneAt?: number; keep?: boolean }>>({});
-  const [sweepConfig, setSweepConfig] = useState({
-    doneArchiveMs: DEFAULT_DONE_ARCHIVE_MS,
-    idleArchiveMs: DEFAULT_IDLE_ARCHIVE_MS,
-  });
+  const [doneExtras, setDoneExtras] = useState<Record<string, { doneAt?: number; keep?: boolean }>>(
+    () => (seeded === null ? {} : { ...seeded.doneExtras }),
+  );
+  const [sweepConfig, setSweepConfig] = useState(
+    () =>
+      seeded?.sweepConfig ?? {
+        doneArchiveMs: DEFAULT_DONE_ARCHIVE_MS,
+        idleArchiveMs: DEFAULT_IDLE_ARCHIVE_MS,
+      },
+  );
   // The readiness gate (issue #403): the board paints once, settled. Each
   // mount list marks itself when its call settles (ok or error); the ninth
   // landing — or the ceiling — releases the gate. The fetches fire exactly
   // as before (the gate holds the RENDER, not the calls): the fan-in runs
   // during the loading view, so its echo commits land pre-paint.
-  const settledMountListsRef = useRef<Set<MountListKey>>(new Set());
-  const [mountSettled, setMountSettled] = useState(false);
-  const mountSettledRef = useRef(false);
+  //
+  // A seeded mount (the remount bridge above) starts RELEASED: the previous
+  // instance already waited for these lists, and making the operator watch the
+  // same wait again is the flash this whole path exists to remove. Its fan-in
+  // still fires; `settleMountList` just has nothing left to hold.
+  const settledMountListsRef = useRef<Set<MountListKey>>(
+    new Set(boardSeed === null ? [] : MOUNT_LIST_KEYS),
+  );
+  const [mountSettled, setMountSettled] = useState(boardSeed !== null);
+  const mountSettledRef = useRef(boardSeed !== null);
   const settleMountList = useCallback((key: MountListKey) => {
     if (mountSettledRef.current) return; // released — the gate never re-arms
     const settled = settledMountListsRef.current;
@@ -715,7 +754,9 @@ function BoardPage({ subPath }: { subPath: string }) {
   // through the snooze RPCs. The board only mirrors the records — dimming,
   // the wake chip, menu entries, and sweep skipping all derive from them;
   // the wake itself (markUnread at the target time) is server-side.
-  const [snoozeRecords, setSnoozeRecords] = useState<Record<string, SnoozeRecord>>({});
+  const [snoozeRecords, setSnoozeRecords] = useState<Record<string, SnoozeRecord>>(
+    () => (seeded === null ? {} : { ...seeded.snoozeRecords }),
+  );
   const refetchSnoozes = useCallback(() => {
     rpc.call("snooze_list").then(
       (result) => setSnoozeRecords(result.snoozes),
@@ -779,7 +820,9 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Manual column orders, keyed by columnRankKey. A column with no stored
   // order stays in the derived order and shows no drag affordance, so the
   // board never implies a reorder it will silently drop.
-  const [ranks, setRanks] = useState<RankStore>({});
+  const [ranks, setRanks] = useState<RankStore>(() =>
+    seeded === null ? {} : { ...seeded.ranks },
+  );
   // A rank write the host rejected (issue #232: the failure path used to
   // refetch the stored order silently, so an optimistic landing fell back
   // with no word — the operator's rank writes never reached the KV and the
@@ -812,8 +855,12 @@ function BoardPage({ subPath }: { subPath: string }) {
   // per-thread assignments, both optional state — the board renders a plain
   // board without them. One group-changed signal per surface (menu, CLI,
   // another panel) refetches both shapes.
-  const [groupRegistry, setGroupRegistry] = useState<Record<string, { name: string; createdAt: string }>>({});
-  const [groupAssignments, setGroupAssignments] = useState<Record<string, string>>({});
+  const [groupRegistry, setGroupRegistry] = useState<Record<string, { name: string; createdAt: string }>>(
+    () => (seeded === null ? {} : { ...seeded.groupRegistry }),
+  );
+  const [groupAssignments, setGroupAssignments] = useState<Record<string, string>>(
+    () => (seeded === null ? {} : { ...seeded.groupAssignments }),
+  );
   const refetchGroups = useCallback(() => {
     rpc.call("groups_list").then(
       (result) => {
@@ -1073,12 +1120,14 @@ function BoardPage({ subPath }: { subPath: string }) {
   // not in browser localStorage: the same fold and hide read on every window
   // AND every machine. Both start empty and hydrate from `family_state_list`
   // just below; each set only ever records deliberate toggles, so an id absent
-  // from it renders expanded / not hidden.
+  // from it renders expanded / not hidden. A seeded mount starts from the
+  // previous instance's sets, so folds survive the host's re-creation of the
+  // panel and the server read below confirms rather than reveals them.
   const [collapsedFamilies, setCollapsedFamilies] = useState<ReadonlySet<string>>(
-    () => new Set(),
+    () => new Set(seeded === null ? [] : seeded.collapsedFamilies),
   );
   const [hideIdleFamilies, setHideIdleFamilies] = useState<ReadonlySet<string>>(
-    () => new Set(),
+    () => new Set(seeded === null ? [] : seeded.hideIdleFamilies),
   );
   // A family-state write the host rejected (the fold/idle toggle did not
   // save): the toggle rolls back to the server's truth and this names the
@@ -4222,6 +4271,87 @@ function BoardPage({ subPath }: { subPath: string }) {
     [actions, applyUnreadStateEffects, clearParkPin, clearSnooze, doneAgeSource, doneIds, exitPinnedLane, familyIndex, filter, groupAssignments, openNewChildThread, pendingStateClaimsRef, persistFilter, persistGroupBy, releaseAttentionFor, requestReveal, restoreParkedPin, runBrowserReveal, rpc, setBrowserNotice, setDoneExtras, setDoneIds, setGroupDialogFor, setSnoozeDialogFor, snoozedIds, sdk],
   );
 
+  // The remount bridge's writer (lib/board-snapshot carries the measurement
+  // and the host code that forces the re-creation): whatever this instance has
+  // painted is what the next instance starts from. It runs only once the data
+  // has settled, so a half-loaded board is never remembered as the truth, and
+  // it holds no state of its own — one plain object per settled change, no
+  // serialization, no storage quota.
+  useEffect(() => {
+    if (!mountSettled) return;
+    rememberBoardData({
+      doneIds: [...doneIds],
+      doneExtras,
+      parkIds: [...parkIds],
+      linksByThread,
+      errorAckIds: [...errorAckIds],
+      snoozeRecords,
+      ranks,
+      groupRegistry,
+      groupAssignments,
+      collapsedFamilies: [...collapsedFamilies],
+      hideIdleFamilies: [...hideIdleFamilies],
+      sweepConfig,
+    });
+  }, [
+    mountSettled,
+    doneIds,
+    doneExtras,
+    parkIds,
+    linksByThread,
+    errorAckIds,
+    snoozeRecords,
+    ranks,
+    groupRegistry,
+    groupAssignments,
+    collapsedFamilies,
+    hideIdleFamilies,
+    sweepConfig,
+  ]);
+  // The scroll half of the bridge: captured as the operator scrolls (a
+  // passive capture listener on the panel root, which sees the board's own
+  // scroller and every lane list through the bubble-free scroll event), plus
+  // one last read in the cleanup. The listener is the load-bearing half —
+  // React detaches an unmounting subtree's refs around the same commit as its
+  // effect cleanups, so a cleanup-only read can find the ref already null —
+  // and it costs one object per scroll, never a write per render.
+  // `mountSettled` is the dep that matters: the panel root exists only once
+  // the gate releases, and on a seeded mount that is the first commit.
+  const scrollListenerRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const root = panelRef.current;
+    if (root === null || scrollListenerRef.current === root) return undefined;
+    scrollListenerRef.current = root;
+    const capture = () => {
+      const scroll = readBoardScroll(root);
+      if (scroll !== null) rememberBoardScroll(scroll);
+    };
+    root.addEventListener("scroll", capture, { capture: true, passive: true });
+    return () => {
+      root.removeEventListener("scroll", capture, { capture: true });
+      if (scrollListenerRef.current === root) scrollListenerRef.current = null;
+      capture();
+    };
+  }, [mountSettled]);
+  // Applied once, on the first commit that has a board to put it on: the gate
+  // is already released on a seeded mount, so that is the first paint rather
+  // than the commit that merely mounts the loading view.
+  const scrollRestoredRef = useRef(false);
+  useLayoutEffect(() => {
+    if (scrollRestoredRef.current) return;
+    const root = panelRef.current;
+    if (root === null) return;
+    const scroll = boardSeed === null ? null : boardSeed.scroll;
+    if (scroll === null) {
+      scrollRestoredRef.current = true;
+      return;
+    }
+    // A board root with no scroller yet is not the paint that gets scrolled;
+    // stay armed and take the next one.
+    if (applyBoardScroll(root, scroll) === 0) return;
+    scrollRestoredRef.current = true;
+  });
+
   // The readiness gate (issue #403): the loading view holds until the mount
   // fan-in has settled (or the ceiling fires) — the board's first paint is
   // the settled board, not a board that re-renders moments later. The view it
@@ -4360,6 +4490,10 @@ function BoardPage({ subPath }: { subPath: string }) {
             columns={columns}
             groupBy={groupBy}
             activeThreadId={paneCoversBoard ? null : boardActiveThreadId}
+            // Only a position the operator actually had suppresses the mount
+            // fit; a board that was resting at 0/0 has nothing to defend, and
+            // the fit is what keeps the open card visible when a pane opens.
+            restoredView={boardSeed !== null && boardSeed.scroll !== null && hasRestoredPosition(boardSeed.scroll)}
             cardTransport={cardTransport}
             motionPref={motionFollow ? "system" : "manual"}
             motionPacing={motionPacing}

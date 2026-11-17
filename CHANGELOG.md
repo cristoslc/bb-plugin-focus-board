@@ -25,6 +25,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+#### The board's frame
+
+- **Splitting or unsplitting the window no longer reloads the board.** bb rebuilds the panel when the pane layout changes, which used to flash the loading screen and drop the scroll position. The board now repaints what you were looking at, where you left it, and the refetch that follows lands behind it.
+
 #### The board's shortcuts
 
 - **The board's keys stay on the board.** A letter or `/` typed anywhere you can type inserts text instead of opening the New Thread composer or jumping the search field. Both keys fire only while the board's own pane holds focus, so another pane's keystrokes leave the board alone.
