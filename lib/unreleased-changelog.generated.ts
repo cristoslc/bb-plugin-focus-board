@@ -18,6 +18,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "bb's thread pages"
   },
   {
+    "text": "**The board's keys stay on the board.** A letter or `/` typed anywhere you can type now inserts text instead of opening the New Thread composer or jumping the board's search field. A keystroke in another pane, or with a thread pane focused beside the board, leaves the board alone.",
+    "children": [],
+    "group": "The board's shortcuts"
+  },
+  {
     "text": "**Thread and project references in a pane message open the thread or project again.** bb renders an agent-written `@thread:…` mention as a link into the workspace's file preview, which read \"File not found.\"; the pane now claims those clicks itself, and a malformed mention does nothing instead.",
     "children": [],
     "group": "The thread pane"

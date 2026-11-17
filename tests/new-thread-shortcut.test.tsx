@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 // The board's New Thread shortcut: a configurable key (default "C") opens the
 // New Thread composer while the overview board is showing with no pane open.
-// It stays inert inside a pane, while typing in an editable target, inside a
-// dialog, and under modifier chords — the same ownership rules the "/"
-// search-focus shortcut follows (tests/search-focus-slash.test.tsx).
+// It stays inert while typing in an editable target (inputs, textareas,
+// selects, and rich-text contenteditable surfaces — the composer and the
+// thread pane's editors are the latter), inside a pane that is not the
+// board's, inside a dialog, and under modifier chords — the same ownership
+// rules the "/" search-focus shortcut follows
+// (tests/search-focus-slash.test.tsx). The rules live in
+// lib/shortcut-ownership.ts.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import {
@@ -11,18 +15,75 @@ import {
 } from "../components/preferences";
 import { useNewThreadComposerShortcut } from "../hooks/use-new-thread-shortcut";
 
-afterEach(cleanup);
+/** Scratch DOM the tests append to document.body (panes, editors, dialogs).
+ *  Removed per test so one case's surface never owns the next one's keys. */
+const scratch: HTMLElement[] = [];
+
+afterEach(() => {
+  cleanup();
+  for (const node of scratch.splice(0)) node.remove();
+});
+
+function mount(element: HTMLElement): HTMLElement {
+  document.body.appendChild(element);
+  scratch.push(element);
+  return element;
+}
+
+function element<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  attributes: Record<string, string> = {},
+  parent?: HTMLElement,
+): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, value);
+  if (parent !== undefined) parent.appendChild(node);
+  return node;
+}
+
+/** The board's own panel root, as app.tsx renders it. */
+function boardPanel(): HTMLElement {
+  return mount(element("div", { "data-focus-board-panel": "" }));
+}
+
+/** A surface beside the board: another pane the document-level listener also
+ *  hears (a native thread pane, another plugin app). */
+function foreignPane(): HTMLElement {
+  return mount(element("div", { "data-testid": "foreign-pane" }));
+}
+
+function pressOn(
+  target: EventTarget,
+  key: string,
+  init?: KeyboardEventInit,
+): KeyboardEvent {
+  const event = new KeyboardEvent("keydown", {
+    key,
+    bubbles: true,
+    cancelable: true,
+    ...init,
+  });
+  target.dispatchEvent(event);
+  return event;
+}
 
 function Harness({
   enabled,
   hotkey,
   onActivate,
+  threadPaneFocused,
 }: {
   enabled: boolean;
   hotkey: string;
   onActivate: () => void;
+  threadPaneFocused: boolean;
 }) {
-  useNewThreadComposerShortcut({ enabled, hotkey, onActivate });
+  useNewThreadComposerShortcut({
+    enabled,
+    hotkey,
+    onActivate,
+    threadPaneFocused,
+  });
   return null;
 }
 
@@ -40,10 +101,16 @@ function pressKey(key: string, init?: KeyboardEventInit): KeyboardEvent {
 function harness(
   enabled: boolean,
   hotkey = "c",
+  threadPaneFocused = false,
 ): { onActivate: ReturnType<typeof vi.fn> } {
   const onActivate = vi.fn();
   render(
-    <Harness enabled={enabled} hotkey={hotkey} onActivate={onActivate} />,
+    <Harness
+      enabled={enabled}
+      hotkey={hotkey}
+      onActivate={onActivate}
+      threadPaneFocused={threadPaneFocused}
+    />,
   );
   return { onActivate };
 }
@@ -97,6 +164,110 @@ describe("useNewThreadComposerShortcut", () => {
     scratch.dispatchEvent(typed);
     expect(onActivate).not.toHaveBeenCalled();
     expect(typed.defaultPrevented).toBe(false);
+  });
+
+  it("a keystroke typed into a rich-text editor inserts the letter", () => {
+    // The operator's bug: bb's composers are contenteditable, not textareas,
+    // so the old guards let the hotkey claim every letter typed in one.
+    const { onActivate } = harness(true);
+    const editor = element("div", { contenteditable: "true" });
+    boardPanel().appendChild(editor);
+    const typed = pressOn(editor, "c");
+    expect(onActivate).not.toHaveBeenCalled();
+    expect(typed.defaultPrevented).toBe(false);
+  });
+
+  it("a keystroke typed into a rich-text editor's inner block inserts the letter", () => {
+    const { onActivate } = harness(true);
+    const editor = element("div", { contenteditable: "true" });
+    const paragraph = element("p", {}, editor);
+    boardPanel().appendChild(editor);
+    const typed = pressOn(paragraph, "c");
+    expect(onActivate).not.toHaveBeenCalled();
+    expect(typed.defaultPrevented).toBe(false);
+  });
+
+  it("a div declared a textbox owns the letter", () => {
+    const { onActivate } = harness(true);
+    const textbox = element("div", { role: "textbox" });
+    boardPanel().appendChild(textbox);
+    const typed = pressOn(textbox, "c");
+    expect(onActivate).not.toHaveBeenCalled();
+    expect(typed.defaultPrevented).toBe(false);
+  });
+
+  it("a keystroke pressed in a pane that is not the board's does nothing", () => {
+    // Another pane in bb shares the document, so a document-level listener
+    // hears its keystrokes. The letter belongs to that pane's surface.
+    const { onActivate } = harness(true);
+    const pane = foreignPane();
+    const plain = element("div", {}, pane);
+    const event = pressOn(plain, "c");
+    expect(onActivate).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("a keystroke pressed in a foreign pane's rich-text editor does nothing", () => {
+    const { onActivate } = harness(true);
+    const editor = element("div", { contenteditable: "true" }, foreignPane());
+    const event = pressOn(editor, "c");
+    expect(onActivate).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("a keystroke on the board's own surface with nothing focused inside it opens the composer", () => {
+    // The feature: the board is where the keystroke happened, so the letter
+    // is the board's to act on even though no element holds focus.
+    const { onActivate } = harness(true);
+    const panel = boardPanel();
+    const event = pressOn(element("div", {}, panel), "c");
+    expect(onActivate).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("with a native thread pane focused beside the board, a keystroke on nothing does nothing", () => {
+    // The native-pane half: a card click hands the thread to bb's own pane
+    // and leaves `openThread` null, so the layout is the only read that says
+    // the keyboard is parked beside the board. Nothing is focused in that
+    // state, so the keystroke lands on the body — no text is being typed
+    // anywhere, and the board leaves it alone.
+    const { onActivate } = harness(true, "c", true);
+    const event = pressKey("c");
+    expect(onActivate).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("with a native thread pane focused, a keystroke on the board's own surface still opens the composer", () => {
+    // The board is where the keystroke happened, so the letter is still the
+    // board's: the layout read only decides the no-focus case.
+    const { onActivate } = harness(true, "c", true);
+    const event = pressOn(element("div", {}, boardPanel()), "c");
+    expect(onActivate).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("the layout read is live: closing the native pane gives the key back", () => {
+    const onActivate = vi.fn();
+    const view = render(
+      <Harness
+        enabled
+        hotkey="c"
+        onActivate={onActivate}
+        threadPaneFocused
+      />,
+    );
+    pressKey("c");
+    expect(onActivate).not.toHaveBeenCalled();
+    view.rerender(
+      <Harness
+        enabled
+        hotkey="c"
+        onActivate={onActivate}
+        threadPaneFocused={false}
+      />,
+    );
+    pressKey("c");
+    expect(onActivate).toHaveBeenCalledTimes(1);
   });
 
   it("a keystroke pressed inside an open dialog is left to the dialog", () => {
