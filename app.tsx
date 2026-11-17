@@ -10,6 +10,7 @@ import {
   useRpc,
   useSdk,
   useSettings,
+  useSidebarSplitLayout,
 } from "@get-bb/plugin-sdk/app";
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { findTicketRefs, forgejoItemBase, resolveRepoSlug } from "./lib/tickets";
@@ -79,6 +80,7 @@ import { planGroupBoxes } from "./components/group-boxes";
 import { applyUnitMoveVisible } from "./lib/rank-unit-move";
 import { doneAtToEpochMs } from "./lib/done-metadata";
 import { projectDisplayName } from "./lib/project-name";
+import { nativeOpenWouldEvictBoard } from "./lib/split-pane-cap";
 import { createProjectFromPickedFolder } from "./lib/project-create-flow";
 import { paneContextInfo } from "./lib/pane-context";
 import type { ReferenceMentions } from "./components/decorate-reference-mentions";
@@ -1277,6 +1279,13 @@ function BoardPage({ subPath }: { subPath: string }) {
   // handoff — the gesture the covered-sheet quiet open exists to silence.
   const openThreadIdRef = useRef(openThreadId);
   openThreadIdRef.current = openThreadId;
+  // The split layout the pane-cap guard reads, as a ref: the click callback
+  // stays identity-stable (the same ref-holding lesson the openThreadId
+  // bridge above is), so a layout churn — every native open re-focuses a
+  // pane — never wakes the memoized Board through its prop handoff.
+  const splitLayout = useSidebarSplitLayout();
+  const splitLayoutRef = useRef<Parameters<typeof nativeOpenWouldEvictBoard>[0]>(null);
+  splitLayoutRef.current = splitLayout;
   // Sweep arm state: at most one armed column at a time. The candidate id
   // list is captured at arm time and frozen — late arrivals never join.
   const [armedSweep, setArmedSweep] = useState<ArmedSweep | null>(null);
@@ -2717,6 +2726,41 @@ function BoardPage({ subPath }: { subPath: string }) {
     [navigate, capturePaneAttention],
   );
 
+  // The click switch (dec_nhnljjo8rgbz, the native-pane move's step 3):
+  // a card click opens the thread in bb's own native pane beside the board
+  // — the host's split placement rules (right split by default, focus when
+  // already open, replace at the pane cap, plain navigation where splits
+  // are off) — instead of opening the board's own in-panel pane. The
+  // attention freeze is captured here exactly as the pane's click-open
+  // captured it, so the attended card holds its placement while the
+  // native pane reads it. The board's own pane stays compiled and
+  // reachable through its other entries (deep links, reference chips, a
+  // spawned thread's open), so reverting this slice is the two prop
+  // flips below; the deletion slice — only after the operator has used
+  // the moved board — is what makes the change permanent.
+  //
+  // The one placement rule that cannot stand: at bb's ceiling the host
+  // replaces the FOCUSED pane, and a click inside the board focuses the
+  // board — so an unguarded handoff would delete the board the click was
+  // made on (lib/split-pane-cap.ts carries the rule and its probe). There
+  // the click falls back to the board's own pane, which still ships in
+  // this slice: the thread opens inside the board's slot and the board
+  // never leaves the layout.
+  const openThreadCardNative = useCallback(
+    (threadId: string) => {
+      if (nativeOpenWouldEvictBoard(splitLayoutRef.current)) {
+        // The board's own pane, the one surface that opens a thread without
+        // touching the layout: the host's opener here would replace the
+        // focused board pane with the thread.
+        openThreadCard(threadId);
+        return;
+      }
+      capturePaneAttention(threadId);
+      actions.open(threadId, { split: true });
+    },
+    [actions, capturePaneAttention, openThreadCard],
+  );
+
   // Reference chips in the pane (issue #161): labels resolve from the board's
   // current rows — live sidebar threads first, then the archived list — and
   // routing splits on what the board knows: a listed thread opens in the
@@ -3885,7 +3929,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             validatedHrefs={validatedHrefs}
             parentLaneOrder={parentLaneOrder}
             onParentLaneOrderChange={persistParentLaneOrder}
-            onOpenThread={openThreadCard}
+            onOpenThread={openThreadCardNative}
             onClosePane={closeThreadPane}
             onNewTask={openNewThread}
             menuActionsFor={menuActionsFor}
@@ -3949,7 +3993,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             pulseRateFor={pulseRateFor}
             linkedIssuesFor={linkedIssuesFor}
             validatedHrefs={validatedHrefs}
-            onOpenThread={openThreadCard}
+            onOpenThread={openThreadCardNative}
             onClosePane={closeThreadPane}
             onNewTask={openNewThread}
             snoozeFor={snoozeFor}

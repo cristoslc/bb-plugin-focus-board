@@ -11,7 +11,7 @@ vi.mock("@get-bb/plugin-sdk/app", async () => await import("./helpers/app-fake-s
 
 import "../app";
 import { GRID_SORT_KEY, GROUP_BY_KEY } from "../components/preferences";
-import { registeredNavPanel, seedFakeThreads } from "./helpers/app-fake-sdk";
+import { fakeNativeOpens, fakePanelPushes, registeredNavPanel, resetFakeNativeOpens, resetFakePanelPushes, seedFakeThreads } from "./helpers/app-fake-sdk";
 
 const HOUR = 3_600_000;
 
@@ -209,37 +209,58 @@ describe("the grid's order", () => {
 });
 
 describe("a card in the grid", () => {
-  it("opens its thread in the pane on click", async () => {
+  it("opens its thread in bb's native pane on click, not the board's own", async () => {
+    // The native-pane move (dec_nhnljjo8rgbz): a card click calls the host's
+    // own opener with split on; the board's in-panel pane does not open.
     await mountApp();
+    resetFakeNativeOpens();
     const card = document.querySelector('[data-grid-card="thr_alpha"] a');
     if (card === null) throw new Error("grid card not found");
     fireEvent.click(card);
     await waitFor(() =>
-      expect(
-        document.querySelector('aside[aria-label="Thread: Alpha release notes"]'),
-      ).not.toBeNull(),
+      expect(fakeNativeOpens()).toEqual([{ threadId: "thr_alpha", split: true }]),
     );
+    expect(document.querySelector('aside[aria-label^="Thread:"]')).toBeNull();
   });
 
   it("closes the pane on a click in the empty grid, never on a card", async () => {
-    await mountApp();
-    const card = document.querySelector('[data-grid-card="thr_alpha"] a');
-    if (card === null) throw new Error("grid card not found");
-    fireEvent.click(card);
+    // The pane enters by its deep link (the native-pane move): subPath mount,
+    // the state a shared URL lands on. The fake host declines every panel
+    // push (no history integration), so the close's settle — the subPath
+    // flip the real host's own push produces — is driven by a rerender,
+    // while the push record pins that the background click is what asked.
+    const Component = registeredNavPanel.component;
+    if (Component === undefined) throw new Error("app-fake-sdk: no nav panel registered");
+    const view = render(<Component subPath="t/thr_alpha" />);
     const pane = await waitFor(() => {
       const found = document.querySelector('aside[aria-label="Thread: Alpha release notes"]');
       if (found === null) throw new Error("pane did not open");
       return found;
     });
     expect(pane).not.toBeNull();
+    resetFakePanelPushes();
 
-    // A click on a card is not a background click: the pane stays.
+    // A click on a card is not a background click: the pane stays, and the
+    // click's contract is the native opener — it never touches the pane's
+    // own panel route.
+    const card = document.querySelector('[data-grid-card="thr_alpha"] a');
+    if (card === null) throw new Error("grid card not found");
+    resetFakeNativeOpens();
     fireEvent.click(card);
     expect(document.querySelector('aside[aria-label^="Thread:"]')).not.toBeNull();
+    expect(fakePanelPushes()).toEqual([]);
+    expect(fakeNativeOpens()).toEqual([{ threadId: "thr_alpha", split: true }]);
 
     const board = document.querySelector("[data-card-grid-board]");
     if (board === null) throw new Error("grid board not found");
+    resetFakePanelPushes();
     fireEvent.click(board);
+    // The background click asked the panel route to close…
+    await waitFor(() =>
+      expect(fakePanelPushes()).toEqual([{ path: "board", subPath: "", replace: false }]),
+    );
+    // …and the settle (the subPath flip the real host lands) closes it.
+    view.rerender(<Component subPath="" />);
     await waitFor(() =>
       expect(document.querySelector('aside[aria-label^="Thread:"]')).toBeNull(),
     );

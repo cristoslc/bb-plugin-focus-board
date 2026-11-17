@@ -136,8 +136,21 @@ function mutateThread(threadId: string, patch: (thread: FakeSidebarThread) => Fa
 }
 
 // One stable actions object across renders (same identity lesson as rpc).
+// `open` records every call (the native-pane move's click switch): the
+// card click's contract is now "the host's own opener, split on", and the
+// fake has no native pane to render, so the recorded call is the
+// observable the tests assert.
+const nativeOpens: Array<{ threadId: string; split?: boolean }> = [];
+export function fakeNativeOpens(): Array<{ threadId: string; split?: boolean }> {
+  return structuredClone(nativeOpens);
+}
+export function resetFakeNativeOpens(): void {
+  nativeOpens.splice(0, nativeOpens.length);
+}
 const fakeActions = {
-  open: () => {},
+  open: (threadId: string, options?: { split?: boolean }) => {
+    nativeOpens.push({ threadId, split: options?.split });
+  },
   openNewThread: () => {},
   setPinned: (threadId: string, pinned: boolean) =>
     new Promise((resolve) => {
@@ -172,6 +185,31 @@ export function experimental_useSidebarThreadActions(): unknown {
   return fakeActions;
 }
 
+// The split layout the pane-cap guard reads (the native-pane move): null
+// means "no split" — a single-pane board route. Controllable so tests can
+// drive the ceiling layouts the guard exists for.
+interface FakeSplitPane {
+  paneId: string;
+  threadId: string | null;
+  isFocused: boolean;
+}
+let fakeSplitLayout: { panes: readonly FakeSplitPane[] } | null = null;
+const splitLayoutListeners = new Set<() => void>();
+function subscribeSplitLayout(listener: () => void): () => void {
+  splitLayoutListeners.add(listener);
+  return () => splitLayoutListeners.delete(listener);
+}
+function emitSplitLayout(): void {
+  for (const listener of [...splitLayoutListeners]) listener();
+}
+export function setFakeSplitLayout(panes: readonly FakeSplitPane[] | null): void {
+  fakeSplitLayout = panes === null ? null : { panes };
+  emitSplitLayout();
+}
+export function useSidebarSplitLayout(): unknown {
+  return useSyncExternalStore(subscribeSplitLayout, () => fakeSplitLayout);
+}
+
 const fakeProvidersSnapshot = {
   status: "ready",
   providers: [{ id: "pi", displayName: "Pi" }],
@@ -183,10 +221,23 @@ export function experimental_useProviders(): unknown {
 
 // A panel route the app's pushes always fail (returns false): the pane then
 // opens in fallback mode — component state alone, no history integration.
-// Stable identity: callbacks hanging off navigate must not churn.
+// Stable identity: callbacks hanging off navigate must not churn. Every
+// call is recorded (the native-pane move): the in-panel route is the pane's
+// own surface now that card clicks open bb's native pane, so a test can pin
+// exactly which gestures still push it.
+const panelPushes: Array<{ path: string; subPath: string; replace: boolean }> = [];
+export function fakePanelPushes(): Array<{ path: string; subPath: string; replace: boolean }> {
+  return structuredClone(panelPushes);
+}
+export function resetFakePanelPushes(): void {
+  panelPushes.splice(0, panelPushes.length);
+}
 const fakeNavigate = {
   toThread: () => {},
-  toPluginPanel: (): boolean => false,
+  toPluginPanel: (path: string, options?: { subPath?: string; replace?: boolean }): boolean => {
+    panelPushes.push({ path, subPath: options?.subPath ?? "", replace: options?.replace === true });
+    return false;
+  },
 };
 
 export function useBbNavigate(): unknown {

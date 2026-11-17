@@ -100,15 +100,19 @@ describe("Mark Unread on a read card with its attention frozen (pane open)", () 
   it("the card lands in the Unread lane when the write lands — never in an idle lane", async () => {
     const Component = registeredNavPanel.component;
     if (Component === undefined) throw new Error("app-fake-sdk: no nav panel registered");
-    render(<Component subPath="" />);
+    // The pane enters by its deep link (the native-pane move): the subPath
+    // mount adopts the attention freeze the same way a click-open did.
+    const view = render(<Component subPath="t/thr_read" />);
+    const rerenderSubPath = (subPath: string) => {
+      view.rerender(<Component subPath={subPath} />);
+    };
 
     // Baselines: the read card sits in Idle · Today; the unread one in Unread.
     await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_read"));
     await waitFor(() => expect(columnCardIds("unread")).toContain("thr_unread"));
 
-    // Open the pane on the read card: its attention freeze captures the
+    // The pane is open on the read card: its attention freeze holds the
     // rendered placement — the Idle · Today lane and slot it sits in.
-    fireEvent.click(cardAnchor("thr_read"));
     await waitFor(() => expect(screen.getByLabelText("Mark thread unread")).toBeTruthy());
 
     // The gesture: Mark Unread, with the pane (and so the freeze) still open.
@@ -124,8 +128,11 @@ describe("Mark Unread on a read card with its attention frozen (pane open)", () 
     await waitFor(() => expect(columnCardIds("unread")).toContain("thr_read"));
     expect(columnCardIds("idle-today")).not.toContain("thr_read");
 
-    // The placement rules agree when attention releases (pane close).
+    // The placement rules agree when attention releases (pane close). The
+    // close asks the panel route; the fake declines pushes, so the settle
+    // — the subPath flip the real host's push lands — is driven directly.
     fireEvent.click(screen.getByLabelText("Close thread pane")!);
+    rerenderSubPath("");
     expect(columnCardIds("unread")).toContain("thr_read");
     expect(columnCardIds("idle-today")).not.toContain("thr_read");
   });

@@ -236,19 +236,21 @@ function columnCardIds(columnId: string): string[] {
     .map((el) => (el instanceof HTMLElement ? el.getAttribute("data-thread-card") : ""));
 }
 
-/** The card's title anchor — the click that opens the thread pane. */
-function cardAnchor(threadId: string): HTMLElement {
-  const card = document.querySelector(`[data-thread-card="${threadId}"]`);
-  if (card === null) throw new Error(`missing card ${threadId}`);
-  const anchor = card.querySelector("a");
-  if (anchor === null) throw new Error(`missing title anchor on ${threadId}`);
-  return anchor as HTMLElement;
-}
-
-function mountBoard(): void {
+function mountBoard(subPath = ""): ReturnType<typeof render> {
   const Component = registeredNavPanel.component;
   if (Component === undefined) throw new Error("app-fake-sdk: no nav panel registered");
-  render(<Component subPath="" />);
+  return render(<Component subPath={subPath} />);
+}
+
+/** The pane's deep-link entry and settle, the gestures the native-pane move
+ *  leaves the in-board pane (a card click now opens bb's own pane): the
+ *  open is a subPath rerender — the state a shared URL lands on — and the
+ *  close pairs the pane's own button with the settle flip the real host's
+ *  push lands (the fake declines pushes). */
+function rerenderPane(view: ReturnType<typeof render>, subPath: string): void {
+  const Component = registeredNavPanel.component;
+  if (Component === undefined) throw new Error("app-fake-sdk: no nav panel registered");
+  view.rerender(<Component subPath={subPath} />);
 }
 
 /** Wait until the mount wave's own chip fetch has been seen, then one idle
@@ -266,7 +268,7 @@ async function mountFetchDone(): Promise<void> {
 describe("the pane's covered-sheet skip (issue #406 stage 2)", () => {
   it("opening a pane on a phone renders zero board cards, and closing does too", async () => {
     setCovered(true);
-    mountBoard();
+    const view = mountBoard();
     await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
     await act(async () => { await new Promise((r) => setTimeout(r, 600)); });
     cardRenders.count = 0;
@@ -276,7 +278,7 @@ describe("the pane's covered-sheet skip (issue #406 stage 2)", () => {
     // re-rendered the board on its activeThreadId churn + the capture
     // writes; red again for any wiring that re-couples the pane's state to
     // a board prop.)
-    fireEvent.click(cardAnchor("thr_focus"));
+    rerenderPane(view, "t/thr_focus");
     await waitFor(() => expect(screen.getByLabelText("Back to board")).toBeTruthy());
     await act(async () => { await new Promise((r) => setTimeout(r, 300)); });
     expect(cardRenders.count).toBe(0);
@@ -284,6 +286,7 @@ describe("the pane's covered-sheet skip (issue #406 stage 2)", () => {
     // The covered close: the same law on the way back out.
     cardRenders.count = 0;
     fireEvent.click(screen.getByLabelText("Back to board"));
+    rerenderPane(view, "");
     await waitFor(() => expect(screen.queryByLabelText("Back to board")).toBeNull());
     await act(async () => { await new Promise((r) => setTimeout(r, 300)); });
     expect(cardRenders.count).toBe(0);
@@ -291,12 +294,12 @@ describe("the pane's covered-sheet skip (issue #406 stage 2)", () => {
 
   it("a fine pointer's open still renders the board (the active card's surface is visible)", async () => {
     setCovered(false);
-    mountBoard();
+    const view = mountBoard();
     await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
     await act(async () => { await new Promise((r) => setTimeout(r, 600)); });
     cardRenders.count = 0;
 
-    fireEvent.click(cardAnchor("thr_focus"));
+    rerenderPane(view, "t/thr_focus");
     await waitFor(() => expect(screen.getByLabelText("Close thread pane")).toBeTruthy());
     await act(async () => { await new Promise((r) => setTimeout(r, 300)); });
     expect(cardRenders.count).toBeGreaterThan(0);
@@ -304,12 +307,12 @@ describe("the pane's covered-sheet skip (issue #406 stage 2)", () => {
 
   it("opening a pane on a phone pins nothing: churn moves the card behind the sheet", async () => {
     setCovered(true);
-    mountBoard();
+    const view = mountBoard();
     await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
 
-    // Open the pane on thr_focus. Behind the covered sheet the capture is
+    // The pane opens on thr_focus. Behind the covered sheet the capture is
     // withheld, so the churn below runs the live placement rules.
-    fireEvent.click(cardAnchor("thr_focus"));
+    rerenderPane(view, "t/thr_focus");
     await waitFor(() => expect(screen.getByLabelText("Back to board")).toBeTruthy());
 
     act(() => {
@@ -321,10 +324,10 @@ describe("the pane's covered-sheet skip (issue #406 stage 2)", () => {
 
   it("a fine pointer still freezes: churn holds the attended card's slot", async () => {
     setCovered(false);
-    mountBoard();
+    const view = mountBoard();
     await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
 
-    fireEvent.click(cardAnchor("thr_focus"));
+    rerenderPane(view, "t/thr_focus");
     await waitFor(() => expect(screen.getByLabelText("Close thread pane")).toBeTruthy());
 
     act(() => {
@@ -337,11 +340,11 @@ describe("the pane's covered-sheet skip (issue #406 stage 2)", () => {
 
   it("the skip is per-open, not a latch: the next uncovered open arms the freeze again", async () => {
     setCovered(true);
-    mountBoard();
+    const view = mountBoard();
     await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
 
     // Covered open: no capture.
-    fireEvent.click(cardAnchor("thr_focus"));
+    rerenderPane(view, "t/thr_focus");
     await waitFor(() => expect(screen.getByLabelText("Back to board")).toBeTruthy());
     act(() => {
       seedChurn();
@@ -359,7 +362,7 @@ describe("the pane's covered-sheet skip (issue #406 stage 2)", () => {
     await act(async () => {
       await new Promise((r) => setTimeout(r, 50));
     });
-    fireEvent.click(cardAnchor("thr_older"));
+    rerenderPane(view, "t/thr_older");
     await waitFor(() => expect(screen.getByLabelText("Close thread pane")).toBeTruthy());
 
     // Churn again, with a new card between the pinned card's slot and the
@@ -473,7 +476,7 @@ describe("the pane's covered-sheet skip (issue #406 stage 2)", () => {
       }, { timeout: 10_000 });
       await act(async () => { await new Promise((r) => setTimeout(r, 600)); });
     };
-    mountBoard();
+    const view = mountBoard();
     await mountFetchDone();
     await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
 
@@ -481,7 +484,7 @@ describe("the pane's covered-sheet skip (issue #406 stage 2)", () => {
     // cover the idle seam's fallback (400ms), so a fetch that WOULD fire
     // has landed by the time the count is read.
     resetFakeRpcCalls();
-    fireEvent.click(cardAnchor("thr_focus"));
+    rerenderPane(view, "t/thr_focus");
     await waitFor(() => expect(screen.getByLabelText("Back to board")).toBeTruthy());
     await act(async () => {
       await new Promise((r) => setTimeout(r, 500));
@@ -492,6 +495,7 @@ describe("the pane's covered-sheet skip (issue #406 stage 2)", () => {
     // Close the pane: the same law on the way back.
     resetFakeRpcCalls();
     fireEvent.click(screen.getByLabelText("Back to board"));
+    rerenderPane(view, "");
     await waitFor(() => expect(screen.queryByLabelText("Back to board")).toBeNull());
     await act(async () => {
       await new Promise((r) => setTimeout(r, 500));
@@ -515,12 +519,12 @@ describe("the pane's covered-sheet skip (issue #406 stage 2)", () => {
         },
       ],
     });
-    mountBoard();
+    const view = mountBoard();
     await mountFetchDone();
     await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
 
     resetFakeRpcCalls();
-    fireEvent.click(cardAnchor("thr_focus"));
+    rerenderPane(view, "t/thr_focus");
     await waitFor(() => expect(screen.getByLabelText("Close thread pane")).toBeTruthy());
     // The same idle window, so an open-time refetch (if one fired) is in.
     await act(async () => {
