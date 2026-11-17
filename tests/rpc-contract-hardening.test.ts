@@ -31,6 +31,7 @@ const validInputs: Record<Method, unknown> = {
   tracker_validate: { urls: ["https://github.com/o/r/issues/12"] },
   thread_autotitle: { threadId: "thr_x" },
   thread_autotitle_services: { threadId: "thr_x" },
+  host_version: null,
   workspace_files_exist: { threadId: "thr_x", paths: ["docs/a.md"] },
   workspace_open_targets: { threadId: "thr_x" },
   workspace_open_in_target: { threadId: "thr_x", targetId: "tgt" },

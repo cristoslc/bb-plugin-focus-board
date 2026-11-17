@@ -9,6 +9,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **On bb 0.49 the pane and the New Thread dialog stop duplicating the host.** The host now routes file links in a plugin chat and offers New project in its composer, so the board's own file-link patches and its second New project button stand down there; hosts below 0.49 keep them.
+
 ### Fixed
 
 ## [1.7.15] - 2026-11-16

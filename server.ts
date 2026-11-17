@@ -180,6 +180,13 @@ const EXTERNAL_LINK_RECORD = z.object({
 
 const LINK_RECORD_SCHEMA = z.union([GITHUB_LINK_RECORD, EXTERNAL_LINK_RECORD]);
 
+/**
+ * bb's version, read once per process behind the `host_version` RPC. bb
+ * cannot change version under a running server without a restart, so a
+ * failure here re-reads on the next call rather than caching a wrong answer.
+ */
+let hostVersionCache: string | null = null;
+
 export const rpcContract = defineRpcContract({
   /**
    * The board's whole mount state in ONE round trip (issue #424): six of the
@@ -465,6 +472,18 @@ export const rpcContract = defineRpcContract({
         reason: z.string().nullable(),
       }),
     }),
+  },
+
+  // The host version behind lib/host-capabilities: bb 0.49.0 grew the local
+  // file surface (inline-code and relative-link routing, the glyph fuse, and
+  // New project in the plugin new-thread composer), so this plugin's
+  // compensations switch themselves off above that line and stay on below it.
+  // bb serves the renderer, so the server's version is the version of the
+  // build whose DOM the board decorates. Versioned per process; an update
+  // restarts bb.
+  host_version: {
+    input: z.null(),
+    output: z.object({ version: z.string().min(1) }),
   },
 
   // Existence check behind the thread pane's inline-code file links: the
@@ -2709,6 +2728,15 @@ export default async function plugin(bb: BbPluginApi) {
         now: () => Date.now(),
       });
       return { results };
+    },
+    host_version: async () => {
+      // One read per process: bb's version cannot change under a running
+      // server without a restart.
+      if (hostVersionCache === null) {
+        const state = await bb.sdk.system.version();
+        hostVersionCache = state.currentVersion;
+      }
+      return { version: hostVersionCache };
     },
     workspace_files_exist: async ({ threadId, paths }) => {
       const thread = await bb.sdk.threads.get({ threadId });

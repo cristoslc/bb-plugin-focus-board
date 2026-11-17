@@ -42,6 +42,7 @@ import { attachScrollDebug } from "@/components/scroll-debug";
 import { AutotitleFallbackModal } from "@/components/autotitle-fallback-modal";
 import { WorkspaceOpenMenu, OPEN_LABEL_MIN_PANE_WIDTH } from "@/components/workspace-open-menu";
 import { usePaneContextRowMissing, PaneContextRow } from "@/components/pane-context-row";
+import { useHostCapabilities } from "@/hooks/use-host-capabilities";
 import { HEADER_ICON_BUTTON_CLASS } from "@/lib/pane-chrome";
 import type {
   AutotitleFallbackState,
@@ -554,6 +555,10 @@ export function ThreadPane({
   const effectiveWidth =
     panelWidth === null ? width : Math.min(width, boardFloor, panelWidth);
   const sdk = useSdk();
+  // Which host surfaces bb owns itself (lib/host-capabilities). On 0.49.0 and
+  // later the host routes inline-code and relative links in this pane, so the
+  // two compensations below stand down; on 0.43 through 0.48 they stay on.
+  const host = useHostCapabilities();
   const navigate = useBbNavigate();
   const rpc = useRpc<typeof rpcContract>();
   // The developer scroll instrumentation (setting "Developer: instrument
@@ -636,8 +641,12 @@ export function ThreadPane({
         onMaximize();
         return;
       }
-      // Explicit markdown links win; code spans are only claimed when no
-      // anchor is involved.
+      // Markdown links and code spans, the rest of the 0.44-era rescue: a
+      // plugin chat used to receive no local-file routing, so this pane
+      // reopened relative hrefs and decorated inline code against the
+      // thread's workspace. bb 0.49.0 routes both itself, so the rescue
+      // stands down there (lib/host-capabilities).
+      if (host.routesLocalFileLinks) return;
       const anchor = target.closest("a[href]");
       if (anchor !== null) {
         const href = anchor.getAttribute("href") ?? "";
@@ -660,7 +669,7 @@ export function ThreadPane({
       event.stopPropagation();
       openWorkspacePreview(path);
     },
-    [openWorkspacePreview, onMaximize, referenceMentions],
+    [openWorkspacePreview, onMaximize, referenceMentions, host.routesLocalFileLinks],
   );
 
   const endDrag = useCallback((event: PointerEvent) => {
@@ -858,6 +867,11 @@ export function ThreadPane({
       if (referenceMentions !== undefined) {
         decorateReferenceMentions(root, referenceMentions.labels);
       }
+      // The host paints its own inline-code and relative links from 0.49.0
+      // on, so the decoration's existence checks have nothing left to prove;
+      // the chips above stay because no host version renders `@project:`
+      // tokens (lib/host-capabilities).
+      if (host.routesLocalFileLinks) return;
       if (environmentId === null) return;
       const scope = environmentId;
       if (scope !== undefined) {
@@ -906,7 +920,7 @@ export function ThreadPane({
       observer.disconnect();
       if (frame !== null) view.cancelAnimationFrame(frame);
     };
-  }, [thread.id, sdk, checkWorkspacePaths, referenceMentions]);
+  }, [thread.id, sdk, checkWorkspacePaths, referenceMentions, host.routesLocalFileLinks]);
 
   return (
     <aside
