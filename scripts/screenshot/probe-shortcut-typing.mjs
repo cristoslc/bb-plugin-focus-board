@@ -17,13 +17,19 @@
 //   3. pressing "c" with nothing focused on the board still opens the
 //      composer (the feature).
 //
-// The pane-FOCUS half of the fix (a native thread pane focused beside the
-// board, nothing focused inside the board) cannot be reproduced here: the
-// harness mounts the board as the only pane and its `useSidebarSplitLayout`
-// mock returns null statically (scripts/screenshot/mock-sdk.tsx), so there
-// is no second pane to focus. That case is pinned in jsdom
-// (tests/new-thread-shortcut.test.tsx, tests/search-focus-slash.test.tsx,
-// tests/app-native-split-awareness.test.tsx).
+// The pane-FOCUS half of the fix (the letter fires only while the board's own
+// pane is the focused pane in bb's split layout) cannot be reproduced here:
+// the harness mounts the board as the only pane and its
+// `useSidebarSplitLayout` mock returns null statically
+// (scripts/screenshot/mock-sdk.tsx), and a null layout is a single pane, which
+// the rule treats as the board's own pane. So these cases exercise the armed
+// board. That half is pinned in jsdom (tests/new-thread-shortcut.test.tsx,
+// tests/search-focus-slash.test.tsx, tests/app-native-split-awareness.test.tsx)
+// and the host facts it relies on were read live by
+// scripts/screenshot/probe-native-split-pane.mjs (the board's pane container
+// carries the pane id the layout reports) and
+// scripts/screenshot/probe-board-mount-lifetime.mjs (the panel leaves the
+// document when the route leaves it).
 //
 // Usage: node scripts/screenshot/probe-shortcut-typing.mjs
 // Honors CHROME_PATH and PORT. Exit code is 0 only when every case holds.

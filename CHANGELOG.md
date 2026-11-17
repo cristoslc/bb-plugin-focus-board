@@ -24,7 +24,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 #### The board's shortcuts
 
-- **The board's keys stay on the board.** A letter or `/` typed anywhere you can type now inserts text instead of opening the New Thread composer or jumping the board's search field. A keystroke in another pane, or with a thread pane focused beside the board, leaves the board alone.
+- **The board's keys stay on the board.** A letter or `/` typed anywhere you can type inserts text instead of opening the New Thread composer or jumping the search field. Both keys fire only while the board's own pane holds focus, so another pane's keystrokes leave the board alone.
 
 #### The thread pane
 
