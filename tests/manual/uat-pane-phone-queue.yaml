@@ -13,8 +13,9 @@ defaults:
 steps:
   - id: a-phone-taps-the-queued-row-reveal-and-sends
     title: On a phone the pane's queued-row reveal control is tappable and Send clears the row (issue #296)
-    goto: "?groupBy=status&queuedSend=1"
-    click: { card: thr_uat_queue }
+    # The native-pane move: the pane is entered by its deep link now that
+    # card clicks open bb's own pane.
+    goto: "?groupBy=status&queuedSend=1#/plugins/focus-board/board/t/thr_uat_queue"
     assert:
       - pane: { threadId: thr_uat_queue }
       - queued_send_reach: { row: 1 }

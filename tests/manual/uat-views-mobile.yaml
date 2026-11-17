@@ -27,15 +27,19 @@ steps:
       - column: unread
         ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]
 
-  - id: a-card-click-opens-the-pane
-    title: Clicking a card opens the pane at phone width
+  - id: a-card-click-opens-the-native-pane
+    title: Clicking a card opens its thread in bb's native pane at phone width
     goto: "?groupBy=status"
     click: { card: thr_rpc_auth }
     assert:
-      - pane: { threadId: thr_rpc_auth }
+      - native_open: { threadId: thr_rpc_auth, split: true }
+      - pane: { open: false }
 
   - id: escape-closes-the-phone-pane
     title: Escape closes the pane back onto the board
+    # The pane enters by its deep link (the native-pane move); the compact
+    # sheet and its Escape close are unchanged.
+    goto: "?groupBy=status#/plugins/focus-board/board/t/thr_rpc_auth"
     press_escape: true
     assert:
       - pane: { open: false }

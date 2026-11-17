@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-11-08T05:06:53.831Z by `npm run uat`._
+_Generated 2026-11-17T20:52:35.173Z by `npm run uat`._
 
 ## parent-lanes
 
@@ -12,14 +12,15 @@ Source: `tests/manual/uat-parent-lanes.yaml` · theme dark
 | The board opens with a family locked as the ruler lane and band tracks aligned | pass | ✓ locked lane: true; ✓ bands aligned across lanes; ✓ nest toggle: aria-checked=true aria-disabled=true; ✓ text hidden: "Standalone" |
 | A short pan that mostly brings the next lane in locks that lane | pass | ✓ locked lane: "thr_sweep_parent"; ✓ bands aligned across lanes |
 | Hovering a swimlane shades that row across every lane | pass | ✓ swimlane hover shades one row across lanes |
-| Clicking a lane header opens the parent thread's pane | pass | ✓ pane open; ✓ text visible: "Parent thread lane fixture"; ✓ url ends with /board/t/thr_parent_lane |
-| Clicking a child card opens its thread pane | pass | ✓ pane shows thr_child_lane; ✓ active card is thr_child_lane; ✓ url ends with /board/t/thr_child_lane |
+| Clicking a lane header opens the parent thread in bb's native pane | pass | ✓ native open thr_parent_lane with split; ✓ pane closed; ✓ text visible: "Parent thread lane fixture" |
+| Clicking a child card opens its thread in bb's native pane | pass | ✓ native open thr_child_lane with split; ✓ pane closed |
 | A deep-linked child in the rightmost lane is scrolled into view | pass | ✓ pane shows thr_child_lane; ✓ active card is thr_child_lane; ✓ active card visible |
-| Clicking a card in a context lane keeps it fully visible after the relock and recut | pass | ✓ locked lane: "thr_sweep_parent"; ✓ card visible: thr_sweep_child |
+| A short pan on the parent board locks the lane nearest the ruler | pass | ✓ locked lane: "thr_parent_lane" |
+| Clicking a card in a context lane opens it natively and never disturbs the locked lane | pass | ✓ native open thr_sweep_child with split; ✓ locked lane: "thr_parent_lane"; ✓ pane closed |
 | A horizontal pan releases the ruler lock and re-locks the nearest family at rest | pass | ✓ locked lane: true; ✓ bands aligned across lanes |
 | After a pan the board settles quiet, bounded glide events then stillness | pass | ✓ board quiet after pan: ≤60 events, still ≥500ms; ✓ locked lane: true |
 | A real wheel-event pan re-locks the nearest lane and settles quiet | pass | ✓ board quiet after pan: ≤80 events, still ≥500ms; ✓ locked lane: true; ✓ bands aligned across lanes |
-| Clicking a family header while a pan glide is in flight locks THAT lane, not the pan's target | pass | ✓ locked lane: "thr_parent_lane"; ✓ bands aligned across lanes |
+| Clicking a family header while a pan glide is in flight opens the thread natively and leaves the board locked and aligned | pass | ✓ native open thr_parent_lane with split; ✓ locked lane: true; ✓ bands aligned across lanes |
 | A small wheel overshoot inside the locked lane's grab window snaps back flush and keeps the lock | pass | ✓ locked lane: "thr_parent_lane"; ✓ locked lane pinned flush against the rail; ✓ bands aligned across lanes |
 | Resizing the viewport wider while a lane is locked keeps the ruler locked and bands aligned | pass | ✓ locked lane: "thr_parent_lane"; ✓ bands aligned across lanes |
 | Resizing the viewport narrower while a lane is locked keeps the ruler locked and bands aligned | pass | ✓ locked lane: "thr_parent_lane"; ✓ bands aligned across lanes |

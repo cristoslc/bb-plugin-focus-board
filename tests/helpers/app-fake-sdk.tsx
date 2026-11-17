@@ -166,8 +166,21 @@ function mutateThread(threadId: string, patch: (thread: FakeSidebarThread) => Fa
 }
 
 // One stable actions object across renders (same identity lesson as rpc).
+// `open` records every call (the native-pane move's click switch): the
+// card click's contract is now "the host's own opener, split on", and the
+// fake has no native pane to render, so the recorded call is the
+// observable the tests assert.
+const nativeOpens: Array<{ threadId: string; split?: boolean }> = [];
+export function fakeNativeOpens(): Array<{ threadId: string; split?: boolean }> {
+  return structuredClone(nativeOpens);
+}
+export function resetFakeNativeOpens(): void {
+  nativeOpens.splice(0, nativeOpens.length);
+}
 const fakeActions = {
-  open: () => {},
+  open: (threadId: string, options?: { split?: boolean }) => {
+    nativeOpens.push({ threadId, split: options?.split });
+  },
   openNewThread: () => {},
   setPinned: (threadId: string, pinned: boolean) =>
     new Promise((resolve) => {
@@ -202,11 +215,12 @@ export function experimental_useSidebarThreadActions(): unknown {
   return fakeActions;
 }
 
-// The split layout the board's native-pane awareness reads: null means
-// "no split" — what a single-pane board route reports on a real host.
-// Controllable so a test can focus a native thread pane and read the
-// board's follow (attention capture, active card) exactly as it follows
-// its own pane's open thread.
+// The split layout the board’s native-pane awareness reads, and the pane-cap
+// guard the card click consults: null means "no split" — what a single-pane
+// board route reports on a real host. Controllable so a test can focus a native
+// thread pane and read the board’s follow (attention capture, active card)
+// exactly as it follows its own pane’s open thread, and so the click tests can
+// drive the ceiling layouts the guard exists for.
 interface FakeSplitPane {
   paneId: string;
   threadId: string | null;
@@ -240,10 +254,23 @@ export function experimental_useProviders(): unknown {
 
 // A panel route the app's pushes always fail (returns false): the pane then
 // opens in fallback mode — component state alone, no history integration.
-// Stable identity: callbacks hanging off navigate must not churn.
+// Stable identity: callbacks hanging off navigate must not churn. Every
+// call is recorded (the native-pane move): the in-panel route is the pane's
+// own surface now that card clicks open bb's native pane, so a test can pin
+// exactly which gestures still push it.
+const panelPushes: Array<{ path: string; subPath: string; replace: boolean }> = [];
+export function fakePanelPushes(): Array<{ path: string; subPath: string; replace: boolean }> {
+  return structuredClone(panelPushes);
+}
+export function resetFakePanelPushes(): void {
+  panelPushes.splice(0, panelPushes.length);
+}
 const fakeNavigate = {
   toThread: () => {},
-  toPluginPanel: (): boolean => false,
+  toPluginPanel: (path: string, options?: { subPath?: string; replace?: boolean }): boolean => {
+    panelPushes.push({ path, subPath: options?.subPath ?? "", replace: options?.replace === true });
+    return false;
+  },
 };
 
 export function useBbNavigate(): unknown {

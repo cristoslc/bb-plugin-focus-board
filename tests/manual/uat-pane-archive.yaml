@@ -7,9 +7,10 @@ defaults:
   theme: dark
 steps:
   - id: open-the-pane
-    title: Clicking a card opens its pane
-    goto: "?groupBy=status"
-    click: { card: thr_review_pr }
+    title: The pane opens on the thread (deep-linked; card clicks open bb's own pane now)
+    # The native-pane move: the pane is entered by its deep link, the same
+    # state a shared URL lands on.
+    goto: "?groupBy=status#/plugins/focus-board/board/t/thr_review_pr"
     assert:
       - pane: { threadId: thr_review_pr }
       - text_visible: "Review PR #14"

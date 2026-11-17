@@ -87,14 +87,13 @@ describe("a live idle → active flip while the card's attention is frozen", () 
   it("with the pane open on it, the card moves from Unread to Working", async () => {
     const Component = registeredNavPanel.component;
     if (Component === undefined) throw new Error("app-fake-sdk: no nav panel registered");
-    render(<Component subPath="" />);
+    // The pane enters by its deep link (the native-pane move): the subPath
+    // mount, the state a shared URL lands on. The attention freeze adopts
+    // the placement the same way a click-open used to.
+    render(<Component subPath="t/thr_busy" />);
 
-    await waitFor(() => expect(columnCardIds("unread")).toContain("thr_busy"));
-
-    // Open the pane: the attention freeze captures the rendered placement.
-    fireEvent.click(cardAnchor("thr_busy"));
     await waitFor(() => expect(screen.getByLabelText("Close thread pane")).toBeTruthy());
-    expect(columnCardIds("unread")).toContain("thr_busy");
+    await waitFor(() => expect(columnCardIds("unread")).toContain("thr_busy"));
 
     // The host's status-changed patch lands as a fresh sidebar row.
     seedFakeThreads(fixtureThreads("active"));
@@ -106,16 +105,19 @@ describe("a live idle → active flip while the card's attention is frozen", () 
   it("re-lanes when the pane closes after the flip (no leaked pin)", async () => {
     const Component = registeredNavPanel.component;
     if (Component === undefined) throw new Error("app-fake-sdk: no nav panel registered");
-    render(<Component subPath="" />);
+    const view = render(<Component subPath="t/thr_busy" />);
 
-    await waitFor(() => expect(columnCardIds("unread")).toContain("thr_busy"));
-    fireEvent.click(cardAnchor("thr_busy"));
     await waitFor(() => expect(screen.getByLabelText("Close thread pane")).toBeTruthy());
+    await waitFor(() => expect(columnCardIds("unread")).toContain("thr_busy"));
 
     seedFakeThreads(fixtureThreads("active"));
     await waitFor(() => expect(columnCardIds("unread")).toContain("thr_busy"));
 
+    // The pane's close asks the panel route to close; the fake host declines
+    // pushes, so the settle — the subPath flip the real host's own push
+    // lands — is driven by the rerender.
     fireEvent.click(screen.getByLabelText("Close thread pane")!);
+    view.rerender(<Component subPath="" />);
     await waitFor(() => expect(columnCardIds("working")).toContain("thr_busy"));
     expect(columnCardIds("unread")).not.toContain("thr_busy");
   });

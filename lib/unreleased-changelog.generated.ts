@@ -6,6 +6,13 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "bb's thread pages"
   },
   {
+    "text": "**Clicking a card opens the thread in bb's own pane beside the board.** The thread opens as a split pane that keeps the board in view, and a click on an already-open thread just focuses it. The board's in-panel pane stays reachable through shared links and its own reference chips for now.",
+    "children": [
+      "At bb's eight-pane ceiling the click opens the board's own pane instead, because the host's split placement would otherwise replace the board's pane, the very surface the click was made on."
+    ],
+    "group": "bb's thread pages"
+  },
+  {
     "text": "**On bb 0.49 the pane and the New Thread dialog stop duplicating the host.** The host now routes file links in a plugin chat and offers New project in its composer, so the board's own file-link patches and its second New project button stand down there; hosts below 0.49 keep them.",
     "children": [],
     "group": "bb's thread pages"

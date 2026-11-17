@@ -626,9 +626,15 @@ function mockPublishArchivedChanged(): void {
   }
 }
 
+// The native-pane move's click switch: the card click calls the host's own
+// opener, and the harness has no native pane to render, so the observable
+// is the recorded call — what the uat-native-open suite asserts.
+const nativeOpenLog: Array<{ threadId: string; split?: boolean }> = [];
 export function experimental_useSidebarThreadActions(): unknown {
   return {
-    open: () => {},
+    open: (threadId: string, options?: { split?: boolean }) => {
+      nativeOpenLog.push({ threadId, split: options?.split });
+    },
     openNewThread: () => {},
     setPinned: async (threadId: string, pinned: boolean) => {
       (globalThis as unknown as { __pinLog?: Array<{ threadId: string; pinned: boolean }> }).__pinLog =
@@ -1198,6 +1204,9 @@ function adoptHostOp(op: HostOp): void {
   },
   ranks: () => structuredClone(ordersFromFractionStore(simRanks)),
   calls: () => structuredClone(uatCalls),
+  /** The card clicks' native opens (the native-pane move): the last open
+   *  call first — the freshest gesture is what a step asserts. */
+  nativeOpens: () => [...nativeOpenLog].reverse(),
   /** The thread ids the harness's mock moved into the archived set — the
    *  sweep's visible write, for the parent-view sweep suite. */
   sweepArchived: () => simArchived.map((thread) => thread.id),

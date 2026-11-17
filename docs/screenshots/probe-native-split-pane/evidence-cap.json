@@ -1,0 +1,383 @@
+{
+  "stateA": {
+    "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+    "boardVisible": true,
+    "paneCount": 1,
+    "panes": [
+      {
+        "id": "pane-1",
+        "x": 320,
+        "y": 0,
+        "w": 1280,
+        "h": 1200,
+        "hasBoard": true,
+        "title": "",
+        "threadHref": "/projects/proj_9da9h742i7/threads/thr_9hvf4kvdnn"
+      }
+    ],
+    "boardPaneIds": [
+      "pane-1"
+    ],
+    "focusedPaneId": "pane-1",
+    "layoutPaneCount": 1
+  },
+  "first": "thr_p7udn6q2mr",
+  "openFirst": {
+    "threadId": "thr_p7udn6q2mr",
+    "opened": true
+  },
+  "repeatFirst": {
+    "threadId": "thr_p7udn6q2mr",
+    "opened": false,
+    "reason": "no Open-in-split entry (menu already split?)"
+  },
+  "afterFirst": {
+    "url": "http://127.0.0.1:38886/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr",
+    "boardVisible": true,
+    "paneCount": 2,
+    "panes": [
+      {
+        "id": "pane-1",
+        "x": 320,
+        "y": 0,
+        "w": 640,
+        "h": 1200,
+        "hasBoard": true,
+        "title": "",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-2",
+        "x": 961,
+        "y": 0,
+        "w": 640,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "What the child will change and what it will not",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_rsmf9vukiy"
+      }
+    ],
+    "boardPaneIds": [
+      "pane-1"
+    ],
+    "focusedPaneId": "pane-2",
+    "layoutPaneCount": 2
+  },
+  "afterRepeat": {
+    "url": "http://127.0.0.1:38886/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr",
+    "boardVisible": true,
+    "paneCount": 2,
+    "panes": [
+      {
+        "id": "pane-1",
+        "x": 320,
+        "y": 0,
+        "w": 640,
+        "h": 1200,
+        "hasBoard": true,
+        "title": "",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-2",
+        "x": 961,
+        "y": 0,
+        "w": 640,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "What the child will change and what it will not",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_rsmf9vukiy"
+      }
+    ],
+    "boardPaneIds": [
+      "pane-1"
+    ],
+    "focusedPaneId": "pane-2",
+    "layoutPaneCount": 2
+  },
+  "atCeiling": {
+    "url": "http://127.0.0.1:38886/projects/proj_xkd2gczj6w/threads/thr_zdnzd2ed2u",
+    "boardVisible": true,
+    "paneCount": 8,
+    "panes": [
+      {
+        "id": "pane-1",
+        "x": 320,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": true,
+        "title": "",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-2",
+        "x": 480,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "What the child will change and what it will not",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_rsmf9vukiy"
+      },
+      {
+        "id": "pane-3",
+        "x": 640,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "New Leadership summary sentence",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-4",
+        "x": 800,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task: render the reframed resumes to PDF and review the rendered pages",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-5",
+        "x": 961,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task: reframe the capitalization claim as a systems-fluency story",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-6",
+        "x": 1121,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task: fix the three capitalization guardrail leftovers (rule-backed, s",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-7",
+        "x": 1281,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task (sole focus): review the capitalization wording on the generic an",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-8",
+        "x": 1441,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task: backpropagate the 2025-2026 gap-sweep findings into the brag boo",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_r2zj5n79np"
+      }
+    ],
+    "boardPaneIds": [
+      "pane-1"
+    ],
+    "focusedPaneId": "pane-8",
+    "layoutPaneCount": 8
+  },
+  "afterBoardFocus": {
+    "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+    "boardVisible": true,
+    "paneCount": 8,
+    "panes": [
+      {
+        "id": "pane-1",
+        "x": 320,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": true,
+        "title": "",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-2",
+        "x": 480,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "What the child will change and what it will not",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_rsmf9vukiy"
+      },
+      {
+        "id": "pane-3",
+        "x": 640,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "New Leadership summary sentence",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-4",
+        "x": 800,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task: render the reframed resumes to PDF and review the rendered pages",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-5",
+        "x": 961,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task: reframe the capitalization claim as a systems-fluency story",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-6",
+        "x": 1121,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task: fix the three capitalization guardrail leftovers (rule-backed, s",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-7",
+        "x": 1281,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task (sole focus): review the capitalization wording on the generic an",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-8",
+        "x": 1441,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task: backpropagate the 2025-2026 gap-sweep findings into the brag boo",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_r2zj5n79np"
+      }
+    ],
+    "boardPaneIds": [
+      "pane-1"
+    ],
+    "focusedPaneId": "pane-1",
+    "layoutPaneCount": 8
+  },
+  "capOpen": {
+    "threadId": "thr_r2zj5n79np",
+    "opened": true
+  },
+  "afterCap": {
+    "url": "http://127.0.0.1:38886/projects/proj_xkd2gczj6w/threads/thr_r2zj5n79np",
+    "boardVisible": false,
+    "paneCount": 8,
+    "panes": [
+      {
+        "id": "pane-1",
+        "x": 320,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task: find 2025-2026 achievements missing from the brag book",
+        "threadHref": "/projects/proj_9da9h742i7/threads/thr_9hvf4kvdnn"
+      },
+      {
+        "id": "pane-2",
+        "x": 480,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "What the child will change and what it will not",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_rsmf9vukiy"
+      },
+      {
+        "id": "pane-3",
+        "x": 640,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "New Leadership summary sentence",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-4",
+        "x": 800,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task: render the reframed resumes to PDF and review the rendered pages",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-5",
+        "x": 961,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task: reframe the capitalization claim as a systems-fluency story",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-6",
+        "x": 1121,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task: fix the three capitalization guardrail leftovers (rule-backed, s",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-7",
+        "x": 1281,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task (sole focus): review the capitalization wording on the generic an",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+      },
+      {
+        "id": "pane-8",
+        "x": 1441,
+        "y": 0,
+        "w": 159,
+        "h": 1200,
+        "hasBoard": false,
+        "title": "Task: backpropagate the 2025-2026 gap-sweep findings into the brag boo",
+        "threadHref": "/projects/proj_xkd2gczj6w/threads/thr_r2zj5n79np"
+      }
+    ],
+    "boardPaneIds": [],
+    "focusedPaneId": "pane-1",
+    "layoutPaneCount": 8
+  },
+  "verdict": {
+    "repeatOpenFocusedRatherThanDuplicated": true,
+    "boardSurvivedCapFallback": false,
+    "boardReplacedByCapFallback": true,
+    "boardPaneIdBefore": "pane-1",
+    "boardPaneIdAfter": null
+  }
+}

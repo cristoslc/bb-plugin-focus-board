@@ -1,6 +1,12 @@
 # Operator-assisted E2E: the open pane's thread lives in the panel's URL
 # subPath, so bb's back arrow reopens the pane state the user left — including
-# the trail of cards they lost track of.
+# the trail of panes the pane's own links opened.
+#
+# The native-pane move (dec_nhnljjo8rgbz) changed the entry gestures: a card
+# click now opens bb's own native pane (its contract is the
+# uat-native-open suite), so the in-panel route trail this suite walks is
+# entered by its remaining pushers — the deep link and the pane's own
+# reference chips — which are also the entries the deletion slice keeps.
 #
 # Rendered and driven for real: the harness mounts the actual app.tsx against
 # the mocked SDK (scripts/screenshot), whose mock router performs genuine
@@ -28,51 +34,40 @@ defaults:
   viewport: { width: 1920, height: 640 }
 
 steps:
-  - id: click-opens-pane-and-pushes-route
-    title: Clicking a card opens its pane and pushes a panel route
-    goto: "?groupBy=status"
-    click: { card: thr_uat_queue }
+  - id: deep-link-opens-the-pane-and-adopts-the-route
+    title: A deep link to the panel's thread subPath opens the board with that pane
+    goto: "?groupBy=status&uat=1#/plugins/focus-board/board/t/thr_review_pr"
     assert:
-      - pane: { threadId: thr_uat_queue }
-      - active_card: { id: thr_uat_queue }
-      - url: { suffix: "/board/t/thr_uat_queue" }
+      - pane: { threadId: thr_review_pr }
+      - active_card: { id: thr_review_pr }
+      - url: { suffix: "/board/t/thr_review_pr" }
 
-  - id: switching-cards-stacks-history
-    title: Switching cards pushes, so each opened pane is one history entry
-    click: { card: thr_rpc_auth }
+  - id: a-pane-chip-pushes-a-second-entry
+    title: Opening a listed thread from the pane's reference chip pushes, so each opened pane is one history entry
+    gestures:
+      - click_aria: "Open thread Wrap check: long path with the open glyph"
     assert:
-      - pane: { threadId: thr_rpc_auth }
-      - url: { suffix: "/board/t/thr_rpc_auth" }
+      - pane: { threadId: thr_glyph_glue }
+      - url: { suffix: "/board/t/thr_glyph_glue" }
 
   - id: back-through-the-trail
-    title: Back reopens the previous card's pane — the card you lost track of
+    title: Back reopens the previous pane — the card you lost track of
     back: true
     assert:
-      - pane: { threadId: thr_uat_queue }
-      - active_card: { id: thr_uat_queue }
-      - url: { suffix: "/board/t/thr_uat_queue" }
-
-  - id: back-at-the-first-entry-closes-the-pane
-    title: Back from the first opened card closes the pane at the panel root
-    back: true
-    assert:
-      - pane: { open: false }
-      - active_card: { id: null }
-      # Two backs from the first pane land on the document the board started
-      # on — the pre-pane entry, before any pane route was pushed.
-      - url: { suffix: "?groupBy=status" }
+      - pane: { threadId: thr_review_pr }
+      - active_card: { id: thr_review_pr }
+      - url: { suffix: "/board/t/thr_review_pr" }
 
   - id: back-from-a-foreign-surface-restores-the-pane
     title: The bb back-arrow case — out to another surface, back, pane restored
-    click: { card: thr_uat_queue }
     # A push to a surface the mock router does not own — the shape of a
     # link-out to main bb. The app's own state is untouched by it.
     push_url: "/projects/web/threads/thr_review_pr"
     back: true
     assert:
-      - pane: { threadId: thr_uat_queue }
-      - active_card: { id: thr_uat_queue }
-      - url: { suffix: "/board/t/thr_uat_queue" }
+      - pane: { threadId: thr_review_pr }
+      - active_card: { id: thr_review_pr }
+      - url: { suffix: "/board/t/thr_review_pr" }
 
   - id: escape-close-keeps-the-trail
     title: Escape closes the pane by pushing the root — back after a close reopens
@@ -86,19 +81,15 @@ steps:
     title: Back after a close reopens the last pane — close is not lost work
     back: true
     assert:
-      - pane: { threadId: thr_uat_queue }
-      - url: { suffix: "/board/t/thr_uat_queue" }
-
-  - id: deep-link-opens-the-pane
-    title: A deep link to the panel's thread subPath opens the board with that pane
-    goto: "?groupBy=status#/plugins/focus-board/board/t/thr_rpc_auth"
-    assert:
-      - pane: { threadId: thr_rpc_auth }
-      - active_card: { id: thr_rpc_auth }
+      - pane: { threadId: thr_review_pr }
+      - url: { suffix: "/board/t/thr_review_pr" }
 
   - id: scroll-brings-restored-card-into-view
     title: A restored card below the fold is scrolled into view
-    goto: "?groupBy=status#/plugins/focus-board/board/t/thr_review_pr"
+    # &uat=2, distinct from the opening step's &uat=1: a hash-only goto is a
+    # same-document navigation, so the distinguishing query param is what
+    # makes this a real reload (the state below starts clean).
+    goto: "?groupBy=status&uat=2#/plugins/focus-board/board/t/thr_review_pr"
     assert:
       - pane: { threadId: thr_review_pr }
       - active_card: { id: thr_review_pr, visible: true }

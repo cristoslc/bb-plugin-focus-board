@@ -75,14 +75,15 @@ steps:
       - reparent_called: { threadId: thr_gutter_family_c0_gc0, parentThreadId: null }
       - sub_row: { id: thr_gutter_family_c0_gc0, under: thr_gutter_family_c0, shown: false }
 
-  - id: dots-still-open-their-pane
-    title: After the gestures, a dot still opens its thread on click
+  - id: dots-still-open-their-thread
+    title: After the gestures, a dot still opens its thread on click — in bb's native pane
     goto: "?groupBy=status"
     gestures:
       - click_aria: { label: "Collapse subthreads", within: thr_big_family }
       - click_aria: "Open child thread: Legacy board 1: migrate rows and links"
     assert:
-      - pane: { threadId: thr_big_c0 }
+      - native_open: { threadId: thr_big_c0, split: true }
+      - pane: { open: false }
 
   # Issue #249, goal 6 (cut 4): a CARD dragged into a dot field children it.
   # The write is the existing thread_reparent nest path, and the refetch

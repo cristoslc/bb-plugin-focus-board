@@ -57,7 +57,11 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
 - Gestures run in the order the step declares them, so a pane-history step
   can sequence pushes and backs deliberately.
 - `pane` (`{ threadId: thr_x }`, `{ open: false }`) reads the pane aside's
-  aria-label; `active_card` reads the board's own `aria-current` marker plus
+  aria-label; `native_open` (`{ threadId: thr_x, split: true }`) reads the
+  mock's record of `experimental_useSidebarThreadActions().open` calls —
+  the card click's contract on the native-pane move, since the harness has
+  no native pane to render (the live split behaviour rides the probe
+  evidence in `docs/screenshots/probe-native-split-pane/`); `active_card` reads the board's own `aria-current` marker plus
   whether the card is in view; `column_card_visible` (`thr_x`) asserts the
   card sits fully inside the columns board's own scroll viewport — the
   assertion for relocations that follow no active thread (the Pinned lane is

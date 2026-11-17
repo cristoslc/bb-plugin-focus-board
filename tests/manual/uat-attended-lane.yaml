@@ -30,9 +30,13 @@ steps:
     title: A card open in the pane re-lanes to Working when its row turns active
     # Unread: thr_rpc_auth (26m) · thr_uat_queue (2h) · thr_review_pr (3h).
     # Working: thr_column_sort (40s) · thr_drag_done (12m).
-    goto: "?groupBy=status"
+    # The native-pane move: the pane is entered by its deep link now that
+    # card clicks open bb's own pane; the re-lane-under-attention subject is
+    # unchanged. The &uat=n params keep each step's goto a cross-document
+    # reload — a hash-only change would navigate in the same document and
+    # carry the previous step's simulated sidebar over.
+    goto: "?groupBy=status&uat=1#/plugins/focus-board/board/t/thr_rpc_auth"
     gestures:
-      - click: { card: thr_rpc_auth }
       # The host's status-changed patch: the same patch bb's sidebar applies.
       - push_update: { threadId: thr_rpc_auth, patch: { status: "active", runtimeStatus: "active" } }
     assert:
@@ -46,9 +50,9 @@ steps:
 
   - id: a-needs-you-attended-card-surfaces
     title: A card open in the pane surfaces in Needs you when it starts waiting on the operator
-    goto: "?groupBy=status"
+    # The pane enters by its deep link (the native-pane move).
+    goto: "?groupBy=status&uat=2#/plugins/focus-board/board/t/thr_review_pr"
     gestures:
-      - click: { card: thr_review_pr }
       # An approval/question arrives on the attended card.
       - push_update: { threadId: thr_review_pr, patch: { hasPendingInteraction: true } }
     assert:
@@ -62,9 +66,9 @@ steps:
 
   - id: closing-the-pane-still-agrees
     title: Closing the pane leaves the card in the lane its state picks
-    goto: "?groupBy=status"
+    # The pane enters by its deep link (the native-pane move).
+    goto: "?groupBy=status&uat=3#/plugins/focus-board/board/t/thr_rpc_auth"
     gestures:
-      - click: { card: thr_rpc_auth }
       - push_update: { threadId: thr_rpc_auth, patch: { status: "active", runtimeStatus: "active" } }
       # The pane's own close button, not Escape: Escape in the pane's chat
       # stops a running thread, which this suite must never do.

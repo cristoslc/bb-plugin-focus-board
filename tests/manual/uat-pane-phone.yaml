@@ -9,8 +9,11 @@ defaults:
 steps:
   - id: a-card-opens-the-pane-on-phone
     title: On a phone viewport the pane opens over the board (the full-screen sheet)
-    goto: "?groupBy=status"
-    click: { card: thr_uat_queue }
+    # The native-pane move: a card click now opens bb's own pane, so the
+    # board's pane is entered the way its remaining entries do — the deep
+    # link (the pane still participates in URL state) — and the sheet
+    # behavior under test is unchanged.
+    goto: "?groupBy=status#/plugins/focus-board/board/t/thr_uat_queue"
     assert:
       - pane: { threadId: thr_uat_queue }
   - id: the-compact-actions-menu-carries-full-screen

@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-06T15:50:32.446Z by `npm run uat`._
+_Generated 2026-11-17T20:52:49.795Z by `npm run uat`._
 
 ## dot-drag-family
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_4qh62ybyi5-1/bb-plugin-focus-board/tests/manual/uat-dot-drag.yaml` · theme dark
+Source: `tests/manual/uat-dot-drag.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
@@ -13,6 +13,6 @@ Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees
 | A dot dragged out of its strip lights the family card (the in-place morph) | pass |  |
 | Releasing the dragged dot on another column's floor un-parents it entirely | pass | ✓ thread_reparent {"threadId":"thr_big_c3","parentThreadId":null}; ✓ strip dots of thr_big_family |
 | A sub-dot dragged out un-parents the deep member the same way | pass | ✓ thread_reparent {"threadId":"thr_gutter_family_c0_gc0","parentThreadId":null}; ✓ no sub-row (thr_gutter_family_c0_gc0) |
-| After the gestures, a dot still opens its thread on click | pass | ✓ pane shows thr_big_c0 |
+| After the gestures, a dot still opens its thread on click — in bb's native pane | pass | ✓ native open thr_big_c0 with split; ✓ pane closed |
 | Dropping the stranger card onto the family's dot field children it | pass | ✓ thread_reparent {"threadId":"thr_rpc_auth","parentThreadId":"thr_gutter_family"}; ✓ strip dots of thr_gutter_family |
 | Dropping the family's own root onto its dot field refuses loudly | pass | ✓ failure reported on screen |

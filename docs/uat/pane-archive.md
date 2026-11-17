@@ -1,13 +1,13 @@
 # UAT report
 
-_Generated 2026-11-06T15:50:32.446Z by `npm run uat`._
+_Generated 2026-11-17T20:51:26.273Z by `npm run uat`._
 
 ## pane-archive
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_4qh62ybyi5-1/bb-plugin-focus-board/tests/manual/uat-pane-archive.yaml` · theme dark
+Source: `tests/manual/uat-pane-archive.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
-| Clicking a card opens its pane | pass | ✓ pane shows thr_review_pr; ✓ text visible: "Review PR #14" |
+| The pane opens on the thread (deep-linked; card clicks open bb's own pane now) | pass | ✓ pane shows thr_review_pr; ✓ text visible: "Review PR #14" |
 | Archive in the pane's actions menu removes the card from the board; the pane stays open on the archived thread | pass | ✓ pane open; ✓ text visible: "Review PR #14"; ✓ unread order |
 | An archived row's menu keeps its Unarchive (its only way out) and drops the Pin entry | pass | ✓ text visible: "Unarchive" |
