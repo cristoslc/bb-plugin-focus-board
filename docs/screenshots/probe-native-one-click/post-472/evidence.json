@@ -1,0 +1,250 @@
+{
+  "evidence": {
+    "fresh": {
+      "before": {
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": ""
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": null,
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "cards": [
+        {
+          "threadId": "thr_r282wvvnkf",
+          "title": "HomeLab Infrastructure orchestrator",
+          "x": 448,
+          "y": 206,
+          "visible": true
+        },
+        {
+          "threadId": "thr_bcymmhtpms",
+          "title": "Orchestrate media stack threads",
+          "x": 460,
+          "y": 349,
+          "visible": true
+        },
+        {
+          "threadId": "thr_8nbzpbmm3c",
+          "title": "Homelab Security Orchestrator",
+          "x": 448,
+          "y": 432,
+          "visible": true
+        },
+        {
+          "threadId": "thr_29gxjg77x4",
+          "title": "Homelab Application Services Orchestrator",
+          "x": 445,
+          "y": 640,
+          "visible": true
+        }
+      ],
+      "firstClick": {
+        "threadId": "thr_r282wvvnkf",
+        "title": "HomeLab Infrastructure orchestrator",
+        "x": 448,
+        "y": 206,
+        "visible": true
+      },
+      "afterFirstClick": {
+        "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_r282wvvnkf"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "closedAfterFirst": true,
+      "secondClick": {
+        "threadId": "thr_bcymmhtpms",
+        "title": "Orchestrate media stack threads",
+        "x": 460,
+        "y": 349,
+        "visible": true
+      },
+      "afterSecondClick": {
+        "route": "/plugins/focus-board/board/t/thr_bcymmhtpms",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_bcymmhtpms"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: Orchestrate media stack threads",
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "closedAfterSecond": true,
+      "doubleClickCard": {
+        "threadId": "thr_bcymmhtpms",
+        "title": "Orchestrate media stack threads",
+        "x": 460,
+        "y": 349,
+        "visible": true
+      },
+      "afterDoubleClick": {
+        "route": "/plugins/focus-board/board/t/thr_bcymmhtpms",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_bcymmhtpms"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: Orchestrate media stack threads",
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      }
+    },
+    "recorded": {
+      "before": {
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": ""
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": null,
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "afterFirstClick": {
+        "route": "/plugins/focus-board/board/t/thr_bcymmhtpms",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_bcymmhtpms"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: Orchestrate media stack threads",
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "afterSecondClick": {
+        "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_r282wvvnkf"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "afterDoubleClick": {
+        "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_r282wvvnkf"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+        "compactViewport": false,
+        "viewportWidth": 1600,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      }
+    }
+  },
+  "verdict": {
+    "freshFirstClickOpenedAPane": false,
+    "freshThreadPanes": [],
+    "freshRouteAfterFirstClick": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+    "freshBoardMountedAfterFirstClick": true,
+    "secondClickThreadPanes": [],
+    "secondClickPaneCount": 1,
+    "doubleClickThreadPanes": [],
+    "doubleClickRoute": "/plugins/focus-board/board/t/thr_bcymmhtpms",
+    "doubleClickBoardMounted": true,
+    "doubleClickPaneCount": 1,
+    "recordedFirstClickThreadPanes": [],
+    "recordedSecondClickThreadPanes": [],
+    "recordedDoubleClickThreadPanes": [],
+    "recordedDoubleClickRoute": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+    "inBoardPaneAfterFirstClick": "Thread: HomeLab Infrastructure orchestrator",
+    "inBoardPaneAfterSecondClick": "Thread: Orchestrate media stack threads",
+    "compactViewport": false,
+    "viewportWidth": 1600,
+    "routeAfterFirstClick": "/plugins/focus-board/board/t/thr_r282wvvnkf"
+  }
+}

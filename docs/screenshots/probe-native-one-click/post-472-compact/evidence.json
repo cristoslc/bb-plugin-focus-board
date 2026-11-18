@@ -1,0 +1,250 @@
+{
+  "evidence": {
+    "fresh": {
+      "before": {
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": ""
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": null,
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "cards": [
+        {
+          "threadId": "thr_bcymmhtpms",
+          "title": "Orchestrate media stack threads",
+          "x": 140,
+          "y": 196,
+          "visible": true
+        },
+        {
+          "threadId": "thr_r282wvvnkf",
+          "title": "HomeLab Infrastructure orchestrator",
+          "x": 128,
+          "y": 283,
+          "visible": true
+        },
+        {
+          "threadId": "thr_8nbzpbmm3c",
+          "title": "Homelab Security Orchestrator",
+          "x": 128,
+          "y": 432,
+          "visible": true
+        },
+        {
+          "threadId": "thr_29gxjg77x4",
+          "title": "Homelab Application Services Orchestrator",
+          "x": 125,
+          "y": 640,
+          "visible": true
+        }
+      ],
+      "firstClick": {
+        "threadId": "thr_bcymmhtpms",
+        "title": "Orchestrate media stack threads",
+        "x": 140,
+        "y": 196,
+        "visible": true
+      },
+      "afterFirstClick": {
+        "route": "/plugins/focus-board/board/t/thr_bcymmhtpms",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_bcymmhtpms"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: Orchestrate media stack threads",
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "closedAfterFirst": true,
+      "secondClick": {
+        "threadId": "thr_r282wvvnkf",
+        "title": "HomeLab Infrastructure orchestrator",
+        "x": 128,
+        "y": 283,
+        "visible": true
+      },
+      "afterSecondClick": {
+        "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_r282wvvnkf"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "closedAfterSecond": true,
+      "doubleClickCard": {
+        "threadId": "thr_r282wvvnkf",
+        "title": "HomeLab Infrastructure orchestrator",
+        "x": 128,
+        "y": 283,
+        "visible": true
+      },
+      "afterDoubleClick": {
+        "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_r282wvvnkf"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      }
+    },
+    "recorded": {
+      "before": {
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": ""
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": null,
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "afterFirstClick": {
+        "route": "/plugins/focus-board/board/t/thr_bcymmhtpms",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_bcymmhtpms"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: Orchestrate media stack threads",
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "afterSecondClick": {
+        "route": "/plugins/focus-board/board/t/thr_bcymmhtpms",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_bcymmhtpms"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: Orchestrate media stack threads",
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      },
+      "afterDoubleClick": {
+        "route": "/plugins/focus-board/board/t/thr_bcymmhtpms",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "t/thr_bcymmhtpms"
+          }
+        ],
+        "boardMounted": true,
+        "inBoardPane": "Thread: Orchestrate media stack threads",
+        "compactViewport": true,
+        "viewportWidth": 700,
+        "pluginRecord": null,
+        "consoleErrors": [],
+        "nativeTrace": []
+      }
+    }
+  },
+  "verdict": {
+    "freshFirstClickOpenedAPane": false,
+    "freshThreadPanes": [],
+    "freshRouteAfterFirstClick": "/plugins/focus-board/board/t/thr_bcymmhtpms",
+    "freshBoardMountedAfterFirstClick": true,
+    "secondClickThreadPanes": [],
+    "secondClickPaneCount": 1,
+    "doubleClickThreadPanes": [],
+    "doubleClickRoute": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+    "doubleClickBoardMounted": true,
+    "doubleClickPaneCount": 1,
+    "recordedFirstClickThreadPanes": [],
+    "recordedSecondClickThreadPanes": [],
+    "recordedDoubleClickThreadPanes": [],
+    "recordedDoubleClickRoute": "/plugins/focus-board/board/t/thr_bcymmhtpms",
+    "inBoardPaneAfterFirstClick": "Thread: Orchestrate media stack threads",
+    "inBoardPaneAfterSecondClick": "Thread: HomeLab Infrastructure orchestrator",
+    "compactViewport": true,
+    "viewportWidth": 700,
+    "routeAfterFirstClick": "/plugins/focus-board/board/t/thr_bcymmhtpms"
+  }
+}
