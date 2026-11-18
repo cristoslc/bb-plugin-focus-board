@@ -1,0 +1,348 @@
+{
+  "?groupBy=status&laneDirection=horizontal": [
+    {
+      "id": "thr_sweep_parent",
+      "found": true,
+      "card": {
+        "tag": "div",
+        "rect": {
+          "top": 983,
+          "bottom": 1418,
+          "left": 686,
+          "right": 926,
+          "width": 240,
+          "height": 435
+        },
+        "height": "434.5px",
+        "minHeight": "0px",
+        "maxHeight": "none",
+        "overflowX": "hidden",
+        "overflowY": "hidden",
+        "flex": "0 1 auto",
+        "className": "group relative overflow-hidden rounded-md bg-card [@media(hover:none)]:select-none transition-[color,background-color,border-color,outline-color,text-decoration-color,opacity,fill,stroke] dark:hover:bg-[color-mix(in_oklab,var(--card)_80%,black)] pb-3 ring-1 ring-transparent hover:ring-border",
+        "clientHeight": 435,
+        "scrollHeight": 435,
+        "clientWidth": 240,
+        "scrollWidth": 240
+      },
+      "cardList": {
+        "tag": "div",
+        "rect": {
+          "top": 977,
+          "bottom": 1458,
+          "left": 172,
+          "right": 378,
+          "width": 206,
+          "height": 481
+        },
+        "height": "480.5px",
+        "minHeight": "0px",
+        "maxHeight": "none",
+        "overflowX": "auto",
+        "overflowY": "clip",
+        "flex": "1 1 0%",
+        "className": "min-h-0 flex-1 rounded-lg bg-muted/30 p-1.5 touch-manipulation overflow-x-auto overflow-y-clip",
+        "clientHeight": 481,
+        "scrollHeight": 481,
+        "clientWidth": 206,
+        "scrollWidth": 754
+      },
+      "lane": {
+        "tag": "section",
+        "rect": {
+          "top": 977,
+          "bottom": 1458,
+          "left": 12,
+          "right": 378,
+          "width": 366,
+          "height": 481
+        },
+        "height": "480.5px",
+        "minHeight": "288px",
+        "maxHeight": "none",
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flex": "0 0 auto",
+        "className": "flex min-h-72 w-full min-w-0 shrink-0 flex-row rounded-lg transition-colors",
+        "clientHeight": 481,
+        "scrollHeight": 481,
+        "clientWidth": 366,
+        "scrollWidth": 366
+      },
+      "rows": 5,
+      "rowsOutOfView": 0,
+      "handle": {
+        "tag": "button",
+        "rect": {
+          "top": 1383,
+          "bottom": 1406,
+          "left": 707,
+          "right": 914,
+          "width": 207,
+          "height": 23
+        },
+        "height": "23px",
+        "minHeight": "0px",
+        "maxHeight": "none",
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flex": "0 1 auto",
+        "className": "mt-1 flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/60 py-1 text-[11px] text-muted-foreground/80 transition-colors hover:bg-accent/60 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "clientHeight": 21,
+        "scrollHeight": 21,
+        "clientWidth": 205,
+        "scrollWidth": 205
+      },
+      "handleOutOfView": false,
+      "contentBottom": 1406
+    },
+    {
+      "id": "thr_proj_family",
+      "found": true,
+      "card": {
+        "tag": "div",
+        "rect": {
+          "top": 2392,
+          "bottom": 2572,
+          "left": 670,
+          "right": 910,
+          "width": 240,
+          "height": 180
+        },
+        "height": "180px",
+        "minHeight": "0px",
+        "maxHeight": "none",
+        "overflowX": "hidden",
+        "overflowY": "hidden",
+        "flex": "0 1 auto",
+        "className": "group relative overflow-hidden rounded-md bg-card [@media(hover:none)]:select-none transition-[color,background-color,border-color,outline-color,text-decoration-color,opacity,fill,stroke] dark:hover:bg-[color-mix(in_oklab,var(--card)_80%,black)] pb-3 ring-1 ring-transparent hover:ring-border",
+        "clientHeight": 180,
+        "scrollHeight": 180,
+        "clientWidth": 240,
+        "scrollWidth": 240
+      },
+      "cardList": {
+        "tag": "div",
+        "rect": {
+          "top": 2386,
+          "bottom": 2865,
+          "left": 172,
+          "right": 378,
+          "width": 206,
+          "height": 479
+        },
+        "height": "479px",
+        "minHeight": "0px",
+        "maxHeight": "none",
+        "overflowX": "auto",
+        "overflowY": "clip",
+        "flex": "1 1 0%",
+        "className": "min-h-0 flex-1 rounded-lg bg-muted/30 p-1.5 touch-manipulation overflow-x-auto overflow-y-clip",
+        "clientHeight": 479,
+        "scrollHeight": 479,
+        "clientWidth": 206,
+        "scrollWidth": 1230
+      },
+      "lane": {
+        "tag": "section",
+        "rect": {
+          "top": 2386,
+          "bottom": 2865,
+          "left": 12,
+          "right": 378,
+          "width": 366,
+          "height": 479
+        },
+        "height": "479px",
+        "minHeight": "288px",
+        "maxHeight": "none",
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flex": "0 0 auto",
+        "className": "flex min-h-72 w-full min-w-0 shrink-0 flex-row rounded-lg transition-colors",
+        "clientHeight": 479,
+        "scrollHeight": 479,
+        "clientWidth": 366,
+        "scrollWidth": 366
+      },
+      "rows": 1,
+      "rowsOutOfView": 0,
+      "handle": null,
+      "handleOutOfView": null,
+      "contentBottom": 2560
+    }
+  ],
+  "?groupBy=status": [
+    {
+      "id": "thr_sweep_parent",
+      "found": true,
+      "card": {
+        "tag": "div",
+        "rect": {
+          "top": 286,
+          "bottom": 721,
+          "left": 834,
+          "right": 1078,
+          "width": 244,
+          "height": 435
+        },
+        "height": "434.5px",
+        "minHeight": "0px",
+        "maxHeight": "none",
+        "overflowX": "hidden",
+        "overflowY": "hidden",
+        "flex": "0 1 auto",
+        "className": "group relative overflow-hidden rounded-md bg-card [@media(hover:none)]:select-none transition-[color,background-color,border-color,outline-color,text-decoration-color,opacity,fill,stroke] dark:hover:bg-[color-mix(in_oklab,var(--card)_80%,black)] pb-3 ring-1 ring-transparent hover:ring-border",
+        "clientHeight": 435,
+        "scrollHeight": 435,
+        "clientWidth": 244,
+        "scrollWidth": 244
+      },
+      "cardList": {
+        "tag": "div",
+        "rect": {
+          "top": 88,
+          "bottom": 832,
+          "left": 828,
+          "right": 1084,
+          "width": 256,
+          "height": 744
+        },
+        "height": "744px",
+        "minHeight": "0px",
+        "maxHeight": "none",
+        "overflowX": "clip",
+        "overflowY": "auto",
+        "flex": "1 1 0%",
+        "className": "min-h-0 flex-1 rounded-lg bg-muted/30 p-1.5 touch-manipulation overflow-y-auto overflow-x-clip",
+        "clientHeight": 744,
+        "scrollHeight": 744,
+        "clientWidth": 256,
+        "scrollWidth": 256
+      },
+      "lane": {
+        "tag": "section",
+        "rect": {
+          "top": 65,
+          "bottom": 832,
+          "left": 828,
+          "right": 1084,
+          "width": 256,
+          "height": 767
+        },
+        "height": "767px",
+        "minHeight": "0px",
+        "maxHeight": "none",
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flex": "0 0 auto",
+        "className": "flex h-full min-h-0 w-64 shrink-0 flex-col rounded-lg transition-colors",
+        "clientHeight": 767,
+        "scrollHeight": 767,
+        "clientWidth": 256,
+        "scrollWidth": 256
+      },
+      "rows": 5,
+      "rowsOutOfView": 0,
+      "handle": {
+        "tag": "button",
+        "rect": {
+          "top": 686,
+          "bottom": 709,
+          "left": 855,
+          "right": 1066,
+          "width": 211,
+          "height": 23
+        },
+        "height": "23px",
+        "minHeight": "0px",
+        "maxHeight": "none",
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flex": "0 1 auto",
+        "className": "mt-1 flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/60 py-1 text-[11px] text-muted-foreground/80 transition-colors hover:bg-accent/60 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "clientHeight": 21,
+        "scrollHeight": 21,
+        "clientWidth": 209,
+        "scrollWidth": 209
+      },
+      "handleOutOfView": false,
+      "contentBottom": 709
+    },
+    {
+      "id": "thr_proj_family",
+      "found": true,
+      "card": {
+        "tag": "div",
+        "rect": {
+          "top": 318,
+          "bottom": 498,
+          "left": 1922,
+          "right": 2166,
+          "width": 244,
+          "height": 180
+        },
+        "height": "180px",
+        "minHeight": "0px",
+        "maxHeight": "none",
+        "overflowX": "hidden",
+        "overflowY": "hidden",
+        "flex": "0 1 auto",
+        "className": "group relative overflow-hidden rounded-md bg-card [@media(hover:none)]:select-none transition-[color,background-color,border-color,outline-color,text-decoration-color,opacity,fill,stroke] dark:hover:bg-[color-mix(in_oklab,var(--card)_80%,black)] pb-3 ring-1 ring-transparent hover:ring-border",
+        "clientHeight": 180,
+        "scrollHeight": 180,
+        "clientWidth": 244,
+        "scrollWidth": 244
+      },
+      "cardList": {
+        "tag": "div",
+        "rect": {
+          "top": 91,
+          "bottom": 832,
+          "left": 1916,
+          "right": 2172,
+          "width": 256,
+          "height": 741
+        },
+        "height": "741px",
+        "minHeight": "0px",
+        "maxHeight": "none",
+        "overflowX": "clip",
+        "overflowY": "auto",
+        "flex": "1 1 0%",
+        "className": "min-h-0 flex-1 rounded-lg bg-muted/30 p-1.5 touch-manipulation overflow-y-auto overflow-x-clip",
+        "clientHeight": 741,
+        "scrollHeight": 1201,
+        "clientWidth": 256,
+        "scrollWidth": 256
+      },
+      "lane": {
+        "tag": "section",
+        "rect": {
+          "top": 65,
+          "bottom": 832,
+          "left": 1916,
+          "right": 2172,
+          "width": 256,
+          "height": 767
+        },
+        "height": "767px",
+        "minHeight": "0px",
+        "maxHeight": "none",
+        "overflowX": "visible",
+        "overflowY": "visible",
+        "flex": "0 0 auto",
+        "className": "flex h-full min-h-0 w-64 shrink-0 flex-col rounded-lg transition-colors",
+        "clientHeight": 767,
+        "scrollHeight": 767,
+        "clientWidth": 256,
+        "scrollWidth": 256
+      },
+      "rows": 1,
+      "rowsOutOfView": 0,
+      "handle": null,
+      "handleOutOfView": null,
+      "contentBottom": 486
+    }
+  ]
+}
