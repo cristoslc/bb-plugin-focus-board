@@ -1,0 +1,45 @@
+{
+  "before": {
+    "paneCount": 1,
+    "focusedPaneId": "pane-1",
+    "kinds": [
+      "plugin-panel"
+    ],
+    "route": "/plugins/focus-board/board",
+    "tabs": []
+  },
+  "afterCreate": {
+    "paneCount": 1,
+    "focusedPaneId": "pane-1",
+    "kinds": [
+      "plugin-panel"
+    ],
+    "route": "/plugins/focus-board/board",
+    "tabs": []
+  },
+  "afterReload": {
+    "paneCount": 1,
+    "focusedPaneId": "pane-1",
+    "kinds": [
+      "plugin-panel"
+    ],
+    "route": "/plugins/focus-board/board",
+    "tabs": []
+  },
+  "verdict": {
+    "panesBefore": 1,
+    "panesAfterTerminalCreate": 1,
+    "panesAfterReload": 1,
+    "splitCreated": false,
+    "created": {
+      "status": 201,
+      "id": "term_wpmag3js54",
+      "shape": "{\"id\":\"term_wpmag3js54\",\"threadId\":\"thr_p7udn6q2mr\",\"environmentId\":\"env_y2rgvmnuv7\",\"hostId\":\"host_yat733yf8z\",\"title\":\"focus-board split-prime probe\",\"initialCwd\":\"/Users/cristos/Documents/projects/Project Hal\",\"cols\":80,\"rows\":20,\"status"
+    },
+    "closed": {
+      "status": 200,
+      "body": "{\"id\":\"term_wpmag3js54\",\"threadId\":\"thr_p7udn6q2mr\",\"environmentId\":\"env_y2rgvmnuv7\",\"hostId\":\"host_yat733yf8z\",\"title\":\"focus-board split-prime probe\",\"initial"
+    }
+  },
+  "errors": []
+}

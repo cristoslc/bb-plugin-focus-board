@@ -166,3 +166,36 @@ Creating a pane is the only ask the board makes while blind, and it is the ask t
 So the rule changed: **a native split is only asked for to focus or replace a pane the board can name.** Everything else opens the board's own in-panel pane, which is one pane that changes thread and cannot be lost. The creation branch is gone, the replacement's deadline fallback opens the board's pane instead of asking the opener for a new one, and #467's repair stays wired into the replacement as a safety net. It now also checks that no pane holds the thread before restoring the route, because bb re-creates the plugin panel's subtree on a split that worked (the marker is briefly absent after a successful replace).
 
 Option 1 from the review (count panes from the DOM, `data-split-pane-id` plus the focused pane's marker) is the way back to native creation, and it is not in this change: proving it against bb's own count for 1, 2, 5 and 8 panes needs a live matrix this change does not have.
+
+## 9. The simplification: three questions and one measurement
+
+The rule kept growing because one host fact was assumed rather than measured: **whether a card click starts with the board focused.** Every piece of machinery after §8 (the persisted record's null pane id, the prior-pane rule, the intent, the deadline) existed to survive that assumption and the panel re-creation around it. The operator's reading, in their words: "I think you've been massively overcomplicating the side pane integration with host."
+
+`scripts/screenshot/probe-card-click-focus-trace.mjs` measures it in a fresh browser profile, at two panes (board plus a thread pane opened from bb's own sidebar), with the pointer parked over a board card. Evidence: `docs/screenshots/probe-card-click-focus/evidence.json`. Focus per pane, per step:
+
+| Step | pane-1 (board) | pane-2 (thread) | route |
+|---|---|---|---|
+| pointer parked over the card | ─ | **focused** | the thread's |
+| `pointerdown`, document capture | ─ | **focused** | the thread's |
+| `pointerdown` handler done, `mousedown` | **focused** | ─ | the board panel |
+| `click` (before the board's own handler) | **focused** | ─ | the board panel |
+
+So the assumption holds: the host focuses a pane on press (`onPointerDown` → `focusPane` in `SplitThreadArea`), which means the board is focused by the time a card's handler runs, bb replaces the FOCUSED pane, and a click that wants Focus Board's pane has to focus it first. The focus step is forced by the host, not by the board's design.
+
+What that leaves, and what it costs:
+
+- **Kept, because the host forces it**: the two-step replacement (focus Focus Board's pane by opening the thread it shows, then navigate the clicked thread into the focused pane), the 400ms deadline that turns an unconfirmed focus into the board's own pane, the persisted record (bb re-creates the plugin panel's subtree when the layout changes, so anything the click keeps only in React state can be gone before the host answers), the layout-based recognition, and the eight-pane guard.
+- **Deleted**, all of it machinery for a record that could not name its pane: the null-`paneId` claiming rule, the whole `priorPaneIds` rule ("claim whichever pane shows the thread that was not there at click time"), the record write in the focus branch (a record always names a pane now), the `NativeCardPlacement` type and `planNativeCardPlacement`/`nativeSplitUnavailable` (the branches read top to bottom in the click), and the separate `clearReplaceDeadline` callback (the unmount cleanup owns the timer). Line counts: `lib/native-pane-ownership.ts` 286 → 142, `tests/native-pane-ownership.test.ts` 237 → 131, and the click path in `app.tsx` (`app.tsx:3025-3137`, comment block included) 141 → 113. The whole diff is 491 lines removed against 309 added, and 62 of the added lines are tests.
+- **A record on disk with `paneId: null`** reads as no record: such a pane cannot be named, and adopting a pane the board cannot name is the guess §8 removed.
+- **The double click** now re-asks for the focus on the thread the pane still shows, not on the clicked one. The clicked thread is in no pane, so asking the opener for it with `split: true` was a request for a new right-hand pane.
+
+Two host facts were checked before anything was deleted:
+
+- `PluginSidebarSplitLayout.panes[]` is `{ paneId, rect, threadId: string | null, isFocused }`, documented "The thread this pane shows, or null for non-thread content" (`@get-bb/plugin-sdk` `bb-plugin-sdk.d.ts`), so a pane showing a thread is recognisable and a pane showing plugin content is not.
+- The pane cap needs no new branch: at the eight-pane ceiling the guard still answers first, and every remaining host call is either a focus of an open thread or a navigation into an already-focused pane, neither of which creates a pane.
+
+### Can anything else create the first split?
+
+The operator proposed priming a split with something guaranteed to open one (a terminal, a browser pane) and then putting the thread into the pane it created. On paper there is no channel: `BbNavigate` has three destinations, `openFixedTab` addresses only the current surface, and `terminal.open`/`browser.*` exist only as keybinding names. The pane content union is the reason: `qN` in the renderer strictly parses `thread | new-thread | plugin-panel | plugin-detail`, so no terminal or browser can occupy a pane slot at all.
+
+Measured anyway, once, at one pane (`scripts/screenshot/probe-prime-split.mjs`, evidence `docs/screenshots/probe-card-click-focus/prime-split.json`): `POST /api/v1/terminals` answered 201 with a real terminal session and the layout stayed at ONE pane, before and after a reload; the plugin runtime carries no `openFixedTab` at all. Nothing splits a one-pane window except a thread, a new-thread screen, or a plugin panel, and every one of those openers sits behind the same `layout === null → navigate` gate. **There is no priming channel**, so the fallback to the board's own pane at one pane is the answer, not a workaround.

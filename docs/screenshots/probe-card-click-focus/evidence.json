@@ -1,0 +1,3652 @@
+{
+  "app": "http://127.0.0.1:38886/plugins/focus-board/board",
+  "sidebarThreads": [
+    "thr_p7udn6q2mr",
+    "thr_dryygaxv5k",
+    "thr_6yqnhfqhmm",
+    "thr_rsmf9vukiy",
+    "thr_dpg6sbsht4",
+    "thr_9b9raw8tkb",
+    "thr_zdnzd2ed2u",
+    "thr_r2zj5n79np",
+    "thr_a7pk6mrq7s",
+    "thr_9hvf4kvdnn",
+    "thr_j7j3nc98a8",
+    "thr_kdtatb4se2",
+    "thr_c3ezcmuqxe",
+    "thr_nx5ufefdju",
+    "thr_evrsqnns2m",
+    "thr_q9ymwyy4mg",
+    "thr_inawujv5dc",
+    "thr_h8idjxbnea",
+    "thr_n2zb6eee9s",
+    "thr_eup7y4wjyy",
+    "thr_vd3jv8spvx",
+    "thr_cvvvkw6rjz",
+    "thr_duva59pjai",
+    "thr_cy4brht4fw",
+    "thr_udwv3id9rw",
+    "thr_88qhbzr5zp",
+    "thr_pxtnyir8zs",
+    "thr_vpr4jrzdpf",
+    "thr_zfuwqac27x",
+    "thr_c3pkxjrj9u",
+    "thr_diumwmdj3h",
+    "thr_v5fez9jaki",
+    "thr_8x4m5zk6ur",
+    "thr_yiv3hpk6vy",
+    "thr_6ta8qrr48m",
+    "thr_zemfnbe7as",
+    "thr_xcc9yqg7fy",
+    "thr_kuru9e3sfn",
+    "thr_hqhehbccc9",
+    "thr_2t3cg6pz3q",
+    "thr_43kriv6d3b",
+    "thr_zarecg8n6x",
+    "thr_zyhxpwujai",
+    "thr_fsmjfu46ks",
+    "thr_9b7rui4hz6",
+    "thr_dbfgcengvu",
+    "thr_8nbzpbmm3c",
+    "thr_29gxjg77x4",
+    "thr_jtdjf8af9m",
+    "thr_r282wvvnkf",
+    "thr_nwfrtpa6pt",
+    "thr_tf8zuywpur",
+    "thr_ze3fypk9jr",
+    "thr_8k6d652cjw",
+    "thr_6d38n33qmm",
+    "thr_ksexuty3dj",
+    "thr_zvkpwgy849",
+    "thr_6zhgkgjaww",
+    "thr_5u29w266v9",
+    "thr_rumecchp9s",
+    "thr_u77sfumfxq",
+    "thr_gy4zhsrdvq",
+    "thr_bjzcv2hgfq",
+    "thr_6kcadz3nq9",
+    "thr_n2iw2x6qeq",
+    "thr_bgnt8swbff",
+    "thr_cyyyqxsvix",
+    "thr_cmmicjy9jj",
+    "thr_g6kxhnqr84",
+    "thr_hbda2qu47c",
+    "thr_dihr9incb4",
+    "thr_xupxhhqxxd",
+    "thr_eqqq6bmzug",
+    "thr_maufmdmr5q",
+    "thr_q45wdpwryh",
+    "thr_nusa59caqp",
+    "thr_z96v9bwja7",
+    "thr_msyjn52jwr",
+    "thr_fj92jbzhpy",
+    "thr_g6grp7rzwj",
+    "thr_babmmz2w9g",
+    "thr_3y2fifb8xb",
+    "thr_kup5zk6cy8",
+    "thr_kmgq5syfy3",
+    "thr_spfe8gpdiw",
+    "thr_79edbxkh69",
+    "thr_xpb3j47c9r",
+    "thr_ftfw8y94nk",
+    "thr_j6fraztqpz",
+    "thr_ui7bx76ccf",
+    "thr_7rbkpx2vx7",
+    "thr_6upukv2hpk",
+    "thr_xehqexnwpx",
+    "thr_4trmw5mjcr",
+    "thr_gy23yqvv4u",
+    "thr_ywp2wij95a",
+    "thr_bemnkvy7yj",
+    "thr_nvnprqmtcr",
+    "thr_qv2xhsb82p",
+    "thr_bur6g2wg77",
+    "thr_hsvcwvh6zn",
+    "thr_ktxgim3vbc",
+    "thr_cp93amc56t",
+    "thr_edtfr8a4b6",
+    "thr_xmjtgfh6ss",
+    "thr_ipjmadp2w4",
+    "thr_asg3pjt76t",
+    "thr_e9gy7xe7vm",
+    "thr_vwm3y9cnwm",
+    "thr_qz9i2m4e9a",
+    "thr_trh2acgjg9",
+    "thr_kb82ubfvy7",
+    "thr_kjrjwvc2w7",
+    "thr_f4gkes2dtm",
+    "thr_9n72e4g3ec",
+    "thr_n8gg4p2um3",
+    "thr_8anu7u4dxz",
+    "thr_wyd6w59r5u",
+    "thr_94pjhkxj9c",
+    "thr_p5ds8zaipe",
+    "thr_m6vyga9j7g",
+    "thr_wvrviteij2",
+    "thr_aaqjn2mgcx",
+    "thr_2rjqqc6ihq",
+    "thr_qnb273eb7f",
+    "thr_t5pumjnej8",
+    "thr_74nzddea9w",
+    "thr_fq2ycsuvd2",
+    "thr_zq9xinj74k",
+    "thr_4qh62ybyi5",
+    "thr_gkjxwg6n3h",
+    "thr_s5vbtjtgwe",
+    "thr_vjf5n5zzim",
+    "thr_ffin4vfi2p",
+    "thr_6sf5hk9f4m",
+    "thr_yecmjb6nfu",
+    "thr_em96i5i5qt",
+    "thr_p8cuqzriu8",
+    "thr_q2927xrzt2",
+    "thr_dh96xx4b5f",
+    "thr_mpbr4vbci2",
+    "thr_83hfbqjwjs"
+  ],
+  "opener": "thr_p7udn6q2mr",
+  "twoPanes": {
+    "atom": "layout",
+    "paneCount": 2,
+    "focusedPaneId": "pane-2",
+    "panes": [
+      {
+        "paneId": "pane-1",
+        "kind": "plugin-panel",
+        "threadId": null,
+        "focused": false,
+        "holdsBoard": true,
+        "domFocused": "false"
+      },
+      {
+        "paneId": "pane-2",
+        "kind": "thread",
+        "threadId": "thr_p7udn6q2mr",
+        "focused": true,
+        "holdsBoard": false,
+        "domFocused": "true"
+      }
+    ],
+    "boardMounted": true,
+    "boardBox": {
+      "x": 320,
+      "y": 48,
+      "w": 640,
+      "h": 1152
+    },
+    "route": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr",
+    "inBoardPane": null,
+    "label": "two-panes:after-sidebar-split"
+  },
+  "trace": [
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-2",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": false,
+          "holdsBoard": true,
+          "domFocused": "false"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": true,
+          "holdsBoard": false,
+          "domFocused": "true"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr",
+      "inBoardPane": null,
+      "label": "click-1:before-pointerdown",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "before-pointerdown"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board",
+      "inBoardPane": null,
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "pointerdown:in-handler"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board",
+      "inBoardPane": null,
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "click:in-handler"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+50ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+50ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+100ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+100ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+150ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+150ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+200ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+200ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+250ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+250ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+300ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+300ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+350ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+350ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+400ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+400ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+450ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+450ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+500ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+500ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+550ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+550ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+600ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+600ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+650ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+650ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+700ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+700ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+750ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+750ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+800ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+800ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+850ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+850ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+900ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+900ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+950ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+950ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1000ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1000ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1050ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1050ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1100ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1100ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1150ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1150ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1200ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1200ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1250ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1250ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1300ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1300ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1350ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1350ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1400ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1400ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1450ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1450ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1500ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1500ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1550ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1550ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1600ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1600ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1650ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1650ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1700ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1700ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1750ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1750ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1800ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1800ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1850ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1850ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1900ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1900ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+1950ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+1950ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+      "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+      "label": "click-1:+2000ms",
+      "thread": "thr_9hvf4kvdnn",
+      "phase": "+2000ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board",
+      "inBoardPane": null,
+      "label": "click-2:before-pointerdown",
+      "thread": "thr_r282wvvnkf",
+      "phase": "before-pointerdown"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board",
+      "inBoardPane": null,
+      "thread": "thr_r282wvvnkf",
+      "phase": "pointerdown:in-handler"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board",
+      "inBoardPane": null,
+      "thread": "thr_r282wvvnkf",
+      "phase": "click:in-handler"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+50ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+50ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+100ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+100ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+150ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+150ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+200ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+200ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+250ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+250ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+300ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+300ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+350ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+350ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+400ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+400ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+450ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+450ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+500ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+500ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+550ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+550ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+600ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+600ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+650ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+650ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+700ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+700ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+750ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+750ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+800ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+800ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+850ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+850ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+900ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+900ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+950ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+950ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1000ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1000ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1050ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1050ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1100ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1100ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1150ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1150ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1200ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1200ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1250ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1250ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1300ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1300ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1350ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1350ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1400ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1400ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1450ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1450ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1500ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1500ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1550ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1550ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1600ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1600ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1650ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1650ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1700ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1700ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1750ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1750ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1800ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1800ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1850ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1850ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1900ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1900ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+1950ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+1950ms"
+    },
+    {
+      "atom": "layout",
+      "paneCount": 2,
+      "focusedPaneId": "pane-1",
+      "panes": [
+        {
+          "paneId": "pane-1",
+          "kind": "plugin-panel",
+          "threadId": null,
+          "focused": true,
+          "holdsBoard": true,
+          "domFocused": "true"
+        },
+        {
+          "paneId": "pane-2",
+          "kind": "thread",
+          "threadId": "thr_p7udn6q2mr",
+          "focused": false,
+          "holdsBoard": false,
+          "domFocused": "false"
+        }
+      ],
+      "boardMounted": true,
+      "boardBox": {
+        "x": 320,
+        "y": 48,
+        "w": 640,
+        "h": 1152
+      },
+      "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+      "inBoardPane": "Thread: HomeLab Infrastructure orchestrator",
+      "label": "click-2:+2000ms",
+      "thread": "thr_r282wvvnkf",
+      "phase": "+2000ms"
+    }
+  ],
+  "clickSamples": {
+    "first": [
+      {
+        "phase": "pointerdown",
+        "t": 15409,
+        "state": {
+          "atom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": false,
+              "holdsBoard": true,
+              "domFocused": "false"
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_p7udn6q2mr",
+              "focused": true,
+              "holdsBoard": false,
+              "domFocused": "true"
+            }
+          ],
+          "boardMounted": true,
+          "boardBox": {
+            "x": 320,
+            "y": 48,
+            "w": 640,
+            "h": 1152
+          },
+          "route": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr",
+          "inBoardPane": null
+        },
+        "targetThreadCard": "thr_9hvf4kvdnn",
+        "activeElement": "A"
+      },
+      {
+        "phase": "mousedown",
+        "t": 15700,
+        "state": {
+          "atom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": true,
+              "holdsBoard": true,
+              "domFocused": "true"
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_p7udn6q2mr",
+              "focused": false,
+              "holdsBoard": false,
+              "domFocused": "false"
+            }
+          ],
+          "boardMounted": true,
+          "boardBox": {
+            "x": 320,
+            "y": 48,
+            "w": 640,
+            "h": 1152
+          },
+          "route": "/plugins/focus-board/board",
+          "inBoardPane": null
+        },
+        "targetThreadCard": "thr_9hvf4kvdnn",
+        "activeElement": "A"
+      },
+      {
+        "phase": "pointerdown",
+        "t": 15409,
+        "state": {
+          "atom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": false,
+              "holdsBoard": true,
+              "domFocused": "false"
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_p7udn6q2mr",
+              "focused": true,
+              "holdsBoard": false,
+              "domFocused": "true"
+            }
+          ],
+          "boardMounted": true,
+          "boardBox": {
+            "x": 320,
+            "y": 48,
+            "w": 640,
+            "h": 1152
+          },
+          "route": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr",
+          "inBoardPane": null
+        },
+        "targetThreadCard": "thr_9hvf4kvdnn",
+        "activeElement": "A"
+      },
+      {
+        "phase": "mousedown",
+        "t": 15700,
+        "state": {
+          "atom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": true,
+              "holdsBoard": true,
+              "domFocused": "true"
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_p7udn6q2mr",
+              "focused": false,
+              "holdsBoard": false,
+              "domFocused": "false"
+            }
+          ],
+          "boardMounted": true,
+          "boardBox": {
+            "x": 320,
+            "y": 48,
+            "w": 640,
+            "h": 1152
+          },
+          "route": "/plugins/focus-board/board",
+          "inBoardPane": null
+        },
+        "targetThreadCard": "thr_9hvf4kvdnn",
+        "activeElement": "A"
+      },
+      {
+        "phase": "pointerup",
+        "t": 15935,
+        "state": {
+          "atom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": true,
+              "holdsBoard": true,
+              "domFocused": "true"
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_p7udn6q2mr",
+              "focused": false,
+              "holdsBoard": false,
+              "domFocused": "false"
+            }
+          ],
+          "boardMounted": true,
+          "boardBox": {
+            "x": 320,
+            "y": 48,
+            "w": 640,
+            "h": 1152
+          },
+          "route": "/plugins/focus-board/board",
+          "inBoardPane": null
+        },
+        "targetThreadCard": "thr_9hvf4kvdnn",
+        "activeElement": "A"
+      },
+      {
+        "phase": "click",
+        "t": 15936,
+        "state": {
+          "atom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": true,
+              "holdsBoard": true,
+              "domFocused": "true"
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_p7udn6q2mr",
+              "focused": false,
+              "holdsBoard": false,
+              "domFocused": "false"
+            }
+          ],
+          "boardMounted": true,
+          "boardBox": {
+            "x": 320,
+            "y": 48,
+            "w": 640,
+            "h": 1152
+          },
+          "route": "/plugins/focus-board/board",
+          "inBoardPane": null
+        },
+        "targetThreadCard": "thr_9hvf4kvdnn",
+        "activeElement": "A"
+      }
+    ],
+    "second": [
+      {
+        "phase": "pointerdown",
+        "t": 21974,
+        "state": {
+          "atom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": true,
+              "holdsBoard": true,
+              "domFocused": "true"
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_p7udn6q2mr",
+              "focused": false,
+              "holdsBoard": false,
+              "domFocused": "false"
+            }
+          ],
+          "boardMounted": true,
+          "boardBox": {
+            "x": 320,
+            "y": 48,
+            "w": 640,
+            "h": 1152
+          },
+          "route": "/plugins/focus-board/board",
+          "inBoardPane": null
+        },
+        "targetThreadCard": "thr_r282wvvnkf",
+        "activeElement": "BODY"
+      },
+      {
+        "phase": "mousedown",
+        "t": 21975,
+        "state": {
+          "atom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": true,
+              "holdsBoard": true,
+              "domFocused": "true"
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_p7udn6q2mr",
+              "focused": false,
+              "holdsBoard": false,
+              "domFocused": "false"
+            }
+          ],
+          "boardMounted": true,
+          "boardBox": {
+            "x": 320,
+            "y": 48,
+            "w": 640,
+            "h": 1152
+          },
+          "route": "/plugins/focus-board/board",
+          "inBoardPane": null
+        },
+        "targetThreadCard": "thr_r282wvvnkf",
+        "activeElement": "BODY"
+      },
+      {
+        "phase": "pointerdown",
+        "t": 21974,
+        "state": {
+          "atom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": true,
+              "holdsBoard": true,
+              "domFocused": "true"
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_p7udn6q2mr",
+              "focused": false,
+              "holdsBoard": false,
+              "domFocused": "false"
+            }
+          ],
+          "boardMounted": true,
+          "boardBox": {
+            "x": 320,
+            "y": 48,
+            "w": 640,
+            "h": 1152
+          },
+          "route": "/plugins/focus-board/board",
+          "inBoardPane": null
+        },
+        "targetThreadCard": "thr_r282wvvnkf",
+        "activeElement": "BODY"
+      },
+      {
+        "phase": "mousedown",
+        "t": 21975,
+        "state": {
+          "atom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": true,
+              "holdsBoard": true,
+              "domFocused": "true"
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_p7udn6q2mr",
+              "focused": false,
+              "holdsBoard": false,
+              "domFocused": "false"
+            }
+          ],
+          "boardMounted": true,
+          "boardBox": {
+            "x": 320,
+            "y": 48,
+            "w": 640,
+            "h": 1152
+          },
+          "route": "/plugins/focus-board/board",
+          "inBoardPane": null
+        },
+        "targetThreadCard": "thr_r282wvvnkf",
+        "activeElement": "BODY"
+      },
+      {
+        "phase": "pointerup",
+        "t": 21987,
+        "state": {
+          "atom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": true,
+              "holdsBoard": true,
+              "domFocused": "true"
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_p7udn6q2mr",
+              "focused": false,
+              "holdsBoard": false,
+              "domFocused": "false"
+            }
+          ],
+          "boardMounted": true,
+          "boardBox": {
+            "x": 320,
+            "y": 48,
+            "w": 640,
+            "h": 1152
+          },
+          "route": "/plugins/focus-board/board",
+          "inBoardPane": null
+        },
+        "targetThreadCard": "thr_r282wvvnkf",
+        "activeElement": "A"
+      },
+      {
+        "phase": "click",
+        "t": 21988,
+        "state": {
+          "atom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": true,
+              "holdsBoard": true,
+              "domFocused": "true"
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_p7udn6q2mr",
+              "focused": false,
+              "holdsBoard": false,
+              "domFocused": "false"
+            }
+          ],
+          "boardMounted": true,
+          "boardBox": {
+            "x": 320,
+            "y": 48,
+            "w": 640,
+            "h": 1152
+          },
+          "route": "/plugins/focus-board/board",
+          "inBoardPane": null
+        },
+        "targetThreadCard": "thr_r282wvvnkf",
+        "activeElement": "A"
+      }
+    ]
+  },
+  "errors": []
+}
