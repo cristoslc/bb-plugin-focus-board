@@ -63,8 +63,42 @@ describe("shared host row", () => {
     });
   });
 
-  it("a merge unions both windows' folds instead of replacing them", () => {
+  it("a lane's bulk fold writes every id in one op and publishes one whole-row signal", () => {
+    const { state, signal } = apply(BASE, {
+      kind: "family_state_set_many",
+      key: "collapsedFamilies",
+      ids: ["thr_lane_a", "thr_lane_b"],
+      on: true,
+    });
+    expect(state.family).toEqual({
+      collapsedFamilies: ["thr_lane_a", "thr_lane_b"],
+      hideIdleChildren: [],
+    });
+    // The receiving window refetches off this one echo, exactly as it does
+    // for the merge: one lane, one signal, no per-family storm.
+    expect(signal).toEqual({
+      channel: "family-state-changed",
+      payload: { key: "collapsedFamilies", id: null, on: true },
+    });
+  });
+
+  it("a bulk expand moves only the ids it names", () => {
     const folded = apply(BASE, {
+      kind: "family_state_set_many",
+      key: "collapsedFamilies",
+      ids: ["thr_lane_a", "thr_other_lane"],
+      on: true,
+    }).state;
+    const { state } = apply(folded, {
+      kind: "family_state_set_many",
+      key: "collapsedFamilies",
+      ids: ["thr_lane_a"],
+      on: false,
+    });
+    expect(state.family.collapsedFamilies).toEqual(["thr_other_lane"]);
+  });
+
+  it("a merge unions both windows' folds instead of replacing them", () => {    const folded = apply(BASE, {
       kind: "family_state_set",
       key: "collapsedFamilies",
       id: "thr_first",

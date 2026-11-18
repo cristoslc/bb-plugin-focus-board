@@ -224,6 +224,7 @@ import {
 import { type ArchiveUnit } from "./lib/duration";
 import {
   familyStateMigration,
+  type FamilyStateKey,
   type FamilyStateStore,
 } from "./lib/family-state";
 import { usePrefersDarkScheme } from "./components/ui/hooks/use-media-query";
@@ -269,6 +270,16 @@ const EMPTY_FROZEN_COLUMNS: ReadonlyMap<string, { id: string; label: string }> =
  *  empties, so the Board's props never churn identity per render behind the
  *  covered sheet's quiet open (issue #406). */
 const EMPTY_CHILD_COUNTS: ReadonlyMap<string, number> = new Map();
+
+/**
+ * The lane menu entry a bulk family-state write came from, named for the
+ * save-error banner: a rejected lane-wide write says which action failed
+ * ("Collapse all didn't save: …"), never a bare host message.
+ */
+function familyStateBulkActionLabel(key: FamilyStateKey, on: boolean): string {
+  if (key === "collapsedFamilies") return on ? "Collapse all" : "Expand all";
+  return on ? "Hide idle children" : "Show idle children";
+}
 
 /**
  * `toPluginPanel` is typed `void`, but the host may return `false` when it
@@ -1964,7 +1975,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         .catch((error: unknown) => {
           refetchFamilyState();
           setFamilyStateSaveError(
-            error instanceof Error ? error.message : String(error),
+            `The fold didn't save: ${error instanceof Error ? error.message : String(error)}`,
           );
         });
     },
@@ -1984,7 +1995,35 @@ function BoardPage({ subPath }: { subPath: string }) {
         .catch((error: unknown) => {
           refetchFamilyState();
           setFamilyStateSaveError(
-            error instanceof Error ? error.message : String(error),
+            `The idle filter didn't save: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        });
+    },
+    [rpc, refetchFamilyState],
+  );
+  // The lane menu's bulk form of the two toggles above: one optimistic Set
+  // per call (never one per key), then ONE `family_state_set_many` write, so
+  // a lane of forty families costs one locked round trip instead of forty.
+  // A rejected write rolls the whole lane back to the server's truth and
+  // names the action that failed, never a silent partial fold.
+  const setFamilyStateMany = useCallback(
+    (key: FamilyStateKey, keys: readonly string[], on: boolean) => {
+      const applied = (current: ReadonlySet<string>): ReadonlySet<string> => {
+        const next = new Set(current);
+        for (const id of keys) {
+          if (on) next.add(id);
+          else next.delete(id);
+        }
+        return next;
+      };
+      if (key === "collapsedFamilies") setCollapsedFamilies(applied);
+      else setHideIdleFamilies(applied);
+      rpc
+        .call("family_state_set_many", { key, ids: [...keys], on })
+        .catch((error: unknown) => {
+          refetchFamilyState();
+          setFamilyStateSaveError(
+            `${familyStateBulkActionLabel(key, on)} didn't save: ${error instanceof Error ? error.message : String(error)}`,
           );
         });
     },
@@ -4476,6 +4515,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             onFamilyCollapsedChange={setFamilyCollapsed}
             hideIdleFamilyIds={hideIdleFamilies}
             onFamilyHideIdleChange={setFamilyHideIdle}
+            onSetFamilyStateMany={setFamilyStateMany}
             collapsedGroupIds={collapsedGroups}
             onGroupCollapsedChange={setGroupCollapsed}
             dimmedIds={dimmedIds}

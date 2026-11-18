@@ -118,3 +118,48 @@ steps:
           column: unread
           menuOpen: true
           menuOldestChecked: true
+
+  # The lane's bulk family controls: the card's own fold and idle toggles
+  # applied to every family the lane holds, in ONE write. The A-while-ago
+  # lane carries the seed's families (thr_parent_lane, thr_proj_family,
+  # thr_big_family), so it is the lane these steps act on.
+  - id: a-family-lane-offers-the-bulk-family-entries
+    title: A lane holding a family offers the four bulk entries, with Expand all and Show idle children checked
+    goto: "?groupBy=status"
+    click_aria: "Idle · A while ago lane actions"
+    assert:
+      - lane_sweep:
+          column: idle-awhile
+          menuOpen: true
+          menuFold: true
+          menuCollapseChecked: false
+          menuExpandChecked: true
+          menuIdleHideChecked: false
+          menuIdleShowChecked: true
+
+  - id: collapse-all-writes-one-bulk-call-and-folds-the-lane
+    title: Collapse all writes ONE family_state_set_many and the lane's families fold
+    goto: "?groupBy=status"
+    gestures:
+      - click_aria: "Idle · A while ago lane actions"
+      - click_aria: "Collapse all"
+    assert:
+      - rpc_last: { method: "family_state_set_many", args: { key: "collapsedFamilies", on: true } }
+      - rpc_not_called: "family_state_set"
+      - aria_present: "Expand subthreads"
+      - lane_sweep: { column: idle-awhile, menuOpen: false }
+
+  - id: the-folded-lane-reads-collapse-all-checked
+    title: A lane whose families are all folded marks Collapse all checked on reopen
+    goto: "?groupBy=status"
+    gestures:
+      - click_aria: "Idle · A while ago lane actions"
+      - click_aria: "Collapse all"
+      - click_aria: "Idle · A while ago lane actions"
+    assert:
+      - lane_sweep:
+          column: idle-awhile
+          menuOpen: true
+          menuFold: true
+          menuCollapseChecked: true
+          menuExpandChecked: false

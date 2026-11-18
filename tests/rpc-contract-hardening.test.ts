@@ -64,6 +64,7 @@ const validInputs: Record<Method, unknown> = {
   group_delete: { groupId: "grp_x" },
   family_state_list: null,
   family_state_set: { key: "collapsedFamilies", id: "thr_x", on: true },
+  family_state_set_many: { key: "collapsedFamilies", ids: ["thr_x"], on: true },
   family_state_merge: { collapsedFamilies: ["thr_x"], hideIdleChildren: [] },
   pulse_rates: null,
 };
@@ -200,6 +201,18 @@ describe("rpc contract hardening", () => {
         paths: Array.from({ length: 201 }, (_, i) => `f${i}.md`),
       }).success,
     ).toBe(false);
+  });
+
+  it("caps: a 500-id lane bulk write passes, 501 refuses, an empty lane refuses", () => {
+    const schema = inputSchemaOf("family_state_set_many");
+    const ids = (n: number) => Array.from({ length: n }, (_, i) => `thr_${i}`);
+    expect(schema.safeParse({ key: "collapsedFamilies", ids: ids(500), on: true }).success).toBe(
+      true,
+    );
+    expect(schema.safeParse({ key: "collapsedFamilies", ids: ids(501), on: true }).success).toBe(
+      false,
+    );
+    expect(schema.safeParse({ key: "collapsedFamilies", ids: [], on: true }).success).toBe(false);
   });
 });
 

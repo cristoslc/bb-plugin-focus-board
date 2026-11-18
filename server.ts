@@ -82,6 +82,7 @@ import {
   parseFamilyStateStore,
   sameFamilyState,
   toggleFamilyStateId,
+  toggleFamilyStateIds,
   type FamilyStateStore,
 } from "./lib/family-state";
 import { RANK_KV_KEY } from "./lib/rank";
@@ -740,6 +741,31 @@ export const rpcContract = defineRpcContract({
     output: z.object({
       key: z.enum(FAMILY_STATE_KEYS),
       id: z.string(),
+      on: z.boolean(),
+    }),
+  },
+  /**
+   * A lane's bulk toggle: the lane menu's Collapse all / Expand all / Hide
+   * idle children / Show idle children entries. Applies every id inside ONE
+   * KV write lock, writes once, and publishes ONE signal with the merge's
+   * whole-row payload (`id: null`), so a lane of forty families is one locked
+   * round trip instead of forty. Refuses an empty list at the contract
+   * boundary: an action that can never do anything is a bug, not a no-op. An
+   * all-settled list writes nothing and publishes nothing, exactly like the
+   * single toggle.
+   */
+  family_state_set_many: {
+    input: z.object({
+      key: z.enum(FAMILY_STATE_KEYS),
+      // Same id bounds as the single write, and a cap well above any real
+      // lane: the row is one board-global list, so the array bound is what
+      // keeps a hostile caller from writing an unbounded row in one call.
+      ids: z.array(z.string().min(1).max(200)).min(1).max(500),
+      on: z.boolean(),
+    }),
+    output: z.object({
+      key: z.enum(FAMILY_STATE_KEYS),
+      ids: z.array(z.string()),
       on: z.boolean(),
     }),
   },
@@ -3035,6 +3061,20 @@ export default async function plugin(bb: BbPluginApi) {
         await writeFamilyState(next);
         bb.realtime.publish(FAMILY_STATE_CHANGED, { key, id, on });
         return { key, id, on };
+      }),
+    family_state_set_many: async ({ key, ids, on }) =>
+      // The lane menu's bulk write: one lock, one KV write, one signal. The
+      // whole lane moves together, so a window can never see half a lane
+      // folded, and no other lane's ids are touched.
+      withKvWriteLock(async () => {
+        const store = await readFamilyState();
+        const next = toggleFamilyStateIds(store, key, ids, on);
+        if (next === store) return { key, ids: [...ids], on };
+        await writeFamilyState(next);
+        // The merge's own payload shape (a whole-row change), so every
+        // existing listener refetches once through its coalescer.
+        bb.realtime.publish(FAMILY_STATE_CHANGED, { key, id: null, on });
+        return { key, ids: [...ids], on };
       }),
     family_state_merge: async (incoming) =>
       // The one-time localStorage migration: union, never replace, so a

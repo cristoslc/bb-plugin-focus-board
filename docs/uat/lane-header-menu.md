@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-06T15:50:32.446Z by `npm run uat`._
+_Generated 2026-11-18T05:44:25.732Z by `npm run uat`._
 
 ## lane-header-menu
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_4qh62ybyi5-1/bb-plugin-focus-board/tests/manual/uat-lane-menu.yaml` · theme dark
+Source: `tests/manual/uat-lane-menu.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
@@ -16,3 +16,6 @@ Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees
 | The Unread lane (a manual arm with nothing eligible) carries no broom pill | pass | ✓ lane unread sweep pill absent |
 | Sweep this lane arms the zero-eligible lane the way the old pill did | pass | ✓ lane unread sweep pill present; ✓ lane unread pill matches 0 → Read; ✓ lane unread armed; ✓ lane unread offers the sweep exit |
 | The menu's sort pair shows the standing direction checked, and the pick writes it | pass | ✓ lane unread menu open; ✓ lane unread menu reads oldest first as the checked direction |
+| A lane holding a family offers the four bulk entries, with Expand all and Show idle children checked | pass | ✓ lane idle-awhile menu open; ✓ lane idle-awhile menu offers the bulk family entries; ✓ lane idle-awhile menu reads Collapse all checked = false; ✓ lane idle-awhile menu reads Expand all checked = true; ✓ lane idle-awhile menu reads Hide idle children checked = false; ✓ lane idle-awhile menu reads Show idle children checked = true |
+| Collapse all writes ONE family_state_set_many and the lane's families fold | pass | ✓ family_state_set_many last called with {"key":"collapsedFamilies","on":true}; ✓ no family_state_set call; ✓ control present: "Expand subthreads"; ✓ lane idle-awhile menu closed |
+| A lane whose families are all folded marks Collapse all checked on reopen | pass | ✓ lane idle-awhile menu open; ✓ lane idle-awhile menu offers the bulk family entries; ✓ lane idle-awhile menu reads Collapse all checked = true; ✓ lane idle-awhile menu reads Expand all checked = false |

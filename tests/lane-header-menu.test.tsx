@@ -346,3 +346,217 @@ describe("lane header: the sweep pill is eligibility plus count", () => {
     expect(screen.queryByRole("menuitem", { name: "Sweep this lane…" })).toBeNull();
   });
 });
+
+describe("lane header: the menu's bulk family controls", () => {
+  // Two families in Unread, one in Working, and a standalone card in Unread:
+  // every case below proves the entries are the LANE's, not the board's.
+  const famA = unreadThread("thr_fam_a", 1);
+  const famAChild = thread({ id: "thr_fam_a_c1", parentThreadId: famA.id, isUnread: true });
+  const famB = unreadThread("thr_fam_b", 2);
+  const famBChild = thread({ id: "thr_fam_b_c1", parentThreadId: famB.id, isUnread: true });
+  const lone = unreadThread("thr_lone", 3);
+  const workFam = thread({ id: "thr_work_fam", status: "active" });
+  const workFamChild = thread({
+    id: "thr_work_fam_c1",
+    parentThreadId: workFam.id,
+    status: "active",
+  });
+  const nested = new Map<string, readonly PluginSidebarThread[]>([
+    [famA.id, [famAChild]],
+    [famB.id, [famBChild]],
+    [workFam.id, [workFamChild]],
+  ]);
+  const familyThreads = [famA, famAChild, famB, famBChild, lone, workFam, workFamChild];
+  const bulkLabels = [
+    "Collapse all",
+    "Expand all",
+    "Hide idle children",
+    "Show idle children",
+  ];
+
+  function openLane(columnId: string) {
+    fireEvent.click(laneMenuTrigger(columnId));
+  }
+
+  it("a lane with no family card offers none of the four entries", () => {
+    renderBoard([lone], {
+      nestedChildrenByParent: nested,
+      onSetFamilyStateMany: vi.fn(),
+    });
+    openLane("unread");
+    for (const label of bulkLabels) {
+      expect(screen.queryByRole("menuitemradio", { name: label })).toBeNull();
+    }
+  });
+
+  it("a family lane offers all four, and an unwired board offers none", () => {
+    renderBoard(familyThreads, { nestedChildrenByParent: nested });
+    openLane("unread");
+    for (const label of bulkLabels) {
+      expect(screen.queryByRole("menuitemradio", { name: label })).toBeNull();
+    }
+    cleanup();
+    renderBoard(familyThreads, {
+      nestedChildrenByParent: nested,
+      onSetFamilyStateMany: vi.fn(),
+    });
+    openLane("unread");
+    for (const label of bulkLabels) {
+      expect(screen.getByRole("menuitemradio", { name: label })).not.toBeNull();
+    }
+  });
+
+  it("the fold block sits below the sort entries and marks its divider", () => {
+    renderBoard(familyThreads, {
+      nestedChildrenByParent: nested,
+      onLaneOrderDirection: vi.fn(),
+      onSetFamilyStateMany: vi.fn(),
+    });
+    openLane("unread");
+    const oldest = screen.getByRole("menuitemradio", { name: "Oldest first" });
+    const collapse = screen.getByRole("menuitemradio", { name: "Collapse all" });
+    expect(
+      oldest.compareDocumentPosition(collapse) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(collapse.className).toContain("border-t");
+  });
+
+  it("an untouched lane marks Expand all and Show idle children", () => {
+    renderBoard(familyThreads, {
+      nestedChildrenByParent: nested,
+      onSetFamilyStateMany: vi.fn(),
+    });
+    openLane("unread");
+    expect(
+      screen.getByRole("menuitemradio", { name: "Expand all" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("menuitemradio", { name: "Collapse all" }).getAttribute("aria-checked"),
+    ).toBe("false");
+    expect(
+      screen.getByRole("menuitemradio", { name: "Show idle children" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("menuitemradio", { name: "Hide idle children" }).getAttribute("aria-checked"),
+    ).toBe("false");
+  });
+
+  it("a wholly folded lane marks Collapse all and Hide idle children", () => {
+    renderBoard(familyThreads, {
+      nestedChildrenByParent: nested,
+      collapsedFamilyIds: new Set([famA.id, famB.id]),
+      hideIdleFamilyIds: new Set([famA.id, famB.id]),
+      onSetFamilyStateMany: vi.fn(),
+    });
+    openLane("unread");
+    expect(
+      screen.getByRole("menuitemradio", { name: "Collapse all" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("menuitemradio", { name: "Expand all" }).getAttribute("aria-checked"),
+    ).toBe("false");
+    expect(
+      screen.getByRole("menuitemradio", { name: "Hide idle children" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("menuitemradio", { name: "Show idle children" }).getAttribute("aria-checked"),
+    ).toBe("false");
+  });
+
+  it("a partly folded lane marks neither fold entry (both unchecked is honest)", () => {
+    renderBoard(familyThreads, {
+      nestedChildrenByParent: nested,
+      collapsedFamilyIds: new Set([famA.id]),
+      onSetFamilyStateMany: vi.fn(),
+    });
+    openLane("unread");
+    expect(
+      screen.getByRole("menuitemradio", { name: "Collapse all" }).getAttribute("aria-checked"),
+    ).toBe("false");
+    expect(
+      screen.getByRole("menuitemradio", { name: "Expand all" }).getAttribute("aria-checked"),
+    ).toBe("false");
+  });
+
+  it("Collapse all writes the lane's own keys and closes the menu", () => {
+    const onSetFamilyStateMany = vi.fn();
+    renderBoard(familyThreads, { nestedChildrenByParent: nested, onSetFamilyStateMany });
+    openLane("unread");
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Collapse all" }));
+    expect(onSetFamilyStateMany).toHaveBeenCalledWith(
+      "collapsedFamilies",
+      [famA.id, famB.id],
+      true,
+    );
+    expect(screen.queryByRole("menu", { name: "Lane actions" })).toBeNull();
+  });
+
+  it("Expand all is the same write in the other direction", () => {
+    const onSetFamilyStateMany = vi.fn();
+    renderBoard(familyThreads, { nestedChildrenByParent: nested, onSetFamilyStateMany });
+    openLane("unread");
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Expand all" }));
+    expect(onSetFamilyStateMany).toHaveBeenCalledWith(
+      "collapsedFamilies",
+      [famA.id, famB.id],
+      false,
+    );
+  });
+
+  it("the idle pair writes hideIdleChildren and never the fold key", () => {
+    const onSetFamilyStateMany = vi.fn();
+    renderBoard(familyThreads, { nestedChildrenByParent: nested, onSetFamilyStateMany });
+    openLane("unread");
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Hide idle children" }));
+    expect(onSetFamilyStateMany).toHaveBeenLastCalledWith(
+      "hideIdleChildren",
+      [famA.id, famB.id],
+      true,
+    );
+    openLane("unread");
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Show idle children" }));
+    expect(onSetFamilyStateMany).toHaveBeenLastCalledWith(
+      "hideIdleChildren",
+      [famA.id, famB.id],
+      false,
+    );
+    expect(
+      onSetFamilyStateMany.mock.calls.map((call) => call[0]),
+    ).toEqual(["hideIdleChildren", "hideIdleChildren"]);
+  });
+
+  it("one lane's bulk write never carries another lane's keys", () => {
+    const onSetFamilyStateMany = vi.fn();
+    renderBoard(familyThreads, { nestedChildrenByParent: nested, onSetFamilyStateMany });
+    openLane("unread");
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Collapse all" }));
+    expect(onSetFamilyStateMany.mock.calls[0][1]).not.toContain(workFam.id);
+    openLane("working");
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Collapse all" }));
+    expect(onSetFamilyStateMany).toHaveBeenLastCalledWith(
+      "collapsedFamilies",
+      [workFam.id],
+      true,
+    );
+  });
+
+  it("the Done lane's cards report done: keys", () => {
+    const onSetFamilyStateMany = vi.fn();
+    const liveRoot = thread({ id: "thr_live" });
+    const doneChild = thread({ id: "thr_live_done", parentThreadId: liveRoot.id });
+    renderBoard([liveRoot], {
+      columns: [{ id: "done", label: "Done", threads: [liveRoot] }] as BoardProps["columns"],
+      doneIds: new Set<string>(),
+      nestedChildrenByParent: new Map(),
+      doneChildrenByParent: new Map([[liveRoot.id, [doneChild]]]),
+      onSetFamilyStateMany,
+    });
+    openLane("done");
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Collapse all" }));
+    expect(onSetFamilyStateMany).toHaveBeenCalledWith(
+      "collapsedFamilies",
+      [`done:${liveRoot.id}`],
+      true,
+    );
+  });
+});
