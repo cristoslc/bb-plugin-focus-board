@@ -1934,6 +1934,15 @@ const pageColumnSweep = (columnId) => {
     (el) => el.getAttribute("data-thread-card"),
   );
   const menu = document.querySelector('[role="menu"][aria-label="Lane actions"]');
+  // Whether one named menu row is the checked row (absent reads false).
+  // Local on purpose: `page.evaluate` serializes only this function's own
+  // source, so a module-scope helper would be undefined inside the page.
+  const foldChecked = (label) => {
+    if (!menu) return false;
+    return [...menu.querySelectorAll('[role="menuitemradio"][aria-checked="true"]')].some((row) =>
+      row.textContent?.includes(label),
+    );
+  };
   return {
     ok: true,
     present: pill !== null,
@@ -1950,6 +1959,17 @@ const pageColumnSweep = (columnId) => {
       menu?.querySelector('[role="menuitemradio"][aria-checked="true"]')?.textContent?.includes("Oldest first") ??
       false,
     menuSort: menu?.querySelector("[data-lane-sort-state]")?.getAttribute("data-lane-sort-state") ?? null,
+    // The lane's bulk family controls: offered only when the lane holds a
+    // family card, and each pair's checked mark is the lane's all/none truth.
+    menuFold: menu
+      ? [...menu.querySelectorAll('[role="menuitemradio"]')].some((row) =>
+          row.textContent?.includes("Collapse all"),
+        )
+      : false,
+    menuCollapseChecked: foldChecked("Collapse all"),
+    menuExpandChecked: foldChecked("Expand all"),
+    menuIdleHideChecked: foldChecked("Hide idle children"),
+    menuIdleShowChecked: foldChecked("Show idle children"),
   };
 };
 
@@ -2947,6 +2967,26 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
             `lane ${want.column} menu sort state is ${want.menuSort}`,
             got.menuSort === want.menuSort,
             `sort state reads ${JSON.stringify(got.menuSort)}`,
+          );
+        }
+        if (want.menuFold !== undefined) {
+          expect(
+            `lane ${want.column} menu ${want.menuFold ? "offers" : "hides"} the bulk family entries`,
+            got.menuFold === want.menuFold,
+            got.menuFold ? "bulk entries present" : "no bulk entries",
+          );
+        }
+        for (const [wantKey, label] of [
+          ["menuCollapseChecked", "Collapse all checked"],
+          ["menuExpandChecked", "Expand all checked"],
+          ["menuIdleHideChecked", "Hide idle children checked"],
+          ["menuIdleShowChecked", "Show idle children checked"],
+        ]) {
+          if (want[wantKey] === undefined) continue;
+          expect(
+            `lane ${want.column} menu reads ${label} = ${want[wantKey]}`,
+            got[wantKey] === want[wantKey],
+            `${wantKey} reads ${JSON.stringify(got[wantKey])}`,
           );
         }
         if (want.menuOldestChecked !== undefined) {

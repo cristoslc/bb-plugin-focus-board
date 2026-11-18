@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+#### The board's lanes
+
+- **A lane's menu can fold or unfold every family in that lane at once, and hide or show their idle children.** The four entries act on the whole lane and leave other lanes' folds alone; a lane with no families shows none of them.
+
 #### bb's thread pages
 
 - **Focus Board actions ride along on bb's own thread pages.** A small control in the thread header carries the board's Mark Done, Snooze and New child thread gestures to any thread pane, so a thread you read beside the board keeps its board state within reach.

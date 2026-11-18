@@ -64,6 +64,11 @@ import {
   type RankStore,
 } from "../lib/rank";
 import { reparentRefusalFromParents } from "../lib/reparent";
+import {
+  foldKeyForCard,
+  laneFamilyFoldKeys,
+} from "../lib/family-fold-keys";
+import type { FamilyStateKey } from "../lib/family-state";
 import { flatNestReason } from "./nesting";
 import {
   canJoinGroup,
@@ -196,16 +201,6 @@ function TransportSparkLayer({
 
 /** The group plan absents itself when the caller has no group data. */
 const EMPTY_GROUP_BOXES: GroupBoxMap = new Map();
-
-/**
- * The fold key a Done projection card reads and reports: a root's two cards
- * fold separately (the derived ruleset's Defect 8 — one shared fold folded
- * both), so a projection's stored fold is prefixed to keep both entries in
- * the one collapsed list.
- */
-function foldKeyForSpace(threadId: string): string {
-  return `done:${threadId}`;
-}
 
 /** The parent map absents itself when the caller has no nesting data. */
 const EMPTY_PARENT_OF: ReadonlyMap<string, string> = new Map();
@@ -394,6 +389,18 @@ interface BoardProps {
   hideIdleFamilyIds?: ReadonlySet<string>;
   /** Reports a family card's idle-filter gesture (fold key, hidden state). */
   onFamilyHideIdleChange?: (parentId: string, hide: boolean) => void;
+  /**
+   * The lane menu's bulk form of the two per-card controls above: fold or
+   * unfold every family in one lane, or hide/show their idle children, in ONE
+   * write (the server's `family_state_set_many`). `keys` are the lane's fold
+   * keys exactly as its cards read them (lib/family-fold-keys). Unwired → the
+   * lane menu offers none of the four entries.
+   */
+  onSetFamilyStateMany?: (
+    key: FamilyStateKey,
+    keys: readonly string[],
+    on: boolean,
+  ) => void;
   /**
    * Group ids whose dashed family boxes fold into ONE normal-size card (the
    * box's member cards hide). Persisted by the caller; absent → boxes always
@@ -721,6 +728,7 @@ function BoardBase({
   onDismissRankSaveError,
   familyStateSaveError = null,
   onDismissFamilyStateSaveError,
+  onSetFamilyStateMany,
   browserNotice = null,
   onDismissBrowserNotice,
   onSweepUndo,
@@ -2432,7 +2440,7 @@ function BoardBase({
           >
             {/* A fold/idle write the host rejected: the toggle rolled back to
                 the server's truth — this banner is the only word about it. */}
-            <p className="min-w-0">The fold didn't save: {familyStateSaveError}</p>
+            <p className="min-w-0">{familyStateSaveError}</p>
             <button
               type="button"
               onClick={() => onDismissFamilyStateSaveError?.()}
@@ -3426,6 +3434,11 @@ function BoardBase({
                   const isDoneProjection =
                     column.id === "done" && !doneIds.has(thread.id);
                   const projectionChildren = doneChildrenByParent.get(thread.id);
+                  // The fold key this card reads and reports: the projection's
+                  // `done:` space for a live root in the Done column, its own
+                  // id everywhere else. One helper, shared with the lane
+                  // menu's bulk fold (lib/family-fold-keys).
+                  const cardFoldKey = foldKeyForCard(column.id, thread.id, doneIds);
                   // This slot's box role, passed by the caller: attrs only —
                   // a box's outline is drawn by its CONTAINER (one dashed
                   // rounded element around the run), never by fragments on
@@ -4033,23 +4046,13 @@ function BoardBase({
                               ? countDoneRows(doneChildrenByParent, nestedChildrenByParent, thread.id)
                               : (childCountByParent.get(thread.id) ?? 0)
                           }
-                          isCollapsed={collapsedFamilyIds?.has(
-                            isDoneProjection ? foldKeyForSpace(thread.id) : thread.id,
-                          )}
+                          isCollapsed={collapsedFamilyIds?.has(cardFoldKey)}
                           onCollapsedChange={(collapsed) =>
-                            onFamilyCollapsedChange?.(
-                              isDoneProjection ? foldKeyForSpace(thread.id) : thread.id,
-                              collapsed,
-                            )
+                            onFamilyCollapsedChange?.(cardFoldKey, collapsed)
                           }
-                          hideIdleChildren={hideIdleFamilyIds?.has(
-                            isDoneProjection ? foldKeyForSpace(thread.id) : thread.id,
-                          )}
+                          hideIdleChildren={hideIdleFamilyIds?.has(cardFoldKey)}
                           onHideIdleChildrenChange={(hide) =>
-                            onFamilyHideIdleChange?.(
-                              isDoneProjection ? foldKeyForSpace(thread.id) : thread.id,
-                              hide,
-                            )
+                            onFamilyHideIdleChange?.(cardFoldKey, hide)
                           }
                           snoozeFor={snoozeFor}
                           pulseRateFor={pulseRateFor}
@@ -5255,6 +5258,24 @@ function BoardBase({
               sweepRun !== null && sweepRun.columnId === laneMenu.columnId;
             const laneMenuArmed = armedColumnId === laneMenu.columnId;
             const laneMenuRemoveVisible = laneMenuOrdered && onRankClear !== undefined;
+            // The lane's family cards, by the same fold keys their own cards
+            // read and report (lib/family-fold-keys): a lane with no family
+            // card offers no bulk action that could only do nothing.
+            const laneFoldKeys = laneFamilyFoldKeys(
+              laneMenuColumn?.threads ?? [],
+              laneMenu.columnId,
+              doneIds,
+              { nestedChildrenByParent, doneChildrenByParent },
+            );
+            const laneCollapsedCount = laneFoldKeys.filter((key) =>
+              collapsedFamilyIds?.has(key) ?? false,
+            ).length;
+            const laneIdleHiddenCount = laneFoldKeys.filter((key) =>
+              hideIdleFamilyIds?.has(key) ?? false,
+            ).length;
+            const laneFoldVisible =
+              laneFoldKeys.length > 0 && onSetFamilyStateMany !== undefined;
+            const setFamilyStateMany = onSetFamilyStateMany;
             return (
               <MenuPopover
                 open={{ x: laneMenu.x, y: laneMenu.y }}
@@ -5321,11 +5342,62 @@ function BoardBase({
                     }}
                   />
                 ) : null}
+                {/* The lane's family controls, bulk: the card's own fold and
+                    idle-filter toggles applied to every family in this lane.
+                    Lane-scoped on purpose — these write only this lane's
+                    keys, so another lane's folds and hides survive. Each pair
+                    marks "everything already this way"; a partly-folded lane
+                    shows both unchecked, which is honest. */}
+                {laneFoldVisible ? (
+                  <MenuPopoverEntry
+                    label="Collapse all"
+                    icon="ChevronRight"
+                    dividerAbove
+                    checked={laneCollapsedCount === laneFoldKeys.length}
+                    onRun={() => {
+                      closeLaneMenu();
+                      setFamilyStateMany?.("collapsedFamilies", laneFoldKeys, true);
+                    }}
+                  />
+                ) : null}
+                {laneFoldVisible ? (
+                  <MenuPopoverEntry
+                    label="Expand all"
+                    icon="ChevronDown"
+                    checked={laneCollapsedCount === 0}
+                    onRun={() => {
+                      closeLaneMenu();
+                      setFamilyStateMany?.("collapsedFamilies", laneFoldKeys, false);
+                    }}
+                  />
+                ) : null}
+                {laneFoldVisible ? (
+                  <MenuPopoverEntry
+                    label="Hide idle children"
+                    icon="ViewOff"
+                    checked={laneIdleHiddenCount === laneFoldKeys.length}
+                    onRun={() => {
+                      closeLaneMenu();
+                      setFamilyStateMany?.("hideIdleChildren", laneFoldKeys, true);
+                    }}
+                  />
+                ) : null}
+                {laneFoldVisible ? (
+                  <MenuPopoverEntry
+                    label="Show idle children"
+                    icon="View"
+                    checked={laneIdleHiddenCount === 0}
+                    onRun={() => {
+                      closeLaneMenu();
+                      setFamilyStateMany?.("hideIdleChildren", laneFoldKeys, false);
+                    }}
+                  />
+                ) : null}
                 {laneMenuSweepKind !== null && !laneMenuArmed && !laneMenuRunning ? (
                   <MenuPopoverEntry
                     label="Sweep this lane…"
                     icon="Broom"
-                    dividerAbove={!laneMenuRemoveVisible}
+                    dividerAbove={!laneMenuRemoveVisible && !laneFoldVisible}
                     onRun={() => {
                       closeLaneMenu();
                       onSweepArm?.(laneMenu.columnId);

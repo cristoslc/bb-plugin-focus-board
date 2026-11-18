@@ -1742,6 +1742,15 @@ const simRpcBase = async (method: string, args?: unknown): Promise<unknown> => {
     commitHostOp({ kind: "family_state_set", key, id, on });
     return { key, id, on };
   }
+  if (method === "family_state_set_many") {
+    const { key, ids, on } = args as {
+      key: "collapsedFamilies" | "hideIdleChildren";
+      ids: string[];
+      on: boolean;
+    };
+    commitHostOp({ kind: "family_state_set_many", key, ids, on });
+    return { key, ids, on };
+  }
   if (method === "family_state_merge") {
     const incoming = args as { collapsedFamilies: string[]; hideIdleChildren: string[] };
     commitHostOp({ kind: "family_state_merge", ...incoming });

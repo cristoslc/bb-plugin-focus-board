@@ -820,6 +820,22 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
       fireRealtime("family-state-changed", { key, id, on });
       return { key, id, on };
     }
+    case "family_state_set_many": {
+      if (familyStateWriteFailure !== null) throw new Error(familyStateWriteFailure);
+      const { key, ids, on } = args as {
+        key: "collapsedFamilies" | "hideIdleChildren";
+        ids: string[];
+        on: boolean;
+      };
+      const set = new Set(fakeFamilyState[key]);
+      for (const id of ids) {
+        if (on) set.add(id);
+        else set.delete(id);
+      }
+      fakeFamilyState = { ...fakeFamilyState, [key]: [...set].sort() };
+      fireRealtime("family-state-changed", { key, id: null, on });
+      return { key, ids, on };
+    }
     case "family_state_merge": {
       if (familyStateWriteFailure !== null) throw new Error(familyStateWriteFailure);
       const incoming = args as { collapsedFamilies: string[]; hideIdleChildren: string[] };

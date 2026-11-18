@@ -59,6 +59,12 @@ export type HostOp =
   | { kind: "done_set"; threadId: string; done: boolean }
   | { kind: "family_state_set"; key: FamilyStateKey; id: string; on: boolean }
   | {
+      kind: "family_state_set_many";
+      key: FamilyStateKey;
+      ids: string[];
+      on: boolean;
+    }
+  | {
       kind: "family_state_merge";
       collapsedFamilies: string[];
       hideIdleChildren: string[];
@@ -117,6 +123,22 @@ export function applyHostOp(state: HostState, op: HostOp): HostOpResult {
       return {
         state: { ...state, family: { ...state.family, [op.key]: sorted(set) } },
         signal: { channel: "family-state-changed", payload: { key: op.key, id: op.id, on: op.on } },
+      };
+    }
+    case "family_state_set_many": {
+      // The lane menu's bulk write: every id in one op, one whole-row signal
+      // (the merge's payload shape), so a two-window demo refetches once.
+      if (!FAMILY_KEYS.includes(op.key)) {
+        throw new Error(`family_state_set_many: unknown key ${JSON.stringify(op.key)}`);
+      }
+      const set = new Set(state.family[op.key]);
+      for (const id of op.ids) {
+        if (op.on) set.add(id);
+        else set.delete(id);
+      }
+      return {
+        state: { ...state, family: { ...state.family, [op.key]: sorted(set) } },
+        signal: { channel: "family-state-changed", payload: { key: op.key, id: null, on: op.on } },
       };
     }
     case "family_state_merge": {

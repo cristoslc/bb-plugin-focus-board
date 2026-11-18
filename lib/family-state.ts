@@ -142,6 +142,32 @@ export function toggleFamilyStateId(
 }
 
 /**
+ * A lane's bulk toggle: add or remove every id in `ids` in `key`'s set, in one
+ * read-merge-write. Returns the SAME reference when none of the ids needed to
+ * move (every one already in the requested state), so the server skips both
+ * the KV write and the realtime publish — the single toggle's law, applied to
+ * a whole lane. The client never fires N single-id calls: a lane of forty
+ * families would cost forty locked round trips.
+ */
+export function toggleFamilyStateIds(
+  store: FamilyStateStore,
+  key: FamilyStateKey,
+  ids: readonly string[],
+  on: boolean,
+): FamilyStateStore {
+  const current = new Set(store[key]);
+  let changed = false;
+  for (const id of ids) {
+    if (current.has(id) === on) continue;
+    changed = true;
+    if (on) current.add(id);
+    else current.delete(id);
+  }
+  if (!changed) return store;
+  return { ...store, [key]: canonicalIds(current) };
+}
+
+/**
  * Union the incoming ids into both sets (the one-time migration write). Never
  * removes: the merge can only add a fold the server did not already hold, so a
  * migration can never erase state a newer window wrote.
