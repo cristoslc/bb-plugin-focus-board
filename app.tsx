@@ -145,6 +145,7 @@ import { pinStateChangeFromEvent, readStateChangeFromEvent } from "./lib/pin-par
 import {
   DEFAULT_DONE_ARCHIVE_MS,
   DEFAULT_IDLE_ARCHIVE_MS,
+  SWEEP_BATCH_CONCURRENCY,
   SWEEP_SETTLED_WORDS,
   armSweep,
   confirmSweep,
@@ -1494,12 +1495,17 @@ function BoardPage({ subPath }: { subPath: string }) {
   // Sweep arm state: at most one armed column at a time. The candidate id
   // list is captured at arm time and frozen — late arrivals never join.
   const [armedSweep, setArmedSweep] = useState<ArmedSweep | null>(null);
-  // A confirmed sweep in flight: sequential archives with per-card progress
+  // A confirmed sweep in flight: batched writes with per-card progress
   // (throbber on the active card, highlight kept on the rest). Null when idle.
   const [sweepRun, setSweepRun] = useState<SweepRunView | null>(null);
-  // Cancel flag for the live run: read by the runner between archives.
+  // Cancel flag for the live run: read by the runner between batches.
   // A ref, not state — cancelling must not re-render the loop's inputs.
   const sweepCancelRef = useRef(false);
+  // The sweep's unread follow-ups, one serial queue: a done write marks its
+  // card read, and the host's sidebar writes are single-slot (a new write
+  // aborts the one in flight), so a batch's follow-ups must not overlap each
+  // other. A ref — the queue is bookkeeping, never paint input.
+  const sweepReadQueueRef = useRef<Promise<unknown>>(Promise.resolve());
   // A finished sweep's summary ("3 failed: ...", or a cancelled run's undo
   // offer). Null when nothing needs saying.
   const [sweepNotice, setSweepNotice] = useState<SweepNotice | null>(null);
@@ -3456,7 +3462,7 @@ function BoardPage({ subPath }: { subPath: string }) {
   );
 
   // Confirm a sweep: apply the arm's per-thread gesture to the captured
-  // selection, strictly one at a time (the runner's contract — the host's
+  // selection, one batch at a time (the runner's contract — the host's
   // sidebar writes run one row at a time, so an unawaited loop applies only
   // the last candidate; observed 2026-10-01: a 4-thread sweep archived one).
   // Side effects stay out of the state updater: read the armed snapshot,
@@ -3488,18 +3494,38 @@ function BoardPage({ subPath }: { subPath: string }) {
       // on the Done column), never archive a quiet-but-not-done thread. The
       // fresh doneAt stamp starts the Done arm's archive clock, so swept
       // threads resurface there in doneArchiveDays instead of vanishing.
+      //
+      // The gesture is just the write. Its state application — the `doneIds`
+      // add and the unread follow-up — happens ONE per batch in
+      // `applyDoneBatch` below, because the board recomputes its whole
+      // assembly (and walks every card) on each `doneIds` identity: one write
+      // per card made a lane sweep cost N full-board passes (measured: ~110ms
+      // per card on a 1,394-card board, docs/perf/sweep-latency-2026-11-18.md).
       const markDone = async (threadId: string): Promise<void> => {
         await rpc.call("done_set", { threadId, done: true });
+      };
+      const applyDoneBatch = (settledIds: readonly string[]): void => {
+        if (settledIds.length === 0) return;
         setDoneIds((currentDone) => {
           const next = new Set(currentDone);
-          next.add(threadId);
+          for (const threadId of settledIds) next.add(threadId);
           return next;
         });
-        // Done implies read: the card must not land in Done still claiming
-        // unread (the same rule the drop-on-Done path applies).
-        const thread = threads.find((candidate) => candidate.id === threadId);
-        if (thread !== undefined && thread.isUnread) {
-          void actions.setRead(threadId, true);
+        // Done implies read: a card must not land in Done still claiming
+        // unread (the same rule the drop-on-Done path applies). The host's
+        // sidebar writes are single-slot, so the batch's follow-ups go
+        // through ONE serial queue instead of firing over each other; they
+        // ride off the sweep's critical path either way.
+        for (const threadId of settledIds) {
+          const thread = threads.find((candidate) => candidate.id === threadId);
+          if (thread === undefined || !thread.isUnread) continue;
+          sweepReadQueueRef.current = sweepReadQueueRef.current
+            .then(() => actions.setRead(threadId, true))
+            .catch(() => {
+              // A rejected read write leaves the card Done and unread: the
+              // board shows that state truthfully, and the next sweep or
+              // pane visit clears it. Never counted as swept-and-read.
+            });
         }
       };
       // The Pinned arm exits through the lane exit: unpin, pin parked, so a
@@ -3530,8 +3556,14 @@ function BoardPage({ subPath }: { subPath: string }) {
           setSweepRun((run) =>
             run === null ? run : { ...run, done: run.done + 1, activeId: null },
           ),
-        // Cancel between actions; the one in flight always finishes.
+        // Cancel between batches; the batch in flight always finishes.
         shouldContinue: () => !sweepCancelRef.current,
+        // Only the Done arm overlaps its writes (see SWEEP_BATCH_CONCURRENCY):
+        // its gesture is the board's own RPC, and its state application is
+        // the batch-wide `doneIds` write above. Every other arm drives host
+        // sidebar actions, which are single-slot.
+        concurrency: destination === "done" ? SWEEP_BATCH_CONCURRENCY : 1,
+        onBatchSettled: destination === "done" ? applyDoneBatch : undefined,
       }).then((result) => {
         setSweepRun(null);
         const failedIds = result.failures.map((failure) => failure.threadId);

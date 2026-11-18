@@ -25,6 +25,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+#### Sweeping a lane
+
+- **Sweeping a lane to Done no longer stalls.** Cards go out six at a time and the board repaints once per batch, so a nine-card sweep on a busy board takes about half a second where it used to take a couple.
+
 #### The board's frame
 
 - **Splitting or unsplitting the window no longer reloads the board.** bb rebuilds the panel when the pane layout changes, which used to flash the loading screen and drop the scroll position. The board now repaints what you were looking at, where you left it, and the refetch that follows lands behind it.

@@ -21,6 +21,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "bb's thread pages"
   },
   {
+    "text": "**Sweeping a lane to Done no longer stalls.** Cards go out six at a time and the board repaints once per batch, so a nine-card sweep on a busy board takes about half a second where it used to take a couple.",
+    "children": [],
+    "group": "Sweeping a lane"
+  },
+  {
     "text": "**Splitting or unsplitting the window no longer reloads the board.** bb rebuilds the panel when the pane layout changes, which used to flash the loading screen and drop the scroll position. The board now repaints what you were looking at, where you left it, and the refetch that follows lands behind it.",
     "children": [],
     "group": "The board's frame"
