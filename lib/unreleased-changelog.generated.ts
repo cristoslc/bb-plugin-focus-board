@@ -36,6 +36,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "The board's frame"
   },
   {
+    "text": "**With lane direction set to Horizontal, a family card keeps every child row on the card.** A lane row now grows to fit its tallest card instead of cutting it at a fixed height, so the rest of the family and its Show all control stay on screen.",
+    "children": [],
+    "group": "The board's lanes"
+  },
+  {
     "text": "**The board's keys stay on the board.** A letter or `/` typed anywhere you can type inserts text instead of opening the New Thread composer or jumping the search field. Both keys fire only while the board's own pane holds focus, so another pane's keystrokes leave the board alone.",
     "children": [],
     "group": "The board's shortcuts"
