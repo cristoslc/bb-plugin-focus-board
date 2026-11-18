@@ -57,11 +57,16 @@ through `puppeteer-core` (nothing is downloaded), writes a report per suite to
 - Gestures run in the order the step declares them, so a pane-history step
   can sequence pushes and backs deliberately.
 - `pane` (`{ threadId: thr_x }`, `{ open: false }`) reads the pane aside's
-  aria-label; `native_open` (`{ threadId: thr_x, split: true }`) reads the
-  mock's record of `experimental_useSidebarThreadActions().open` calls —
-  the card click's contract on the native-pane move, since the harness has
-  no native pane to render (the live split behaviour rides the probe
-  evidence in `docs/screenshots/probe-native-split-pane/`); `active_card` reads the board's own `aria-current` marker plus
+  aria-label, and it is how a click's contract is asserted: a click opens the
+  board's OWN in-panel pane (one click, one surface), so a click step pairs it
+  with `native_panes: []`, which pins that the host's opener was never asked
+  for a split. `native_open` (`{ threadId: thr_x, split: true }`) still reads
+  the mock's record of `experimental_useSidebarThreadActions().open` calls for
+  the suites that do run with a split (`?nativeSplit=1`). No suite expects a
+  native open today: the click only reaches the host where the board already
+  owns a pane, and there it focuses rather than creates (the live side rides
+  the probe evidence in `docs/screenshots/probe-native-one-click/`).
+  `active_card` reads the board's own `aria-current` marker plus
   whether the card is in view; `column_card_visible` (`thr_x`) asserts the
   card sits fully inside the columns board's own scroll viewport — the
   assertion for relocations that follow no active thread (the Pinned lane is

@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-11-17T20:51:51.734Z by `npm run uat`._
+_Generated 2026-11-18T04:31:10.149Z by `npm run uat`._
 
 ## grid-view (v1180x820-dark)
 
@@ -13,5 +13,5 @@ Source: `tests/manual/uat-grid-view.yaml` · theme dark
 | Tapping Alphabetical re-orders the same cards by title | pass | ✓ grid order; ✓ the grid holds 24 cards; ✓ the grid carries 0 lane containers; ✓ no refusal banner |
 | The Order pair relabels for titles and Z to A reverses the grid | pass | ✓ grid order |
 | The Created key reads createdAt — the newest thread leads, not the busiest | pass | ✓ grid order; ✓ text visible: "Newest first" |
-| A card in the grid opens the native pane on a click, exactly as a lane card does | pass | ✓ native open thr_column_sort with split; ✓ pane closed |
+| A card in the grid opens the board's own pane on a click, exactly as a lane card does | pass | ✓ native panes []; ✓ pane shows thr_column_sort; ✓ url ends with /board/t/thr_column_sort |
 | Typing in search narrows the grid to the matching cards | pass | ✓ the grid holds 1 cards; ✓ the grid carries 0 lane containers; ✓ text visible: "Plan Q4 plugin roadmap"; ✓ text hidden: "Ship 0.1.1: column ordering fix + release notes" |

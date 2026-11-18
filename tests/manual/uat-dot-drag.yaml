@@ -76,14 +76,20 @@ steps:
       - sub_row: { id: thr_gutter_family_c0_gc0, under: thr_gutter_family_c0, shown: false }
 
   - id: dots-still-open-their-thread
-    title: After the gestures, a dot still opens its thread on click — in bb's native pane
+    title: After the gestures, a dot still opens its thread on click — in the board's own pane
+    # One click, one surface (issue #470): the dot rides the same click a card
+    # does, so the board's own in-panel pane takes the thread and the host's
+    # opener is never asked for a split. A dot is not a card in the DOM, so
+    # the pane names its thread through its own title and the route.
     goto: "?groupBy=status"
     gestures:
       - click_aria: { label: "Collapse subthreads", within: thr_big_family }
       - click_aria: "Open child thread: Legacy board 1: migrate rows and links"
     assert:
-      - native_open: { threadId: thr_big_c0, split: true }
-      - pane: { open: false }
+      - native_panes: []
+      - pane: { open: true }
+      - aria_present: "Thread: Legacy board 1: migrate rows and links"
+      - url: { suffix: "/board/t/thr_big_c0" }
 
   # Issue #249, goal 6 (cut 4): a CARD dragged into a dot field children it.
   # The write is the existing thread_reparent nest path, and the refetch

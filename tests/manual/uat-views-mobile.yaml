@@ -27,13 +27,16 @@ steps:
       - column: unread
         ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]
 
-  - id: a-card-click-opens-the-native-pane
-    title: Clicking a card opens its thread in bb's native pane at phone width
+  - id: a-card-click-opens-the-boards-pane
+    title: Clicking a card opens its thread in the board's own pane at phone width
+    # One click, one surface (issue #470): at the covered pane width the board
+    # keeps to its own sheet, so the tap lands the thread in the board's pane
+    # and the host's opener is never asked for a split.
     goto: "?groupBy=status"
     click: { card: thr_rpc_auth }
     assert:
-      - native_open: { threadId: thr_rpc_auth, split: true }
-      - pane: { open: false }
+      - native_panes: []
+      - pane: { threadId: thr_rpc_auth }
 
   - id: escape-closes-the-phone-pane
     title: Escape closes the pane back onto the board
