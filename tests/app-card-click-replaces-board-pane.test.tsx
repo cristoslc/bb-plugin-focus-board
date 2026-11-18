@@ -372,3 +372,34 @@ describe("the developer trace", () => {
     debug.mockRestore();
   });
 });
+
+describe("one click, one surface", () => {
+  it("does not open the board's pane when a replacement lands", async () => {
+    // bb re-creates the plugin panel's subtree whenever the window's layout
+    // changes, and its opener navigates the route to the thread it placed.
+    // #467's 500ms repair read that pair as "the board was replaced" and
+    // pushed the board's route back with a subPath, so one click produced the
+    // native pane AND the board's in-panel pane. Measured live on a938fc7.
+    seedOwnedPane("thr_older");
+    const Component = registeredNavPanel.component;
+    if (Component === undefined) throw new Error("app-fake-sdk: no nav panel registered");
+    const view = render(<Component subPath="" />);
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+
+    fireEvent.click(cardAnchor("thr_focus"));
+
+    // What the host does next, inside the click's own repair window: the
+    // route becomes the thread's and the panel's subtree is gone while it is
+    // re-created.
+    window.history.pushState({}, "", "/projects/proj_a/threads/thr_focus");
+    view.unmount();
+    expect(document.querySelector("[data-focus-board-panel]")).toBeNull();
+
+    // Past the old repair window.
+    await new Promise((resolve) => setTimeout(resolve, 650));
+
+    // One surface: the pane the replacement landed in.
+    expect(fakePanelPushes()).toEqual([]);
+    window.history.pushState({}, "", "/");
+  });
+});
