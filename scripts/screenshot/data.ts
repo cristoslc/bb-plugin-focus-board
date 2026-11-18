@@ -1242,6 +1242,40 @@ export function SIM_BULK_THREADS(count: number, now: number = SIM_NOW): SimThrea
 }
 
 /**
+ * The Done-lane density fixture (`?done=N`): N threads already marked Done,
+ * on top of the base board. A long-lived workspace accumulates them — the
+ * operator's own board carries 1,363 live Done cards beside 390 live
+ * threads — and the Done column is rebuilt by every board assembly, so a
+ * probe that leaves it nearly empty measures an assembly the operator never
+ * has. Ids are `thr_bulkdone_<index>`; the caller also adds them to the
+ * done set (they render nothing without a Done mark).
+ */
+export function SIM_BULK_DONE_THREADS(count: number, now: number = SIM_NOW): SimThread[] {
+  const projects = ["proj_board", "proj_api", "proj_web"];
+  const providers = ["pi", "claude-code", "codex"];
+  return Array.from({ length: count }, (_, i) => {
+    const projectId = projects[i % projects.length]!;
+    const providerId = providers[i % providers.length]!;
+    const updatedAt = now - (i % 40) * DAY - (i % 11) * HOUR;
+    return thread({
+      id: `thr_bulkdone_${i}`,
+      projectId,
+      providerId,
+      updatedAt,
+      lastReadAt: updatedAt,
+      displayTitle: `Retired thread ${i}: landed work`,
+      environment: boardEnv(`perf/done-${i}`),
+      href: `/projects/board/threads/thr_bulkdone_${i}`,
+    });
+  });
+}
+
+/** The Done marks for `SIM_BULK_DONE_THREADS`, past every sweep threshold. */
+export function SIM_BULK_DONE_IDS(count: number): string[] {
+  return Array.from({ length: count }, (_, i) => `thr_bulkdone_${i}`);
+}
+
+/**
  * The Zoom-to-family GIF fixture (`?zoomfamily=1` on top of `?demo=1`): a
  * 24-child family the README's animated capture right-clicks. The card's
  * fold reads "24 child threads", plainly past the 20-child bar the shot

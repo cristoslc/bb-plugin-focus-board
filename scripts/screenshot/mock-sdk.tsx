@@ -10,7 +10,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
-import { SIM_ATTENTION_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DESC_GROUP, SIM_DESC_GROUP_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_DUAL_GROUPS, SIM_DUAL_GROUP_THREADS, SIM_GROUP_FAMILY_GROUPS, SIM_GROUP_FAMILY_THREADS, SIM_IDLE_BUSY_THREADS, SIM_ORCH_FAMILY_THREADS, SIM_OVERVIEW_GROUPS, SIM_OVERVIEW_LINKS, SIM_OVERVIEW_THREADS, SIM_PINNED_GROUP, SIM_PINNED_GROUP_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimProject, type SimThread } from "./data";
+import { SIM_ATTENTION_THREADS, SIM_BULK_DONE_IDS, SIM_BULK_DONE_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DESC_GROUP, SIM_DESC_GROUP_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_DUAL_GROUPS, SIM_DUAL_GROUP_THREADS, SIM_GROUP_FAMILY_GROUPS, SIM_GROUP_FAMILY_THREADS, SIM_IDLE_BUSY_THREADS, SIM_ORCH_FAMILY_THREADS, SIM_OVERVIEW_GROUPS, SIM_OVERVIEW_LINKS, SIM_OVERVIEW_THREADS, SIM_PINNED_GROUP, SIM_PINNED_GROUP_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimProject, type SimThread } from "./data";
 import {
   type FractionColumn,
   mintLegacyColumn,
@@ -529,6 +529,13 @@ const SCALE = Math.max(0, Number(new URLSearchParams(window.location.search).get
 // Unlike the probe's injected clones, these exercise the shipped card's pulse
 // path, so the pulse cliff is measured on genuine board pulses.
 const ATTENTION = Math.max(0, Number(new URLSearchParams(window.location.search).get("attention") ?? "0") || 0);
+// `?done=N` (the sweep-latency probe): append N threads already marked Done,
+// so the Done column carries the card count a long-lived workspace reaches
+// (the operator's own board: 1,363 live Done cards beside 390 live threads).
+// The Done lane is rebuilt by every board assembly, so a probe that leaves it
+// nearly empty prices an assembly nobody has. 0 (the default) leaves every
+// fixture byte-for-byte what the UAT suites and screenshots depend on.
+const DONE_BULK = Math.max(0, Number(new URLSearchParams(window.location.search).get("done") ?? "0") || 0);
 // `?zoomfamily=1` (the family-zoom GIF capture only): append the 24-child
 // zoom fixture (data.ts SIM_ZOOM_FAMILY_THREADS) — a parent with far more
 // children than the standard demo families carry, so the right-click →
@@ -594,6 +601,7 @@ let simThreads: readonly SimThread[] = EMPTY_MODE
           ? [...SIM_THREADS, ...SIM_DEMO_THREADS]
           : SIM_THREADS),
       ...(SCALE > 0 ? SIM_BULK_THREADS(SCALE) : []),
+      ...(DONE_BULK > 0 ? SIM_BULK_DONE_THREADS(DONE_BULK) : []),
       ...(ATTENTION > 0 ? SIM_ATTENTION_THREADS(ATTENTION) : []),
       ...(ZOOM_FAMILY_MODE ? SIM_ZOOM_FAMILY_THREADS : []),
       ...WORKPULSE_DATA.threads,
@@ -1143,7 +1151,10 @@ const uatCalls: { method: string; args?: unknown }[] = [];
 const simRpcLog: string[] = [];
 // Threads marked done in the harness: the SIM_DONE_IDS fixture seeds it and
 // done_set mutates it (the real server's KV is the same shape).
-const simDoneIds = new Set<string>(SIM_DONE_IDS);
+const simDoneIds = new Set<string>([
+  ...SIM_DONE_IDS,
+  ...SIM_BULK_DONE_IDS(DONE_BULK),
+]);
 // Family fold + idle-hide server state, mirroring the server's one KV row
 // (`focus-board:family-state`): { collapsedFamilies, hideIdleChildren },
 // seeded from `?familyState=` (JSON) and mutated by family_state_set/merge.
