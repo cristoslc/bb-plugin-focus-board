@@ -151,7 +151,7 @@ function inBoardPaneTitle(): string | null {
 function seedOwnedPane(threadId: string, paneId = "pane-2"): void {
   window.localStorage.setItem(
     "focus-board:boardNativeThreadPane",
-    JSON.stringify({ paneId, threadId, priorPaneIds: [] }),
+    JSON.stringify({ paneId, threadId }),
   );
   act(() => {
     setFakeSplitLayout([
@@ -272,10 +272,64 @@ describe("a pane the board owns", () => {
     expect(fakeSplitPanes()).toHaveLength(2);
   });
 
+  it("writes the record as the pane and the thread, nothing else", async () => {
+    seedOwnedPane("thr_older");
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+
+    fireEvent.click(cardAnchor("thr_focus"));
+    await waitFor(() => expect(threadPanes()).toEqual(["thr_focus"]));
+    expect(
+      JSON.parse(
+        window.localStorage.getItem("focus-board:boardNativeThreadPane") ?? "null",
+      ),
+    ).toEqual({ paneId: "pane-2", threadId: "thr_focus" });
+  });
+
+  it("a second click on another card replaces, never stacks", async () => {
+    // The click never asks the host to open the CLICKED thread: that ask is
+    // the host's "new pane on the right", so only the pane's current thread is
+    // ever opened (to focus it) and the clicked one is navigated into it.
+    seedOwnedPane("thr_older");
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+
+    fireEvent.click(cardAnchor("thr_focus"));
+    fireEvent.click(cardAnchor("thr_backlog"));
+    await waitFor(() => expect(threadPanes()).toEqual(["thr_backlog"]));
+    expect(fakeSplitPanes()).toHaveLength(2);
+    // One pane, so the second click replaced rather than opening beside it:
+    // the focus step names the thread the pane still shows, not the clicked
+    // one (which is in no pane and would have been opened as a new split).
+    expect(fakeNativeOpens().map((open) => open.threadId)).not.toContain("thr_backlog");
+  });
+
+  it("ignores a record with no pane id, the shape the old rule could write", async () => {
+    // `paneId: null` meant "claim whichever pane shows this thread that was
+    // not there at click time"; that rule is gone, and an old record on disk
+    // must read as no record rather than adopt the operator's pane.
+    window.localStorage.setItem(
+      "focus-board:boardNativeThreadPane",
+      JSON.stringify({ paneId: null, threadId: "thr_older", priorPaneIds: ["pane-1"] }),
+    );
+    act(() => {
+      setFakeSplitLayout([
+        { paneId: "pane-1", threadId: null, isFocused: false },
+        { paneId: "pane-2", threadId: "thr_older", isFocused: true },
+      ]);
+    });
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+
+    await clickCardInBoard("thr_focus");
+    expect(threadPanes()).toEqual(["thr_older"]);
+    expect(inBoardPaneTitle()).toBe("Focused thread");
+  });
+
   it("leaves a pane the operator re-threaded alone, and uses the board's own pane", async () => {
     window.localStorage.setItem(
       "focus-board:boardNativeThreadPane",
-      JSON.stringify({ paneId: "pane-2", threadId: "thr_older", priorPaneIds: [] }),
+      JSON.stringify({ paneId: "pane-2", threadId: "thr_older" }),
     );
     act(() => {
       setFakeSplitLayout([
@@ -305,7 +359,7 @@ describe("a pane the board owns", () => {
   it("a dragged pane is still the board's: position does not decide ownership", async () => {
     window.localStorage.setItem(
       "focus-board:boardNativeThreadPane",
-      JSON.stringify({ paneId: "pane-2", threadId: "thr_older", priorPaneIds: [] }),
+      JSON.stringify({ paneId: "pane-2", threadId: "thr_older" }),
     );
     act(() => {
       setFakeSplitLayout([
@@ -354,7 +408,7 @@ describe("the developer trace", () => {
       "[focus-board:native-open]",
       expect.objectContaining({
         threadId: "thr_older",
-        branch: "in-board: no pane of the board's to replace",
+        branch: "in-board: no split to use",
       }),
     );
     debug.mockRestore();
