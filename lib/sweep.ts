@@ -313,10 +313,32 @@ export interface SweepRunResult {
   swept: string[];
 }
 
+/**
+ * How many gestures the Done arm runs at once. Six is the measured knee, not
+ * a guess: the sweep's per-card wall on a 1,394-card board (1,305 live Done
+ * cards) is ~110ms in the production build, and almost all of it is the
+ * board's own work per state write — one full reconciliation pass over every
+ * card — plus one serialized bridge round trip. Overlapping six writes and
+ * applying their `doneIds` mutations as ONE state write collapses six of
+ * those passes into one, while a cancel still stops within a batch. Six also
+ * keeps a lane of nine at two windows, and the batch's cost is one board pass
+ * no matter how wide it is. Evidence and both measurements:
+ * docs/perf/sweep-latency-2026-11-18.md.
+ *
+ * Only the Done arm may exceed 1: `done_set` is the board's own RPC, safe to
+ * run concurrently (server.ts serializes the Done index behind its KV write
+ * lock, and tests/board-kv-concurrent.test.ts pins interleaved marks). The
+ * other arms drive the HOST's sidebar actions, which run one row at a time
+ * (a new write aborts the previous in-flight one — a single-slot design), so
+ * they stay strictly sequential.
+ */
+export const SWEEP_BATCH_CONCURRENCY = 6;
+
 export interface SweepRunCallbacks {
   /**
    * The sweep's per-thread gesture — archive, mark Done, unpin, or mark
-   * read, per the arm's destination. The runner awaits it before the next.
+   * read, per the arm's destination. The runner awaits each batch before
+   * the next; within a batch up to `concurrency` gestures are in flight.
    */
   act: (threadId: string) => Promise<unknown>;
   /** Fired before each gesture starts: the throbber target. */
@@ -324,22 +346,40 @@ export interface SweepRunCallbacks {
   /** Fired after each gesture settles (success or failure). */
   onSettled?: (threadId: string) => void;
   /**
-   * Asked before every gesture AFTER the first. False stops the run: the
-   * action already in flight finishes (cancel means "no more", not "yank
+   * Fired once per batch with the ids whose gesture resolved, after
+   * `onSettled` has run for every id in it. The place for a state write the
+   * whole batch shares: one `doneIds` mutation per batch instead of one per
+   * card, so the board recomputes its assembly once per batch.
+   *
+   * A failed id never appears here — failures ride the result's `failures`
+   * and must not be counted as swept — and an empty batch is not fired at
+   * all, so a caller cannot mistake "nothing landed" for a write.
+   */
+  onBatchSettled?: (settledIds: readonly string[]) => void;
+  /**
+   * Asked before every batch AFTER the first. False stops the run: the
+   * gestures already in flight finish (cancel means "no more", not "yank
    * the current one"), the rest are reported as `remaining`.
    */
   shouldContinue?: () => boolean;
+  /**
+   * Gestures in flight at once (default 1 — strictly one at a time). See
+   * SWEEP_BATCH_CONCURRENCY for which arm may raise it and why.
+   */
+  concurrency?: number;
 }
 
 /**
  * Apply the sweep's per-thread gesture to every captured candidate,
- * strictly one at a time, collecting failures instead of stopping.
+ * collecting failures instead of stopping.
  *
- * Sequential is a hard requirement, not a style choice: the host's sidebar
- * actions run one row at a time (a new write aborts the previous in-flight
- * one — a single-slot design), so firing the loop without awaiting applies
- * only the last candidate. Each await here gives the previous gesture the
- * whole window to finish.
+ * Sequential by default is a hard requirement, not a style choice: the
+ * host's sidebar actions run one row at a time (a new write aborts the
+ * previous in-flight one — a single-slot design), so firing the loop
+ * without awaiting applies only the last candidate. A caller whose gesture
+ * is safe to overlap (the Done arm's own `done_set` RPC) raises
+ * `concurrency`, and the batch's resolved ids arrive in ONE
+ * `onBatchSettled` call so a single state write covers them all.
  */
 export async function runSweep(
   threadIds: readonly string[],
@@ -347,7 +387,9 @@ export async function runSweep(
 ): Promise<SweepRunResult> {
   const failures: SweepRunFailure[] = [];
   const swept: string[] = [];
-  for (const [index, threadId] of threadIds.entries()) {
+  const concurrency = Math.max(1, Math.floor(callbacks.concurrency ?? 1));
+  let index = 0;
+  while (index < threadIds.length) {
     if (
       index > 0 &&
       callbacks.shouldContinue !== undefined &&
@@ -360,17 +402,35 @@ export async function runSweep(
         swept,
       };
     }
-    callbacks.onActive?.(threadId);
-    try {
-      await callbacks.act(threadId);
-      swept.push(threadId);
-    } catch (error) {
-      failures.push({
-        threadId,
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-    callbacks.onSettled?.(threadId);
+    const batch = threadIds.slice(index, index + concurrency);
+    index += batch.length;
+    for (const threadId of batch) callbacks.onActive?.(threadId);
+    // allSettled, never all: one rejection inside a batch must not lose the
+    // ids that DID settle, and must not reject the batch. The async wrapper
+    // turns a SYNCHRONOUS throw from `act` into a rejection too, so a gesture
+    // that throws before returning a promise is still collected (the
+    // sequential runner's try/catch used to cover that).
+    const outcomes = await Promise.allSettled(
+      batch.map(async (threadId) => callbacks.act(threadId)),
+    );
+    const batchSettled: string[] = [];
+    outcomes.forEach((outcome, at) => {
+      const threadId = batch[at];
+      if (outcome.status === "fulfilled") {
+        swept.push(threadId);
+        batchSettled.push(threadId);
+      } else {
+        failures.push({
+          threadId,
+          message:
+            outcome.reason instanceof Error
+              ? outcome.reason.message
+              : String(outcome.reason),
+        });
+      }
+      callbacks.onSettled?.(threadId);
+    });
+    if (batchSettled.length > 0) callbacks.onBatchSettled?.(batchSettled);
   }
   return { failures, cancelled: false, remaining: [], swept };
 }

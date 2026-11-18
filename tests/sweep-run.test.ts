@@ -109,6 +109,137 @@ describe("runSweep archives every candidate, one at a time", () => {
   });
 });
 
+describe("runSweep batching", () => {
+  /** A promise resolved by hand, per id. */
+  function gate() {
+    let release = () => {};
+    const promise = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return { promise, release };
+  }
+
+  it("runs up to `concurrency` gestures at once and reports each batch once", async () => {
+    const gates = new Map<string, { promise: Promise<void>; release: () => void }>();
+    const started: string[] = [];
+    const batches: string[][] = [];
+    const run = runSweep(["a", "b", "c", "d", "e"], {
+      concurrency: 3,
+      act: (threadId) => {
+        started.push(threadId);
+        const gateFor = gate();
+        gates.set(threadId, gateFor);
+        return gateFor.promise;
+      },
+      onBatchSettled: (ids) => batches.push([...ids]),
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    // The first window is in flight; nothing past it has started.
+    expect(started).toEqual(["a", "b", "c"]);
+    for (const id of ["c", "b", "a"]) gates.get(id)!.release();
+    // The second window opens only once the first has fully settled.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(started).toEqual(["a", "b", "c", "d", "e"]);
+    for (const id of ["d", "e"]) gates.get(id)!.release();
+    await run;
+    expect(batches).toEqual([
+      ["a", "b", "c"],
+      ["d", "e"],
+    ]);
+  });
+
+  it("names one failure inside a batch and never counts it as swept", async () => {
+    const batches: string[][] = [];
+    const result = await runSweep(["ok1", "bad", "ok2"], {
+      concurrency: 3,
+      act: (threadId) =>
+        threadId === "bad" ? Promise.reject(new Error("host refused")) : Promise.resolve(true),
+      onBatchSettled: (ids) => batches.push([...ids]),
+    });
+    expect(result.swept).toEqual(["ok1", "ok2"]);
+    expect(result.failures).toEqual([{ threadId: "bad", message: "host refused" }]);
+    expect(result.cancelled).toBe(false);
+    expect(batches).toEqual([["ok1", "ok2"]]);
+  });
+
+  it("collects a synchronous throw inside a batch like a rejection", async () => {
+    const batches: string[][] = [];
+    const result = await runSweep(["throws", "ok"], {
+      concurrency: 2,
+      act: (threadId) => {
+        if (threadId === "throws") throw new Error("thrown before the promise");
+        return Promise.resolve(true);
+      },
+      onBatchSettled: (ids) => batches.push([...ids]),
+    });
+    expect(result.failures).toEqual([
+      { threadId: "throws", message: "thrown before the promise" },
+    ]);
+    expect(result.swept).toEqual(["ok"]);
+    expect(batches).toEqual([["ok"]]);
+  });
+
+  it("a cancel between batches leaves the unstarted ids remaining", async () => {
+    const started: string[] = [];
+    let proceed = true;
+    const result = await runSweep(["a", "b", "c", "d", "e"], {
+      concurrency: 2,
+      act: (threadId) => {
+        started.push(threadId);
+        // The cancel lands while the first batch is in flight: the batch
+        // finishes, nothing after it starts.
+        if (threadId === "b") proceed = false;
+        return Promise.resolve(true);
+      },
+      shouldContinue: () => proceed,
+    });
+    expect(started).toEqual(["a", "b"]);
+    expect(result.cancelled).toBe(true);
+    expect(result.swept).toEqual(["a", "b"]);
+    expect(result.remaining).toEqual(["c", "d", "e"]);
+  });
+
+  it("an empty confirmed set runs nothing and applies no batch", async () => {
+    const act = vi.fn(() => Promise.resolve(true));
+    const onBatchSettled = vi.fn();
+    const result = await runSweep([], {
+      concurrency: 6,
+      act,
+      onBatchSettled,
+    });
+    expect(act).not.toHaveBeenCalled();
+    expect(onBatchSettled).not.toHaveBeenCalled();
+    expect(result).toEqual({ failures: [], cancelled: false, remaining: [], swept: [] });
+  });
+
+  it("a batch that settles nothing fires no batch callback", async () => {
+    const onBatchSettled = vi.fn();
+    const result = await runSweep(["a", "b"], {
+      concurrency: 2,
+      act: () => Promise.reject(new Error("host refused")),
+      onBatchSettled,
+    });
+    expect(result.failures).toHaveLength(2);
+    expect(onBatchSettled).not.toHaveBeenCalled();
+  });
+
+  it("without `concurrency` the runner stays strictly one at a time", async () => {
+    let inFlight = 0;
+    let peak = 0;
+    await runSweep(["a", "b", "c"], {
+      act: async () => {
+        inFlight += 1;
+        peak = Math.max(peak, inFlight);
+        await Promise.resolve();
+        await Promise.resolve();
+        inFlight -= 1;
+      },
+    });
+    expect(peak).toBe(1);
+  });
+});
+
 describe("runSweep cancellation", () => {
   it("stops before the next archive when shouldContinue turns false", async () => {
     const archive = vi.fn((threadId: string) => Promise.resolve({ ok: true }));
