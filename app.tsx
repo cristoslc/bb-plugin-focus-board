@@ -391,12 +391,8 @@ const REPLACE_CONFIRM_MS = 400;
 
 /** How long a native open waits before checking the host did not just replace
  *  the board with the thread page. */
-const NATIVE_OPEN_REPAIR_MS = 500;
-
 /** The board's own root element: its presence is how the click knows whether
  *  the plugin panel survived the open. */
-const BOARD_PANEL_SELECTOR = "[data-focus-board-panel]";
-
 /**
  * The card click's decision trace (2026-11-17: two reports in a row could not
  * be attributed from a screenshot). Off unless the developer setting
@@ -409,9 +405,6 @@ function traceNativeOpen(
   if (!enabled) return;
   console.debug("[focus-board:native-open]", event);
 }
-
-/** The repair timer, module-scoped: it must outlive the panel it repairs. */
-let nativeRepairTimer: number | null = null;
 
 /** A compact trace of the host's split layout, for the debug line. */
 function splitLayoutTrace(layout: SplitPaneLayoutView | null): unknown {
@@ -1461,47 +1454,6 @@ function BoardPage({ subPath }: { subPath: string }) {
   // The developer trace switch (server.ts's `nativeOpenDebug`).
   const nativeOpenDebugRef = useRef(false);
   nativeOpenDebugRef.current = settingValues?.nativeOpenDebug === true;
-  /**
-   * The repair for the half of bb's split predicate a plugin cannot read: if
-   * the host plainly navigated anyway (no layout atom yet, or its own compact
-   * override), the plugin panel is unmounted and the route is the thread page.
-   * Put the board's route back with that thread in its own pane, so one click
-   * still leaves the thread open beside the board.
-   *
-   * The timer outlives the panel on purpose: the failure mode is the panel
-   * being unmounted, so the code that notices cannot live inside it.
-   */
-  const scheduleNativeRepair = useCallback(
-    (threadId: string, branch: string) => {
-      if (nativeRepairTimer !== null) window.clearTimeout(nativeRepairTimer);
-      nativeRepairTimer = window.setTimeout(() => {
-        nativeRepairTimer = null;
-        const boardMounted = document.querySelector(BOARD_PANEL_SELECTOR) !== null;
-        const route = window.location.pathname;
-        // bb re-creates the plugin panel's subtree when it splits, so the
-        // marker is briefly absent on a split that WORKED. A pane holding the
-        // thread is the difference: only a host that never made one has
-        // plainly navigated.
-        const threadPane =
-          splitLayoutRef.current?.panes.some((pane) => pane.threadId === threadId) ?? false;
-        const hostPlainlyNavigated =
-          !boardMounted && !threadPane && route.includes(`/threads/${threadId}`);
-        traceNativeOpen(nativeOpenDebugRef.current, {
-          threadId,
-          branch,
-          outcome: hostPlainlyNavigated
-            ? "host plainly navigated: restoring the board's route"
-            : "host kept the board",
-          boardMounted,
-          route,
-          layout: splitLayoutTrace(splitLayoutRef.current),
-        });
-        if (!hostPlainlyNavigated) return;
-        navigate.toPluginPanel(PANEL_PATH, { subPath: paneSubPathFor(threadId) });
-      }, NATIVE_OPEN_REPAIR_MS);
-    },
-    [navigate],
-  );
   const clearReplaceDeadline = useCallback(() => {
     if (replaceTimerRef.current !== null) {
       window.clearTimeout(replaceTimerRef.current);
@@ -3191,10 +3143,6 @@ function BoardPage({ subPath }: { subPath: string }) {
         }, REPLACE_CONFIRM_MS);
         // The focus step: the pane's CURRENT thread, which the host focuses.
         actions.open(placement.threadId, { split: true });
-        // The safety net stays wired: if the host took the click as a plain
-        // navigation after all, the board's route comes back with the thread
-        // in its own pane. It is not the mechanism; the pane above is.
-        scheduleNativeRepair(threadId, "replace");
         return;
       }
     },
@@ -3203,7 +3151,6 @@ function BoardPage({ subPath }: { subPath: string }) {
       capturePaneAttention,
       clearReplaceDeadline,
       openThreadCard,
-      scheduleNativeRepair,
       setBoardNativePane,
     ],
   );
