@@ -42,20 +42,19 @@ defaults:
   cpu_throttle: 4
 
 steps:
-  - id: a-tap-opens-the-native-pane
-    title: On a throttled phone with 478 cards, a tap hands the thread to bb's own pane
+  - id: a-tap-opens-the-boards-pane
+    title: On a throttled phone with 478 cards, a tap enters the board's own pane
     goto: "?groupBy=status"
-    # The native-pane move retires the phone-open budget this step used to
-    # spend: past the covered sheet the board captures no attention (issue
-    # #406), and the native pane is the host's to paint, so the plugin's own
-    # tap work is one recorded opener call and zero board DOM. What is pinned
-    # here is that contract; the sheet teardown and the desktop freeze each
-    # keep a timed budget below.
+    # One click, one surface (issue #470): at the covered-pane width the tap
+    # opens the board's own sheet, never a host split. Past the covered sheet
+    # the board captures no attention (issue #406), so what is pinned here is
+    # the contract and that the tap paints no error; the sheet teardown and the
+    # desktop freeze each keep a timed budget below.
     gestures:
       - click: { card: thr_uat_queue }
     assert:
-      - native_open: { threadId: thr_uat_queue, split: true }
-      - pane: { open: false }
+      - native_panes: []
+      - pane: { threadId: thr_uat_queue }
       - no_visible_error: true
 
   - id: a-tap-closes-the-pane-within-budget
@@ -73,16 +72,17 @@ steps:
     title: With the board visible beside the pane, the tap's attention freeze paints inside the latency budget
     # Last, because it leaves the viewport wide: the phone steps above need
     # the compact sheet. The move's own plugin-side cost is here — on a fine
-    # pointer the tap captures the card's placement and the board rebuilds
-    # around it. The budget is the measured figure at this load (478 cards,
-    # 4x CPU) plus headroom; the instrument times dispatch to DOM-quiet in
-    # page time, and the resize and its settle sit outside the click's
-    # reading.
+    # pointer the tap opens the board's pane beside the board, captures the
+    # card's placement, and the board rebuilds around it. The budget is the
+    # measured figure at this load (478 cards, 4x CPU) plus headroom; the
+    # instrument times dispatch to DOM-quiet in page time, and the resize and
+    # its settle sit outside the click's reading.
     goto: "?groupBy=status"
     gestures:
       - resize: { width: 1180, height: 820 }
       - sleep: 300
       - click: { card: thr_uat_queue }
     assert:
-      - native_open: { threadId: thr_uat_queue, split: true }
+      - native_panes: []
+      - pane: { threadId: thr_uat_queue }
       - gesture_budget: { gesture: click, max_ms: 1500 }

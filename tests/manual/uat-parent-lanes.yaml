@@ -53,27 +53,35 @@ steps:
     assert:
       - band_hover: true
 
-  - id: header-click-opens-parent-natively
-    title: Clicking a lane header opens the parent thread in bb's native pane
-    # The native-pane move: the lane header rides the same host opener a
-    # card click does (its aria-label is the lane's own "Open …" control).
+  - id: header-click-opens-the-parent-in-the-boards-pane
+    title: Clicking a lane header opens the parent thread in the board's own pane
+    # One click, one surface (issue #470): the click opens the board's own
+    # in-panel pane. The header rides the same path a card click does (its
+    # aria-label is the lane's own "Open …" control), so at one pane the host's
+    # opener is never asked for a split, and the header's own lock comes with
+    # the click. The header IS the parent's card in this view, so the pane's
+    # title is the parent's display title.
     goto: "?groupBy=parent"
     click_aria: { label: "Open Parent thread lane fixture" }
     assert:
-      - native_open: { threadId: thr_parent_lane, split: true }
-      - pane: { open: false }
-      - text_visible: "Parent thread lane fixture"
+      - native_panes: []
+      - pane: { open: true }
+      - aria_present: "Thread: Parent thread lane fixture"
+      - url: { suffix: "/board/t/thr_parent_lane" }
+      - locked_lane: thr_parent_lane
 
   - id: card-click-opens-child-pane
-    title: Clicking a child card opens its thread in bb's native pane
-    # The native-pane move: the child-row click rides the same host opener a
-    # lane card does; the pane's own URL trail is covered by the deep-link
-    # step below.
+    title: Clicking a child card opens its thread in the board's own pane
+    # The same one-surface click a lane card takes: the board's pane carries
+    # the child, and the child's family lane becomes the locked lane.
     goto: "?groupBy=parent"
     click: { card: thr_child_lane }
     assert:
-      - native_open: { threadId: thr_child_lane, split: true }
-      - pane: { open: false }
+      - native_panes: []
+      - pane: { threadId: thr_child_lane }
+      - active_card: { id: thr_child_lane }
+      - url: { suffix: "/board/t/thr_child_lane" }
+      - locked_lane: thr_parent_lane
 
   - id: horizontal-scroll-keeps-active-lane-in-view
     title: A deep-linked child in the rightmost lane is scrolled into view
@@ -84,28 +92,30 @@ steps:
 
   - id: a-context-lane-pan-locks-its-nearest-lane
     title: A short pan on the parent board locks the lane nearest the ruler
-    # With the in-board pane no longer opening on a click, the board keeps
-    # its full width for this pan, so the lock lands on the lane the pan
-    # brings to the ruler — recorded here, then held by the click below.
+    # The pan runs with no pane open, so the board still has its full width
+    # for it: the lock lands on the lane the pan brings to the ruler —
+    # recorded here, then replaced by the click below.
     goto: "?groupBy=parent"
     scroll: { dy: 260 }
     sleep: 1800
     assert:
       - locked_lane: thr_parent_lane
 
-  - id: clicking-a-context-card-keeps-the-lock
-    title: Clicking a card in a context lane opens it natively and never disturbs the locked lane
-    # The native-pane move: the click opens bb's own pane, so the in-board
-    # churn this step used to exercise (the pane-open keep-in-view scroll)
-    # is gone with the pane entry; what must hold is the quiet board — the
-    # lock keeps its lane through the click and its relock/recut settle,
-    # which lands at ~300ms.
+  - id: clicking-a-context-card-locks-its-own-lane
+    title: Clicking a card in a context lane opens it in the board's pane, relocks onto that lane, and keeps the card visible
+    # The click sets the active thread, and this board's rule is that the
+    # active thread's lane becomes the locked lane (the pane-open state the
+    # one-surface contract restored). What this step has always guarded is the
+    # card itself: through the relock glide and the recut that follows, the
+    # clicked card stays fully visible, and the lock it leaves behind is that
+    # card's own lane rather than the lane the pan before it held.
     click: { card: thr_sweep_child }
     sleep: 1800
     assert:
-      - native_open: { threadId: thr_sweep_child, split: true }
-      - locked_lane: thr_parent_lane
-      - pane: { open: false }
+      - native_panes: []
+      - pane: { threadId: thr_sweep_child }
+      - locked_lane: thr_sweep_parent
+      - card_visible: thr_sweep_child
 
   - id: horizontal-pan-relocks-nearest-family
     title: A horizontal pan releases the ruler lock and re-locks the nearest family at rest
@@ -137,22 +147,23 @@ steps:
       - locked_lane: true
       - bands_aligned: true
 
-  - id: click-during-a-glide-opens-natively
-    title: Clicking a family header while a pan glide is in flight opens the thread natively and leaves the board locked and aligned
+  - id: click-during-a-glide-opens-in-the-boards-pane
+    title: Clicking a family header while a pan glide is in flight opens the thread in the board's pane and wins the lock for that lane
     goto: "?groupBy=parent"
-    # The header click used to win the lock back for family A only because
-    # opening the in-board pane scrolled the board to the active card. Under
-    # the native-pane move the click is a pure host-opener call — no board
-    # scroll — so which family the interrupted glide settles on is the pan's
-    # business (and a race by construction). What must hold is the quiet
-    # board: a lock exists, the bands stay aligned, and the click reached
-    # the host's opener.
+    # The pan starts a glide toward the sweep family; the click (no settle
+    # wait) lands while that glide is in flight. The header click locks its own
+    # lane and sets the active thread, whose lane is locked too — the pane's own
+    # entry is what carries the board to that lane. What must hold is the quiet
+    # board: the clicked family holds the lock, the bands stay aligned, and the
+    # thread lands in the board's pane rather than a host split.
     scroll: { dx: 400, settle_ms: 0 }
     click_aria: { label: "Open Parent thread lane fixture" }
     sleep: 3000
     assert:
-      - native_open: { threadId: thr_parent_lane, split: true }
-      - locked_lane: true
+      - native_panes: []
+      - pane: { open: true }
+      - aria_present: "Thread: Parent thread lane fixture"
+      - locked_lane: thr_parent_lane
       - bands_aligned: true
 
   - id: wheel-overshoot-snaps-back-to-the-locked-lane
