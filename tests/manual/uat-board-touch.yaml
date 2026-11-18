@@ -87,6 +87,38 @@ steps:
     assert:
       - touch_overflow: { card: thr_ship_release, board: { x: "hidden", y: "auto" }, lane: { x: "auto", y: "clip" } }
 
+  # ── A tall family card: the row grows to its card, nothing is cut ────────
+  # The operator's report (2026-11-18): on the rows read a family card's lower
+  # child rows were sliced off at the row's bottom edge, with no scroll inside
+  # the card and (under the fold budget) no Show all handle either. The lane's
+  # card list clips its cross axis by design, so a row pinned shorter than its
+  # tallest card cuts content away rather than scrolling it. The row is
+  # content-tall with a floor now, and the board's own vertical scroll reaches
+  # every lane.
+  - id: a-tall-family-card-keeps-every-row-inside-its-row
+    title: On the rows read a family card taller than the row's floor shows every folded row and its Show all handle
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert:
+      - lane_direction: horizontal
+      # Seven children fold to five whole rows plus the handle; all six boxes
+      # must sit inside the row's card list, which has no inner scroll.
+      - card_rows_reachable: { card: thr_sweep_parent, inner_scroll: false }
+
+  - id: the-show-all-handle-reveals-the-withheld-rows-in-place
+    title: Tapping Show all on a rows-read family card renders the withheld rows, still inside the row
+    goto: "?groupBy=status&laneDirection=horizontal"
+    click_aria: { label: "Show all 7 child threads", within: thr_sweep_parent }
+    assert:
+      - text_visible: "Show fewer"
+      # The expanded card is taller again; the row must grow with it.
+      - card_rows_reachable: { card: thr_sweep_parent, inner_scroll: false }
+
+  - id: the-column-read-still-reaches-a-tall-family-card
+    title: The vertical read keeps its own lane scroll, so a tall card's rows stay reachable there
+    goto: "?groupBy=status"
+    assert:
+      - card_rows_reachable: { card: thr_sweep_parent }
+
   # ── The operator's case: a finger on a card pans the board ───────────────
   - id: a-finger-on-a-card-pans-the-column-board
     title: A horizontal pan starting ON a card scrolls the board and moves no card

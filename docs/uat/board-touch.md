@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-06T15:50:32.446Z by `npm run uat`._
+_Generated 2026-11-18T17:38:30.289Z by `npm run uat`._
 
 ## board-touch
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_4qh62ybyi5-1/bb-plugin-focus-board/tests/manual/uat-board-touch.yaml` · theme dark
+Source: `tests/manual/uat-board-touch.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
@@ -12,6 +12,9 @@ Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees
 | A column lane scrolls its own stack and clips the horizontal axis instead of becoming a second scroll container | pass | ✓ the board's x overflow is auto; ✓ the board's y overflow is hidden; ✓ the lane's x overflow is clip; ✓ the lane's y overflow is auto |
 | The rows board carries the same touch contract | pass | ✓ lane direction: horizontal; ✓ the viewport presents a coarse pointer and no hover; ✓ no card is a native drag source, so a finger's pan cannot lift one; ✓ the card's anchor is not draggable; ✓ the card's text is not touch-selectable, so a long press pans; ✓ the board allows both pan axes; ✓ the lane list allows both pan axes; ✓ card thr_ship_release is not a native drag source |
 | A row scrolls along its own flow and clips the vertical axis, so a vertical slide reaches the board | pass | ✓ the board's x overflow is hidden; ✓ the board's y overflow is auto; ✓ the lane's x overflow is auto; ✓ the lane's y overflow is clip |
+| On the rows read a family card taller than the row's floor shows every folded row and its Show all handle | pass | ✓ lane direction: horizontal; ✓ family card thr_sweep_parent: every child row is reachable inside its lane; ✓ family card thr_sweep_parent: the lane needs no inner scroll to show the card |
+| Tapping Show all on a rows-read family card renders the withheld rows, still inside the row | pass | ✓ text visible: "Show fewer"; ✓ family card thr_sweep_parent: every child row is reachable inside its lane; ✓ family card thr_sweep_parent: the lane needs no inner scroll to show the card |
+| The vertical read keeps its own lane scroll, so a tall card's rows stay reachable there | pass | ✓ family card thr_sweep_parent: every child row is reachable inside its lane |
 | A horizontal pan starting ON a card scrolls the board and moves no card | pass | ✓ the finger landed on {"card":"thr_ship_release","column":"pinned"}; ✓ the board x scrolled positive 40px; ✓ the lane x scrolled exactly 0px; ✓ the page x scrolled exactly 0px; ✓ the browser started no native drag; ✓ no rank_move call; ✓ pinned order |
 | A pan that starts in the gap between two cards scrolls the board, never drags one | pass | ✓ the finger landed on {"card":null,"column":"pinned"}; ✓ the board x scrolled positive 40px; ✓ the lane x scrolled exactly 0px; ✓ the browser started no native drag; ✓ no rank_move call; ✓ pinned order |
 | A pan on the lane's empty space below its last card scrolls the board | pass | ✓ the finger landed on {"column":"pinned"}; ✓ the board x scrolled positive 40px; ✓ the browser started no native drag; ✓ no rank_move call |

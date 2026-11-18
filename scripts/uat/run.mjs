@@ -1870,6 +1870,66 @@ const pageTextVisible = (needle) =>
   document.body.textContent?.includes(needle) ?? false;
 
 /**
+ * Is every child row of a family card reachable inside its lane? The card
+ * list clips its cross axis (`overflow-y: clip` in a horizontal lane, by
+ * design — see its note in components/board.tsx), so a row that reaches past
+ * the list's visible box is not merely scrolled away, it is CUT: no scroll,
+ * no handle, nothing on screen to reach it. That is the operator's report
+ * (2026-11-18): two child rows on a card, the second one sliced.
+ *
+ * The rule reads the vertical axis only, because that is the axis a
+ * horizontal lane clips; the flow axis is the list's own scroll. A row counts
+ * as reachable when it sits inside the list's box, or when the list is a
+ * vertical scroller (a vertical lane) with the range to bring it there.
+ * `handle` includes the Show all control in the set (default true: a clipped
+ * handle is the same bug, and the fold's whole promise is that the withheld
+ * rows are one click away).
+ */
+const pageCardRowsReachable = (input) => {
+  const want = typeof input === "string" ? { card: input } : input;
+  const id = want.card;
+  const card = document.querySelector(`[data-thread-card="${CSS.escape(id)}"]`);
+  if (card === null) return { ok: false, reason: `no card ${id}` };
+  const list = card.closest("[data-card-list]");
+  if (list === null) return { ok: false, reason: `card ${id} is not in a lane's card list` };
+  const box = list.getBoundingClientRect();
+  const style = getComputedStyle(list);
+  const scrollableY = style.overflowY === "auto" || style.overflowY === "scroll";
+  const rows = [...card.querySelectorAll("[data-nested-rows] > ul > li")];
+  const handle = want.handle === false ? null : card.querySelector("[data-show-all-rows]");
+  if (rows.length === 0) return { ok: false, reason: `card ${id} renders no child rows` };
+  const escape = (el) => {
+    const r = el.getBoundingClientRect();
+    return r.bottom > box.bottom + 0.5 || r.top < box.top - 0.5;
+  };
+  const cutRows = rows.filter(escape).length;
+  const handleCut = handle !== null && escape(handle);
+  const cardBox = card.getBoundingClientRect();
+  const cardCut = cardBox.bottom > box.bottom + 0.5 || cardBox.top < box.top - 0.5;
+  const detail =
+    `card ${id}: ${rows.length} row(s)${handle === null ? "" : " + handle"}, ` +
+    `card list ${Math.round(box.top)}…${Math.round(box.bottom)} ` +
+    `(overflow-y ${style.overflowY}, scroll ${list.scrollHeight}/${list.clientHeight}), ` +
+    `card ${Math.round(cardBox.top)}…${Math.round(cardBox.bottom)}`;
+  const reachableByScroll = scrollableY && list.scrollHeight > list.clientHeight;
+  if (cutRows === 0 && !handleCut && !cardCut) {
+    return { ok: true, scrollableY, reason: `${detail}; every row sits inside the lane's box` };
+  }
+  if (reachableByScroll) {
+    return {
+      ok: true,
+      scrollableY,
+      reason: `${detail}; ${cutRows} row(s) past the fold are reachable by the lane's own scroll`,
+    };
+  }
+  return {
+    ok: false,
+    scrollableY,
+    reason: `${detail}; ${cutRows} row(s)${handleCut ? " and the Show all handle" : ""} sit past the clip and no scroll reaches them`,
+  };
+};
+
+/**
  * Horizontal pan over a board: a programmatic scrollLeft delta, which fires a
  * real scroll event. `target` picks the board: "lanes" (default — the
  * parent-lane board) or "columns" (the grouped column board, for scrolled
@@ -3667,6 +3727,28 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
     if (rule.card_visible !== undefined) {
       const got = await page.evaluate(pageCardVisible, rule.card_visible);
       expect(`card visible: ${rule.card_visible}`, got.ok === true, got.reason);
+    }
+    if (rule.card_rows_reachable !== undefined) {
+      const want =
+        typeof rule.card_rows_reachable === "string"
+          ? { card: rule.card_rows_reachable }
+          : rule.card_rows_reachable;
+      const got = await page.evaluate(pageCardRowsReachable, want);
+      expect(
+        `family card ${want.card}: every child row is reachable inside its lane`,
+        got.ok === true,
+        got.reason,
+      );
+      if (want.inner_scroll === false) {
+        // The row growing is what keeps the card whole; a vertical scroller
+        // inside the list would be the shape the 2026-10-22 ruling rejected
+        // and would trap the board's own pan (issue #330).
+        expect(
+          `family card ${want.card}: the lane needs no inner scroll to show the card`,
+          got.scrollableY === false,
+          got.reason,
+        );
+      }
     }
     if (rule.attention_pulse !== undefined) {
       const want = rule.attention_pulse; // { visible_animate?, parked_still?, parked_at_least? }
