@@ -1463,6 +1463,11 @@ function BoardPage({ subPath }: { subPath: string }) {
   // because the host's opener cannot resolve that thread either.
   const liveThreadIdsRef = useRef<readonly string[]>([]);
   liveThreadIdsRef.current = threads.map((thread) => thread.id);
+  // The sidebar rows themselves, as a ref for the same identity-stable
+  // callback: the card click reads the clicked thread's read state off this
+  // one to decide whether opening it is a gesture that will relocate it.
+  const liveThreadsRef = useRef<readonly PluginSidebarThread[]>([]);
+  liveThreadsRef.current = threads;
   // bb's compact predicate, the one its opener gates splits on
   // (lib/native-pane-ownership.ts cites the renderer constant): where it is
   // true, a split request is a plain navigation that replaces the board.
@@ -3085,6 +3090,27 @@ function BoardPage({ subPath }: { subPath: string }) {
   // pane reads it.
   const openThreadCardNative = useCallback(
     (threadId: string) => {
+      // A click on an UNREAD card is itself a gesture that relocates the card:
+      // bb marks a thread read as its pane opens, and under the status
+      // grouping that state flip re-lanes the card at once into its idle
+      // bucket (components/grouping.ts `frozenLaneHolds`, issue #338) — a lane
+      // the board can be scrolled far away from. Arm the one-shot reveal claim
+      // here, at the click and not at the write: the read write lands in a
+      // LATER commit than the click, so the claim is what makes the board
+      // follow the card once it has actually moved (the same mechanism, and
+      // the same reason, as the card menu's Pin/Done/Read entries).
+      //
+      // The claim carries the relocation for every click shape. A desktop
+      // click beside a native pane keeps the board's active card, and the
+      // board's own keep-in-view effect follows it there; the phone's covered
+      // sheet deliberately hands Board `activeThreadId={null}` (the quiet-open
+      // work), so only the claim can follow the card behind the sheet — the
+      // operator lifts it onto a board already showing the card they opened
+      // (reported 2026-11-18).
+      const clicked = liveThreadsRef.current.find((thread) => thread.id === threadId);
+      if (clicked?.isUnread === true) {
+        pendingStateClaimsRef.current.set(threadId, { field: "isUnread", value: false });
+      }
       const layout = splitLayoutRef.current;
       const debug = nativeOpenDebugRef.current;
       const trace = (branch: string, extra: Record<string, unknown> = {}) =>

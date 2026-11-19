@@ -877,9 +877,19 @@ function BoardBase({
   // `restoredView` prop): a ref, not the prop, so a later re-run of this
   // effect — a lane-direction flip, a grouping switch — still fits as usual.
   const mountFitPendingRef = useRef(!restoredView);
+  // What the last fit followed: the active card's lane PLUS the scroll axis it
+  // is followed along (the lane board's flow, or the grid's). A different key
+  // means the card relocated, or the board re-laid out under it (a lane-
+  // direction flip, a switch to the grid) and the place it was fitted to is
+  // gone — the one board-driven reason to move the operator's scroll. An
+  // unchanged key is a plain data refresh and must not. `undefined` is "never
+  // fitted": a restored view records its key without fitting, which is what
+  // keeps the restored scroll position still.
+  const fittedViewKeyRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     const container = scrollRef.current;
     if (container === null || activeThreadId === null) return;
+    const viewKey = `${gridMode || horizontalLanes ? "y" : "x"}|${activeCardLaneId ?? ""}`;
     const keepActiveCardInView = () => {
       const card = firstRealCard(container, activeThreadId);
       if (!(card instanceof HTMLElement)) return;
@@ -912,7 +922,23 @@ function BoardBase({
     };
     if (mountFitPendingRef.current) {
       mountFitPendingRef.current = false;
+      fittedViewKeyRef.current = viewKey;
       keepActiveCardInView();
+    } else if (fittedViewKeyRef.current !== undefined && fittedViewKeyRef.current !== viewKey) {
+      // The active card RELOCATED, and this effect body has to act on the
+      // dependency it carries. Until 2026-11-18 it fitted only the mount pass
+      // and width changes, so a state flip that re-laned the card left it
+      // where it landed — offscreen, with its pane open on it (the report, and
+      // docs/screenshots/repro-unread-open-recenter/ for the trace). A
+      // same-lane re-render keeps the recorded key and never reaches this
+      // branch, so data refreshes still leave the operator's pan alone.
+      fittedViewKeyRef.current = viewKey;
+      keepActiveCardInView();
+    } else {
+      // First run on a restored view: record where the card is without
+      // fitting, so the replayed scroll position stands and only a later
+      // relocation moves the board.
+      fittedViewKeyRef.current = viewKey;
     }
     // Pane opening and drag-resizing both change the container's width; the
     // observer re-runs the adjustment for each size change. The re-fit gates
