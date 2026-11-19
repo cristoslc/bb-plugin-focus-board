@@ -36,6 +36,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "The board's frame"
   },
   {
+    "text": "**Opening a card from Unread leaves the board looking at it.** The card moves to its idle lane and the board follows it there, so it no longer reads as vanished behind the pane.",
+    "children": [],
+    "group": "The board's lanes"
+  },
+  {
     "text": "**With lane direction set to Horizontal, a family card keeps every child row on the card.** A lane row now grows to fit its tallest card instead of cutting it at a fixed height, so the rest of the family and its Show all control stay on screen.",
     "children": [],
     "group": "The board's lanes"

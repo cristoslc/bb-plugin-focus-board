@@ -121,6 +121,20 @@ host app involved.
   vite harness first (same as above), then `node
   scripts/screenshot/repro-child-row-chips.mjs`; honors the same `CHROME_PATH`
   and `HARNESS_URL` overrides, plus `OUT_DIR`.
+- `repro-unread-open-recenter.mjs` — the phone report "opening a card from
+  unread moves it to its idle lane but does not recenter the view on the
+  active card" (2026-11-18). Pans the board to an Unread card (at 390×844 the
+  lane starts past the fold, so a click on the recorded rect would otherwise
+  land on nothing), clicks it, then drives the host's read write through
+  `__uat.pushThreadUpdate` after its round trip. Samples the board's and the
+  lane list's offsets, the card's lane, and whether the card sits inside the
+  board's visible range once per animation frame, and writes
+  `evidence-<width>.json` plus before/after shots. Exits non-zero while the
+  card is left out of view. Honors `CHROME_PATH`, `HARNESS_URL`, `OUT_DIR`,
+  `VIEWPORT` (`390x844` default, `1280x800` for the desktop board),
+  `READ_WRITE_DELAY_MS`, and `CARD`. Evidence in
+  `docs/screenshots/repro-unread-open-recenter/`, the pre-fix run preserved in
+  `repro-unread-open-recenter-prefix/` via `OUT_DIR`.
 - `repro-done-scroll-yank.mjs` — one-shot headless regression driver for the
   post-done re-scroll yank (#119): opens a pane on the Unread card
   (`thr_uat_queue`) at 1280x800, marks it done via the on-card checkbox,

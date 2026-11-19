@@ -47,6 +47,34 @@ steps:
     assert:
       - pane: { open: false }
 
+  - id: opening-an-unread-card-recenters-on-it
+    title: Tapping an unread card leaves the board looking at it, in its idle lane
+    # The 2026-11-18 phone report: opening a card from Unread moves it to its
+    # idle lane but the board keeps its scroll, so the card the operator just
+    # opened reads as vanished. At 390 the Unread lane starts past the fold, so
+    # the premise is real: the card is offscreen before the click. Opening it
+    # makes the host mark the thread read a beat later, which re-lanes the card
+    # into its idle bucket at once (grouping's frozenLaneHolds, issue #338).
+    # The covered sheet hides the board while it happens, so the step proves the
+    # board settled by reading the offsets and the card's place in the board's
+    # range, not by looking at the pane.
+    goto: "?groupBy=status"
+    assert_before_drag:
+      - column: unread
+        ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]
+      - column_card_offscreen: thr_rpc_auth
+    gestures:
+      - click: { card: thr_rpc_auth }
+      - push_update: { threadId: thr_rpc_auth, patch: { isUnread: false } }
+    assert:
+      - pane: { threadId: thr_rpc_auth }
+      # The card left Unread for its idle bucket…
+      - column_contains: { column: idle-recent, id: thr_rpc_auth }
+      - column_contains: { column: unread, id: thr_rpc_auth, shown: false }
+      # …and the board followed it there instead of resting on the old lane.
+      - column_card_visible: thr_rpc_auth
+      - scroll_offset: { target: board, axis: x, min: 1 }
+
   - id: recency-renders-its-buckets-at-phone-width
     title: The Last activity board renders its age buckets at phone width
     goto: "?groupBy=recency"

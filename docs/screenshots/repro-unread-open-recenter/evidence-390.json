@@ -1,0 +1,126 @@
+{
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "card": "thr_rpc_auth",
+  "readWriteDelayMs": 120,
+  "firstFrame": {
+    "label": "pre-click",
+    "t": 1287,
+    "lane": "unread",
+    "paneOpen": false,
+    "boardX": 432,
+    "boardY": 0,
+    "listX": 0,
+    "listY": 0,
+    "cardLeft": 130,
+    "cardRight": 374,
+    "inBoardView": true,
+    "ghost": false
+  },
+  "lastFrame": {
+    "label": "frame",
+    "t": 3266,
+    "lane": "idle-recent",
+    "paneOpen": true,
+    "boardX": 960,
+    "boardY": 0,
+    "listX": 0,
+    "listY": 0,
+    "cardLeft": 146,
+    "cardRight": 390,
+    "inBoardView": true,
+    "ghost": false
+  },
+  "frames": 121,
+  "framesPerLane": {
+    "unread": 17,
+    "idle-recent": 100
+  },
+  "transitions": [
+    {
+      "label": "pre-click",
+      "t": 1287,
+      "lane": "unread",
+      "boardX": 432,
+      "boardY": 0,
+      "listX": 0,
+      "listY": 0,
+      "cardLeft": 130,
+      "cardRight": 374,
+      "inBoardView": true,
+      "paneOpen": false
+    },
+    {
+      "label": "frame",
+      "t": 1299,
+      "lane": "unread",
+      "boardX": 432,
+      "boardY": 0,
+      "listX": 0,
+      "listY": 0,
+      "cardLeft": 130,
+      "cardRight": 374,
+      "inBoardView": true,
+      "paneOpen": false
+    },
+    {
+      "label": "clicked",
+      "t": 1456
+    },
+    {
+      "label": "frame",
+      "t": 1456,
+      "lane": "unread",
+      "boardX": 432,
+      "boardY": 0,
+      "listX": 0,
+      "listY": 0,
+      "cardLeft": 130,
+      "cardRight": 374,
+      "inBoardView": true,
+      "paneOpen": true
+    },
+    {
+      "label": "pane-open",
+      "t": 1466
+    },
+    {
+      "label": "frame",
+      "t": 1482,
+      "lane": "unread",
+      "boardX": 432,
+      "boardY": 0,
+      "listX": 0,
+      "listY": 0,
+      "cardLeft": 130,
+      "cardRight": 374,
+      "inBoardView": true,
+      "paneOpen": true
+    },
+    {
+      "label": "read-write",
+      "t": 1589
+    },
+    {
+      "label": "frame",
+      "t": 1632,
+      "lane": "idle-recent",
+      "boardX": 960,
+      "boardY": 0,
+      "listX": 0,
+      "listY": 0,
+      "cardLeft": 244,
+      "cardRight": 292,
+      "inBoardView": true,
+      "paneOpen": true
+    }
+  ],
+  "afterPaneClose": {
+    "lane": "idle-recent",
+    "boardX": 960,
+    "boardY": 0,
+    "inBoardView": true
+  }
+}

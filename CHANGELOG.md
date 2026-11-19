@@ -39,6 +39,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 #### The board's lanes
 
+- **Opening a card from Unread leaves the board looking at it.** The card moves to its idle lane and the board follows it there, so it no longer reads as vanished behind the pane.
 - **With lane direction set to Horizontal, a family card keeps every child row on the card.** A lane row now grows to fit its tallest card instead of cutting it at a fixed height, so the rest of the family and its Show all control stay on screen.
 
 #### The board's shortcuts
