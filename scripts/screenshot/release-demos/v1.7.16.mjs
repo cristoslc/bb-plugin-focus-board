@@ -68,6 +68,34 @@ async function clickScoped(g, scope, selector, { settle = 0.8 } = {}) {
   return point;
 }
 
+/**
+ * Pick a menu entry by its exact text. The lane menu's bulk entries are
+ * role="menuitemradio" (menuPick only reaches role="menuitem"), so the
+ * entries the recorder clicks by text need their own pick.
+ */
+async function menuRadio(g, label, { hoverHold = 0.8, settle = 0.7 } = {}) {
+  await g.page.waitForFunction(
+    (text) =>
+      [...document.querySelectorAll('[role="menuitemradio"]')].some(
+        (el) => el.textContent?.trim() === text,
+      ),
+    { timeout: 8_000 },
+    label,
+  );
+  const entry = await g.page.evaluate((text) => {
+    const el = [...document.querySelectorAll('[role="menuitemradio"]')].find(
+      (candidate) => candidate.textContent?.trim() === text,
+    );
+    const box = el.getBoundingClientRect();
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  }, label);
+  await g.glide(entry, { frames: 4 });
+  await g.shot(`mh${String(g.frames.length).padStart(3, "0")}`, { hold: hoverHold });
+  await g.page.mouse.click(entry.x, entry.y);
+  await g.shot(`mc${String(g.frames.length).padStart(3, "0")}`, { hold: settle });
+  return entry;
+}
+
 export const demos = [
   {
     id: "lane-bulk-fold",
@@ -84,13 +112,13 @@ export const demos = [
       await g.clickAria("Idle · A while ago lane actions");
       await g.sleep(500);
       await g.shot("lane-menu-open", { hold: 1.6 });
-      await g.menuPick("Collapse all");
+      await menuRadio(g, "Collapse all");
       await g.sleep(700);
       await g.shot("families-collapsed", { hold: 2.2 });
       // The second pair: hide the lane's idle children behind their cards.
       await g.clickAria("Idle · A while ago lane actions");
       await g.sleep(500);
-      await g.menuPick("Hide idle children");
+      await menuRadio(g, "Hide idle children");
       await g.sleep(700);
       await g.shot("idle-children-hidden", { hold: 2.6 });
     },
@@ -100,9 +128,13 @@ export const demos = [
     id: "sweep-lane-to-done",
     viewport: { width: 1280, height: 800, deviceScaleFactor: 2 },
     ready: '[data-column-id="idle-awhile"] [data-thread-card]',
+    params: "&scale=40",
     steps: async (g) => {
+      // The scale fixture (?scale=40, issue #186) fattens the A-while-ago
+      // lane with old idle threads — the busy board the bullet's numbers
+      // name, so the sweep runs more than one batch of six.
       await g.scrollInto('[data-column-id="idle-awhile"]');
-      await g.sleep(400);
+      await g.sleep(600);
       await g.shot("lane-at-rest", { hold: 1.4 });
       // Arm: the lane header's pill turns amber and names the destination.
       await clickScoped(g, '[data-column-id="idle-awhile"]', "[data-sweep-button]", { settle: 0.9 });
@@ -110,9 +142,8 @@ export const demos = [
       // Confirm: the cards go out six at a time, one repaint per batch —
       // the whole lane lands in Done in about half a second.
       await clickScoped(g, '[data-column-id="idle-awhile"]', "[data-sweep-button]", { settle: 0 });
-      await g.sleep(450);
-      await g.shot("sweep-running", { hold: 1.2 });
-      await g.sleep(900);
+      await g.shot("sweep-running", { hold: 1.4 });
+      await g.sleep(700);
       await g.shot("lane-swept", { hold: 2.6 });
     },
   },
@@ -171,7 +202,7 @@ export const demos = [
     id: "phone-horizontal-labels",
     viewport: { width: 390, height: 844, deviceScaleFactor: 2, hasTouch: true, isMobile: true },
     ready: '[data-thread-card="thr_rpc_auth"]',
-    params: "laneDirection=horizontal",
+    params: "&laneDirection=horizontal",
     steps: async (g) => {
       // The phone's Horizontal board at rest: each lane's label stacked
       // above its cards, the row's whole width given to the cards, the next
@@ -179,12 +210,16 @@ export const demos = [
       await g.shot("phone-horizontal-at-rest", { hold: 1.6 });
       // A touch pan along the Unread row scrolls the row (the board does
       // not scroll at this width): the peeking card slides in. The finger
-      // moves before the hold arms, so the card never lifts.
+      // moves before the hold arms — and rests before lifting, so the
+      // gesture ends a settled pan instead of a fling that springs back.
       const from = await g.centerOf('[data-thread-card="thr_rpc_auth"]');
       await g.touchStart(from.x, from.y);
       for (let step = 1; step <= 4; step += 1) {
-        await g.touchMove(from.x - step * 45, from.y);
+        await g.touchMove(from.x - step * 50, from.y);
+        await g.sleep(60);
       }
+      await g.touchMove(from.x - 200, from.y);
+      await g.sleep(250);
       await g.touchEnd();
       await g.sleep(700);
       await g.shot("row-scrolled", { hold: 2.4 });
@@ -245,7 +280,7 @@ export const demos = [
     id: "mention-chip-opens-thread",
     viewport: { width: 1280, height: 800, deviceScaleFactor: 2 },
     ready: '[data-thread-card="thr_review_pr"]',
-    params: "mentionAnchor=1",
+    params: "&mentionAnchor=1",
     steps: async (g) => {
       // The pane on thr_review_pr, carrying the host mention anchor: bb
       // renders the agent's @thread: token as a file:// link into the
