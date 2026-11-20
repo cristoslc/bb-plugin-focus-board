@@ -31,14 +31,15 @@ const violation = (line) => {
 // silenced check: the gate names it on every run, and the moment the expiry
 // passes the finding is a violation again. Nothing else may be excepted —
 // an unlisted advisory, or a listed one past its date, fails the gate.
-const ADVISORY_EXCEPTIONS = [
-  {
-    id: "GHSA-fc5q-39xc-vjpf",
-    until: "2026-12-08",
-    note:
-      "picomatch ReDoS through repeated extglobs; vulnerable range <=4.0.7 and 4.0.7 is the newest published version, so no upgrade exists. Reach is the dev toolchain only (vite, vitest, tinyglobby, fdir); `npm audit --omit=dev` is clean, and nothing that ships imports it.",
-  },
-];
+// VACATED 2026-11-20: GHSA-fc5q-39xc-vjpf (picomatch ReDoS through repeated
+// extglobs) held the only entry here, until 2026-12-08, on the grounds that no
+// patched version existed and nothing that ships imported it. GitHub WITHDREW
+// that advisory on 2026-11-18 — "it is not a security issue", see
+// https://github.com/micromatch/picomatch/pull/235#issuecomment-6315749381 —
+// and `npm audit` now reports nothing across both trees, so the entry had
+// stopped describing anything. The mechanism stays: a real advisory with no
+// upgrade path belongs here, with an expiry and a note naming its reach.
+const ADVISORY_EXCEPTIONS = [];
 
 const exceptionsInForce = (today = new Date()) =>
   ADVISORY_EXCEPTIONS.filter((exception) => new Date(exception.until) >= today);
