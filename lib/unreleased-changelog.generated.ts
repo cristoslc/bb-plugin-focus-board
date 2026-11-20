@@ -46,6 +46,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "The board's lanes"
   },
   {
+    "text": "**On a phone, a Horizontal board puts each lane's label above its cards instead of beside them.** The label strip took 160 of a 366-pixel row there and left every card cut off at the edge. The cards now get the row's whole width and the next one peeks in, so the row also reads as scrollable; the desktop strip is unchanged.",
+    "children": [],
+    "group": "The board's lanes"
+  },
+  {
     "text": "**The board's keys stay on the board.** A letter or `/` typed anywhere you can type inserts text instead of opening the New Thread composer or jumping the search field. Both keys fire only while the board's own pane holds focus, so another pane's keystrokes leave the board alone.",
     "children": [],
     "group": "The board's shortcuts"

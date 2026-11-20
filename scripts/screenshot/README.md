@@ -347,6 +347,23 @@ host app involved.
   read by that folder's README). Run the vite harness first (same as above);
   honors the same `CHROME_PATH` and `HARNESS_URL` overrides.
 
+- `repro-horizontal-lane-header-left-gap.mjs` — the measurement behind the
+  phone report of 2026-11-19 ("in horizontal mode on phone, too much negative
+  space at left"). At 390×844 (phones) and 1280×900 (the desktop control) on
+  the horizontal board, it reads every lane's row box, its header strip's box,
+  its card list's box, the first card's left edge, and each of the header's own
+  affordances (menu trigger, caret, bare count, hide-lane), then writes
+  `readings-<label>.json` plus four frames. The pre-fix numbers: the strip was
+  160×288 of a 366px row (43.7%), the card list 206px (56.3%), and the first
+  card started 166px in — so a 240px card could never be whole across a phone
+  row. After the restack: header 366×23 above the cards, list 366px (100%),
+  first card at +6px, and both desktop frames byte-identical to the pre-fix
+  run (same sha256), which is the "desktop unchanged" proof. Run it per tree
+  with `SHOT_PREFIX=before` / `SHOT_PREFIX=after`; artifacts land in
+  `docs/screenshots/repro-horizontal-lane-header-left-gap/`. Run the vite
+  harness first (same as above); honors the same `CHROME_PATH`, `HARNESS_URL`,
+  and `OUT_DIR` overrides.
+
 - `probe-board-touch-scroll.mjs` — the touch-pan grid for issue #328 (the
   phone report: the columns drag around and the board never scrolls). At
   390×844 with `hasTouch` + `isMobile` it drives a real CDP touch pan in both
