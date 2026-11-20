@@ -1172,9 +1172,23 @@ function simFireRealtime(channel: string, payload: unknown = { entity: "thread",
 // The simulated declared-settings store the plugins.updateSettings mock
 // merges into and useSettings reads back; `?settings=` (main.tsx) seeds it
 // so a verify run can prove the modal renders previously-written values.
-let simSettings: Record<string, string | number | boolean> = {};
+//
+// `threadOpenTarget` starts ANSWERED (`beside`, the shipping split pane): every
+// board in this harness models an install that has already met the setup
+// dialog, which is the state all of its suites and screenshots were written
+// against. `?firstRun=1` (main.tsx) drops the key instead, the one thing a
+// fresh install has: no answer, so the dialog owes it one.
+let simSettings: Record<string, string | number | boolean> = { threadOpenTarget: "beside" };
 export function seedSimSettings(seed: Record<string, string | number | boolean>) {
-  simSettings = { ...seed };
+  // Merge, the way the host's partial patch lands: `?settings=` seeds the keys
+  // a run cares about and leaves the rest of an answered install alone (notably
+  // `threadOpenTarget`, so no run meets the setup dialog by accident).
+  simSettings = { ...simSettings, ...seed };
+}
+/** Drop one declared key, the shape of an install that never answered it. */
+export function clearSimSetting(key: string) {
+  delete simSettings[key];
+  mockRender();
 }
 // The sidebar-footer action's captured registration (its title is the
  // "configuration" noun the verify script asserts).

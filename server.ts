@@ -86,6 +86,7 @@ import {
   type FamilyStateStore,
 } from "./lib/family-state";
 import { RANK_KV_KEY } from "./lib/rank";
+import { THREAD_OPEN_TARGETS } from "./lib/thread-open-target";
 import {
   applyRankClearFractions,
   applyRankMoveFractions,
@@ -810,6 +811,10 @@ export const rpcContract = defineRpcContract({
  */
 const ARCHIVE_UNIT_SCHEMA = z.enum(ARCHIVE_UNITS);
 
+/** The card click's surface choice, validated the same way (no default: the
+ *  declared absence is what tells a fresh install it still owes an answer). */
+const THREAD_OPEN_TARGET_SCHEMA = z.enum(THREAD_OPEN_TARGETS);
+
 /** Realtime signal after every done/keep write. Payload is { threadId, done }
  *  (was { count } before the metadata migration); consumers refetch on the
  *  event rather than reading the payload. */
@@ -1007,6 +1012,24 @@ export default async function plugin(bb: BbPluginApi) {
       default: false,
     },
 
+    // The card click's surface choice. A card opens its thread either beside
+    // the board in bb's own pane or inside the board's own panel, and this is
+    // the one stored value that decides which: both the configuration page and
+    // the settings modal's Behavior tab write it, and the click reads it
+    // through the frontend `useSettings()` hook (lib/thread-open-target.ts).
+    // Deliberately NO default: bb stores nothing until someone answers, which
+    // is how the board knows an install has never been asked (the setup
+    // dialog) and never asks it twice. Host rules still outrank it: a compact
+    // viewport and a host known older than 0.50 open the board's own pane
+    // whatever it says.
+    threadOpenTarget: {
+      type: "select",
+      label: "Thread cards: where a click opens the thread",
+      description:
+        "beside opens the thread in its own pane next to the board; panel opens it inside the board and keeps the window one pane. The board asks once on the first run and remembers the answer.",
+      options: [...THREAD_OPEN_TARGETS],
+      experimental_schema: THREAD_OPEN_TARGET_SCHEMA,
+    },
     // Debug-mode trace for the card click's pane placement (2026-11-17: two
     // reports in a row could not be attributed from a screenshot). Ships OFF,
     // like the scroll instrumentation above: while on, every card click logs

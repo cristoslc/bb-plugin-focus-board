@@ -4,6 +4,11 @@ export const DERIVED_WHATS_NEW: readonly { version: string; items: readonly { le
     "version": "1.8.0",
     "items": [
       {
+        "lead": "The thread pane's header reads as bb's native chrome row.",
+        "children": [],
+        "group": "bb's thread pages"
+      },
+      {
         "lead": "The thread-pane interaction model gets the 1.8.0 mark.",
         "children": [],
         "group": "bb's thread pages"

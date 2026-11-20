@@ -24,6 +24,7 @@ import {
   mountRegisteredConfigSection,
   mountRegisteredPanel,
   seedSimSettings,
+  clearSimSetting,
 } from "./mock-sdk";
 import { CURRENT_UNRELEASED_FINGERPRINT } from "../../lib/whats-new";
 import { setLoadingViewVariantForCapture } from "../../components/loading-view";
@@ -174,10 +175,19 @@ if (seedRanks !== null) {
 
 // Seed the harness's simulated plugin settings (the declared settings the
 // modal's Behavior tab reads through useSettings): `?settings={"key":value}`
-// JSON. Absent → empty, so defaults apply with no stale residue.
+// JSON. Absent → the answered default (the setup dialog's question already
+// settled), so no suite meets the dialog by accident.
 const settingsSeed = params.get("settings");
 if (settingsSeed !== null) {
   seedSimSettings(JSON.parse(settingsSeed) as Record<string, string | number | boolean>);
+}
+
+// `?firstRun=1` models an install that has never answered where threads open:
+// the simulated store loses `threadOpenTarget`, which is exactly the marker the
+// board reads (lib/thread-open-target.ts), so the setup dialog shows once.
+// Applied AFTER any `?settings=` seed, since a fresh install has no answers.
+if (params.get("firstRun") === "1") {
+  clearSimSetting("threadOpenTarget");
 }
 
 // Seed the harness's family-state server row (the plugin KV row the fold and

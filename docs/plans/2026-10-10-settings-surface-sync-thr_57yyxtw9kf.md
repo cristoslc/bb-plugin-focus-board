@@ -138,6 +138,24 @@ says keep it off. The Behavior tab carries one muted line pointing at the
 configuration page (the footer gear opens it) so nothing declared is
 undiscoverable.
 
+**D6, `threadOpenTarget` is declared, with no default (added 2026-11-20,
+operator thread thr_eds5qfdb6s).** P3's first question settles it: the card
+click reads the value on every mount, the answer should follow the operator
+across browsers, and an install that has never answered must be distinguishable
+from one that kept the default. So it is a host-declared `select`
+(`beside` | `panel`): the click reads it through `useSettings()`, the
+configuration page gets its native control for free, and the Behavior tab
+carries the same control right after the New Thread shortcut row (P4, and the
+same partial-patch write path as every other declared behavior setting, D1).
+The load-bearing part is the DECLARED ABSENCE of a `default`: bb stores nothing
+until someone answers, so an unset row is exactly "this install still owes the
+first-run dialog its one answer" (`components/open-preference-dialog.tsx`),
+while an operator who kept the split pane has `beside` stored and is never
+asked again. One row carries both the value and the marker, so the two cannot
+disagree and no second "have we asked" key exists to drift. The row count in
+"Surfaces today" above predates several additions and is not authoritative; the
+descriptors in `server.ts` are, and this setting joins them as the ninth.
+
 ## What's-new pulse constraint (AMBER)
 
 The pulse keys read only changelog-derived fingerprints

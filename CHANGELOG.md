@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Focus Board asks where a thread opens, once per install.** A card can open its thread beside the board in its own pane or inside the board's own panel; the first run asks, and both the gear modal and the configuration page carry the same answer.
+
 ### Changed
 
 ### Fixed
