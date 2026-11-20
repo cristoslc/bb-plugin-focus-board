@@ -1,0 +1,7 @@
+version: 1.8.0
+demos: []
+skips:
+  - bullet: "**The thread-pane interaction model gets the 1.8.0 mark.**"
+    reason: "A re-numbering cut: the content is 1.7.16's and its seven gifs demo it on that release page; no code moves between the tags beyond the bb 0.49 fix below."
+  - bullet: "**On bb 0.49 a card click opens the board's own pane straight away.**"
+    reason: "The fix keys to the host's version, which the mock does not stage, and the visible part is the board no longer unmounting and coming back — an absence; the skipped ask is asserted by the one-pane-split tests."
