@@ -22,6 +22,12 @@ harness:
 defaults:
   groupBy: status
   theme: dark
+  # A desktop window narrow enough that the board's lane row overflows: the
+  # reported split bug needs an operator pan (a nonzero restored scroll) and a
+  # card near the board's right edge, and a wider window leaves nothing to pan.
+  viewport:
+    width: 1280
+    height: 800
 steps:
   - id: a-one-pane-click-puts-the-thread-beside-the-board
     title: A card click in a one-pane window opens the thread beside the board
@@ -53,6 +59,44 @@ steps:
       - native_pane_count: 2
       - pane: { open: false }
       - native_route_fell_back: false
+
+  # The reported regression (2026-11-20): "keeping the focused card in view (by
+  # scrolling) isn't fully working in conjunction with the pane split". The
+  # board is panned to a far-right lane, the card is clicked, and the split
+  # halves the board. bb re-creates the panel in that same gesture, so the
+  # restored scroll was captured at the wide width; the board must still leave
+  # the card the click focused inside its visible range. The harness models the
+  # host's split chrome and its panel re-creation for this path
+  # (scripts/screenshot/mock-sdk.tsx).
+  - id: the-clicked-card-stays-in-view-when-the-pane-splits
+    title: A card clicked from a scrolled board stays inside the board after the native pane opens
+    goto: "?groupBy=status&nativeSplit=1"
+    gestures:
+      - scroll: { dx: 500, target: columns, settle_ms: 300 }
+      - click: { card: thr_icon_lazy }
+      - sleep: 800
+    assert:
+      - native_panes: [thr_icon_lazy]
+      - native_pane_count: 2
+      - column_card_visible: thr_icon_lazy
+
+  # The other surface: the board's own in-panel pane narrows the board without
+  # re-creating the panel, so the width observer is the fit. Pinned here so the
+  # remount fix cannot quietly become the only branch that works.
+  - id: the-clicked-card-stays-in-view-in-the-board-panel
+    title: The same click with the board-panel answer keeps the card inside the narrowed board
+    goto: "?groupBy=status&nativeSplit=1&firstRun=1"
+    gestures:
+      - click_aria: "In the board panel"
+      - sleep: 300
+      - scroll: { dx: 500, target: columns, settle_ms: 300 }
+      - click: { card: thr_icon_lazy }
+      - sleep: 800
+    assert:
+      - native_panes: []
+      - native_pane_count: 1
+      - pane: { threadId: thr_icon_lazy }
+      - column_card_visible: thr_icon_lazy
 
   - id: a-click-with-splits-off-keeps-the-thread-in-the-board
     title: With splits off the click still asks, then keeps the thread in the board's own pane
