@@ -3327,6 +3327,15 @@ function BoardPage({ subPath }: { subPath: string }) {
         }
         trace("one-pane: asking the opener for the split");
         onePaneDance.begin({ threadId, subPath: paneSubPathFor(threadId) });
+        // The split's ratio is the host's, not the request's. bb inserts a
+        // fresh split at halves (the persisted atom's sizes land at
+        // [0.5, 0.5] — measured on 0.50.1, the record in
+        // docs/screenshots/probe-split-ratio/), and `open` takes placement
+        // only: no size option exists on the SDK's sidebar surface or in bb's
+        // CLI, so the board asks for the pane and never for its width. A host
+        // release that grows the lever fails
+        // tests/host-split-ratio-surface.test.ts, which is the signal to pass
+        // it here.
         actions.open(threadId, { split: true });
         return;
       }
