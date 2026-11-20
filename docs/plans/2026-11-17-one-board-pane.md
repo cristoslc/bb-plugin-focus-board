@@ -236,4 +236,8 @@ Two states measured no split, and both are real:
 
 The click's other branches are unchanged: the eight-pane ceiling guard, the compact viewport's own pane, and the replacement rule for a pane the board owns (§2). The UAT suite that owns the click contract, `tests/manual/uat-native-open.yaml`, now drives a one-pane click and asserts what the operator ends with: the thread in a native pane, the board still rendering its cards, and a two-pane layout.
 
+### The live rerun on the merged build
+
+After the branch merged, the plugin was rebuilt and reloaded from the main checkout, and the click probe was run again against the served build in a fresh browser context (`docs/screenshots/probe-native-one-click/post-484/evidence.json`). One click on a card in a one-pane window now reads two panes: `freshFirstClickOpenedAPane: true`, the thread pane holds the clicked thread, the board is still mounted, and the route is the thread's page. A second click on another card keeps two panes and replaces the thread in that pane. A double click on the same card leaves the same two panes. Before this change the same probe read one pane, the board mounted, and no thread pane at all.
+
 > AGENT GENERATED CONTENT
