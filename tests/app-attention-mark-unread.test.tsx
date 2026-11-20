@@ -83,6 +83,12 @@ function columnCardIds(columnId: string): string[] {
   const section = document.querySelector(`section[data-column-id="${columnId}"]`);
   if (section === null) return [];
   return [...section.querySelectorAll("[data-thread-card]")]
+    // A lane move dissolves the departing card as a ghost that keeps its old
+    // slot for the transport's whole clock, and that ghost is a real card
+    // markup-wise. The placements under test are where the card LIVES, so the
+    // ghost reading is dropped: without it the post-move "not in the old lane"
+    // assertion raced the dissolve and flaked under load.
+    .filter((el) => el.closest("[data-transport-ghost]") === null)
     .filter((el) => el.parentElement?.closest("[data-thread-card]") === null)
     .map((el) => (el instanceof HTMLElement ? el.getAttribute("data-thread-card") : ""));
 }
