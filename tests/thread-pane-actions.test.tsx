@@ -144,6 +144,31 @@ describe("desktop thread pane header", () => {
     openActionsMenu();
     expect(screen.queryByRole("menuitem", { name: "Full Screen" })).toBeNull();
   });
+
+  it("carries no labeled read control in the row — mark-read lives in the ⋯ overflow", () => {
+    // Native parity: bb's own header reaches Mark unread through the ⋯
+    // menu (the native pane's overflow, screenshot 07), so the row never
+    // renders a labeled primary that starves the title.
+    renderPane({ compact: false });
+    expect(screen.queryByRole("button", { name: /^Mark thread (read|unread)$/ })).toBeNull();
+    openActionsMenu();
+    expect(screen.getByRole("menuitem", { name: "Mark Unread" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Mark Unread" }));
+    expect(screen.queryByRole("menuitem", { name: "Mark Unread" })).toBeNull();
+  });
+
+  it("carries a standalone Maximize pane ghost, as the native header does", () => {
+    renderPane({ compact: false });
+    fireEvent.click(screen.getByRole("button", { name: "Maximize pane" }));
+    expect(onMaximize).toHaveBeenCalledTimes(1);
+  });
+
+  it("the ⋯ trigger is a standalone ellipsis, not the attached-caret split", () => {
+    renderPane({ compact: false });
+    const trigger = screen.getByRole("button", { name: "More thread actions" });
+    expect(trigger.querySelector('[data-icon="MoreHorizontal"]')).not.toBeNull();
+    expect(trigger.closest('[class*="items-stretch"]')).toBeNull();
+  });
 });
 
 describe("snooze entries in the actions menu", () => {
@@ -189,7 +214,7 @@ describe("snooze entries in the actions menu", () => {
     );
     openActionsMenu();
     const item = screen.getByRole("menuitem", { name: "Snooze…" });
-    expect(screen.getAllByRole("menuitem")).toHaveLength(4); // Done, Pin, Snooze…, Archive
+    expect(screen.getAllByRole("menuitem")).toHaveLength(5); // Done, Pin, Read, Snooze…, Archive
     fireEvent.click(item);
     expect(openPicker).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("menuitem", { name: "Snooze…" })).toBeNull();
@@ -206,13 +231,13 @@ describe("snooze entries in the actions menu", () => {
     );
     openActionsMenu();
     const item = screen.getByRole("menuitem", { name: "Edit snooze…" });
-    expect(screen.getAllByRole("menuitem")).toHaveLength(4); // Pin, Done, Edit snooze…, Archive
+    expect(screen.getAllByRole("menuitem")).toHaveLength(5); // Pin, Done, Read, Edit snooze…, Archive
     expect(screen.queryByRole("menuitem", { name: "Snooze…" })).toBeNull();
     fireEvent.click(item);
     expect(openPicker).toHaveBeenCalledTimes(1);
   });
 
-  it("the snooze entry renders under its divider, between Done and Archive", () => {
+  it("the snooze entry renders under its divider, between the read toggle and Archive", () => {
     renderPaneWithSnooze(
       snoozeMenuActions({
         snoozed: false,
@@ -225,7 +250,7 @@ describe("snooze entries in the actions menu", () => {
     const labels = Array.from(menu.querySelectorAll("[role='menuitem']")).map(
       (item) => item.textContent,
     );
-    expect(labels).toEqual(["Mark Done", "Pin", "Snooze…", "Archive"]);
+    expect(labels).toEqual(["Mark Done", "Pin", "Mark Unread", "Snooze…", "Archive"]);
     const head = Array.from(menu.querySelectorAll("[role='menuitem']")).find(
       (item) => item.textContent === "Snooze…",
     );
@@ -280,13 +305,13 @@ describe("new child thread entry in the actions menu", () => {
     renderPane({ compact: false, onNewChildThread });
     openActionsMenu();
     // The state toggles lead the menu in frequency-of-use order (Done,
-    // Pin); the creation entry trails the snooze, categorically apart
+    // Pin, Read); the creation entry trails the snooze, categorically apart
     // from Mark Done / Pin.
     const menu = screen.getByRole("menu");
     const labels = Array.from(menu.querySelectorAll("[role='menuitem']")).map(
       (item) => item.textContent,
     );
-    expect(labels).toEqual(["Mark Done", "Pin", "New child thread…", "Archive"]);
+    expect(labels).toEqual(["Mark Done", "Pin", "Mark Unread", "New child thread…", "Archive"]);
     fireEvent.click(screen.getByRole("menuitem", { name: "New child thread…" }));
     expect(onNewChildThread).toHaveBeenCalledTimes(1);
     // The menu closes on selection, leaving no stale overlay.
@@ -308,7 +333,7 @@ describe("new child thread entry in the actions menu", () => {
     const labels = Array.from(menu.querySelectorAll("[role='menuitem']")).map(
       (item) => item.textContent,
     );
-    expect(labels).toEqual(["Mark Done", "Pin", "Snooze…", "New child thread…", "Archive"]);
+    expect(labels).toEqual(["Mark Done", "Pin", "Mark Unread", "Snooze…", "New child thread…", "Archive"]);
   });
 
   it("an archived thread's pane still offers the child spawn", () => {
@@ -359,21 +384,30 @@ describe("done checkbox in the pane header", () => {
     expect(onToggleDone).toHaveBeenCalledWith(false);
   });
 
-  it("the checkbox sits in the header before the title, at both widths", () => {
+  it("at compact width the checkbox sits before the title; on desktop it rides the right cluster", () => {
     for (const compact of [false, true]) {
       cleanup();
       renderPane({ compact });
       const header = headerOf();
       const checkbox = screen.getByRole("button", { name: "Mark done" });
-      // The editable title follows the checkbox in the header row: the
-      // checkbox took the chat icon's slot.
       const title = header.querySelector('button[title="Rename thread"]');
       expect(title).toBeTruthy();
       expect(header.contains(checkbox)).toBe(true);
       expect(
-        checkbox.compareDocumentPosition(title as Node) &
+        (compact ? checkbox.compareDocumentPosition(title as Node) : title.compareDocumentPosition(checkbox as Node)) &
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
     }
+  });
+
+  it("on desktop the checkbox is a 28px ghost button, as in the native header's own action row", () => {
+    renderPane({ compact: false });
+    const checkbox = screen.getByRole("button", { name: "Mark done" });
+    // The native pane renders Focus Board's own header action as a 28px
+    // ghost icon button; the pane header's toggle carries the same size
+    // (the constant spells it as arbitrary values), so both checkboxes
+    // read as one control family.
+    expect(checkbox.className).toContain("h-[28px]");
+    expect(checkbox.className).toContain("w-[28px]");
   });
 });

@@ -313,7 +313,7 @@ export function EditableTitle({
           setEditing(true);
         }}
       >
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">{title}</span>
+        <span className="min-w-0 flex-1 truncate text-sm">{title}</span>
       </button>
     );
   }
@@ -343,7 +343,7 @@ export function EditableTitle({
             cancel();
           }
         }}
-        className="w-full min-w-0 flex-1 rounded-sm border border-border bg-background px-1.5 pr-7 py-0.5 text-sm font-medium outline-none focus:ring-1 focus:ring-ring"
+        className="w-full min-w-0 flex-1 rounded-sm border border-border bg-background px-1.5 pr-7 py-0.5 text-sm outline-none focus:ring-1 focus:ring-ring"
         aria-label="Thread title"
       />
       {onAutotitle !== undefined ? (
@@ -426,7 +426,10 @@ function ActionsMenu({
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        <Icon name={attached ? "ChevronDown" : "More"} className={attached ? "size-3" : "size-4"} />
+        {/* The native header's ellipsis (MoreHorizontal), not the card
+            menu's dotted square — the overflow trigger reads as bb's own
+            thread-actions button. */}
+        <Icon name={attached ? "ChevronDown" : "MoreHorizontal"} className={attached ? "size-3" : "size-4"} />
       </Button>
       {open ? (
         <>
@@ -1036,6 +1039,43 @@ export function ThreadPane({
     };
   }, [thread.id, sdk, checkWorkspacePaths, referenceMentions, host.routesLocalFileLinks]);
 
+  // The done checkbox. Same checkbox language as the board cards' done
+  // checkbox (thread-card.tsx): an empty box on not-done threads, a checked
+  // one on done. There is no arming here — the card arms only because its
+  // checkbox is a hover-revealed target inside a clickable anchor, while
+  // this button is a standalone header control, so one click toggles, like
+  // the actions menu's own "Mark Done" item. aria-label stays off the
+  // "Mark thread" prefix, which is the read-state toggle's namespace.
+  //
+  // Native pane parity: one of the 28px ghost icon buttons in the chrome
+  // row (the native pane hosts Focus Board's own 28px header action
+  // registered through `experimental_threadHeaderAction`), with the
+  // coarse-pointer ladder (issue #267) keeping it a 36px box on a phone.
+  const doneLabel = isDone ? "Mark not done" : "Mark done";
+  const doneCheckbox = (
+    <button
+      type="button"
+      data-pane-done-checkbox=""
+      aria-label={doneLabel}
+      title={doneLabel}
+      onClick={() => onToggleDone(!isDone)}
+      className={cn(
+        HEADER_ICON_BUTTON_CLASS,
+        "max-md:pointer-coarse:h-9 max-md:pointer-coarse:w-9",
+        "max-md:pointer-coarse:[&_[data-icon-root]]:size-5",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        isDone
+          ? "text-muted-foreground"
+          : "text-muted-foreground/60 hover:text-muted-foreground",
+      )}
+    >
+      <Icon
+        name={isDone ? "CheckboxChecked" : "Checkbox"}
+        className="size-3.5"
+        aria-hidden
+      />
+    </button>
+  );
   return (
     <aside
       ref={paneRef}
@@ -1069,9 +1109,16 @@ export function ThreadPane({
       ) : null}
       <header
         className={
+          // Native chrome-row parity, measured against the installed app
+          // (scripts/screenshot/probe-pane-header-parity.mjs): ONE row at
+          // --bb-app-chrome-row-height (48px on the installed host), px-4,
+          // the same hairline border weight and the 92%-opaque backdrop the
+          // native header paints. The compact sheet pads for the notch
+          // itself (it escapes the host panel's own safe-area padding as a
+          // fixed element) by adding the inset to the row height.
           isCompact
-            ? "flex items-center gap-2 border-b border-border px-2 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]"
-            : "flex items-center gap-2 border-b border-border px-3 py-2"
+            ? "flex h-[calc(var(--bb-app-chrome-row-height,3rem)+env(safe-area-inset-top,0px))] items-center gap-2 border-b border-border/60 bg-background/92 px-2 pt-[env(safe-area-inset-top,0px)]"
+            : "flex h-[var(--bb-app-chrome-row-height,3rem)] items-center gap-2 border-b border-border/60 bg-background/92 px-4"
         }
       >
         {isCompact ? (
@@ -1085,48 +1132,13 @@ export function ThreadPane({
             <Icon name="ChevronLeft" className="size-5" />
           </Button>
         ) : null}
-        {(() => {
-          // The done checkbox, in the slot the chat icon used to hold just
-          // left of the title. Same checkbox language as the board cards'
-          // done checkbox (thread-card.tsx): an empty box on not-done
-          // threads, a checked one on done. There is no arming here — the
-          // card arms only because its checkbox is a hover-revealed target
-          // inside a clickable anchor, while this button is a standalone
-          // header control, so one click toggles, like the actions menu's
-          // own "Mark Done" item. aria-label stays off the "Mark thread"
-          // prefix, which is the read-state toggle's namespace.
-          const doneLabel = isDone ? "Mark not done" : "Mark done";
-          return (
-            <button
-              type="button"
-              data-pane-done-checkbox=""
-              aria-label={doneLabel}
-              title={doneLabel}
-              onClick={() => onToggleDone(!isDone)}
-              className={cn(
-                // The header's coarse-pointer ladder (issue #267): this was the
-                // one control that never joined it, so on a phone it measured
-                // 18x22 against its 36px siblings. A bare button, not a Button,
-                // because its glyph sits in the card-checkbox slot, so it
-                // carries the ladder itself: a 36px box below md on a coarse
-                // pointer, with the glyph stepped to 20px to match.
-                "flex items-center justify-center shrink-0 rounded-sm p-0.5",
-                "max-md:pointer-coarse:h-9 max-md:pointer-coarse:w-9",
-                "max-md:pointer-coarse:[&_[data-icon-root]]:size-5",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                isDone
-                  ? "text-muted-foreground"
-                  : "text-muted-foreground/60 hover:text-muted-foreground",
-              )}
-            >
-              <Icon
-                name={isDone ? "CheckboxChecked" : "Checkbox"}
-                className="size-3.5"
-                aria-hidden
-              />
-            </button>
-          );
-        })()}
+        {isCompact
+          ? // On the phone the done toggle keeps its slot left of the title
+            // (the thumb reach the pane's phone report settled), while on a
+            // desktop pane it rides the right control cluster where the
+            // native pane renders Focus Board's own header action.
+            doneCheckbox
+          : null}
         <EditableTitle
           title={thread.displayTitle}
           onRename={onRename}
@@ -1169,22 +1181,24 @@ export function ThreadPane({
           </span>
         ) : null}
         {(() => {
-          // The read-state toggle and the thread actions are one family, so
-          // they render as ONE split control at every width — the same
-          // grammar as the open menu. On compact there is no room for a
-          // labeled primary, so the split goes icon-only (Mail / MailOpen
-          // toggle, rounded open toward the divider), then the attached
-          // caret opening the thread-actions menu (done, pin, snooze,
-          // archive). No floating ellipsis at any width.
+          // The thread actions. Two shapes, both measured against the
+          // native pane's header: on compact the icon-only read toggle
+          // stays the split control's primary (one tap on a phone), with
+          // the attached caret dropping the menu; on a desktop pane the row
+          // carries no labeled control at all — bb's own header has five
+          // 28px ghost icon buttons and reaches mark-read through the ⋯
+          // overflow (the native pane's own menu, probe screenshot 07), so
+          // Mark Read/Unread moved there. The menu items keep the pane's
+          // frequency-of-use order: the done toggle first, then the pin
+          // (an archived row pins nothing — its only way out is
+          // Unarchive), the read-state toggle in the native menu's slot of
+          // Pin → Mark unread, the snooze entry under its divider, the
+          // family-spawn entry ("New child thread…") behind the snooze — a
+          // creation action stays categorically apart from the state
+          // toggles — and Archive last. Archived rows carry the spawn too —
+          // bb accepts a child of an archived parent (the child re-roots to
+          // render standalone), and the operator's call.
           const actionItems: (ActionMenuItem | SnoozeMenuAction)[] = [
-            // State toggles first, in the menu's frequency-of-use order: the
-            // done toggle, then the pin (an archived row pins nothing —
-            // its only way out is Unarchive), the snooze entry under its
-            // divider, then the family-spawn entry ("New child thread…")
-            // behind the snooze: a creation action stays categorically
-            // apart from the state toggles. Archived rows carry it
-            // too — bb accepts a child of an archived parent (the child
-            // re-roots to render standalone), and the operator's call.
             {
               id: "done",
               label: isDone ? "Mark Not Done" : "Mark Done",
@@ -1201,6 +1215,12 @@ export function ThreadPane({
                     run: onTogglePinned,
                   },
                 ]),
+            {
+              id: "read-unread",
+              label: thread.isUnread ? "Mark Read" : "Mark Unread",
+              icon: thread.isUnread ? "MailOpen" : "Mail",
+              run: onToggleUnread,
+            },
             ...(snoozeMenuItems ?? []),
             ...(onNewChildThread !== undefined
               ? [
@@ -1251,39 +1271,24 @@ export function ThreadPane({
             );
           }
           return (
-            // No overflow-hidden here: the dropdown the caret opens is a
-            // descendant of this wrapper, and clipping for rounded corners
-            // would clip the menu out of view. The halves round themselves.
-            <div className="relative inline-flex shrink-0 items-stretch rounded-md">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 shrink-0 gap-1.5 rounded-r-none px-2 text-xs text-muted-foreground hover:text-foreground"
-                aria-label={thread.isUnread ? "Mark thread read" : "Mark thread unread"}
-                onClick={onToggleUnread}
-              >
-                <Icon
-                  name={thread.isUnread ? "MailOpen" : "Mail"}
-                  className="size-3.5"
-                  aria-hidden
-                />
-                {thread.isUnread ? "Mark Read" : "Mark Unread"}
-              </Button>
-              <div className="w-px self-stretch my-1.5 bg-border" aria-hidden />
-              <ActionsMenu items={actionItems} attached />
-            </div>
+            <>
+              {/* The ⋯ overflow, where the native pane itself keeps mark
+                  read/unread, pin and archive; the standalone 28px ghost */
+              }
+              <ActionsMenu items={actionItems} />
+              {doneCheckbox}
+            </>
           );
         })()}
         {(() => {
           // The pane's take on the main view's workspace-open button: an
           // icon that opens the thread's workspace in the preferred editor
           // plus a dropdown (file explorer, terminal, Maximize pane, new
-          // window, copy link). The standalone full-screen button is gone —
-          // its action lives in this dropdown as bb's "Maximize pane". On a
-          // wide pane the primary grows an "Open in editor" label; the
-          // default width keeps it icon-only so the title keeps its room.
-          // Renders nothing when no local open applies — no workspace,
-          // daemon down, or the workspace on another host.
+          // window, copy link). On a wide pane the primary grows an "Open
+          // in editor" label; the default width keeps it icon-only so the
+          // title keeps its room. Renders nothing when no local open
+          // applies — no workspace, daemon down, or the workspace on
+          // another host.
           return (
             <WorkspaceOpenMenu
               threadId={thread.id}
@@ -1294,6 +1299,21 @@ export function ThreadPane({
             />
           );
         })()}
+        {!isCompact ? (
+          // The native pane's own "Maximize pane" affordance: a standalone
+          // 28px ghost in the chrome row (the native header carries it
+          // outside its workspace control). The workspace dropdown keeps
+          // its "Maximize pane" entry for the menu-only reach.
+          <Button
+            variant="ghost"
+            size="icon"
+            className={HEADER_ICON_BUTTON_CLASS}
+            aria-label="Maximize pane"
+            onClick={onMaximize}
+          >
+            <Icon name="Maximize2" className="size-4" />
+          </Button>
+        ) : null}
         <Button
           variant="ghost"
           size="icon"
