@@ -41,6 +41,7 @@ import { FocusBoardThreadHeaderAction } from "./components/thread-header-actions
 import type { ThreadPaneThread } from "./components/thread-pane";
 import { useSearchFocusOnSlash } from "./hooks/use-search-focus";
 import { useNewThreadComposerShortcut } from "./hooks/use-new-thread-shortcut";
+import { useHostCapabilities } from "./hooks/use-host-capabilities";
 import { useTicketStatuses } from "./hooks/use-ticket-statuses";
 import { usePulseRates } from "./hooks/use-pulse-rates";
 import { NewThreadModal } from "./components/new-thread-modal";
@@ -1408,6 +1409,14 @@ function BoardPage({ subPath }: { subPath: string }) {
   // pane — never wakes the memoized Board through its prop handoff.
   const splitLayoutRef = useRef<Parameters<typeof nativeOpenWouldEvictBoard>[0]>(null);
   splitLayoutRef.current = splitLayout;
+  // The host surfaces the board compensates for (lib/host-capabilities.ts).
+  // Mounted here, and not only in the pane or the composer, because the
+  // one-pane click reads the one-pane verdict with NO pane open: nothing else
+  // in that state had started the version read. The ref keeps the click
+  // callback identity-stable across the one settle.
+  const hostCaps = useHostCapabilities();
+  const hostCapsRef = useRef(hostCaps);
+  hostCapsRef.current = hostCaps;
   // The pane the board opened, and the thread the board last put there
   // (lib/native-pane-ownership.ts carries the rule and its evidence). One
   // board-opened thread pane, replaced in place: without the record every
@@ -3158,6 +3167,20 @@ function BoardPage({ subPath }: { subPath: string }) {
       if (layout === null) {
         if (openThreadIdRef.current !== null) {
           trace("in-board: the board's pane is open");
+          openThreadCard(threadId);
+          return;
+        }
+        // 1c. A host KNOWN to be older than 0.50: its opener has no layout to
+        //     split, so the ask is a plain navigation that unmounts the board
+        //     and only the dance brings it back (0.49.0, the one-board-pane
+        //     plan §4/§7 and docs/screenshots/probe-native-one-click/). Skip
+        //     the ask and the dance there: the board's own pane is the state
+        //     that host would have reached, without the unmount and the route
+        //     rewrite in between. Anything but a known "no" still asks
+        //     (lib/host-capabilities.ts `splitsFromOnePane`: a version not
+        //     read is not an old host).
+        if (hostCapsRef.current.splitsFromOnePane === "no") {
+          trace("in-board: the host cannot split one pane");
           openThreadCard(threadId);
           return;
         }

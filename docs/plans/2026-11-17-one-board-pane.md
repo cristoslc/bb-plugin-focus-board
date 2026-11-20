@@ -236,6 +236,12 @@ Two states measured no split, and both are real:
 
 The click's other branches are unchanged: the eight-pane ceiling guard, the compact viewport's own pane, and the replacement rule for a pane the board owns (§2). The UAT suite that owns the click contract, `tests/manual/uat-native-open.yaml`, now drives a one-pane click and asserts what the operator ends with: the thread in a native pane, the board still rendering its cards, and a two-pane layout.
 
+### The version gate on that ask
+
+The ask is a 0.50 fact, so the click asks only where the host may split. `lib/host-capabilities.ts` reads the host version once per process behind the `host_version` RPC (the gate `dec_kyuduwmr8w7g` chose over raising `engines.bb`), and carries a one-pane verdict for it: yes from 0.50.0 up, no on a version known to be older, unknown while the version has not been read. A known no opens the board's own pane with no ask and no dance, which is the state that host would have reached by navigating, minus the unmount and the route rewrite.
+
+Unknown keeps the ask, which is the one place the module does not fall back to its lacking set, and the deviation is deliberate. Skipping on a host that could split costs the feature on every click; asking on a host that cannot costs one navigation the dance already repairs.
+
 ### The live rerun on the merged build
 
 After the branch merged, the plugin was rebuilt and reloaded from the main checkout, and the click probe was run again against the served build in a fresh browser context (`docs/screenshots/probe-native-one-click/post-484/evidence.json`). One click on a card in a one-pane window now reads two panes: `freshFirstClickOpenedAPane: true`, the thread pane holds the clicked thread, the board is still mounted, and the route is the thread's page. A second click on another card keeps two panes and replaces the thread in that pane. A double click on the same card leaves the same two panes. Before this change the same probe read one pane, the board mounted, and no thread pane at all.
