@@ -1,0 +1,55 @@
+version: 1.7.16
+demos:
+  - bullet: "**A lane's menu can fold or unfold every family in that lane at once, and hide or show their idle children.**"
+    gif: docs/screenshots/release-demos/v1.7.16-lane-bulk-fold.gif
+    caption: "The A-while-ago lane's own menu folds all three of its families at once, then hides their idle children — other lanes untouched."
+    steps:
+      - "release-demos/v1.7.16.mjs lane-bulk-fold: the lane-menu suite's bulk-entries steps on camera, on the seed's three-family lane (thr_parent_lane, thr_proj_family, thr_big_family)"
+      - "the lane header's name+caret opens the menu; Collapse all folds every family in one write; the reopened menu's Hide idle children strips the idle rows"
+  - bullet: "**Sweeping a lane to Done no longer stalls.**"
+    gif: docs/screenshots/release-demos/v1.7.16-sweep-lane-to-done.gif
+    caption: "The lane's pill arms to N → Done, the confirm sends the cards out six at a time, and the lane empties in about half a second."
+    steps:
+      - "release-demos/v1.7.16.mjs sweep-lane-to-done: the A-while-ago lane's sweep pill clicked to arm, clicked again to confirm"
+      - "the run's batching is the story: the pill counts the batches while the cards leave the lane, one repaint per batch of six"
+  - bullet: "**Opening a card from Unread leaves the board looking at it.**"
+    gif: docs/screenshots/release-demos/v1.7.16-unread-open-recenter.gif
+    caption: "Clicking the Unread card opens the pane; the read mark re-lanes it into its idle bucket and the board pans there with it."
+    steps:
+      - "release-demos/v1.7.16.mjs unread-open-recenter: the uat-views-mobile recenter steps at desktop width"
+      - "one click on thr_rpc_auth opens the pane; the read mark rides __uat.pushThreadUpdate (the mock host's setRead is a no-op), the card re-lanes, and the board's scroll follows it into the idle lane"
+  - bullet: "**With lane direction set to Horizontal, a family card keeps every child row on the card.**"
+    gif: docs/screenshots/release-demos/v1.7.16-horizontal-family-rows.gif
+    caption: "Horizontal re-lays the lanes as rows; the big family's Show all expands all nine child rows and the row grows to fit instead of cutting the card."
+    steps:
+      - "release-demos/v1.7.16.mjs horizontal-family-rows: the View menu's Horizontal pick re-lays the lanes on camera (the v1.7.10 recipe)"
+      - "the A-while-ago row's big family (thr_big_family, nine children) expands through its Show all handle; the grown row keeps every row and the handle on screen"
+  - bullet: "**On a phone, a Horizontal board puts each lane's label above its cards instead of beside them.**"
+    gif: docs/screenshots/release-demos/v1.7.16-phone-horizontal-labels.gif
+    caption: "At phone width the label stacks above the row and the cards span it; a touch pan slides the row so the next card peeks in."
+    steps:
+      - "release-demos/v1.7.16.mjs phone-horizontal-labels: 390×844 with laneDirection=horizontal, the restack the uat-views-mobile measurements pin"
+      - "a CDP touch pan along the Unread row scrolls the row before the hold arms — the finger overlay shows the gesture, the peeking card slides in"
+  - bullet: "**The board's keys stay on the board.**"
+    gif: docs/screenshots/release-demos/v1.7.16-keys-stay-on-board.gif
+    caption: "A planted editable pane (where bb's thread chat sits) takes the c and the / as text; with nothing focused, c still opens the composer on the board."
+    steps:
+      - "release-demos/v1.7.16.mjs keys-stay-on-board: the probe-shortcut-typing staging, themed — a contenteditable and a textarea outside the board's panel root"
+      - "real key events: c lands in the planted editor with no dialog, / lands in the textarea without jumping search; blur, then c on the board opens the New Thread dialog"
+  - bullet: "**Thread and project references in a pane message open the thread or project again.**"
+    gif: docs/screenshots/release-demos/v1.7.16-mention-chip-opens-thread.gif
+    caption: "bb renders the agent's @thread: mention as a file:// link; the pane claims the click and opens the referenced thread itself."
+    steps:
+      - "release-demos/v1.7.16.mjs mention-chip-opens-thread: the pane on thr_review_pr with the mention-anchor fixture (?mentionAnchor=1, the File-not-found regression's shape)"
+      - "the anchor click routes through the pane's claim chain into the referenced thread (thr_glyph_glue) in the pane"
+skips:
+  - bullet: "**Focus Board actions ride along on bb's own thread pages.**"
+    reason: "The control mounts in bb's own thread-page header, which the harness does not render (the mock captures the slot's registration only); the registration is asserted, not filmable."
+  - bullet: "**A card click in a single-pane window opens the thread, then brings the board back beside it.**"
+    reason: "The thread lands in a native bb pane the harness cannot render; the observable is the host call (native_open split: true) the uat-native-open suite asserts, and the board-side picture is the board simply staying put."
+  - bullet: "**On bb 0.49 the pane and the New Thread dialog stop duplicating the host.**"
+    reason: "The stand-down keys to the host's version, which the mock does not stage, and the visible result is board chrome that no longer renders — an absence."
+  - bullet: "**Splitting or unsplitting the window no longer reloads the board.**"
+    reason: "The reload is a host window action the harness cannot stage, and the fix proves an absence (the loading flash gone); identical pixels frame to frame."
+  - bullet: "**A directory reference in a pane message opens in your editor instead of an error pane.**"
+    reason: "The outcome is host navigation (the preferred editor opens); the harness has no editor to render, and the board-side result is an error pane that no longer appears — an absence."
