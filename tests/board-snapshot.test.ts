@@ -50,6 +50,7 @@ const laneList = (root: ParentNode, id: string): HTMLElement =>
 
 const scroll: BoardScroll = {
   board: { x: 260, y: 0 },
+  viewportWidth: 800,
   lanes: { unread: { x: 0, y: 120 } },
 };
 
@@ -160,7 +161,16 @@ describe("parsing a snapshot", () => {
           version: BOARD_SNAPSHOT_VERSION,
           takenAt: 1,
           data: data(),
-          scroll: { board: { x: Number.NaN, y: 0 }, lanes: {} },
+          scroll: { board: { x: Number.NaN, y: 0 }, viewportWidth: 800, lanes: {} },
+        }),
+    ).toBe(true);
+    expect(
+      "problem" in
+        parseBoardSnapshot({
+          version: BOARD_SNAPSHOT_VERSION,
+          takenAt: 1,
+          data: data(),
+          scroll: { board: { x: 0, y: 0 }, viewportWidth: Number.NaN, lanes: {} },
         }),
     ).toBe(true);
   });
@@ -207,6 +217,9 @@ describe("the scroll half", () => {
     laneList(root, "pinned").scrollTop = 40;
     expect(readBoardScroll(root)).toEqual({
       board: { x: 260, y: 0 },
+      // jsdom lays nothing out, so the captured viewport is 0; a browser
+      // records the scroller's own width here.
+      viewportWidth: 0,
       lanes: { unread: { x: 0, y: 120 }, pinned: { x: 0, y: 40 } },
     });
     root.remove();
@@ -227,19 +240,20 @@ describe("the scroll half", () => {
   });
 
   it("tells a real position from a board resting at zero, which leaves the mount fit alone", () => {
-    expect(hasRestoredPosition({ board: { x: 0, y: 0 }, lanes: {} })).toBe(false);
+    expect(hasRestoredPosition({ board: { x: 0, y: 0 }, viewportWidth: 800, lanes: {} })).toBe(false);
     expect(
-      hasRestoredPosition({ board: { x: 0, y: 0 }, lanes: { pinned: { x: 0, y: 0 } } }),
+      hasRestoredPosition({ board: { x: 0, y: 0 }, viewportWidth: 800, lanes: { pinned: { x: 0, y: 0 } } }),
     ).toBe(false);
-    expect(hasRestoredPosition({ board: { x: 260, y: 0 }, lanes: {} })).toBe(true);
+    expect(hasRestoredPosition({ board: { x: 260, y: 0 }, viewportWidth: 800, lanes: {} })).toBe(true);
     expect(
-      hasRestoredPosition({ board: { x: 0, y: 0 }, lanes: { pinned: { x: 0, y: 120 } } }),
+      hasRestoredPosition({ board: { x: 0, y: 0 }, viewportWidth: 800, lanes: { pinned: { x: 0, y: 120 } } }),
     ).toBe(true);
   });
 
   it("skips a remembered lane that is no longer on the board, never inventing one", () => {    const root = paintBoard();
     const restored = applyBoardScroll(root, {
       board: { x: 10, y: 0 },
+      viewportWidth: 800,
       lanes: { "no-such-lane": { x: 0, y: 90 } },
     });
     expect(restored).toBe(1); // the board alone

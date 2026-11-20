@@ -67,7 +67,7 @@ import type { JsonValue } from "@get-bb/plugin-sdk";
 import type { SnoozeRecord } from "./snooze";
 
 /** Bumped when the stored shape changes; an older snapshot is a cache miss. */
-export const BOARD_SNAPSHOT_VERSION = 2;
+export const BOARD_SNAPSHOT_VERSION = 3;
 
 /** The done-age stamp and sweep override one thread carries. */
 export interface SnapshotDoneExtra {
@@ -115,9 +115,19 @@ export interface ScrollBox {
 /**
  * The scroll offsets the operator was looking at: the board's own scroller and
  * each lane's card list, keyed by the lane's `data-column-id`.
+ *
+ * `viewportWidth` is the board scroller's own width when those offsets were
+ * read. It is not needed to replay them, but it records what the position was
+ * a position IN: bb re-creates the panel on a pane split, and that same
+ * gesture halves the board, so a restored scroll captured at the wide pre-split
+ * viewport no longer describes the narrow new one (the card the click focused
+ * can fall outside it). The next mount compares the two and refits only when
+ * the host resized the board under the restored position (components/board.tsx,
+ * the keep-in-view effect).
  */
 export interface BoardScroll {
   readonly board: ScrollBox;
+  readonly viewportWidth: number;
   readonly lanes: Readonly<Record<string, ScrollBox>>;
 }
 
@@ -233,6 +243,7 @@ function readScroll(value: unknown, path: string): BoardScroll {
   if (!isRecord(value)) throw new Error(`${path}: expected an object`);
   return {
     board: readScrollBox(value.board, `${path}.board`),
+    viewportWidth: finiteNumber(value.viewportWidth, `${path}.viewportWidth`),
     lanes: recordOf(value.lanes, `${path}.lanes`, readScrollBox),
   };
 }
@@ -416,7 +427,15 @@ export function readBoardScroll(root: ParentNode): BoardScroll | null {
     if (id === null || list === null) continue;
     lanes[id] = scrollBoxOf(list);
   }
-  return { board: scrollBoxOf(board), lanes };
+  return {
+    board: scrollBoxOf(board),
+    // The visible width the box had when these offsets were read, rounded the
+    // same way the keep-in-view fit compares it (components/board.tsx). The
+    // rect, not clientWidth: it is the very number the fit's width observer
+    // reads, so a split's resize lands on the same integer on both sides.
+    viewportWidth: Math.round(board.getBoundingClientRect().width),
+    lanes,
+  };
 }
 
 /**
