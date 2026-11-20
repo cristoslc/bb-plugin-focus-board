@@ -11,7 +11,7 @@ demos:
     caption: "The lane's pill arms to N → Done, the confirm sends the cards out six at a time, and the lane empties in about half a second."
     steps:
       - "release-demos/v1.7.16.mjs sweep-lane-to-done: the A-while-ago lane's sweep pill clicked to arm, clicked again to confirm"
-      - "the run's batching is the story: the pill counts the batches while the cards leave the lane, one repaint per batch of six"
+      - "?scale=40 (the scale fixture, issue #186) fattens the lane with old idle threads — the busy board the bullet's numbers name; the run's batching is the story: the pill counts the batches while the cards leave the lane, one repaint per batch of six"
   - bullet: "**Opening a card from Unread leaves the board looking at it.**"
     gif: docs/screenshots/release-demos/v1.7.16-unread-open-recenter.gif
     caption: "Clicking the Unread card opens the pane; the read mark re-lanes it into its idle bucket and the board pans there with it."
