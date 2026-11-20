@@ -116,3 +116,39 @@ steps:
       - native_panes: []
       - native_pane_count: 1
       - pane: { threadId: thr_uat_queue }
+
+  # A thread CREATED inside the board (reported 2026-11-20). The board's own
+  # New Thread modal is the composer; its spawn used to call the in-panel
+  # opener directly, so a created thread always landed in the board whatever
+  # the answer said. These two steps are the contract: the spawn takes the
+  # same routing entry as a card click. The send button is the harness's mock
+  # host composer (scripts/screenshot/mock-sdk.tsx), and `threads.spawn` adds
+  # the created thread to the simulated sidebar so the board paints its card
+  # exactly as a live spawn's row does.
+  - id: a-thread-created-in-the-modal-opens-beside-the-board
+    title: A thread created from the board's New Thread modal opens beside the board
+    goto: "?groupBy=status&nativeSplit=1"
+    gestures:
+      - click_aria: "New thread"
+      - sleep: 300
+      - click_aria: "Create thread"
+    assert:
+      - native_open: { threadId: thr_uat_spawned, split: true }
+      - native_panes: [thr_uat_spawned]
+      - native_pane_count: 2
+      - pane: { open: false }
+
+  - id: a-thread-created-in-the-modal-stays-in-the-board-when-that-is-the-answer
+    title: With the board-panel answer, a created thread opens in the board's own pane
+    goto: "?groupBy=status&nativeSplit=1&firstRun=1"
+    gestures:
+      - click_aria: "In the board panel"
+      - sleep: 300
+      - click_aria: "New thread"
+      - sleep: 300
+      - click_aria: "Create thread"
+    assert:
+      - native_panes: []
+      - native_pane_count: 1
+      - pane: { threadId: thr_uat_spawned }
+      - url: { suffix: "/board/t/thr_uat_spawned" }

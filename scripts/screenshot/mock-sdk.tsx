@@ -934,6 +934,43 @@ const mockSdk = {
         turnRequestId: "trq_uat_retry",
       };
     },
+    // The board's own composer spawn (components/new-thread-modal): recorded in
+    // `uatCalls` as `threads.spawn`, and the spawned thread joins the simulated
+    // sidebar so the board paints its card the way a live spawn's row does. The
+    // row the modal opens is this result, which is what the pane renders until
+    // the sidebar catches up.
+    spawn: async (args?: { projectId?: string; parentThreadId?: string }) => {
+      uatCalls.push({ method: "threads.spawn", args });
+      const spawned: SimThread = {
+        id: "thr_uat_spawned",
+        projectId: args?.projectId ?? "proj_board",
+        parentThreadId: args?.parentThreadId ?? null,
+        title: "Spawned from the board",
+        titleFallback: null,
+        displayTitle: "Spawned from the board",
+        providerId: "pi",
+        status: "idle",
+        runtimeStatus: "idle",
+        queuedWork: "none",
+        hasPendingInteraction: false,
+        isUnread: false,
+        isPinned: false,
+        isArchived: false,
+        isHidden: false,
+        indicator: "none",
+        indicatorLabel: null,
+        lastReadAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      bumpSimThreads([spawned, ...simThreads]);
+      return {
+        id: spawned.id,
+        title: spawned.title,
+        titleFallback: null,
+        status: "idle",
+        projectId: spawned.projectId,
+      };
+    },
   },
   hosts: {
     // The fields the plugin's create flows read: the dialog's picked-folder
@@ -1061,10 +1098,6 @@ export function experimental_NewThreadComposer(props: Record<string, unknown>): 
           <button
             type="button"
             data-mock-composer=""
-            onClick={() => {
-              const submit = props.onSubmit as ((request: unknown) => void) | undefined;
-              void submit?.({ projectId: "proj_1", input: [] });
-            }}
             className="inline-flex h-7 items-center gap-1.5 rounded-md px-1.5 text-sm"
             style={{ color: "var(--muted-foreground)" }}
           >
@@ -1082,8 +1115,17 @@ export function experimental_NewThreadComposer(props: Record<string, unknown>): 
             >
               <Icon name="Mic" className="size-4" aria-hidden />
             </button>
+            {/* The send button submits, the way bb's own composer does: the
+                modal forwards the request to `threads.spawn`. A labelled
+                affordance so a UAT step can create a thread through the board
+                (`click_aria: "Create thread"`). */}
             <button
               type="button"
+              aria-label="Create thread"
+              onClick={() => {
+                const submit = props.onSubmit as ((request: unknown) => void) | undefined;
+                void submit?.({ projectId: "proj_1", input: [] });
+              }}
               className="inline-flex size-7 items-center justify-center rounded-md"
               style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}
             >

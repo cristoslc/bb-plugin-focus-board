@@ -3167,6 +3167,15 @@ function BoardPage({ subPath }: { subPath: string }) {
   // instead, so × / Escape do not multiply entries. A failed push (host route
   // owner unavailable — older bb, exotic embeds) falls back to the pane still
   // opening locally, which keeps the board usable without URL state.
+  //
+  // This is the PRIMITIVE, not the way in. It renders the thread in the
+  // board's own in-panel pane and decides nothing about where a thread
+  // should open — not the operator's answer, not the host fallbacks. Every
+  // gesture that opens a thread for interaction goes through
+  // `openThreadForInteraction` below, which owns those decisions and calls
+  // this only for the in-panel outcome. A new caller reaches for that
+  // handler instead; if it seems to need this function directly, the
+  // decision it is trying to skip belongs in the handler.
   const openThreadCard = useCallback(
     (threadId: string) => {
       pushedThreadIdRef.current = threadId;
@@ -3189,36 +3198,51 @@ function BoardPage({ subPath }: { subPath: string }) {
     [navigate, capturePaneAttention],
   );
 
-  // The card click's native placement, in three questions
-  // (lib/native-pane-ownership.ts carries the host facts and the probe that
-  // measured them, lib/native-one-pane-dance.ts the one-pane measurement):
+  // Loading a thread for interaction: the board's ONE routing entry. A card
+  // click, a card menu's Open thread, a nested child row, a reference chip, a
+  // thread the composer just spawned — every gesture that means "put this
+  // thread in front of me" asks here, and nothing decides a surface on its
+  // own. The bug that made this the only door (reported 2026-11-20): the New
+  // Thread modal's own spawn path called the in-panel primitive directly, so a
+  // thread created inside the board always landed in the board's pane and the
+  // operator's answer to "where should threads open" was ignored.
   //
-  // 1. Is there a split? A compact viewport means the board's own in-panel
-  //    pane, because bb's opener plainly navigates there. One pane is not the
-  //    same thing: the window already carries a one-pane layout, so the host's
-  //    opener splits it, and the click asks (the ruling dec_a4lrjn0gqqmk).
-  // 2. Is one of those panes Focus Board's? The persisted record says so and
-  //    the live layout has to agree.
-  // 3. Use it: focus it when the clicked thread is already in it, otherwise
-  //    focus it and land the clicked thread, because bb replaces the focused
-  //    pane and pressing a card focuses the board.
+  // What the handler owns, in this order:
   //
-  // The attention freeze is captured here exactly as the pane's click-open
-  // captured it, so the attended card holds its placement while the native
-  // pane reads it.
-  const openThreadCardNative = useCallback(
+  // 0. The operator's stored answer (lib/thread-open-target.ts). "panel" is
+  //    the whole path: the board's own in-panel pane, and the host's opener is
+  //    never asked, so a window that could split stays one pane. It is a gate
+  //    on the shipped branches below, not a second switch beside them: with
+  //    "beside", every host fallback still applies.
+  // 1. The refusals: bb's pane cap (the opener would replace the FOCUSED pane,
+  //    which at the cap can be the board itself), a compact viewport (the
+  //    opener plainly navigates), a host known older than 0.50 (no layout to
+  //    split), and a window with splits off (the ask's dance keeps the thread
+  //    on screen when the host cannot split).
+  // 2. The split pane the board already owns: focus it, and replace the thread
+  //    in it when the gesture names another one. The persisted record decides
+  //    (lib/native-pane-ownership.ts), and the live layout has to agree.
+  // 3. The two side effects the outcomes need: the attention freeze for a
+  //    native pane (the in-panel primitive captures its own, because the
+  //    pane's placement freeze belongs with the pane that reads it) and, for
+  //    an UNREAD target, the one-shot reveal claim.
+  //
+  // The native placement's three questions live in the steps above, with
+  // lib/native-one-pane-dance.ts carrying the one-pane measurement and
+  // lib/native-pane-ownership.ts the host facts and their probes.
+  const openThreadForInteraction = useCallback(
     (threadId: string) => {
-      // A click on an UNREAD card is itself a gesture that relocates the card:
-      // bb marks a thread read as its pane opens, and under the status
-      // grouping that state flip re-lanes the card at once into its idle
-      // bucket (components/grouping.ts `frozenLaneHolds`, issue #338) — a lane
-      // the board can be scrolled far away from. Arm the one-shot reveal claim
-      // here, at the click and not at the write: the read write lands in a
-      // LATER commit than the click, so the claim is what makes the board
+      // A gesture aimed at an UNREAD thread relocates that card: bb marks a
+      // thread read as its pane opens, and under the status grouping that
+      // state flip re-lanes the card at once into its idle bucket
+      // (components/grouping.ts `frozenLaneHolds`, issue #338) — a lane the
+      // board can be scrolled far away from. Arm the one-shot reveal claim
+      // here, at the gesture and not at the write: the read write lands in a
+      // LATER commit than the gesture, so the claim is what makes the board
       // follow the card once it has actually moved (the same mechanism, and
       // the same reason, as the card menu's Pin/Done/Read entries).
       //
-      // The claim carries the relocation for every click shape. A desktop
+      // The claim carries the relocation for every open shape. A desktop
       // click beside a native pane keeps the board's active card, and the
       // board's own keep-in-view effect follows it there; the phone's covered
       // sheet deliberately hands Board `activeThreadId={null}` (the quiet-open
@@ -3241,11 +3265,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           ...extra,
         });
       // 0. The operator's chosen surface (the setup dialog or either settings
-      //    surface). "panel" is the whole click path: the board's own in-panel
-      //    pane, and the host's opener is never asked, so a window that could
-      //    split stays one pane. This is a gate on the shipped branch, not a
-      //    second switch beside it: every host fallback below still applies
-      //    when the choice is "beside".
+      //    surface).
       if (openTargetRef.current === "panel") {
         trace("in-board: the operator chose the board panel");
         openThreadCard(threadId);
@@ -3270,12 +3290,12 @@ function BoardPage({ subPath }: { subPath: string }) {
       // 1b. ONE pane. bb's plugin-facing layout is null here, but the window's
       //     own layout is not: it holds the board's pane, so the host's opener
       //     splits it and nothing unmounts (measured on the installed host,
-      //     docs/screenshots/probe-split-dance/). The click asks for the split
-      //     and arms a dance that outlives this component, in case the host has
-      //     no layout to split and plainly navigates instead
+      //     docs/screenshots/probe-split-dance/). The request asks for the
+      //     split and arms a dance that outlives this component, in case the
+      //     host has no layout to split and plainly navigates instead
       //     (lib/native-one-pane-dance.ts).
       //
-      //     With the board's own pane already open, this click is a
+      //     With the board's own pane already open, this request is a
       //     replacement in it (the shipped rule for that pane): the operator is
       //     reading two surfaces already, and a second one would duplicate the
       //     thread they just left.
@@ -3299,7 +3319,7 @@ function BoardPage({ subPath }: { subPath: string }) {
           openThreadCard(threadId);
           return;
         }
-        // A second click on the same card while the ask is still in flight:
+        // A second request for the same thread while the ask is in flight:
         // one dance, one ask. The host's answer will settle the first one.
         if (onePaneDance.pending()?.threadId === threadId) {
           trace("one-pane: the ask is already in flight");
@@ -3310,13 +3330,14 @@ function BoardPage({ subPath }: { subPath: string }) {
         actions.open(threadId, { split: true });
         return;
       }
-      // A second click while a replacement is still waiting for the host's
-      // focus step: the record already names the clicked thread, so the layout
-      // no longer resolves it. Re-ask for the focus (idempotent: the pane still
-      // shows the thread it focuses) and let the first click land. Re-planning
-      // here would read a layout that is mid-replacement and stack a pane.
-      // Cheap insurance for a slow landing: the harness's host lands inside the
-      // click's own flush, so only a live window reaches this.
+      // A second request while a replacement is still waiting for the host's
+      // focus step: the record already names the requested thread, so the
+      // layout no longer resolves it. Re-ask for the focus (idempotent: the
+      // pane still shows the thread it focuses) and let the first request
+      // land. Re-planning here would read a layout that is mid-replacement and
+      // stack a pane. Cheap insurance for a slow landing: the harness's host
+      // lands inside the request's own flush, so only a live window reaches
+      // this.
       const inFlight = nativeReplaceRef.current;
       if (inFlight !== null && inFlight.threadId === threadId) {
         trace("focus: replacement in flight");
@@ -3326,14 +3347,14 @@ function BoardPage({ subPath }: { subPath: string }) {
       // 2. A pane Focus Board opened, still showing the thread the board put
       //    there. A record whose pane is gone, rethreaded by the operator, or
       //    naming a thread bb can no longer resolve (it has left the board's
-      //    list) is stale, and the click falls back rather than guessing.
+      //    list) is stale, and the request falls back rather than guessing.
       const owned = resolveBoardNativePane(layout, boardNativePaneRef.current);
       if (owned === null || !liveThreadIdsRef.current.includes(owned.threadId)) {
         trace("in-board: no pane of the board's to use");
         openThreadCard(threadId);
         return;
       }
-      // 3a. The clicked thread is already in Focus Board's pane: the host's
+      // 3a. The requested thread is already in Focus Board's pane: the host's
       //     opener focuses that pane and nothing moves.
       if (owned.threadId === threadId) {
         trace("focus: already in the board's pane");
@@ -3358,10 +3379,10 @@ function BoardPage({ subPath }: { subPath: string }) {
       replaceTimerRef.current = window.setTimeout(() => {
         replaceTimerRef.current = null;
         if (nativeReplaceRef.current !== intent) return;
-        // The host never focused the board's pane inside the window. One click
-        // must still open the thread, and it must not cost a new pane: the
-        // board's own pane shows it, and the record is dropped so the next
-        // click re-plans from what the host actually holds.
+        // The host never focused the board's pane inside the window. The
+        // request must still open the thread, and it must not cost a new pane:
+        // the board's own pane shows it, and the record is dropped so the next
+        // request re-plans from what the host actually holds.
         setNativeReplace(null);
         setBoardNativePane(null);
         trace("in-board: replacement not confirmed");
@@ -3378,12 +3399,17 @@ function BoardPage({ subPath }: { subPath: string }) {
     ],
   );
 
-  // The one-pane click's two continuations, handed to the dance module
+  // The one-pane request's two continuations, handed to the dance module
   // (lib/native-one-pane-dance.ts). Both live outside this component's state
-  // because the click destroys the panel when the host has no layout to split:
-  // the in-panel opener needs a mounted board, so it is released on unmount,
-  // while the route restore only needs the host's router, which outlives the
-  // panel — that is the half that puts the board's route back.
+  // because the request destroys the panel when the host has no layout to
+  // split: the in-panel opener needs a mounted board, so it is released on
+  // unmount, while the route restore only needs the host's router, which
+  // outlives the panel — that is the half that puts the board's route back.
+  //
+  // The dance's in-panel half is the handler's own fallback, so it is the one
+  // place outside `openThreadForInteraction` that uses the primitive: the ask
+  // has already been made and answered, and re-running the handler would plan
+  // the split it is repairing.
   useEffect(() => {
     onePaneDanceHost.openBoardPane = (threadId) => openThreadCard(threadId);
     onePaneDanceHost.restoreBoardRoute = (subPath) => {
@@ -3457,17 +3483,25 @@ function BoardPage({ subPath }: { subPath: string }) {
         const listed =
           threads.some((thread) => thread.id === reference.id) ||
           archivedThreads.some((archived) => archived.id === reference.id);
-        if (listed) openThreadCard(reference.id);
+        // A thread the board lists goes through its one routing entry like
+        // every other gesture; a thread it does not list has no card and no
+        // pane to route from, so bb's main thread view is the only surface
+        // that can show it (the deliberate half of this path).
+        if (listed) openThreadForInteraction(reference.id);
         else navigate.toThread(reference.id);
       },
     }),
-    [threads, archivedThreads, projects, navigate, openThreadCard],
+    [threads, archivedThreads, projects, navigate, openThreadForInteraction],
   );
 
   // The composer modal resolved a spawn: remember the project it landed in
   // (the remembered rung of the seed ladder, fed from the submit success
-  // path — a failed spawn never writes), file the provisional row, then
-  // open the new thread in the pane (route push + frozen column as usual).
+  // path — a failed spawn never writes), file the provisional row, then hand
+  // the created thread to the board's one routing entry. The spawn gesture is
+  // an open like any other: with the answer "beside the board" the host's
+  // opener takes it, and with "in the board panel" the board's own pane does
+  // (the bug this path carried until 2026-11-20: it called the in-panel
+  // primitive directly and ignored the answer).
   const handleSpawnedThread = useCallback(
     (thread: SpawnedThread) => {
       const key = rememberedProjectStorageKey(pluginId);
@@ -3478,10 +3512,11 @@ function BoardPage({ subPath }: { subPath: string }) {
         displayTitle: thread.title ?? thread.titleFallback ?? thread.id,
         status: thread.status,
       });
-      openThreadCard(thread.id);
+      openThreadForInteraction(thread.id);
     },
-    [pluginId, openThreadCard],
+    [pluginId, openThreadForInteraction],
   );
+
   // The group tag every successful composer spawn carries, resolved from
   // the armed presets (lib/group-inheritance): the explicit "New thread in
   // group…" preset, or — the operator's decided design, metadata at spawn —
@@ -4693,7 +4728,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             validatedHrefs={validatedHrefs}
             parentLaneOrder={parentLaneOrder}
             onParentLaneOrderChange={persistParentLaneOrder}
-            onOpenThread={openThreadCardNative}
+            onOpenThread={openThreadForInteraction}
             onClosePane={closeThreadPane}
             onNewTask={openNewThread}
             menuActionsFor={menuActionsFor}
@@ -4762,7 +4797,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             pulseRateFor={pulseRateFor}
             linkedIssuesFor={linkedIssuesFor}
             validatedHrefs={validatedHrefs}
-            onOpenThread={openThreadCardNative}
+            onOpenThread={openThreadForInteraction}
             onClosePane={closeThreadPane}
             onNewTask={openNewThread}
             snoozeFor={snoozeFor}

@@ -3,5 +3,9 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
   {
     "text": "**Focus Board asks where a thread opens, once per install.** A card can open its thread beside the board in its own pane or inside the board's own panel; the first run asks, and both the gear modal and the configuration page carry the same answer.",
     "children": []
+  },
+  {
+    "text": "**A thread created from the board opens where your choice says it should.** The New Thread dialog's own spawn now takes the same path as a card click, so the answer \"beside the board\" puts the created thread in bb's pane instead of the board's.",
+    "children": []
   }
 ];
