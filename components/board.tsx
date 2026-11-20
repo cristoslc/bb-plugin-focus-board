@@ -47,6 +47,7 @@ import type { CardMenuAction } from "./thread-card-menu";
 import type { BrowserRevealNotice } from "@/lib/browser-reveal";
 import { Icon } from "@/components/ui/icon";
 import { usePrefersReducedMotion } from "@/components/ui/hooks/use-media-query";
+import { useIsCompactViewport } from "@/components/ui/hooks/use-compact-viewport";
 import { usePointerCoarse } from "@/components/ui/hooks/use-pointer-coarse";
 import { touchDragArmed, useTouchHoldDrag } from "@/components/touch-hold-drag";
 import { useBoardDragAutoscroll } from "@/components/board-drag-autoscroll";
@@ -759,6 +760,21 @@ function BoardBase({
   // dimension the transport's ghost collapse and arrival grow measure.
   const flowAxis: TransportAxis = laneDirection;
   const horizontalLanes = flowAxis === "horizontal";
+  // A horizontal lane's header is a left strip on a desktop row, where its
+  // 160px read as a margin (12.7% of a 1280px row). At phone width the same
+  // 160px is 43.7% of a 366px row, and it leaves the card list 206px for a
+  // 240px card: no card was ever whole across the row, and the strip's two
+  // short lines filled ~50 of its 288 rows of height. That block is the
+  // operator's "too much negative space at left" (2026-11-19, measured under
+  // docs/screenshots/repro-horizontal-lane-header-left-gap). The width
+  // belongs to the cards, so at a phone viewport the label restacks ABOVE the
+  // row — the slim strip vertical lanes already use — and the desktop row
+  // keeps today's strip unchanged. The compact viewport is the one phone
+  // signal the plugin already owns (components/ui/hooks/use-compact-viewport),
+  // read by the toolbar's ribbon and the pane's sheet coverage. The hook is
+  // called unconditionally (hooks law); the direction gates its RESULT.
+  const compactViewport = useIsCompactViewport();
+  const stackedLaneHeaders = horizontalLanes && compactViewport;
   // The ungrouped view is a card GRID, not a one-lane board (issue #416):
   // every lane affordance below is bypassed — no rank key, no lane header, no
   // sweep pill, no floor, no transport between lanes — and the cards land in
@@ -3152,7 +3168,13 @@ function BoardBase({
                 // the board's existing vertical scroll reaches every lane. The
                 // floor keeps a sparse lane reading as a row.
                 horizontalLanes
-                  ? "flex min-h-72 w-full min-w-0 shrink-0 flex-row rounded-lg transition-colors"
+                  ? cn(
+                      "flex min-h-72 w-full min-w-0 shrink-0 rounded-lg transition-colors",
+                      // A phone-width row stacks its label above the cards, so
+                      // the list spans the row's whole width (`flex-col`
+                      // instead of the desktop's strip-beside-cards row).
+                      stackedLaneHeaders ? "flex-col" : "flex-row",
+                    )
                   : "flex h-full min-h-0 w-64 shrink-0 flex-col rounded-lg transition-colors",
                 familyFloorColumn === column.id
                   // Amber is the family drop color — the same signal the nest
@@ -3163,17 +3185,37 @@ function BoardBase({
               )}
             >
               <header
+                // Which shape this header took, for the tests and the phone
+                // UAT suite that measure the row: a desktop row's left strip,
+                // or the phone's strip above the cards. Absent on a vertical
+                // lane, whose header is a top strip in both directions.
+                data-lane-header-layout={
+                  horizontalLanes ? (stackedLaneHeaders ? "top" : "strip") : undefined
+                }
                 className={cn(
                   // `group` lights the hover-revealed hide-lane icon.
-                  // Vertical: a slim top strip. Horizontal: a narrow left
-                  // strip the lane's label stacks down.
-                  horizontalLanes
+                  // Vertical: a slim top strip. Horizontal desktop: a narrow
+                  // left strip the lane's label stacks down. Horizontal at
+                  // phone width: the same slim top strip as vertical, so the
+                  // cards get the row's whole width.
+                  horizontalLanes && !stackedLaneHeaders
                     ? "group flex w-40 shrink-0 flex-col items-start gap-1 pb-1 pl-1 pr-1 pt-1.5 transition-colors"
-                    : "group flex items-center gap-1.5 px-1 pb-1.5 transition-colors",
+                    : cn(
+                        "group flex items-center gap-1.5 px-1 pb-1.5 transition-colors",
+                        // The restacked header spans the row it labels; the
+                        // list below it does too.
+                        stackedLaneHeaders && "w-full",
+                      ),
                   // Grow the hit strip only while a drag flies, and grow it
                   // with negated margins so no card moves beneath the cursor:
-                  // +4px each side here, -4px back from the content flow.
-                  dragInFlight && (horizontalLanes ? "-my-1 px-2 py-2.5" : "px-2 pb-2.5 -mx-1 -mb-1"),
+                  // +4px each side here, -4px back from the content flow. A
+                  // left strip grows in both directions (its row height is
+                  // set by the cards); a top strip grows downward only, which
+                  // is the vertical header's own pair.
+                  dragInFlight &&
+                    (horizontalLanes && !stackedLaneHeaders
+                      ? "-my-1 px-2 py-2.5"
+                      : "px-2 pb-2.5 -mx-1 -mb-1"),
                   familyHeaderColumn === column.id
                     ? "rounded-md ring-2 ring-amber-500 bg-accent/40"
                     : null,
@@ -3408,6 +3450,9 @@ function BoardBase({
                 data-card-list
                 className={cn(
                   "min-h-0 flex-1 rounded-lg bg-muted/30 p-1.5",
+                  // A restacked row's list spans the row it sits under, the
+                  // whole width the strip used to eat a share of.
+                  stackedLaneHeaders && "w-full",
                   // A touch inside a lane is a pan too (see the board's own
                   // `touch-manipulation` note): the lane keeps both axes, so
                   // a finger that lands on a card still reaches the lane's

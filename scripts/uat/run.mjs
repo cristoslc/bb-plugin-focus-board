@@ -1809,14 +1809,64 @@ const pageColumnCardVisible = (threadId) => {
 };
 
 /**
+ * How much of a horizontal lane row's WIDTH the cards get (operator report
+ * 2026-11-19: "in horizontal mode on phone, too much negative space at
+ * left"). Measures the lane's row box, its header's box, its card list, and
+ * the given card's left edge, and reads the two numbers that decide whether
+ * the width belongs to the cards:
+ *
+ * - `max_inset` — where the first card starts, in px from the row's left
+ *   edge. Today's phone read put it at +166px of a 366px row.
+ * - `min_list_share` — the card list's share of the row's width, 0…1.
+ *
+ * Both are optional and both must hold when given. A missing lane, list, or
+ * card is a FAIL, never a silent pass: a row that cannot be measured proves
+ * nothing.
+ */
+const pageLaneRowWidth = ({ column, card, max_inset: maxInset, min_list_share: minListShare }) => {
+  const lane = document.querySelector(`section[data-column-id="${CSS.escape(column)}"]`);
+  if (lane === null) return { ok: false, reason: `no ${column} lane` };
+  const list = lane.querySelector("[data-card-list]");
+  if (list === null) return { ok: false, reason: `the ${column} lane has no card list` };
+  const cardEl =
+    card === undefined
+      ? list.querySelector("[data-thread-card]")
+      : document.querySelector(`[data-thread-card="${CSS.escape(card)}"]`);
+  if (cardEl === null) return { ok: false, reason: `no card ${card ?? "(first)"} in the ${column} lane` };
+  const row = lane.getBoundingClientRect();
+  const listBox = list.getBoundingClientRect();
+  const cardBox = cardEl.getBoundingClientRect();
+  const header = lane.querySelector("header");
+  const headerBox = header === null ? null : header.getBoundingClientRect();
+  const inset = Math.round(cardBox.left - row.left);
+  const share = row.width === 0 ? 0 : listBox.width / row.width;
+  const detail =
+    `row ${Math.round(row.width)}px wide, header ` +
+    `${headerBox === null ? "none" : `${Math.round(headerBox.width)}x${Math.round(headerBox.height)}`}, ` +
+    `card list ${Math.round(listBox.width)}px (${(share * 100).toFixed(1)}%), ` +
+    `first card at +${inset}px`;
+  const problems = [];
+  if (maxInset !== undefined && inset > Number(maxInset)) {
+    problems.push(`the first card starts ${inset}px in (max ${maxInset}px)`);
+  }
+  if (minListShare !== undefined && share < Number(minListShare)) {
+    problems.push(
+      `the card list takes ${(share * 100).toFixed(1)}% of the row (min ${(Number(minListShare) * 100).toFixed(0)}%)`,
+    );
+  }
+  return problems.length === 0
+    ? { ok: true, reason: detail }
+    : { ok: false, reason: `${problems.join("; ")} — ${detail}` };
+};
+
+/**
  * The inverse read, on the axis the board PANS (issue #350): the card must
  * sit OUTSIDE the board's visible range — the premise a "drop in the
  * revealed lane" step needs. Vertical lanes stack sideways, so the check is
  * horizontal; horizontal lanes stack vertically, so it is vertical. The
  * board's own data-lane-direction picks the axis, the same read the drag
  * path itself uses.
- */
-const pageColumnCardOffscreen = (threadId) => {
+ */const pageColumnCardOffscreen = (threadId) => {
   const board = document.querySelector("[data-columns-board]");
   if (!board) return { ok: false, reason: "no columns board on the page" };
   const host = document.querySelector(`[data-thread-card="${CSS.escape(threadId)}"]`);
@@ -3168,6 +3218,16 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
       const got = await page.evaluate(pageColumnCardOffscreen, rule.column_card_offscreen);
       expect(
         `card ${rule.column_card_offscreen} outside the columns board's view`,
+        got.ok === true,
+        got.reason,
+      );
+    }
+    if (rule.lane_row_width !== undefined) {
+      // A horizontal lane row's width belongs to the cards, not to the
+      // header strip beside them (see pageLaneRowWidth).
+      const got = await page.evaluate(pageLaneRowWidth, rule.lane_row_width);
+      expect(
+        `the ${rule.lane_row_width.column} row gives its width to the cards`,
         got.ok === true,
         got.reason,
       );

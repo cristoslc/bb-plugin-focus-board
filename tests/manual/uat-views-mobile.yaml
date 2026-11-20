@@ -90,9 +90,40 @@ steps:
       - text_visible: "Unread"
       - column: unread
         ordered: [thr_rpc_auth, thr_uat_queue, thr_review_pr]
-      # The lane row holds its own horizontal scroll (the 160px header strip
-      # plus a 240px card exceeds 390px), so a whole-card-in-board-viewport
+      # The lane row holds its own horizontal scroll (a 240px card plus the
+      # next one's edge exceeds 390px), so a whole-card-in-board-viewport
       # assertion does not apply here: the row scrolls, the board doesn't.
+      #
+      # What the row may NOT spend on its own header is measured below: the
+      # label sits above the cards at this width, so the first card starts at
+      # the row's own left edge (measured 6px of list padding) instead of
+      # behind a 160px strip, and the card list spans the row.
+      - lane_row_width: { column: unread, card: thr_rpc_auth, max_inset: 60, min_list_share: 0.95 }
+
+  - id: horizontal-lane-label-sits-above-the-cards-at-phone-width
+    title: A phone-width horizontal lane stacks its label above the row, never beside it
+    # The operator's 2026-11-19 phone report ("too much negative space at
+    # left"): the strip was 160px of a 366px row, so the cards got 206px for a
+    # 240px card. The fix restacks the label above the row at phone width;
+    # every other lane must read the same way, not just the one card's.
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert:
+      - lane_row_width: { column: working, max_inset: 60, min_list_share: 0.95 }
+      - lane_row_width: { column: done, max_inset: 60, min_list_share: 0.95 }
+
+  - id: a-pinned-card-still-scrolls-its-row-at-phone-width
+    title: Pinning a card from a row scrolls the row it lands in, at phone width
+    # The restack moves the label, never the row's own flow: a card relocating
+    # into a row must still bring its slot into that row's view (the board's
+    # reveal path), so the pinned row's list must end scrolled off its start.
+    goto: "?groupBy=status&laneDirection=horizontal"
+    assert_before_drag:
+      - scroll_offset: { target: lane, column: pinned, axis: x, equals: 0 }
+    menu: { card: thr_review_pr, item: "Pin" }
+    assert:
+      - column: pinned
+        ordered: [thr_ship_release, thr_review_pr, thr_roadmap]
+      - scroll_offset: { target: lane, column: pinned, axis: x, min: 1 }
 
   - id: group-view-renders-at-phone-width
     title: The Group view renders its buckets at phone width
