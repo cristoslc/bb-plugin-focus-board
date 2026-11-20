@@ -4765,6 +4765,11 @@ function BoardPage({ subPath }: { subPath: string }) {
             // fit; a board that was resting at 0/0 has nothing to defend, and
             // the fit is what keeps the open card visible when a pane opens.
             restoredView={boardSeed !== null && boardSeed.scroll !== null && hasRestoredPosition(boardSeed.scroll)}
+            // The width the restored scroll was captured at: a host
+            // re-creation that also resized the board (bb's pane split) leaves
+            // the position describing a viewport this mount no longer has, and
+            // the keep-in-view effect refits the focused card for it.
+            restoredViewportWidth={boardSeed?.scroll?.viewportWidth ?? null}
             cardTransport={cardTransport}
             motionPref={motionFollow ? "system" : "manual"}
             motionPacing={motionPacing}

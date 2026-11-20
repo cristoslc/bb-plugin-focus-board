@@ -342,9 +342,75 @@ function refreshMockSplit(): void {
     !mockSplitsEnabled || mockHostPanes.length < 2 ? null : { panes: mockHostPanes };
   for (const listener of [...splitLayoutListenerSet]) listener();
 }
+/**
+ * The host's split chrome, which the harness otherwise leaves out. bb places
+ * the board's pane and a thread pane side by side at equal widths, so a split
+ * halves the board. Without this the harness's layout never narrows and a
+ * keep-in-view assertion after a native open would pass without measuring the
+ * thing the split does. The pane element is a bare stand-in: the suites assert
+ * the mock's pane records (`__uat.nativePanes()`), never this DOM.
+ */
+function applyMockSplitChrome(): void {
+  const rootElement = document.getElementById("root");
+  if (rootElement === null) return;
+  const split = mockSplitsEnabled && mockHostPanes.length >= 2;
+  if (!split) {
+    document.getElementById("mock-split-pane")?.remove();
+    return;
+  }
+  let host = document.getElementById("mock-split-host");
+  if (host === null) {
+    host = document.createElement("div");
+    host.id = "mock-split-host";
+    host.style.cssText = "display:flex;height:100%;width:100%;min-height:0;";
+    rootElement.parentElement?.insertBefore(host, rootElement);
+    host.append(rootElement);
+  }
+  rootElement.style.cssText = "flex:1 1 0;min-width:0;height:100%;overflow:hidden;";
+  let pane = document.getElementById("mock-split-pane");
+  if (pane === null) {
+    pane = document.createElement("div");
+    pane.id = "mock-split-pane";
+    pane.setAttribute("data-split-pane-id", "pane-2");
+    pane.setAttribute("data-probe-mock-pane", "");
+    pane.style.cssText =
+      "flex:1 1 0;min-width:0;height:100%;border-left:1px solid var(--border);";
+    host.append(pane);
+  }
+}
+
+/**
+ * bb re-creates the panel's React subtree on the first split and the last
+ * unsplit (its workspace split renderer swaps parent element types at the same
+ * position; lib/board-snapshot quotes it). The harness models that re-creation
+ * on the same transitions, so a suite can prove the remount bridge and the
+ * keep-in-view fit against the layout a split really produces. Module state
+ * (threads, panes, the plugin's snapshot slot) outlives the unmount, exactly as
+ * it does in the host's document.
+ */
+function mockHostRemount(): void {
+  const rootElement = document.getElementById("root");
+  if (rootElement === null) return;
+  if (mockRoot !== null) {
+    mockRoot.unmount();
+    mockRoot = null;
+  }
+  rootElement.replaceChildren();
+  mockRender();
+}
+
 function setMockHostPanes(panes: readonly MockSplitPane[]): void {
+  const wasSplit = mockHostPanes.length >= 2;
   mockHostPanes = panes;
+  const isSplit = panes.length >= 2;
   refreshMockSplit();
+  applyMockSplitChrome();
+  if (wasSplit !== isSplit) {
+    // A microtask, not the same tick: the click's own handler is still
+    // running, and the app has not rendered the pane yet. The host tears the
+    // subtree down after its layout commit, which is one task later here.
+    queueMicrotask(() => mockHostRemount());
+  }
 }
 function focusedMockPane(
   panes: readonly MockSplitPane[],

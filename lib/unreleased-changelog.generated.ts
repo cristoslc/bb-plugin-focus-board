@@ -5,6 +5,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "children": []
   },
   {
+    "text": "**A card you open beside the board stays in view when the pane splits.** The board now fits the card the click focused into its new, narrower range instead of leaving it off screen.",
+    "children": []
+  },
+  {
     "text": "**A thread created from the board opens where your choice says it should.** The New Thread dialog's own spawn now takes the same path as a card click, so the answer \"beside the board\" puts the created thread in bb's pane instead of the board's.",
     "children": []
   },

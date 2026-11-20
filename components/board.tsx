@@ -529,6 +529,15 @@ interface BoardProps {
    * still fit, exactly as they always did.
    */
   restoredView?: boolean;
+  /**
+   * The board scroller's width when the restored scroll was captured. A host
+   * re-creation that ALSO resized the board (bb's pane split re-creates the
+   * panel as it halves the board) leaves the restored position describing a
+   * viewport this mount no longer has, so the mount pass fits the active card
+   * once instead of defending a position that cannot show it. Absent or equal
+   * to the current width keeps the restored position untouched.
+   */
+  restoredViewportWidth?: number | null;
   /** Right-click menu actions for one thread, sidebar-menu style. */
   menuActionsFor: (thread: PluginSidebarThread) => readonly CardMenuAction[];
   /**
@@ -717,6 +726,7 @@ function BoardBase({
   onHideLane,
   reveal = null,
   restoredView = false,
+  restoredViewportWidth = null,
   menuActionsFor,
   snoozeFor,
   pulseRateFor,
@@ -938,6 +948,22 @@ function BoardBase({
     };
     if (mountFitPendingRef.current) {
       mountFitPendingRef.current = false;
+      fittedViewKeyRef.current = viewKey;
+      keepActiveCardInView();
+    } else if (
+      fittedViewKeyRef.current === undefined &&
+      restoredViewportWidth !== null &&
+      Math.round(container.getBoundingClientRect().width) !== restoredViewportWidth
+    ) {
+      // A re-created panel that ALSO came back narrower (or wider): bb's pane
+      // split halves the board and re-creates the panel in the same gesture,
+      // so the restored scroll was captured at the pre-split width and the
+      // card the click focused can sit outside the new visible range. The
+      // width observer cannot catch this one: it is created after this paint,
+      // with the already-narrow width as its baseline, so no change is ever
+      // observed (probe-pane-split-recenter). The snapshot's recorded width is
+      // the only evidence that the restored position describes a viewport this
+      // mount no longer has; a same-width re-creation still keeps its scroll.
       fittedViewKeyRef.current = viewKey;
       keepActiveCardInView();
     } else if (fittedViewKeyRef.current !== undefined && fittedViewKeyRef.current !== viewKey) {
