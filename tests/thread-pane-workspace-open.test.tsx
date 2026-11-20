@@ -145,16 +145,18 @@ describe("pane header chrome", () => {
 		).toBeNull();
 	});
 
-	it("Mark Unread and the actions caret form one attached split control on desktop", () => {
+	it("Mark Read/Unread lives in the standalone ⋯ overflow on desktop — no attached split", () => {
+		// Native parity: the row carries no labeled read primary; bb's own
+		// header reaches Mark unread through the ⋯ menu.
 		renderPane();
-		const primary = screen.getByRole("button", {
-			name: /mark thread unread/i,
-		});
+		expect(
+			screen.queryByRole("button", { name: /mark thread unread/i }),
+		).toBeNull();
 		const trigger = screen.getByRole("button", { name: "More thread actions" });
-		// Attached, like the open control: same wrapper, caret on the right.
-		expect(primary.parentElement).toBe(trigger.parentElement);
-		expect(trigger.querySelector('[data-icon="ChevronDown"]')).not.toBeNull();
-		expect(trigger.querySelector('[data-icon="More"]')).toBeNull();
+		// Standalone, like the native header's own ⋯ button: no split
+		// wrapper, an ellipsis glyph.
+		expect(trigger.querySelector('[data-icon="MoreHorizontal"]')).not.toBeNull();
+		expect(trigger.querySelector('[data-icon="ChevronDown"]')).toBeNull();
 	});
 
 	it("the actions dropdown is not trapped inside a clipping wrapper", async () => {

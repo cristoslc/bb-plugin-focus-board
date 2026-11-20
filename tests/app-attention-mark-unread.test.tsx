@@ -112,11 +112,15 @@ describe("Mark Unread on a read card with its attention frozen (pane open)", () 
     await waitFor(() => expect(columnCardIds("unread")).toContain("thr_unread"));
 
     // The pane is open on the read card: its attention freeze holds the
-    // rendered placement — the Idle · Today lane and slot it sits in.
-    await waitFor(() => expect(screen.getByLabelText("Mark thread unread")).toBeTruthy());
+    // rendered placement — the Idle · Today lane and slot it sits in. The
+    // gesture's control: Mark Read/Unread lives in the header's ⋯ overflow
+    // menu (the native header restyle moved it out of the row).
+    await waitFor(() => expect(screen.getByLabelText("Close thread pane")).toBeTruthy());
 
-    // The gesture: Mark Unread, with the pane (and so the freeze) still open.
-    fireEvent.click(screen.getByLabelText("Mark thread unread")!);
+    // The gesture: open the ⋯ overflow and run Mark Unread, with the pane
+    // (and so the freeze) still open.
+    fireEvent.click(screen.getByRole("button", { name: "More thread actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Mark Unread" }));
     // Host-bridge timing: the write lands in a later commit than the click.
     expect(pendingWriteCount()).toBe(1);
     await act(async () => {

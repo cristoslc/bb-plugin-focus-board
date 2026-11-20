@@ -1,0 +1,221 @@
+{
+  "label": "after",
+  "harnessedAt": "http://localhost:4173/",
+  "viewport": {},
+  "theme": {
+    "desktop-dark": {
+      "headerCls": "bg-background/92 px-4",
+      "headerH": 48,
+      "headerPad": "0px 16px",
+      "headerBg": "oklab(0.195 0 0 / 0.92)",
+      "borderBottom": "0px|oklch(0.81 0 0)",
+      "rowCls": "flex h-[48px] items-center gap-2 border-b border-border/60",
+      "rowH": 48,
+      "rowHRule": "48px",
+      "buttons": [
+        {
+          "aria": null,
+          "h": 21,
+          "w": 238
+        },
+        {
+          "aria": "More thread actions",
+          "h": 28,
+          "w": 28
+        },
+        {
+          "aria": "Mark done",
+          "h": 28,
+          "w": 28
+        },
+        {
+          "aria": "Open workspace in Visual Studio Code",
+          "h": 28,
+          "w": 28
+        },
+        {
+          "aria": "More places to open",
+          "h": 28,
+          "w": 28
+        },
+        {
+          "aria": "Maximize pane",
+          "h": 28,
+          "w": 28
+        },
+        {
+          "aria": "Close thread pane",
+          "h": 28,
+          "w": 28
+        }
+      ],
+      "titleSpan": {
+        "fs": "13px",
+        "fw": "400"
+      }
+    },
+    "desktop-light": {
+      "headerCls": "bg-background/92 px-4",
+      "headerH": 48,
+      "headerPad": "0px 16px",
+      "headerBg": "oklab(0.985 0 0 / 0.92)",
+      "borderBottom": "0px|oklch(0.22 0 0)",
+      "rowCls": "flex h-[48px] items-center gap-2 border-b border-border/60",
+      "rowH": 48,
+      "rowHRule": "48px",
+      "buttons": [
+        {
+          "aria": null,
+          "h": 21,
+          "w": 238
+        },
+        {
+          "aria": "More thread actions",
+          "h": 28,
+          "w": 28
+        },
+        {
+          "aria": "Mark done",
+          "h": 28,
+          "w": 28
+        },
+        {
+          "aria": "Open workspace in Visual Studio Code",
+          "h": 28,
+          "w": 28
+        },
+        {
+          "aria": "More places to open",
+          "h": 28,
+          "w": 28
+        },
+        {
+          "aria": "Maximize pane",
+          "h": 28,
+          "w": 28
+        },
+        {
+          "aria": "Close thread pane",
+          "h": 28,
+          "w": 28
+        }
+      ],
+      "titleSpan": {
+        "fs": "13px",
+        "fw": "400"
+      }
+    },
+    "phone-dark": {
+      "headerCls": "bg-background/92 px-2 pt-[env(safe-area-inset-top,0px)]",
+      "headerH": 48,
+      "headerPad": "0px 8px",
+      "headerBg": "oklab(0.195 0 0 / 0.92)",
+      "borderBottom": "0px|oklch(0.81 0 0)",
+      "rowCls": "flex h-[48px] items-center gap-2 border-b border-border/60",
+      "rowH": 48,
+      "rowHRule": "48px",
+      "buttons": [
+        {
+          "aria": "Back to board",
+          "h": 36,
+          "w": 36
+        },
+        {
+          "aria": "Mark done",
+          "h": 36,
+          "w": 36
+        },
+        {
+          "aria": null,
+          "h": 24,
+          "w": 80
+        },
+        {
+          "aria": "Mark thread read",
+          "h": 36,
+          "w": 36
+        },
+        {
+          "aria": "More thread actions",
+          "h": 36,
+          "w": 36
+        },
+        {
+          "aria": "Open workspace in Visual Studio Code",
+          "h": 36,
+          "w": 36
+        },
+        {
+          "aria": "More places to open",
+          "h": 36,
+          "w": 36
+        },
+        {
+          "aria": "Close thread pane",
+          "h": 36,
+          "w": 36
+        }
+      ],
+      "titleSpan": {
+        "fs": "15px",
+        "fw": "400"
+      }
+    },
+    "phone-light": {
+      "headerCls": "bg-background/92 px-2 pt-[env(safe-area-inset-top,0px)]",
+      "headerH": 48,
+      "headerPad": "0px 8px",
+      "headerBg": "oklab(0.985 0 0 / 0.92)",
+      "borderBottom": "0px|oklch(0.22 0 0)",
+      "rowCls": "flex h-[48px] items-center gap-2 border-b border-border/60",
+      "rowH": 48,
+      "rowHRule": "48px",
+      "buttons": [
+        {
+          "aria": "Back to board",
+          "h": 36,
+          "w": 36
+        },
+        {
+          "aria": "Mark done",
+          "h": 36,
+          "w": 36
+        },
+        {
+          "aria": null,
+          "h": 24,
+          "w": 80
+        },
+        {
+          "aria": "Mark thread read",
+          "h": 36,
+          "w": 36
+        },
+        {
+          "aria": "More thread actions",
+          "h": 36,
+          "w": 36
+        },
+        {
+          "aria": "Open workspace in Visual Studio Code",
+          "h": 36,
+          "w": 36
+        },
+        {
+          "aria": "More places to open",
+          "h": 36,
+          "w": 36
+        },
+        {
+          "aria": "Close thread pane",
+          "h": 36,
+          "w": 36
+        }
+      ],
+      "titleSpan": {
+        "fs": "15px",
+        "fw": "400"
+      }
+    }
+  }
+}
