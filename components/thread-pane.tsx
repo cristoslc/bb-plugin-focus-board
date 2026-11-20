@@ -203,11 +203,18 @@ interface ActionMenuItem {
 /** Exported for the ✨ auto-rename editor tests; ThreadPane renders it. */
 export function EditableTitle({
   title,
+  isCompact,
   onRename,
   onAutotitle,
   loadFallbackServices,
 }: {
   title: string;
+  /**
+   * The compact sheet's title is one step larger, matching the native
+   * page's phone header (its title row measures 16px where the desktop
+   * pane row measures 13px — the measured native sizes at both widths).
+   */
+  isCompact?: boolean;
   onRename: (title: string) => Promise<void>;
   /**
    * The ✨ auto-rename: ask the server for a generated title (thread_autotitle)
@@ -313,7 +320,7 @@ export function EditableTitle({
           setEditing(true);
         }}
       >
-        <span className="min-w-0 flex-1 truncate text-sm">{title}</span>
+        <span className={cn("min-w-0 flex-1 truncate", isCompact ? "text-base" : "text-sm")}>{title}</span>
       </button>
     );
   }
@@ -343,7 +350,10 @@ export function EditableTitle({
             cancel();
           }
         }}
-        className="w-full min-w-0 flex-1 rounded-sm border border-border bg-background px-1.5 pr-7 py-0.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+        className={cn(
+          "w-full min-w-0 flex-1 rounded-sm border border-border bg-background px-1.5 pr-7 py-0.5 outline-none focus:ring-1 focus:ring-ring",
+          isCompact ? "text-base" : "text-sm",
+        )}
         aria-label="Thread title"
       />
       {onAutotitle !== undefined ? (
@@ -1111,22 +1121,23 @@ export function ThreadPane({
         className={
           // Native chrome-row parity, measured against the installed app
           // (scripts/screenshot/probe-pane-header-parity.mjs), all px: the
-          // native pane's header is a 48px chrome row (`h-[48px]`, px-4)
-          // over a 1px hairline at 60% and a 92%-opaque backdrop. The row
-          // is NOT spelled through `--bb-app-chrome-row-height`: its value
-          // is `3rem`, and root-relative units are scaled on the host
-          // (h-12 measured 46.08px, and var-carrying arbitrary utilities
-          // do not apply at runtime in the served sheet — both verified in
-          // the probe), so the px value the host itself measures at wins.
-          // The compact sheet pads for the notch itself (it escapes the
-          // host panel's own safe-area padding as a fixed element) on the
-          // wrapper; the row keeps its 48px inside it.
+          // native pane's header is a 48px chrome row (px-4, border-box
+          // with the 1px hairline inside at 60%) over a 92%-opaque
+          // backdrop. The row is NOT spelled through
+          // `--bb-app-chrome-row-height`: its value is `3rem`, and
+          // root-relative units are scaled on the host (h-12 measured
+          // 46.08px, and var-carrying arbitrary utilities do not apply in
+          // the served sheet — both verified in the probe), so the px
+          // value the host itself measures at wins. The compact sheet pads
+          // for the notch itself (it escapes the host panel's own
+          // safe-area padding as a fixed element) on the wrapper; the row
+          // keeps its 48px inside it.
           isCompact
-            ? "border-b border-border/60 bg-background/92 px-2 pt-[env(safe-area-inset-top,0px)]"
-            : "border-b border-border/60 bg-background/92 px-4"
+            ? "bg-background/92 px-2 pt-[env(safe-area-inset-top,0px)]"
+            : "bg-background/92 px-4"
         }
       >
-        <div className="flex h-[48px] items-center gap-2">
+        <div className="flex h-[48px] items-center gap-2 border-b border-border/60">
           {isCompact ? (
             <Button
               variant="ghost"
@@ -1146,6 +1157,7 @@ export function ThreadPane({
               doneCheckbox
             : null}
           <EditableTitle
+            isCompact={isCompact}
             title={thread.displayTitle}
             onRename={onRename}
             onAutotitle={(target) =>
