@@ -11,6 +11,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **On bb 0.49 a card click opens the board's own pane straight away.** Below 0.50 the host has no layout to split, so the board skips the ask that used to unmount it and bring it back.
+
 ## [1.7.16] - 2026-11-20
 
 ### Added

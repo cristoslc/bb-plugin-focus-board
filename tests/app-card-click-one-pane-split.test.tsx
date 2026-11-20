@@ -31,10 +31,12 @@ import {
   resetFakePanelPushes,
   seedFakeLinks,
   seedFakeThreads,
+  setFakeHostVersion,
   setFakeRouteThread,
   setFakeSplitLayout,
   setFakeSplitsOff,
 } from "./helpers/app-fake-sdk";
+import { resetHostCapabilitiesForTests } from "../lib/host-capabilities";
 
 const HOUR = 3_600_000;
 
@@ -66,6 +68,11 @@ beforeEach(() => {
   setFakeRouteThread(null);
   setFakeSplitLayout(null);
   setFakeSplitsOff(false);
+  // The installed host: a one-pane window carries a layout to split, so the
+  // click asks. The host-version store is per module graph and settles once,
+  // so every test here starts it fresh against the version it wants.
+  setFakeHostVersion("0.50.1");
+  resetHostCapabilitiesForTests();
 });
 
 afterEach(() => {
@@ -212,6 +219,73 @@ describe("a card click in a one-pane window", () => {
       { paneId: "pane-1", threadId: null, isFocused: true },
     ]);
     expect(document.querySelector('[data-focus-board-panel]')).not.toBeNull();
+  });
+
+  // The version guard. Below 0.50 the host's opener has no layout to split, so
+  // the same ask plainly navigates: the board unmounts and only the dance
+  // brings its route back. A host KNOWN to be that old opens the board's own
+  // pane directly instead, with no ask and nothing to repair. The installed
+  // host here is 0.50.1, so this branch is proved by test only.
+  it("on a 0.49 host opens the board's own pane and records no opener call", async () => {
+    setFakeHostVersion("0.49.0");
+    resetHostCapabilitiesForTests();
+    mountBoard();
+    await waitForCards();
+
+    fireEvent.click(cardAnchor("thr_focus"));
+
+    // The board never asked: no opener call, no dance, no navigation to
+    // repair. The thread arrives in the board's own in-panel pane instead.
+    await waitFor(() =>
+      expect(
+        document.querySelector('aside[aria-label="Thread: Focused thread"]'),
+      ).not.toBeNull(),
+    );
+    expect(fakeNativeOpens()).toEqual([]);
+    // The board kept its pane and pushed its own panel route for the pane.
+    expect(document.querySelector('[data-focus-board-panel]')).not.toBeNull();
+    expect(fakePanelPushes().length).toBeGreaterThan(0);
+    // One pane throughout, focused: the window the host would have reached
+    // by navigating, without the unmount in between.
+    expect(fakeSplitPanes()).toEqual([
+      { paneId: "pane-1", threadId: null, isFocused: true },
+    ]);
+  });
+
+  it("still asks on a 0.50 host after the read settles", async () => {
+    setFakeHostVersion("0.50.1");
+    resetHostCapabilitiesForTests();
+    mountBoard();
+    await waitForCards();
+
+    fireEvent.click(cardAnchor("thr_focus"));
+
+    await waitFor(() =>
+      expect(fakeNativeOpens()).toEqual([{ threadId: "thr_focus", split: true }]),
+    );
+    expect(fakeSplitPanes()).toEqual([
+      { paneId: "pane-1", threadId: null, isFocused: false },
+      { paneId: "pane-2", threadId: "thr_focus", isFocused: true },
+    ]);
+    expect(document.querySelector('aside[aria-label^="Thread:"]')).toBeNull();
+  });
+
+  it("keeps the ask when the host version cannot be read", async () => {
+    // The deliberate deviation: an unread version is not an old host. Asking
+    // costs a navigation the dance repairs; skipping would cost the split on
+    // every 0.50 host whose read failed.
+    setFakeHostVersion(null);
+    resetHostCapabilitiesForTests();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    mountBoard();
+    await waitForCards();
+
+    fireEvent.click(cardAnchor("thr_focus"));
+
+    await waitFor(() =>
+      expect(fakeNativeOpens()).toEqual([{ threadId: "thr_focus", split: true }]),
+    );
+    expect(document.querySelector('aside[aria-label^="Thread:"]')).toBeNull();
   });
 
 });

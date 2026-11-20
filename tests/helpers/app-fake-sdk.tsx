@@ -472,6 +472,16 @@ function publishThreadChanged(): void {
 // same migration the server does on its first read.
 let fakeRanks: Record<string, FractionColumn> = {};
 const rpcCalls: { method: string; args?: unknown }[] = [];
+
+/** The version the fake `host_version` RPC serves (lib/host-capabilities.ts).
+ *  Defaults to the installed host, so a suite that never touches it drives the
+ *  0.50 branch. `null` makes the read fail, which is the unknown host. The
+ *  capability store settles once per module graph: a suite that flips this
+ *  mid-file also calls `resetHostCapabilitiesForTests()`. */
+let fakeHostVersion: string | null = "0.50.1";
+export function setFakeHostVersion(version: string | null): void {
+  fakeHostVersion = version;
+}
 // A host rejection stub (issue #232: the operator's host served rank RPCs
 // from a foreign plugin instance that rejected rank_move with an input
 // validation failure — the drags fell back silently). When armed, every
@@ -643,6 +653,15 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
     });
   }
   switch (method) {
+    case "host_version": {
+      // The one capability input (lib/host-capabilities.ts): the app reads it
+      // once per process, so every branch of the one-pane click is reachable
+      // here by setting the version before the board mounts.
+      if (fakeHostVersion === null) {
+        throw new Error("app-fake-sdk: host_version stubbed to fail");
+      }
+      return { version: fakeHostVersion };
+    }
     case "board_state_get":
       // The mount aggregate (issue #424): the same six bodies the per-list
       // handlers answer with, so a suite that seeds links/groups sees them
