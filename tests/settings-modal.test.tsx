@@ -26,6 +26,7 @@ const NULL_WALLPAPER: WallpaperSettings = { version: 1 as const, global: null };
 interface RenderHandlers {
   onSetEscStopsRunningThread: ReturnType<typeof vi.fn>;
   onSetNewThreadShortcutKey: ReturnType<typeof vi.fn>;
+  onSetOpenTarget: ReturnType<typeof vi.fn>;
   onSetSweep: ReturnType<typeof vi.fn>;
   onSetCardTransport: ReturnType<typeof vi.fn>;
   onSetMotionFollow: ReturnType<typeof vi.fn>;
@@ -49,6 +50,7 @@ function renderModal(
     entries: readonly WhatsNewEntry[];
     escStopsRunningThread: boolean | undefined;
     newThreadShortcutKey: string | undefined;
+    openTarget: string | number | boolean | undefined;
     sweep: typeof NULL_SWEEP;
     cardTransport: "none" | "teleport" | "zoom";
     follow: boolean;
@@ -57,6 +59,7 @@ function renderModal(
     wallpaper: WallpaperSettings;
     onSetEscStopsRunningThread: (value: boolean) => void | Promise<void>;
     onSetNewThreadShortcutKey: (value: string) => void | Promise<void>;
+    onSetOpenTarget: (value: "beside" | "panel") => void | Promise<void>;
     onSetSweep: (write: { key: string; value: number | string }) => void | Promise<void>;
     onSetCardTransport: (value: "none" | "teleport" | "zoom") => void;
     onSetMotionFollow: (value: boolean) => void;
@@ -71,6 +74,7 @@ function renderModal(
   const handlers = {
     onSetEscStopsRunningThread: vi.fn(),
     onSetNewThreadShortcutKey: vi.fn(),
+    onSetOpenTarget: vi.fn(),
     onSetSweep: vi.fn(),
     onSetCardTransport: vi.fn(),
     onSetMotionFollow: vi.fn(),
@@ -86,9 +90,11 @@ function renderModal(
       entries={ENTRIES}
       escStopsRunningThread={undefined}
       newThreadShortcutKey={undefined}
+      openTarget={undefined}
       sweep={NULL_SWEEP}
       onSetEscStopsRunningThread={handlers.onSetEscStopsRunningThread}
       onSetNewThreadShortcutKey={handlers.onSetNewThreadShortcutKey}
+      onSetOpenTarget={handlers.onSetOpenTarget}
       onSetSweep={handlers.onSetSweep}
       cardTransport="zoom"
       follow={true}
@@ -151,8 +157,10 @@ describe("settings modal: rail", () => {
         entries={ENTRIES}
         escStopsRunningThread={undefined}
         newThreadShortcutKey={undefined}
+        openTarget={undefined}
         onSetEscStopsRunningThread={vi.fn()}
         onSetNewThreadShortcutKey={vi.fn()}
+        onSetOpenTarget={vi.fn()}
         onOpenChange={vi.fn()}
         onTabChange={onTabChange}
       />,
@@ -710,5 +718,60 @@ describe("settings modal: compact viewport", () => {
     expect(document.querySelector<HTMLElement>('[role="tabpanel"]')?.className).toContain(
       "overflow-y-auto",
     );
+  });
+});
+
+describe("settings modal: Behavior tab's thread-open row", () => {
+  it("renders the shipping split pane while the install has not answered, without writing", () => {
+    const { onSetOpenTarget } = renderModal({ openTarget: undefined });
+    const select = document.querySelector(
+      'select[aria-label="Where a card click opens the thread"]',
+    ) as HTMLSelectElement | null;
+    expect(select).not.toBeNull();
+    expect(select?.value).toBe("beside");
+    expect([...select!.options].map((option) => option.textContent)).toEqual([
+      "Beside the board",
+      "In the board panel",
+    ]);
+    // Rendering the effective default is not an answer: the setup dialog still
+    // owns that write for an install that never chose.
+    expect(onSetOpenTarget).not.toHaveBeenCalled();
+  });
+
+  it("shows the stored choice", () => {
+    renderModal({ openTarget: "panel" });
+    const select = document.querySelector(
+      'select[aria-label="Where a card click opens the thread"]',
+    ) as HTMLSelectElement;
+    expect(select.value).toBe("panel");
+  });
+
+  it("a pick writes the declared token through the setting handler", () => {
+    const { onSetOpenTarget } = renderModal({ openTarget: "beside" });
+    const select = document.querySelector(
+      'select[aria-label="Where a card click opens the thread"]',
+    ) as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "panel" } });
+    expect(onSetOpenTarget).toHaveBeenCalledTimes(1);
+    expect(onSetOpenTarget).toHaveBeenCalledWith("panel");
+  });
+
+  it("re-picking the value already stored writes nothing", () => {
+    const { onSetOpenTarget } = renderModal({ openTarget: "panel" });
+    const select = document.querySelector(
+      'select[aria-label="Where a card click opens the thread"]',
+    ) as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "panel" } });
+    expect(onSetOpenTarget).not.toHaveBeenCalled();
+  });
+
+  it("a failed write surfaces the failure inline, not as a silent revert", async () => {
+    const { onSetOpenTarget } = renderModal({ openTarget: "beside" });
+    onSetOpenTarget.mockRejectedValueOnce(new Error("the host refused the write"));
+    const select = document.querySelector(
+      'select[aria-label="Where a card click opens the thread"]',
+    ) as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "panel" } });
+    await screen.findByText(/the host refused the write/);
   });
 });

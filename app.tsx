@@ -41,7 +41,10 @@ import { FocusBoardThreadHeaderAction } from "./components/thread-header-actions
 import type { ThreadPaneThread } from "./components/thread-pane";
 import { useSearchFocusOnSlash } from "./hooks/use-search-focus";
 import { useNewThreadComposerShortcut } from "./hooks/use-new-thread-shortcut";
-import { useHostCapabilities } from "./hooks/use-host-capabilities";
+import {
+  useHostCapabilities,
+  useHostCapabilitiesSettled,
+} from "./hooks/use-host-capabilities";
 import { useTicketStatuses } from "./hooks/use-ticket-statuses";
 import { usePulseRates } from "./hooks/use-pulse-rates";
 import { NewThreadModal } from "./components/new-thread-modal";
@@ -241,6 +244,13 @@ import { WallpaperPaintLayer } from "./components/wallpaper-paint";
 import { EmptyState } from "./components/empty-state";
 import { LoadingView } from "./components/loading-view";
 import { SettingsModal, type SettingsTab } from "./components/settings-modal";
+import { OpenPreferenceDialog } from "./components/open-preference-dialog";
+import {
+  DEFAULT_THREAD_OPEN_TARGET,
+  threadOpenTargetAnswered,
+  threadOpenTargetFromSetting,
+  type ThreadOpenTarget,
+} from "./lib/thread-open-target";
 import { AppearanceSettingsSection } from "./components/settings-section";
 import {
   APP_VERSION,
@@ -460,6 +470,13 @@ function BoardPage({ subPath }: { subPath: string }) {
   const newThreadShortcutKey = newThreadShortcutKeyFromSetting(
     settingValues?.newThreadShortcutKey,
   );
+  // Where a card click opens its thread (lib/thread-open-target.ts, the
+  // declared `threadOpenTarget` setting). The effective choice, the split pane
+  // while the host has not answered or an install never did. The RAW value is
+  // kept beside it because "unset" is not a choice: it is the marker that this
+  // install still owes the setup dialog its one answer.
+  const openTargetRaw = settingValues?.threadOpenTarget;
+  const openTarget = threadOpenTargetFromSetting(openTargetRaw);
   // The settings modal's Behavior tab writes the same host declaration the
   // detail page's config panel edits — a partial values patch on this
   // plugin's settings (the host stores settings per key, so the panel keys
@@ -469,6 +486,12 @@ function BoardPage({ subPath }: { subPath: string }) {
     async (patch: Record<string, string | number | boolean>) =>
       void (await sdk.plugins.updateSettings({ pluginId, values: patch })),
     [sdk, pluginId],
+  );
+  const setOpenTarget = useCallback(
+    async (value: ThreadOpenTarget) => {
+      await setPluginSettings({ threadOpenTarget: value });
+    },
+    [setPluginSettings],
   );
   const setEscStopsRunningThread = useCallback(
     async (value: boolean) => {
@@ -1417,6 +1440,7 @@ function BoardPage({ subPath }: { subPath: string }) {
   const hostCaps = useHostCapabilities();
   const hostCapsRef = useRef(hostCaps);
   hostCapsRef.current = hostCaps;
+  const hostCapsSettled = useHostCapabilitiesSettled();
   // The pane the board opened, and the thread the board last put there
   // (lib/native-pane-ownership.ts carries the rule and its evidence). One
   // board-opened thread pane, replaced in place: without the record every
@@ -1489,6 +1513,12 @@ function BoardPage({ subPath }: { subPath: string }) {
   // The developer trace switch (server.ts's `nativeOpenDebug`).
   const nativeOpenDebugRef = useRef(false);
   nativeOpenDebugRef.current = settingValues?.nativeOpenDebug === true;
+  // The operator's chosen card-click surface (lib/thread-open-target.ts), as a
+  // ref for the same reason: the click callback stays identity-stable, so a
+  // switch made in either settings surface changes where the NEXT click goes
+  // without re-handing a new handler to the memoized Board (issue #406).
+  const openTargetRef = useRef<ThreadOpenTarget>(openTarget);
+  openTargetRef.current = openTarget;
   // Split-layout awareness (docs/plans/2026-11-17-native-thread-pane.md §3):
   // the board panel is itself a pane in bb’s split layout, and threads can
   // be open beside it in the host’s own native panes. The FOCUSED pane’s
@@ -1663,6 +1693,80 @@ function BoardPage({ subPath }: { subPath: string }) {
       ),
     [whatsNewUnseen, lastSeenVersion, unreleasedNewLeads],
   );
+  // ---- The setup question (components/open-preference-dialog.tsx).
+  // A fresh install answers once where a card click opens its thread. The
+  // marker for "asked" is the DECLARED SETTING ITSELF (server.ts
+  // `threadOpenTarget`, no default): the host's settings store is the only
+  // per-install truth the board already reads, so an unanswered install reads
+  // `undefined` and an answered one — including the operator who kept the
+  // split pane — reads a token. That makes the ask once per INSTALL, not once
+  // per browser, and it needs no second key that could drift from the value it
+  // guards.
+  //
+  // The dialog opens only once the board is usable (mountSettled, the
+  // readiness gate's verdict), only after bb's settings surface has answered,
+  // only where the choice can matter (a compact viewport is the board's own
+  // pane whatever the answer says), and only once the host's version has
+  // settled as one that may split — a host known older than 0.50 has nowhere
+  // to put a second pane, so asking it would promise what it cannot do.
+  const [openPreferenceOpen, setOpenPreferenceOpen] = useState(false);
+  const [openPreferenceDone, setOpenPreferenceDone] = useState(false);
+  const [openPreferenceError, setOpenPreferenceError] = useState<string | null>(null);
+  // The write that records the answer, held so an answer waits behind it: the
+  // dialog records the default when it OPENS (a reload mid-answer must never
+  // ask twice), and the operator's pick has to land after that mark, never
+  // race in front of it.
+  const openPreferenceMarkRef = useRef<Promise<void>>(Promise.resolve());
+  const shouldAskOpenTarget =
+    !openPreferenceDone &&
+    !openPreferenceOpen &&
+    mountSettled &&
+    settingValues !== undefined &&
+    !threadOpenTargetAnswered(openTargetRaw) &&
+    hostCapsSettled &&
+    hostCaps.splitsFromOnePane !== "no" &&
+    !paneCoversBoard;
+  useEffect(() => {
+    if (!shouldAskOpenTarget) return;
+    // The mark IS the answer until the operator picks: today's behaviour, the
+    // split pane. A failed mark is logged (the ask repeats on the next load,
+    // which is the visible symptom) and never blocks the dialog.
+    const mark = setPluginSettings({ threadOpenTarget: DEFAULT_THREAD_OPEN_TARGET });
+    openPreferenceMarkRef.current = mark;
+    mark.catch((error: unknown) => {
+      console.warn(
+        "[focus-board] could not record the thread-open choice; the setup dialog will ask again next load",
+        error,
+      );
+    });
+    setOpenPreferenceOpen(true);
+  }, [shouldAskOpenTarget, setPluginSettings]);
+  const answerOpenTarget = (choice: ThreadOpenTarget) => {
+    setOpenPreferenceError(null);
+    void openPreferenceMarkRef.current
+      .catch(() => undefined)
+      .then(() => setPluginSettings({ threadOpenTarget: choice }))
+      .then(() => {
+        setOpenPreferenceDone(true);
+        setOpenPreferenceOpen(false);
+      })
+      .catch((error: unknown) => {
+        // Fail loud at the point of choice: the write failed, so the dialog
+        // stays open with the reason rather than closing on an answer the
+        // host never stored.
+        setOpenPreferenceError(error instanceof Error ? error.message : String(error));
+      });
+  };
+  const dismissOpenTarget = () => {
+    // Closing without choosing keeps the shipping behaviour, which is what
+    // the mark already wrote when the dialog opened. Nothing else changes.
+    void openPreferenceMarkRef.current
+      .catch(() => undefined)
+      .then(() => {
+        setOpenPreferenceDone(true);
+        setOpenPreferenceOpen(false);
+      });
+  };
   // ---- The attention freeze (components/attention-freeze).
   // A card the operator attends to — the pointer on it, or the pane open on
   // it — holds the placement captured at attention time: its slot, its
@@ -3136,6 +3240,17 @@ function BoardPage({ subPath }: { subPath: string }) {
           record: boardNativePaneRef.current,
           ...extra,
         });
+      // 0. The operator's chosen surface (the setup dialog or either settings
+      //    surface). "panel" is the whole click path: the board's own in-panel
+      //    pane, and the host's opener is never asked, so a window that could
+      //    split stays one pane. This is a gate on the shipped branch, not a
+      //    second switch beside it: every host fallback below still applies
+      //    when the choice is "beside".
+      if (openTargetRef.current === "panel") {
+        trace("in-board: the operator chose the board panel");
+        openThreadCard(threadId);
+        return;
+      }
       // The one host outcome the board never accepts: at bb's pane cap the
       // opener replaces the FOCUSED pane, so a stale layout would hand it the
       // board itself (lib/split-pane-cap.ts carries the rule and its probe).
@@ -4825,6 +4940,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         entries={whatsNewEntries}
         escStopsRunningThread={settingValues?.escStopsRunningThread}
         newThreadShortcutKey={settingValues?.newThreadShortcutKey}
+        openTarget={openTargetRaw}
         sweep={{
           doneArchiveValue: settingValues?.doneArchiveValue,
           doneArchiveUnit: settingValues?.doneArchiveUnit,
@@ -4834,6 +4950,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         onSetSweep={setSweepThreshold}
         onSetEscStopsRunningThread={setEscStopsRunningThread}
         onSetNewThreadShortcutKey={setNewThreadShortcutKey}
+        onSetOpenTarget={setOpenTarget}
         cardTransport={cardTransport}
         follow={motionFollow}
         motionPacing={motionPacing}
@@ -4844,6 +4961,12 @@ function BoardPage({ subPath }: { subPath: string }) {
         onSetMotionPacing={(value) => persistMotion(motionFollow, value)}
         onSetLaneDirection={persistLaneDirection}
         onWallpaperChange={persistWallpaper}
+      />
+      <OpenPreferenceDialog
+        open={openPreferenceOpen}
+        onAnswer={answerOpenTarget}
+        onDismiss={dismissOpenTarget}
+        error={openPreferenceError}
       />
       {snoozeDialogFor === null ? null : (() => {
         const dialogThread = threads.find((candidate) => candidate.id === snoozeDialogFor);

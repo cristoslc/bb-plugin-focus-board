@@ -7,6 +7,7 @@ import { useRpc } from "@get-bb/plugin-sdk/app";
 import type { rpcContract } from "@/server";
 import {
 	hostCapabilities,
+	hostCapabilitiesSettled,
 	resolveHostCapabilities,
 	subscribeHostCapabilities,
 	type HostCapabilities,
@@ -24,5 +25,20 @@ export function useHostCapabilities(): HostCapabilities {
 		subscribeHostCapabilities,
 		hostCapabilities,
 		hostCapabilities,
+	);
+}
+
+/**
+ * Whether the host's version read has settled, either way. A surface that must
+ * not act on the unknown set waits for this one, the readiness gate's cousin:
+ * `useHostCapabilities` alone cannot tell "this host may split" from "nobody
+ * has asked it yet". Call it beside `useHostCapabilities`, which owns starting
+ * the read.
+ */
+export function useHostCapabilitiesSettled(): boolean {
+	return useSyncExternalStore(
+		subscribeHostCapabilities,
+		hostCapabilitiesSettled,
+		hostCapabilitiesSettled,
 	);
 }

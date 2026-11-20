@@ -86,3 +86,33 @@ steps:
       - native_panes: [thr_gutter_family_c0]
       - native_pane_count: 2
       - pane: { open: false }
+  # The setup question (server.ts `threadOpenTarget`, the dialog in
+  # components/open-preference-dialog.tsx). `?firstRun=1` models an install that
+  # has never answered: the harness's simulated settings store drops the key,
+  # which is the dialog's own once-only marker. The harness CAN stage this run,
+  # but not a second page load on the same store (the simulated store lives in
+  # the page), so the once-only half is pinned by tests/app-open-preference.test.tsx
+  # rather than here.
+  - id: a-first-run-is-asked-where-threads-open
+    title: A fresh install is asked where a card opens its thread, and the shipping answer is marked
+    goto: "?groupBy=status&nativeSplit=1&firstRun=1"
+    assert:
+      - text_visible: "Where should threads open?"
+      - text_visible: "Beside the board"
+      - text_visible: "In the board panel"
+      - text_visible: "Default"
+
+  - id: the-board-panel-answer-keeps-the-click-in-the-board
+    title: Choosing the board panel closes the question and every click stays in the board
+    goto: "?groupBy=status&nativeSplit=1&firstRun=1"
+    gestures:
+      - click_aria: "In the board panel"
+      - sleep: 300
+      - click: { card: thr_uat_queue }
+    assert:
+      - text_hidden: "Where should threads open?"
+      # The window could split here (`nativeSplit=1`): the opener is never asked,
+      # no thread pane appears, and the board's own pane carries the thread.
+      - native_panes: []
+      - native_pane_count: 1
+      - pane: { threadId: thr_uat_queue }

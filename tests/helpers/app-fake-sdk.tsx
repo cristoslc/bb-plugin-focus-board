@@ -943,12 +943,37 @@ const fakeSdk = {
     create: async () => ({}),
   },
   plugins: {
-    updateSettings: async () => {
+    // The declared-settings write path, modelled the way the host behaves: the
+    // patch merges into the store `useSettings` reads back, so a suite proves a
+    // real round trip (write → re-render → the next click reads it). A store
+    // nobody seeded stays UNSET: an unavailable settings surface is a state
+    // several suites depend on (the setup dialog never asks without it), so a
+    // write there is recorded but does not conjure a loaded store.
+    updateSettings: async (args?: { pluginId?: string; values?: Record<string, unknown> }) => {
+      const patch = args?.values ?? {};
+      settingsWrites.push(structuredClone(patch));
+      if (fakeSettingsValues !== undefined) {
+        setFakeSettings({ ...fakeSettingsValues, ...patch });
+      }
       publishThreadChanged();
       return { ok: true as const };
     },
   },
 };
+
+const settingsWrites: Record<string, unknown>[] = [];
+
+/** Every declared-settings patch this suite wrote, in order (test
+ *  introspection: the setup dialog's mark and the operator's pick are two
+ *  writes a suite asserts the ORDER of). */
+export function fakeSettingsWrites(): Record<string, unknown>[] {
+  return structuredClone(settingsWrites);
+}
+
+export function resetFakeSettingsWrites(): void {
+  settingsWrites.length = 0;
+  setFakeSettings(null);
+}
 
 export function useSdk(): unknown {
   return fakeSdk;
@@ -968,7 +993,12 @@ export function setFakeSettings(values: Record<string, unknown> | null): void {
 }
 
 export function useSettings(): { values: Record<string, unknown> | undefined } {
-  return fakeSettingsSnapshot;
+  // Reactive, like the host's own hook: a write from ANY surface (this board's
+  // gear modal, bb's configuration page, the CLI) re-renders every reader, which
+  // is the property the settings-surface plan calls structural sync (P1/P2 in
+  // docs/plans/2026-10-10-settings-surface-sync-thr_57yyxtw9kf.md). A snapshot
+  // object, not a fresh one per render, so useSyncExternalStore stays stable.
+  return useSyncExternalStore(subscribe, () => fakeSettingsSnapshot);
 }
 
 // The pane's embedded chat: only imported for render; tests stub it out as

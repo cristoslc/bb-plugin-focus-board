@@ -15,6 +15,12 @@ import {
 } from "@/components/appearance-controls";
 import { APP_VERSION, type WhatsNewEntry } from "@/lib/whats-new";
 import {
+  THREAD_OPEN_TARGETS,
+  THREAD_OPEN_TARGET_LABELS,
+  threadOpenTargetFromSetting,
+  type ThreadOpenTarget,
+} from "@/lib/thread-open-target";
+import {
   ARCHIVE_UNITS,
   type ArchiveUnit,
 } from "@/lib/duration";
@@ -88,6 +94,7 @@ export function SettingsModal({
   entries,
   escStopsRunningThread,
   newThreadShortcutKey,
+  openTarget,
   sweep = DEFAULT_SWEEP,
   cardTransport,
   follow,
@@ -96,6 +103,7 @@ export function SettingsModal({
   wallpaper,
   onSetEscStopsRunningThread,
   onSetNewThreadShortcutKey,
+  onSetOpenTarget,
   onSetSweep,
   onSetCardTransport,
   onSetMotionFollow,
@@ -127,6 +135,18 @@ export function SettingsModal({
    * surfaced inline under the row, never as a silent revert.
    */
   onSetNewThreadShortcutKey: (value: string) => void | Promise<void>;
+  /**
+   * The card click's declared surface setting's raw stored value (server.ts
+   * `threadOpenTarget`, lib/thread-open-target.ts): an unanswered install
+   * shows the shipping default, the split pane, and any stored token shows
+   * itself.
+   */
+  openTarget: string | number | boolean | undefined;
+  /**
+   * Called with the surface to store. A failed write surfaces inline under the
+   * row, never as a silent revert.
+   */
+  onSetOpenTarget: (value: ThreadOpenTarget) => void | Promise<void>;
   /**
    * The four sweep threshold settings' raw stored values, read with the
    * same unset-means-default rule (components/preferences.ts) at render —
@@ -237,6 +257,7 @@ export function SettingsModal({
                   storedValue={newThreadShortcutKey}
                   onSet={onSetNewThreadShortcutKey}
                 />
+                <OpenTargetRow storedValue={openTarget} onSet={onSetOpenTarget} />
                 <SweepThresholdRow
                   arm="done"
                   numberKey="doneArchiveValue"
@@ -499,6 +520,62 @@ function NewThreadShortcutRow({
       >
         {enabled ? "On" : "Off"}
       </button>
+    </div>
+  );
+}
+
+/**
+ * The Behavior tab's card-click row: the same declared setting bb's
+ * configuration page renders natively (`threadOpenTarget`), so both surfaces
+ * show one value and either one's write reaches the click. The stored value is
+ * the truth; an unset install renders the shipping default (the split pane)
+ * without writing it, so a board whose dialog has not been answered yet still
+ * tells the truth about what a click does. A failed write surfaces inline, the
+ * Escape toggle's existing pattern.
+ */
+function OpenTargetRow({
+  storedValue,
+  onSet,
+}: {
+  storedValue: string | number | boolean | undefined;
+  onSet: (value: ThreadOpenTarget) => void | Promise<void>;
+}) {
+  const effective = threadOpenTargetFromSetting(storedValue);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const commit = (next: ThreadOpenTarget) => {
+    setSaveError(null);
+    if (next === effective) return;
+    Promise.resolve(onSet(next)).catch((error: unknown) => {
+      setSaveError(error instanceof Error ? error.message : String(error));
+    });
+  };
+  return (
+    <div>
+      <p className="text-xs font-medium text-foreground">
+        Thread cards: where a click opens the thread
+      </p>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+        Beside the board opens the thread in its own pane next to the board;
+        in the board panel opens it inside the board and keeps the window one
+        pane.
+      </p>
+      {saveError !== null && (
+        <p className="mt-2 text-xs text-destructive" role="alert">
+          Saving failed: {saveError}
+        </p>
+      )}
+      <select
+        aria-label="Where a card click opens the thread"
+        value={effective}
+        onChange={(event) => commit(event.target.value as ThreadOpenTarget)}
+        className="mt-2 rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {THREAD_OPEN_TARGETS.map((candidate) => (
+          <option key={candidate} value={candidate}>
+            {THREAD_OPEN_TARGET_LABELS[candidate]}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

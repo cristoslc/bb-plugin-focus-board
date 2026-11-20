@@ -128,18 +128,24 @@ const selectedTab = (page) =>
     }));
   });
   const cardGroup = radioInfo.find((g) => g.label === "Card animations");
-  const motionGroup = radioInfo.find((g) => g.label === "Motion");
+  const laneGroup = radioInfo.find((g) => g.label === "Lane direction");
+  // The Motion control is not a radiogroup since the 2026-10-15 rework: it is a
+  // follow-system checkbox over a notched slider, so it is read as those two
+  // inputs rather than as a third group.
+  const motionControl = await page.$('input[aria-label="Motion"]');
+  const followBox = await page.$('input[aria-label="Follow my system setting"]');
   const okAppearance =
-    cardGroup !== undefined && motionGroup !== undefined &&
+    cardGroup !== undefined && laneGroup !== undefined && motionControl !== null && followBox !== null &&
     JSON.stringify(cardGroup.options.map((o) => [o.name, o.checked, o.disabled])) ===
       JSON.stringify([
         ["None", false, false],
         ["Teleport", false, false],
         ["Zoom out / in", true, false],
       ]) &&
-    motionGroup.options.length === 3;
-  if (okAppearance) ok("Appearance tab: defaults (Zoom, system motion), zoom live and default");
-  else fail(`Appearance tab radio state wrong: ${JSON.stringify(radioInfo)}`);
+    JSON.stringify(laneGroup.options.map((o) => [o.name, o.checked])) ===
+      JSON.stringify([["Vertical", true], ["Horizontal", false]]);
+  if (okAppearance) ok("Appearance tab: defaults (Zoom, vertical lanes, system motion), zoom live and default");
+  else fail(`Appearance tab radio state wrong: ${JSON.stringify(radioInfo)}, motion ${motionControl !== null}, follow ${followBox !== null}`);
   const wallpaperInput = await page.$('input[aria-label="Wallpaper image url"]');
   const presetCount = await page.$$eval(
     'button[aria-label^="Wallpaper preset:"]',
@@ -282,7 +288,7 @@ const selectedTab = (page) =>
     checked: [...document.querySelectorAll('[role="radio"][aria-checked="true"]')].map((r) => r.textContent),
     wallpaper: document.querySelector('input[aria-label="Wallpaper image url"]') !== null,
   }));
-  const mountOk = section.mounted && JSON.stringify(section.groups) === JSON.stringify(["Card animations"]) && section.wallpaper;
+  const mountOk = section.mounted && JSON.stringify(section.groups) === JSON.stringify(["Card animations", "Lane direction"]) && section.wallpaper;
   if (mountOk) ok(`config page mounts the Appearance mirror (${section.checked.join(", ")})`);
   else fail(`config page section wrong: ${JSON.stringify(section)}`);
 
@@ -299,7 +305,7 @@ const selectedTab = (page) =>
   const reloaded = await open("?page=configuration&groupBy=status");
   const mirrored = await reloaded.evaluate(() =>
     [...document.querySelectorAll('[role="radio"][aria-checked="true"]')].map((r) => r.textContent));
-  if (JSON.stringify(mirrored) === JSON.stringify(["None"])) {
+  if (JSON.stringify(mirrored) === JSON.stringify(["None", "Vertical"])) {
     ok("a fresh config page renders the picked value (the mirror reads the truth, not a copy)");
   } else fail(`fresh config page ignored the pick: ${JSON.stringify(mirrored)}`);
   await reloaded.close();
