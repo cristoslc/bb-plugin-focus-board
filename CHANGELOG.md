@@ -19,6 +19,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 #### bb's thread pages
 
+- **The thread pane's header reads as bb's native chrome row.** One 48px row of 28px ghost buttons replaces the taller mixed-height header: Mark Read/Unread joins the overflow menu the way the native header reaches the same toggle, and Maximize pane becomes a standalone 28px ghost. The rename, autotitle, done toggle, snooze chip, workspace split, and the phone's one-tap read toggle stay as they were.
+
 - **The thread-pane interaction model gets the 1.8.0 mark.** The changes themselves shipped in 1.7.16: cards open threads beside the board, and the board's gestures ride bb's own thread pages. This cut re-numbers the release so the version signal matches the scale of the change.
 
 ### Fixed
