@@ -18,8 +18,13 @@
 //
 // Usage: node scripts/screenshot/probe-pane-header-parity.mjs
 // Honors BB_APP, CHROME_PATH, THREAD_ID (a board card's thread), PROJECT_ID,
-// OUT_DIR (defaults from LABEL).
-import { mkdirSync, writeFileSync } from "node:fs";
+// OUT_DIR (defaults from LABEL), and SERVE_BUNDLE — a candidate build's
+// directory: the probe sniffs the installed host's
+// `plugin-app-assets/<hash>/app.{js,css}` for Focus Board and answers those
+// two requests from <SERVE_BUNDLE>/app.{js,css} (the restyled utilities are
+// compiled into the candidate CSS; the served one must move with the JS).
+// Everything else — the host, the plugin install — is untouched.
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import puppeteer from "puppeteer-core";
 
 const LABEL = process.env.LABEL ?? "run";
@@ -30,6 +35,10 @@ const CHROME =
   process.env.CHROME_PATH ??
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const OUT_DIR = process.env.OUT_DIR ?? `docs/screenshots/pane-header-parity/${LABEL}`;
+/** Candidate build dir; when set the probe swaps the served plugin JS+CSS. */
+const SERVE_BUNDLE = process.env.SERVE_BUNDLE ?? null;
+/** A string only the board's own bundle carries: the panel's root attribute. */
+const BUNDLE_MARKER = "data-focus-board-panel";
 
 mkdirSync(OUT_DIR, { recursive: true });
 if (!THREAD_ID) {
@@ -318,12 +327,89 @@ async function growGutterTo(page, target) {
   return widths;
 }
 
-const browser = await puppeteer.launch({  executablePath: CHROME,
+const browser = await puppeteer.launch({
+  executablePath: CHROME,
   headless: "new",
   args: ["--window-size=1600,1200", "--disable-gpu", "--disable-dev-shm-usage"],
   defaultViewport: { width: 1600, height: 1200 },
 });
 const evidence = { label: LABEL, threadId: THREAD_ID, desktop: {}, phone: {} };
+
+// ---------- Optional candidate-build swap (SERVE_BUNDLE): sniff which
+// plugin-app-assets URLs are the board's app.js / app.css and answer them
+// from the candidate build, so the measured pane runs the tree's code
+// against the real host without touching the install. ----------
+let swap = null;
+if (SERVE_BUNDLE !== null) {
+  const assets = new Set();
+  const bodies = [];
+  const sniff = await browser.newPage();
+  await sniff.setCacheEnabled(false);
+  sniff.on("response", (response) => {
+    const url = response.url();
+    if (!/\/plugin-app-assets\/[a-f0-9]+\/app\.(js|css)$/.test(url)) return;
+    assets.add(url);
+    bodies.push(
+      response.text().then((body) => ({
+        url,
+        hasBoard: body.includes(BUNDLE_MARKER) || (url.endsWith(".css") && body.includes(".fb-")),
+      })),
+    );
+  });
+  await sniff.goto(BOARD, { waitUntil: "networkidle2", timeout: 30000 });
+  await sleep(1500);
+  const all = await Promise.all(bodies);
+  await sniff.close();
+  const jsUrl = all.find((e) => e.url.endsWith(".js") && e.hasBoard)?.url ?? null;
+  const cssUrl = all.find((e) => e.url.endsWith(".css"))?.url ?? null;
+  if (jsUrl === null) {
+    console.error("Could not identify the board's app.js among the served plugin assets.");
+    await browser.close();
+    process.exit(1);
+  }
+  const js = readFileSync(`${SERVE_BUNDLE}/app.js`, "utf8");
+  const css = cssUrl === null ? null : readFileSync(`${SERVE_BUNDLE}/app.css`, "utf8");
+  swap = { jsUrl, cssUrl, js, css };
+  evidence.bundleSwap = { servedBy: SERVE_BUNDLE, jsUrl, cssUrl, marker: "swapped" };
+  console.log(`serving ${SERVE_BUNDLE}/app.{js,css} for ${jsUrl}`);
+}
+/** The page records the swap marker so the evidence proves the candidate ran. */
+const armSwapMarker = (pageLike) =>
+  pageLike.evaluateOnNewDocument(() => {
+    window.__fbServedBundle = "pending";
+  });
+/** Answer the two plugin asset requests from the candidate build. */
+const swapResponder = (request) => {
+  if (swap === null) {
+    void request.continue();
+    return;
+  }
+  if (request.url() === swap.jsUrl) {
+    void request.respond({
+      status: 200,
+      contentType: "application/javascript; charset=utf-8",
+      body: `${swap.js}\n;window.__fbServedBundle = "swapped";`,
+    });
+    return;
+  }
+  if (swap.cssUrl !== null && request.url() === swap.cssUrl && swap.css !== null) {
+    void request.respond({
+      status: 200,
+      contentType: "text/css; charset=utf-8",
+      body: swap.css,
+    });
+    return;
+  }
+  void request.continue();
+};
+const wireSwap = async (pageLike) => {
+  await armSwapMarker(pageLike);
+  if (swap !== null) {
+    pageLike.setRequestInterception(true).catch(() => {});
+    pageLike.on("request", swapResponder);
+  }
+  await pageLike.setCacheEnabled(false);
+};
 
 // ---------- Desktop pass: split, open the FB pane, measure both ----------
 // bb normalizes a reloaded split's sizes back to 0.5/0.5 (verified: seeds
@@ -334,6 +420,7 @@ const evidence = { label: LABEL, threadId: THREAD_ID, desktop: {}, phone: {} };
 // side-by-side, native pane ≈512. The narrow readings then come from live
 // drags measured in the same page load.
 const page = await browser.newPage();
+await wireSwap(page);
 await page.goto(BOARD, { waitUntil: "networkidle2", timeout: 30000 });
 await sleep(5000);
 await openInSplit(page);
@@ -356,14 +443,15 @@ for (const theme of ["dark", "light"]) {
   await setTheme(page, theme);
   await page.reload({ waitUntil: "networkidle2", timeout: 30000 });
   await sleep(4000);
-  evidence.desktop[theme] = {
-    bodyBg: await page.evaluate(BODY_BG),
-    widths: await setupEveryday(),
-  };
   const fb = await page.evaluate(FB_HEADER);
   const native = await page.evaluate(NATIVE_HEADER);
-  evidence.desktop[theme].fb = fb;
-  evidence.desktop[theme].native = native;
+  evidence.desktop[theme] = {
+    bodyBg: await page.evaluate(BODY_BG),
+    served: await page.evaluate(() => window.__fbServedBundle ?? null),
+    widths: await setupEveryday(),
+    fb,
+    native,
+  };
 
   await shot(page, `desktop-both-${theme}`);
   await clipHeader(page, FB_HEADER_SEL, `desktop-fb-${theme}`);
@@ -389,6 +477,7 @@ await page.close();
 
 // ---------- Phone pass: compact viewport, same themes ----------
 const phone = await browser.newPage();
+await wireSwap(phone);
 await phone.setViewport({ width: 390, height: 844, hasTouch: true, isMobile: true });
 const threadUrl = `${new URL(BOARD).origin}/projects/${PROJECT_ID}/threads/${THREAD_ID}`;
 // A real document before localStorage touches (about:blank denies it).
