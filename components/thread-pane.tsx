@@ -1110,219 +1110,226 @@ export function ThreadPane({
       <header
         className={
           // Native chrome-row parity, measured against the installed app
-          // (scripts/screenshot/probe-pane-header-parity.mjs): ONE row at
-          // --bb-app-chrome-row-height (48px on the installed host), px-4,
-          // the same hairline border weight and the 92%-opaque backdrop the
-          // native header paints. The compact sheet pads for the notch
-          // itself (it escapes the host panel's own safe-area padding as a
-          // fixed element) by adding the inset to the row height.
+          // (scripts/screenshot/probe-pane-header-parity.mjs), all px: the
+          // native pane's header is a 48px chrome row (`h-[48px]`, px-4)
+          // over a 1px hairline at 60% and a 92%-opaque backdrop. The row
+          // is NOT spelled through `--bb-app-chrome-row-height`: its value
+          // is `3rem`, and root-relative units are scaled on the host
+          // (h-12 measured 46.08px, and var-carrying arbitrary utilities
+          // do not apply at runtime in the served sheet — both verified in
+          // the probe), so the px value the host itself measures at wins.
+          // The compact sheet pads for the notch itself (it escapes the
+          // host panel's own safe-area padding as a fixed element) on the
+          // wrapper; the row keeps its 48px inside it.
           isCompact
-            ? "flex h-[calc(var(--bb-app-chrome-row-height,3rem)+env(safe-area-inset-top,0px))] items-center gap-2 border-b border-border/60 bg-background/92 px-2 pt-[env(safe-area-inset-top,0px)]"
-            : "flex h-[var(--bb-app-chrome-row-height,3rem)] items-center gap-2 border-b border-border/60 bg-background/92 px-4"
+            ? "border-b border-border/60 bg-background/92 px-2 pt-[env(safe-area-inset-top,0px)]"
+            : "border-b border-border/60 bg-background/92 px-4"
         }
       >
-        {isCompact ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 shrink-0 text-foreground max-md:pointer-coarse:size-9"
-            aria-label="Back to board"
-            onClick={onClose}
-          >
-            <Icon name="ChevronLeft" className="size-5" />
-          </Button>
-        ) : null}
-        {isCompact
-          ? // On the phone the done toggle keeps its slot left of the title
-            // (the thumb reach the pane's phone report settled), while on a
-            // desktop pane it rides the right control cluster where the
-            // native pane renders Focus Board's own header action.
-            doneCheckbox
-          : null}
-        <EditableTitle
-          title={thread.displayTitle}
-          onRename={onRename}
-          onAutotitle={(target) =>
-            // ✨ auto-rename (server.ts thread_autotitle): the title comes
-            // back already cleaned; commit it immediately. A target names
-            // the way out the fallback modal picked: an alternative service
-            // pair or the thread's own model probe.
-            rpc
-              .call(
-                "thread_autotitle",
-                target === undefined
-                  ? { threadId: thread.id }
-                  : "useThreadModel" in target
-                    ? { threadId: thread.id, useThreadModel: true }
-                    : {
-                        threadId: thread.id,
-                        pluginId: target.pluginId,
-                        serviceId: target.serviceId,
-                      },
-              )
-              .then((result) => result.title)
-          }
-          loadFallbackServices={() =>
-            rpc
-              .call("thread_autotitle_services", { threadId: thread.id })
-              .then((result) => result as unknown as AutotitleFallbackState)
-          }
-        />
-        {snoozeWakeAt !== null ? (
-          // Muted chip on the pane's header: the open pane carries the same
-          // "snoozed, wakes at …" language the board card does.
-          <span
-            data-pane-snooze-chip=""
-            title={`Wakes ${describeWakeAt(snoozeWakeAt, Date.now())}`}
-            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-muted-foreground"
-          >
-            <Icon name="Clock" className="size-3" aria-hidden />
-            {isCompact ? "" : `Snoozed · wakes ${describeWakeAt(snoozeWakeAt, Date.now())}`}
-          </span>
-        ) : null}
-        {(() => {
-          // The thread actions. Two shapes, both measured against the
-          // native pane's header: on compact the icon-only read toggle
-          // stays the split control's primary (one tap on a phone), with
-          // the attached caret dropping the menu; on a desktop pane the row
-          // carries no labeled control at all — bb's own header has five
-          // 28px ghost icon buttons and reaches mark-read through the ⋯
-          // overflow (the native pane's own menu, probe screenshot 07), so
-          // Mark Read/Unread moved there. The menu items keep the pane's
-          // frequency-of-use order: the done toggle first, then the pin
-          // (an archived row pins nothing — its only way out is
-          // Unarchive), the read-state toggle in the native menu's slot of
-          // Pin → Mark unread, the snooze entry under its divider, the
-          // family-spawn entry ("New child thread…") behind the snooze — a
-          // creation action stays categorically apart from the state
-          // toggles — and Archive last. Archived rows carry the spawn too —
-          // bb accepts a child of an archived parent (the child re-roots to
-          // render standalone), and the operator's call.
-          const actionItems: (ActionMenuItem | SnoozeMenuAction)[] = [
-            {
-              id: "done",
-              label: isDone ? "Mark Not Done" : "Mark Done",
-              icon: isDone ? "CircleCheck" : "Check",
-              run: () => onToggleDone(!isDone),
-            },
-            ...(isArchived
-              ? []
-              : [
-                  {
-                    id: "pin",
-                    label: thread.isPinned ? "Unpin" : "Pin",
-                    icon: thread.isPinned ? "PinOff" : "Pin",
-                    run: onTogglePinned,
-                  },
-                ]),
-            {
-              id: "read-unread",
-              label: thread.isUnread ? "Mark Read" : "Mark Unread",
-              icon: thread.isUnread ? "MailOpen" : "Mail",
-              run: onToggleUnread,
-            },
-            ...(snoozeMenuItems ?? []),
-            ...(onNewChildThread !== undefined
-              ? [
-                  {
-                    id: "new-child",
-                    label: "New child thread…",
-                    icon: "Fork",
-                    run: onNewChildThread,
-                  },
-                ]
-              : []),
-            {
-              id: "archive",
-              label: isArchived ? "Unarchive" : "Archive",
-              icon: isArchived ? "ArchiveRestore" : "Archive",
-              run: onToggleArchived,
-            },
-          ];
-          if (isCompact) {
-            // On compact viewports the full-screen button is dropped from
-            // the header to save space, so the menu carries it instead
-            // (bb's compact term; the desktop open dropdown has "Maximize
-            // pane").
-            actionItems.push({
-              id: "maximize",
-              label: "Full Screen",
-              icon: "Maximize2",
-              run: onMaximize,
-            });
+        <div className="flex h-[48px] items-center gap-2">
+          {isCompact ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0 text-foreground max-md:pointer-coarse:size-9"
+              aria-label="Back to board"
+              onClick={onClose}
+            >
+              <Icon name="ChevronLeft" className="size-5" />
+            </Button>
+          ) : null}
+          {isCompact
+            ? // On the phone the done toggle keeps its slot left of the title
+              // (the thumb reach the pane's phone report settled), while on a
+              // desktop pane it rides the right control cluster where the
+              // native pane renders Focus Board's own header action.
+              doneCheckbox
+            : null}
+          <EditableTitle
+            title={thread.displayTitle}
+            onRename={onRename}
+            onAutotitle={(target) =>
+              // ✨ auto-rename (server.ts thread_autotitle): the title comes
+              // back already cleaned; commit it immediately. A target names
+              // the way out the fallback modal picked: an alternative service
+              // pair or the thread's own model probe.
+              rpc
+                .call(
+                  "thread_autotitle",
+                  target === undefined
+                    ? { threadId: thread.id }
+                    : "useThreadModel" in target
+                      ? { threadId: thread.id, useThreadModel: true }
+                      : {
+                          threadId: thread.id,
+                          pluginId: target.pluginId,
+                          serviceId: target.serviceId,
+                        },
+                )
+                .then((result) => result.title)
+            }
+            loadFallbackServices={() =>
+              rpc
+                .call("thread_autotitle_services", { threadId: thread.id })
+                .then((result) => result as unknown as AutotitleFallbackState)
+            }
+          />
+          {snoozeWakeAt !== null ? (
+            // Muted chip on the pane's header: the open pane carries the same
+            // "snoozed, wakes at …" language the board card does.
+            <span
+              data-pane-snooze-chip=""
+              title={`Wakes ${describeWakeAt(snoozeWakeAt, Date.now())}`}
+              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-muted-foreground"
+            >
+              <Icon name="Clock" className="size-3" aria-hidden />
+              {isCompact ? "" : `Snoozed · wakes ${describeWakeAt(snoozeWakeAt, Date.now())}`}
+            </span>
+          ) : null}
+          {(() => {
+            // The thread actions. Two shapes, both measured against the
+            // native pane's header: on compact the icon-only read toggle
+            // stays the split control's primary (one tap on a phone), with
+            // the attached caret dropping the menu; on a desktop pane the row
+            // carries no labeled control at all — bb's own header has five
+            // 28px ghost icon buttons and reaches mark-read through the ⋯
+            // overflow (the native pane's own menu, probe screenshot 07), so
+            // Mark Read/Unread moved there. The menu items keep the pane's
+            // frequency-of-use order: the done toggle first, then the pin
+            // (an archived row pins nothing — its only way out is
+            // Unarchive), the read-state toggle in the native menu's slot of
+            // Pin → Mark unread, the snooze entry under its divider, the
+            // family-spawn entry ("New child thread…") behind the snooze — a
+            // creation action stays categorically apart from the state
+            // toggles — and Archive last. Archived rows carry the spawn too —
+            // bb accepts a child of an archived parent (the child re-roots to
+            // render standalone), and the operator's call.
+            const actionItems: (ActionMenuItem | SnoozeMenuAction)[] = [
+              {
+                id: "done",
+                label: isDone ? "Mark Not Done" : "Mark Done",
+                icon: isDone ? "CircleCheck" : "Check",
+                run: () => onToggleDone(!isDone),
+              },
+              ...(isArchived
+                ? []
+                : [
+                    {
+                      id: "pin",
+                      label: thread.isPinned ? "Unpin" : "Pin",
+                      icon: thread.isPinned ? "PinOff" : "Pin",
+                      run: onTogglePinned,
+                    },
+                  ]),
+              {
+                id: "read-unread",
+                label: thread.isUnread ? "Mark Read" : "Mark Unread",
+                icon: thread.isUnread ? "MailOpen" : "Mail",
+                run: onToggleUnread,
+              },
+              ...(snoozeMenuItems ?? []),
+              ...(onNewChildThread !== undefined
+                ? [
+                    {
+                      id: "new-child",
+                      label: "New child thread…",
+                      icon: "Fork",
+                      run: onNewChildThread,
+                    },
+                  ]
+                : []),
+              {
+                id: "archive",
+                label: isArchived ? "Unarchive" : "Archive",
+                icon: isArchived ? "ArchiveRestore" : "Archive",
+                run: onToggleArchived,
+              },
+            ];
+            if (isCompact) {
+              // On compact viewports the full-screen button is dropped from
+              // the header to save space, so the menu carries it instead
+              // (bb's compact term; the desktop open dropdown has "Maximize
+              // pane").
+              actionItems.push({
+                id: "maximize",
+                label: "Full Screen",
+                icon: "Maximize2",
+                run: onMaximize,
+              });
+              return (
+                // Same split grammar as the open menu at every width: the
+                // icon-only read-state toggle is the primary, a hairline
+                // divider, then the attached caret dropping the menu. No
+                // overflow-hidden — the halves round themselves.
+                <div className="relative inline-flex shrink-0 items-stretch rounded-md">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(HEADER_ICON_BUTTON_CLASS, "rounded-r-none")}
+                    aria-label={thread.isUnread ? "Mark thread read" : "Mark thread unread"}
+                    onClick={onToggleUnread}
+                  >
+                    <Icon name={thread.isUnread ? "MailOpen" : "Mail"} className="size-4" />
+                  </Button>
+                  <div className="w-px self-stretch my-1.5 bg-border" aria-hidden />
+                  <ActionsMenu items={actionItems} attached />
+                </div>
+              );
+            }
             return (
-              // Same split grammar as the open menu at every width: the
-              // icon-only read-state toggle is the primary, a hairline
-              // divider, then the attached caret dropping the menu. No
-              // overflow-hidden — the halves round themselves.
-              <div className="relative inline-flex shrink-0 items-stretch rounded-md">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn(HEADER_ICON_BUTTON_CLASS, "rounded-r-none")}
-                  aria-label={thread.isUnread ? "Mark thread read" : "Mark thread unread"}
-                  onClick={onToggleUnread}
-                >
-                  <Icon name={thread.isUnread ? "MailOpen" : "Mail"} className="size-4" />
-                </Button>
-                <div className="w-px self-stretch my-1.5 bg-border" aria-hidden />
-                <ActionsMenu items={actionItems} attached />
-              </div>
+              <>
+                {/* The ⋯ overflow, where the native pane itself keeps mark
+                    read/unread, pin and archive; the standalone 28px ghost */
+                }
+                <ActionsMenu items={actionItems} />
+                {doneCheckbox}
+              </>
             );
-          }
-          return (
-            <>
-              {/* The ⋯ overflow, where the native pane itself keeps mark
-                  read/unread, pin and archive; the standalone 28px ghost */
-              }
-              <ActionsMenu items={actionItems} />
-              {doneCheckbox}
-            </>
-          );
-        })()}
-        {(() => {
-          // The pane's take on the main view's workspace-open button: an
-          // icon that opens the thread's workspace in the preferred editor
-          // plus a dropdown (file explorer, terminal, Maximize pane, new
-          // window, copy link). On a wide pane the primary grows an "Open
-          // in editor" label; the default width keeps it icon-only so the
-          // title keeps its room. Renders nothing when no local open
-          // applies — no workspace, daemon down, or the workspace on
-          // another host.
-          return (
-            <WorkspaceOpenMenu
-              threadId={thread.id}
-              threadHref={thread.href}
-              onMaximize={onMaximize}
-              onRevealBrowserTab={onRevealBrowserTab}
-              showLabel={!isCompact && width >= OPEN_LABEL_MIN_PANE_WIDTH}
-            />
-          );
-        })()}
-        {!isCompact ? (
-          // The native pane's own "Maximize pane" affordance: a standalone
-          // 28px ghost in the chrome row (the native header carries it
-          // outside its workspace control). The workspace dropdown keeps
-          // its "Maximize pane" entry for the menu-only reach.
+          })()}
+          {(() => {
+            // The pane's take on the main view's workspace-open button: an
+            // icon that opens the thread's workspace in the preferred editor
+            // plus a dropdown (file explorer, terminal, Maximize pane, new
+            // window, copy link). On a wide pane the primary grows an "Open
+            // in editor" label; the default width keeps it icon-only so the
+            // title keeps its room. Renders nothing when no local open
+            // applies — no workspace, daemon down, or the workspace on
+            // another host.
+            return (
+              <WorkspaceOpenMenu
+                threadId={thread.id}
+                threadHref={thread.href}
+                onMaximize={onMaximize}
+                onRevealBrowserTab={onRevealBrowserTab}
+                showLabel={!isCompact && width >= OPEN_LABEL_MIN_PANE_WIDTH}
+              />
+            );
+          })()}
+          {!isCompact ? (
+            // The native pane's own "Maximize pane" affordance: a standalone
+            // 28px ghost in the chrome row (the native header carries it
+            // outside its workspace control). The workspace dropdown keeps
+            // its "Maximize pane" entry for the menu-only reach.
+            <Button
+              variant="ghost"
+              size="icon"
+              className={HEADER_ICON_BUTTON_CLASS}
+              aria-label="Maximize pane"
+              onClick={onMaximize}
+            >
+              <Icon name="Maximize2" className="size-4" />
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
             size="icon"
             className={HEADER_ICON_BUTTON_CLASS}
-            aria-label="Maximize pane"
-            onClick={onMaximize}
+            aria-label="Close thread pane"
+            onClick={onClose}
           >
-            <Icon name="Maximize2" className="size-4" />
+            <Icon name="X" className="size-4" />
           </Button>
-        ) : null}
-        <Button
-          variant="ghost"
-          size="icon"
-          className={HEADER_ICON_BUTTON_CLASS}
-          aria-label="Close thread pane"
-          onClick={onClose}
-        >
-          <Icon name="X" className="size-4" />
-        </Button>
+        </div>
       </header>
       {/* The host's embedded ThreadChat lives here. bb scopes our plugin
           stylesheet with `:where([data-bb-plugin="focus-board"],

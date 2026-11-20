@@ -86,7 +86,8 @@ const FB_HEADER = `(function () {
   if (root === null) return null;
   const R = root.getBoundingClientRect();
   const c = getComputedStyle(root);
-  const children = [...root.children].map(${MEASURE_EL});
+  const row = root.firstElementChild;
+  const children = row === null ? [] : [...row.children].map(${MEASURE_EL});
   // One level deeper for the title's own text span (the button carries the
   // button font, the span carries the title's typography).
   const titleBtn = root.querySelector('[title="Rename thread"]');
@@ -97,6 +98,8 @@ const FB_HEADER = `(function () {
     padding: c.padding, bg: c.backgroundColor,
     borderBottom: c.borderBottomWidth + '|' + c.borderBottomStyle + '|' + c.borderBottomColor,
     gap: c.gap, display: c.display, overflow: c.overflow,
+    chromeRowVar: c.getPropertyValue('--bb-app-chrome-row-height'),
+    rowBox: row === null ? null : ${MEASURE_EL}(row).box,
     children,
     buttons: [...root.querySelectorAll('button')].map(${MEASURE_EL}),
     titleSpan: titleSpan === null ? null : ${MEASURE_EL}(titleSpan),
@@ -133,6 +136,7 @@ const NATIVE_HEADER = `(function () {
     paneW: Math.round(pane.getBoundingClientRect().width),
     header: ${MEASURE_EL}(header),
     row: ${MEASURE_EL}(row ?? header),
+    chromeRowVar: getComputedStyle(header).getPropertyValue('--bb-app-chrome-row-height'),
     rowChildren: rows,
     buttons: [...header.querySelectorAll('button')].map(${MEASURE_EL}),
   };
