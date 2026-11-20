@@ -7,6 +7,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [1.7.16] - 2026-11-20
+
+### Added
+
 #### The board's lanes
 
 - **A lane's menu can fold or unfold every family in that lane at once, and hide or show their idle children.** The four entries act on the whole lane and leave other lanes' folds alone; a lane with no families shows none of them.
