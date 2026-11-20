@@ -201,14 +201,17 @@ steps:
       - text_visible: "Newest first"
 
   - id: a-grid-card-click-opens-its-thread
-    title: A card in the grid opens the board's own pane on a click, exactly as a lane card does
-    # One click, one surface (issue #470): the grid's cards ride the same click
-    # the columns' do, so the thread lands in the board's in-panel pane and the
-    # host's opener is never asked for a split.
+    title: A card in the grid opens its thread, exactly as a lane card does
+    # A grid card is the same click a lane card is: it asks the host's opener
+    # for a split, and where the host will not split (this window, splits off)
+    # the ask's deadline keeps the thread in the board's own pane
+    # (lib/native-one-pane-dance.ts).
     goto: "?groupBy=none"
     gestures:
       - click: { card: thr_column_sort }
+      - sleep: 400
     assert:
+      - native_open: { threadId: thr_column_sort, split: true }
       - native_panes: []
       - pane: { threadId: thr_column_sort }
       - url: { suffix: "/board/t/thr_column_sort" }

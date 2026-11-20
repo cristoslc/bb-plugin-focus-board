@@ -11,7 +11,7 @@ vi.mock("@get-bb/plugin-sdk/app", async () => await import("./helpers/app-fake-s
 
 import "../app";
 import { GRID_SORT_KEY, GROUP_BY_KEY } from "../components/preferences";
-import { fakeNativeOpens, fakePanelPushes, registeredNavPanel, resetFakeNativeOpens, resetFakePanelPushes, seedFakeThreads } from "./helpers/app-fake-sdk";
+import { fakeNativeOpens, fakePanelPushes, fakeSplitPanes, registeredNavPanel, resetFakeNativeOpens, resetFakePanelPushes, seedFakeThreads } from "./helpers/app-fake-sdk";
 
 const HOUR = 3_600_000;
 
@@ -209,10 +209,10 @@ describe("the grid's order", () => {
 });
 
 describe("a card in the grid", () => {
-  it("opens its thread in the board's own pane on click", async () => {
-    // The 2026-11-17 review: the board asks for a native split only to focus
-    // or replace a pane it can name, and opens its own pane otherwise
-    // (docs/plans/2026-11-17-one-board-pane.md section 8).
+  it("opens its thread beside the board on click", async () => {
+    // A grid card is the same click as a column card: in a one-pane window it
+    // asks the host's opener for the split, and the board keeps its pane
+    // (lib/native-one-pane-dance.ts carries the measurement).
     await mountApp();
     resetFakeNativeOpens();
     resetFakePanelPushes();
@@ -220,12 +220,16 @@ describe("a card in the grid", () => {
     if (card === null) throw new Error("grid card not found");
     fireEvent.click(card);
     await waitFor(() =>
-      expect(document.querySelector('aside[aria-label="Thread: Alpha release notes"]')).not.toBeNull(),
+      expect(fakeNativeOpens()).toEqual([{ threadId: "thr_alpha", split: true }]),
     );
-    expect(fakeNativeOpens()).toEqual([]);
     await waitFor(() =>
-      expect(fakePanelPushes().at(-1)).toMatchObject({ path: "board", subPath: "t/thr_alpha" }),
+      expect(fakeSplitPanes()).toEqual([
+        { paneId: "pane-1", threadId: null, isFocused: false },
+        { paneId: "pane-2", threadId: "thr_alpha", isFocused: true },
+      ]),
     );
+    expect(document.querySelector('aside[aria-label^="Thread:"]')).toBeNull();
+    expect(fakePanelPushes()).toEqual([]);
   });
 
   it("closes the pane on a click in the empty grid, never on a card", async () => {

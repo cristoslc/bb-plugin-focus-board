@@ -75,7 +75,12 @@ steps:
     # The same one-surface click a lane card takes: the board's pane carries
     # the child, and the child's family lane becomes the locked lane.
     goto: "?groupBy=parent"
-    click: { card: thr_child_lane }
+    gestures:
+      - click: { card: thr_child_lane }
+      # This window has splits off, so the click asks the host and then opens
+      # the board's own pane on the ask's deadline
+      # (lib/native-one-pane-dance.ts).
+      - sleep: 400
     assert:
       - native_panes: []
       - pane: { threadId: thr_child_lane }

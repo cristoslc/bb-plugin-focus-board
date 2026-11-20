@@ -167,16 +167,31 @@ async function clickCardInBoard(threadId: string): Promise<void> {
   await waitFor(() => expect(fakePanelPushes().at(-1)).toMatchObject({ subPath: `t/${threadId}` }));
 }
 
-describe("a click the board cannot place", () => {
-  it("opens the board's own pane and never asks the host for a split", async () => {
+describe("a click in a window the host will not split", () => {
+  // Splits off (bb's own setting) leaves the window with no layout to split,
+  // so the opener plainly navigates. The click still asks — it is the only
+  // call that CAN split a one-pane window, and the window it asks from is
+  // indistinguishable from one that would (both read null through
+  // `useSidebarSplitLayout`) — and the ask's deadline keeps the thread on the
+  // board when the answer is "no split". lib/native-one-pane-dance.ts carries
+  // the measurement; the split half is tests/app-card-click-one-pane-split.
+  beforeEach(() => {
+    act(() => {
+      setFakeSplitsOff(true);
+    });
+  });
+
+  it("asks once, then opens the board's own pane", async () => {
     mountBoard();
     await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
 
     fireEvent.click(cardAnchor("thr_focus"));
 
-    // The blind ask is gone: bb's hook reads null at one pane, so a split
-    // request here could not be recorded, and every later click would stack.
-    expect(fakeNativeOpens()).toEqual([]);
+    // The ask is the ruling's step one, made even where the host cannot honour
+    // it…
+    expect(fakeNativeOpens()).toEqual([{ threadId: "thr_focus", split: true }]);
+    // …and the step that keeps the thread: the board's own pane, the surface
+    // that already shows the board and the thread together.
     await waitFor(() =>
       expect(fakePanelPushes().at(-1)).toMatchObject({ path: "board", subPath: "t/thr_focus" }),
     );
@@ -193,7 +208,9 @@ describe("a click the board cannot place", () => {
     await clickCardInBoard("thr_older");
     await clickCardInBoard("thr_backlog");
 
-    expect(fakeNativeOpens()).toEqual([]);
+    // One ask: the board's own pane is open from the first click on, and a
+    // click with that pane up is a replacement in it.
+    expect(fakeNativeOpens()).toEqual([{ threadId: "thr_focus", split: true }]);
     expect(threadPanes()).toEqual([]);
     expect(inBoardPaneTitle()).toBe("Backlog thread");
     expect(document.querySelectorAll('aside[aria-label^="Thread:"]')).toHaveLength(1);
@@ -217,7 +234,7 @@ describe("a click the board cannot place", () => {
     if (open === undefined) throw new Error("missing Open thread entry");
     fireEvent.click(open);
 
-    expect(fakeNativeOpens()).toEqual([]);
+    expect(fakeNativeOpens()).toEqual([{ threadId: "thr_older", split: true }]);
     await waitFor(() => expect(inBoardPaneTitle()).toBe("Older thread"));
   });
 
@@ -227,9 +244,12 @@ describe("a click the board cannot place", () => {
 
     fireEvent.click(cardAnchor("thr_focus"));
     fireEvent.click(cardAnchor("thr_focus"));
+    // One dance, so one ask: the second click finds the first still in flight
+    // and waits for the same answer instead of stacking a second.
+    expect(fakeNativeOpens()).toEqual([{ threadId: "thr_focus", split: true }]);
     await waitFor(() => expect(inBoardPaneTitle()).toBe("Focused thread"));
     expect(document.querySelectorAll('aside[aria-label^="Thread:"]')).toHaveLength(1);
-    expect(fakeNativeOpens()).toEqual([]);
+    expect(threadPanes()).toEqual([]);
   });
 });
 
@@ -408,7 +428,7 @@ describe("the developer trace", () => {
       "[focus-board:native-open]",
       expect.objectContaining({
         threadId: "thr_older",
-        branch: "in-board: no split to use",
+        branch: "one-pane: asking the opener for the split",
       }),
     );
     debug.mockRestore();
