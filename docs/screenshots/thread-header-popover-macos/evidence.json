@@ -1,0 +1,29 @@
+{
+  "reported": "2026-11-20: the Focus Board control in bb's thread header (native pane) shows no menu and appears not to set Done",
+  "where": "bb 0.50.1 desktop app (macOS), native split pane beside the board; the same host page in system Chrome is the measurement surface",
+  "surface": "http://127.0.0.1:38886/projects/proj_9da9h742i7/threads/thr_cvvvkw6rjz, split layout with the Focus Board panel in pane-1",
+  "method": "headless system Chrome (bb browser-automation, local backend) against the running bb server, which serves the plugin bundle the desktop app runs; the macOS desktop condition is the host's own declaration applied to the page-header content row (bb 0.50.1 app/dist/assets/index-BF2hhcfB.js, the xA utility and the OA(desktopInfo).platform === 'macos' gate: [transform:translateY(var(--bb-macos-chrome-control-y,calc(var(--bb-macos-traffic-light-center-y) - var(--bb-app-chrome-row-height)/2)))]). The desktop window itself was not driven.",
+  "stateA": {
+    "condition": "no transform on the header row (a browser window)",
+    "trigger": { "x": 1110, "y": 10, "width": 28, "height": 28 },
+    "ariaExpanded": "true",
+    "menu": { "x": 1096, "y": 42, "width": 176, "height": 101 },
+    "menuStyle": { "left": "1096px", "top": "42px" },
+    "screenshot": "01-chrome-viewport-popover-open.jpg",
+    "reads": "the three entries sit under the trigger, top right of the thread pane"
+  },
+  "stateB": {
+    "condition": "the host's macOS declaration on the header row",
+    "rowTransform": "matrix(1, 0, 0, 1, 0, -2)",
+    "row": { "x": 816.5, "y": -2, "width": 447.5, "height": 48 },
+    "trigger": { "x": 1110, "y": 8, "width": 28, "height": 28 },
+    "ariaExpanded": "true",
+    "menu": { "x": 1912.5, "y": 38, "width": 176, "height": 101 },
+    "menuStyle": { "left": "1096px", "top": "40px" },
+    "viewport": { "width": 1280, "height": 633 },
+    "screenshot": "02-macos-header-transform-popover-offscreen.jpg",
+    "reads": "no menu: it mounts (aria-expanded true) at row-x 816.5 + 1096 = 1912.5, past the 1280px window"
+  },
+  "cause": "The menu is position: fixed but was rendered inline inside the header, and a transformed ancestor is the containing block of fixed descendants. The row's 2px translate re-anchors the menu's viewport left to the row's left edge, so the trigger's click opened the menu off screen and a second click closed it: the control read as dead (no menu, no Done). Fixed by portaling MenuPopover's shell and backdrop to document.body (components/menu-popover.tsx), the shape the SDK asks for ('put anything taller in a portalled popover') and the host's own menus use.",
+  "after": "Harness re-measure (real Chrome, the repo's vite harness, built bundle): the menu's parent element is BODY, and with the app root translated by -2px the menu stays under its trigger (x 16 both reads, y follows the trigger 78 to 76). jsdom pin: tests/thread-header-actions.test.tsx, 'keeps its popover out of the translated header row, and Done still runs from there'."
+}

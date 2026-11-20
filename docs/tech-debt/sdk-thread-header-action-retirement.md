@@ -23,6 +23,8 @@ What the fix actually requires, checked against `@get-bb/plugin-sdk@0.6.150` (th
 
 So the warning stays until an SDK upgrade lands. It is honest noise: the host supports the retired call ("Existing plugins remain supported"), the build succeeds, and nothing ships differently because of it.
 
+Not the cause of the 2026-11-20 report. That report's control rendered but its menu opened off screen on macOS, because the popover rendered inline inside the header row and the desktop build translates that row (`transform` re-anchors `position: fixed` descendants to it). The slot was never the problem: the entries work as soon as the menu leaves that subtree (`components/menu-popover.tsx`, evidence in `docs/screenshots/thread-header-popover-macos/`).
+
 How to verify it is still there: `npm run build` and read the first two lines of output, or `grep -n "experimental_threadHeaderAction" app.tsx`.
 
 How to close it: bump `@get-bb/plugin-sdk`, replace the registration at `app.tsx:4743` with `app.slots.experimental_threadAction({ id, title, icon, group, placement: "header", item })`, confirm the header control still renders in a live window (the board's Done, Snooze and New-child actions on a thread page), and delete this entry.

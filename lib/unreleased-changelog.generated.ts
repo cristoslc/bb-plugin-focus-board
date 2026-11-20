@@ -7,5 +7,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
   {
     "text": "**A thread created from the board opens where your choice says it should.** The New Thread dialog's own spawn now takes the same path as a card click, so the answer \"beside the board\" puts the created thread in bb's pane instead of the board's.",
     "children": []
+  },
+  {
+    "text": "**The Focus Board control in bb's thread header opens its menu again on macOS.** Its popover now renders outside the header row, so the window's own translate no longer parks it off screen. Mark Done, Snooze and New child thread come back with it.",
+    "children": [],
+    "group": "bb's thread pages"
   }
 ];

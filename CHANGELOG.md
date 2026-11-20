@@ -15,6 +15,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **A thread created from the board opens where your choice says it should.** The New Thread dialog's own spawn now takes the same path as a card click, so the answer "beside the board" puts the created thread in bb's pane instead of the board's.
 
+#### bb's thread pages
+
+- **The Focus Board control in bb's thread header opens its menu again on macOS.** Its popover now renders outside the header row, so the window's own translate no longer parks it off screen. Mark Done, Snooze and New child thread come back with it.
+
 ## [1.8.0] - 2026-11-20
 
 ### Added

@@ -1,6 +1,8 @@
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
+import { usePortalScopeProps } from "@/lib/portal-scope";
 
 /**
  * The board's one popover base: an anchored, clamped, click-away-and-Escape
@@ -9,7 +11,9 @@ import { cn } from "@/lib/utils";
  * edge look, one hover contract (components/board-toolbar.tsx migrated onto
  * this shell; the operator's "share a common base" pass on the lane-menu
  * ruling). Position is the caller's: a context menu passes the pointer's
- * point, an anchored dropdown passes its trigger's box.
+ * point, an anchored dropdown passes its trigger's box, and the shell portals
+ * to the body so those viewport coordinates stay viewport ones wherever the
+ * caller sits.
  */
 export function MenuPopover({
   open,
@@ -58,11 +62,23 @@ export function MenuPopover({
    */
   onEscape?: (event: KeyboardEvent) => boolean;
 }) {
+  // The shell and its backdrop leave the caller's subtree for the body, with
+  // the plugin's portal scope on both (lib/portal-scope). It has to: a
+  // transformed ancestor becomes the containing block of `position: fixed`
+  // children, and the host can translate a pane's chrome (bb's own thread-page
+  // header row carries `transform: translateY(...)` on macOS desktop). Left
+  // inline, this menu resolved `left` against that row instead of the viewport
+  // and opened past the window's right edge, so the control read as dead
+  // (reported 2026-11-20). The SDK asks for the same shape in its own words:
+  // "put anything taller in a portalled popover". The backdrop rides along, so
+  // a click anywhere in the window still dismisses.
+  const portalScopeProps = usePortalScopeProps();
   if (open === null) return null;
-  return (
+  return createPortal(
     <>
       <ShellEscape onClose={onClose} onEscape={onEscape} />
       <div
+        {...portalScopeProps}
         className="fixed inset-0 z-40"
         onClick={onClose}
         onContextMenu={(event) => {
@@ -72,6 +88,7 @@ export function MenuPopover({
         aria-hidden
       />
       <div
+        {...portalScopeProps}
         role={role ?? "menu"}
         aria-label={label}
         // Raised above the card surface: cards draw `bg-card` at half-
@@ -110,7 +127,8 @@ export function MenuPopover({
         )}
         {children}
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
 
