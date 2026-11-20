@@ -1,0 +1,638 @@
+{
+  "app": "http://127.0.0.1:38886/plugins/focus-board/board",
+  "viewport": {
+    "width": 1600,
+    "height": 1200
+  },
+  "phases": {
+    "A": {
+      "bootSamples": [
+        {
+          "at": 0,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 100,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 300,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 600,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 1000,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 2000,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 4000,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        }
+      ],
+      "steps": [
+        {
+          "name": "1-board-alone",
+          "route": "/plugins/focus-board/board",
+          "rawAtom": "layout",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "focused": true,
+              "kind": "plugin-panel",
+              "pluginId": "focus-board",
+              "panelPath": "board",
+              "subPath": "",
+              "holdsBoard": true
+            }
+          ],
+          "hookLayout": null,
+          "boardMounted": true,
+          "inBoardPane": null,
+          "renderedPanes": [
+            "pane-1"
+          ],
+          "compactViewport": false,
+          "cardCount": 129,
+          "threadViewVisible": false
+        },
+        {
+          "name": "2-thread-after-plain-open",
+          "route": "/projects/proj_9da9h742i7/threads/thr_cvvvkw6rjz",
+          "rawAtom": "layout",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "focused": true,
+              "kind": "thread",
+              "threadId": "thr_cvvvkw6rjz",
+              "holdsBoard": false
+            }
+          ],
+          "hookLayout": null,
+          "boardMounted": false,
+          "inBoardPane": null,
+          "renderedPanes": [
+            "pane-1"
+          ],
+          "compactViewport": false,
+          "cardCount": 0,
+          "threadViewVisible": true,
+          "via": "sidebar row click (plain navigation)"
+        },
+        {
+          "name": "3-thread-after-open-in-split",
+          "route": "/projects/proj_9da9h742i7/threads/thr_cvvvkw6rjz",
+          "rawAtom": "layout",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "focused": true,
+              "kind": "thread",
+              "threadId": "thr_cvvvkw6rjz",
+              "holdsBoard": false
+            }
+          ],
+          "hookLayout": null,
+          "boardMounted": false,
+          "inBoardPane": null,
+          "renderedPanes": [
+            "pane-1"
+          ],
+          "compactViewport": false,
+          "cardCount": 0,
+          "threadViewVisible": true,
+          "openInSplit": {
+            "opened": false,
+            "menu": [
+              {
+                "label": "Copy link",
+                "x": 249,
+                "y": 116,
+                "visible": true
+              },
+              {
+                "label": "Unpin",
+                "x": 249,
+                "y": 151,
+                "visible": true
+              },
+              {
+                "label": "Mark unread",
+                "x": 249,
+                "y": 177,
+                "visible": true
+              },
+              {
+                "label": "Notifications, All activity",
+                "x": 249,
+                "y": 203,
+                "visible": true
+              },
+              {
+                "label": "Rename",
+                "x": 249,
+                "y": 238,
+                "visible": true
+              },
+              {
+                "label": "Regenerate title",
+                "x": 249,
+                "y": 264,
+                "visible": true
+              },
+              {
+                "label": "Customize actions",
+                "x": 249,
+                "y": 299,
+                "visible": true
+              },
+              {
+                "label": "Archive",
+                "x": 249,
+                "y": 334,
+                "visible": true
+              },
+              {
+                "label": "Delete",
+                "x": 249,
+                "y": 360,
+                "visible": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "4-board-route-with-subpath",
+          "route": "/plugins/focus-board/board/t/thr_cvvvkw6rjz",
+          "rawAtom": "layout",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "focused": true,
+              "kind": "plugin-panel",
+              "pluginId": "focus-board",
+              "panelPath": "board",
+              "subPath": "t/thr_cvvvkw6rjz",
+              "holdsBoard": true
+            }
+          ],
+          "hookLayout": null,
+          "boardMounted": true,
+          "inBoardPane": "Thread: Refine strategic engineering goals",
+          "renderedPanes": [
+            "pane-1"
+          ],
+          "compactViewport": false,
+          "cardCount": 129,
+          "threadViewVisible": true,
+          "via": "panel route load, subPath t/<thread>"
+        }
+      ]
+    },
+    "B": {
+      "bootSamples": [
+        {
+          "at": 0,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 100,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 300,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 600,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 1000,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 2000,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 4000,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        }
+      ],
+      "steps": [
+        {
+          "name": "1-thread-in-only-pane",
+          "route": "/projects/proj_9da9h742i7/threads/thr_cvvvkw6rjz",
+          "rawAtom": "layout",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "focused": true,
+              "kind": "thread",
+              "threadId": "thr_cvvvkw6rjz",
+              "holdsBoard": false
+            }
+          ],
+          "hookLayout": null,
+          "boardMounted": false,
+          "inBoardPane": null,
+          "renderedPanes": [
+            "pane-1"
+          ],
+          "compactViewport": false,
+          "cardCount": 0,
+          "threadViewVisible": true
+        },
+        {
+          "name": "2-board-route",
+          "route": "/plugins/focus-board/board",
+          "rawAtom": "layout",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "focused": true,
+              "kind": "plugin-panel",
+              "pluginId": "focus-board",
+              "panelPath": "board",
+              "subPath": "",
+              "holdsBoard": true
+            }
+          ],
+          "hookLayout": null,
+          "boardMounted": true,
+          "inBoardPane": null,
+          "renderedPanes": [
+            "pane-1"
+          ],
+          "compactViewport": false,
+          "cardCount": 129,
+          "threadViewVisible": false,
+          "via": "sidebar nav item (plain route change)"
+        },
+        {
+          "name": "3-open-in-split-after-board",
+          "route": "/projects/proj_9da9h742i7/threads/thr_cvvvkw6rjz",
+          "rawAtom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "focused": false,
+              "kind": "plugin-panel",
+              "pluginId": "focus-board",
+              "panelPath": "board",
+              "subPath": "",
+              "holdsBoard": true
+            },
+            {
+              "paneId": "pane-2",
+              "focused": true,
+              "kind": "thread",
+              "threadId": "thr_cvvvkw6rjz",
+              "holdsBoard": false
+            }
+          ],
+          "hookLayout": "layout",
+          "boardMounted": true,
+          "inBoardPane": null,
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "compactViewport": false,
+          "cardCount": 129,
+          "threadViewVisible": true,
+          "openInSplit": {
+            "opened": true,
+            "label": "Open in split",
+            "menu": [
+              {
+                "label": "Open in split",
+                "x": 249,
+                "y": 116,
+                "visible": true
+              },
+              {
+                "label": "Copy link",
+                "x": 249,
+                "y": 142,
+                "visible": true
+              },
+              {
+                "label": "Unpin",
+                "x": 249,
+                "y": 177,
+                "visible": true
+              },
+              {
+                "label": "Mark unread",
+                "x": 249,
+                "y": 203,
+                "visible": true
+              },
+              {
+                "label": "Notifications, All activity",
+                "x": 249,
+                "y": 229,
+                "visible": true
+              },
+              {
+                "label": "Rename",
+                "x": 249,
+                "y": 264,
+                "visible": true
+              },
+              {
+                "label": "Regenerate title",
+                "x": 249,
+                "y": 290,
+                "visible": true
+              },
+              {
+                "label": "Customize actions",
+                "x": 249,
+                "y": 325,
+                "visible": true
+              },
+              {
+                "label": "Archive",
+                "x": 249,
+                "y": 360,
+                "visible": true
+              },
+              {
+                "label": "Delete",
+                "x": 249,
+                "y": 386,
+                "visible": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "4-plain-row-click-after-board",
+          "route": "/projects/proj_9da9h742i7/threads/thr_cvvvkw6rjz",
+          "rawAtom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "focused": false,
+              "kind": "plugin-panel",
+              "pluginId": "focus-board",
+              "panelPath": "board",
+              "subPath": "",
+              "holdsBoard": true
+            },
+            {
+              "paneId": "pane-2",
+              "focused": true,
+              "kind": "thread",
+              "threadId": "thr_cvvvkw6rjz",
+              "holdsBoard": false
+            }
+          ],
+          "hookLayout": "layout",
+          "boardMounted": true,
+          "inBoardPane": null,
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "compactViewport": false,
+          "cardCount": 129,
+          "threadViewVisible": true
+        }
+      ]
+    },
+    "C": {
+      "bootSamples": [
+        {
+          "at": 0,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 100,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 300,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 600,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 1000,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 2000,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        },
+        {
+          "at": 4000,
+          "paneCount": 1,
+          "rawAtom": "layout",
+          "route": "/plugins/focus-board/board"
+        }
+      ],
+      "steps": [
+        {
+          "name": "1-thread-in-only-pane",
+          "route": "/projects/proj_9da9h742i7/threads/thr_cvvvkw6rjz",
+          "rawAtom": "layout",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "focused": true,
+              "kind": "thread",
+              "threadId": "thr_cvvvkw6rjz",
+              "holdsBoard": false
+            }
+          ],
+          "hookLayout": null,
+          "boardMounted": false,
+          "inBoardPane": null,
+          "renderedPanes": [
+            "pane-1"
+          ],
+          "compactViewport": false,
+          "cardCount": 0,
+          "threadViewVisible": true
+        },
+        {
+          "name": "2-other-thread-open-in-split",
+          "route": "/projects/proj_9da9h742i7/threads/thr_c3ezcmuqxe",
+          "rawAtom": "layout",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "focused": false,
+              "kind": "thread",
+              "threadId": "thr_cvvvkw6rjz",
+              "holdsBoard": false
+            },
+            {
+              "paneId": "pane-2",
+              "focused": true,
+              "kind": "thread",
+              "threadId": "thr_c3ezcmuqxe",
+              "holdsBoard": false
+            }
+          ],
+          "hookLayout": "layout",
+          "boardMounted": false,
+          "inBoardPane": null,
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "compactViewport": false,
+          "cardCount": 0,
+          "threadViewVisible": true,
+          "openInSplit": {
+            "opened": true,
+            "label": "Open in split",
+            "menu": [
+              {
+                "label": "Open in split",
+                "x": 249,
+                "y": 146,
+                "visible": true
+              },
+              {
+                "label": "Copy link",
+                "x": 249,
+                "y": 172,
+                "visible": true
+              },
+              {
+                "label": "Unpin",
+                "x": 249,
+                "y": 207,
+                "visible": true
+              },
+              {
+                "label": "Mark read",
+                "x": 249,
+                "y": 233,
+                "visible": true
+              },
+              {
+                "label": "Notifications, All activity",
+                "x": 249,
+                "y": 259,
+                "visible": true
+              },
+              {
+                "label": "Rename",
+                "x": 249,
+                "y": 294,
+                "visible": true
+              },
+              {
+                "label": "Regenerate title",
+                "x": 249,
+                "y": 320,
+                "visible": true
+              },
+              {
+                "label": "Customize actions",
+                "x": 249,
+                "y": 355,
+                "visible": true
+              },
+              {
+                "label": "Archive",
+                "x": 249,
+                "y": 390,
+                "visible": true
+              },
+              {
+                "label": "Delete",
+                "x": 249,
+                "y": 416,
+                "visible": true
+              }
+            ]
+          },
+          "thread": "thr_c3ezcmuqxe"
+        }
+      ]
+    }
+  },
+  "notes": [],
+  "threads": {
+    "A": "thr_cvvvkw6rjz",
+    "B": "thr_c3ezcmuqxe"
+  },
+  "errors": []
+}
