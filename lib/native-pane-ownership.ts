@@ -1,18 +1,18 @@
 // The card click's native pane: which pane Focus Board opened, and how the
 // click gets a thread into it.
 //
-// ## What the host gives a plugin, measured on the installed 0.49.0
+// ## What the host gives a plugin, measured on the installed host
 //
 // - `experimental_useSidebarThreadActions().open(threadId, { split: true })` is
-//   the placement API. Its rule (`jQ` in the renderer): plainly navigate when
-//   the window is compact or has no split layout yet; focus the pane that
-//   already shows the thread; otherwise create a new right-hand pane (or, at
-//   the eight-pane cap, replace the focused pane). It has no "put this thread
-//   in that pane".
+//   the placement API. Its rule (`openThreadInSplit` in the renderer): plainly
+//   navigate when the window is compact or has no split layout at all; focus
+//   the pane that already shows the thread; otherwise create a new right-hand
+//   pane (or, at the eight-pane cap, replace the focused pane). It has no "put
+//   this thread in that pane".
 // - Every host navigation lands route content in the pane that already holds
-//   it, and otherwise REPLACES THE FOCUSED PANE (`LP` → `replacePaneContent`,
-//   the same in 0.48 and 0.49). So a replacement is: focus the pane, then
-//   navigate into it.
+//   it, and otherwise REPLACES THE FOCUSED PANE (`replacePaneContent`, the
+//   same rule in 0.48, 0.49 and 0.50). So a replacement is: focus the pane,
+//   then navigate into it.
 // - Focus follows the pointer: pressing inside a pane focuses it (the pane
 //   div's `onPointerDown` → `store.set(splitLayoutAtom, focusPane(...))`). A
 //   card click therefore reaches its own handler with the BOARD focused, which
@@ -23,14 +23,13 @@
 //
 // ## The click, in three questions
 //
-// 1. Is there a split? A one-pane window reports none (`useSidebarSplitLayout`
-//    answers null below two panes), and with no split layout bb's opener
-//    plainly navigates, which replaces the board's pane with the thread page.
-//    A split cannot be created from there either: every pane-creating call in
-//    the renderer sits behind that same "no layout → navigate" gate, and the
-//    pane content union is thread | new-thread | plugin-panel | plugin-detail,
-//    so nothing else (a terminal, a browser, a fixed tab) can occupy a pane
-//    slot. No split therefore means the board's own in-panel pane.
+// 1. Is there a split? A one-pane window reports none through
+//    `useSidebarSplitLayout` (null below two panes), but the WINDOW still
+//    carries a one-pane layout: measured on 0.50.1, the host's opener splits
+//    it and the board keeps its pane. So the one-pane question is not "is
+//    there a split" but "will this host split", which only the ask answers —
+//    `lib/native-one-pane-dance.ts` carries that measurement, the ask, and
+//    the repair for the host that plainly navigates instead.
 // 2. Is one of those panes Focus Board's? The record below says so, and the
 //    live layout has to still agree, so a pane the operator opened from bb's
 //    own sidebar, or rethreaded themselves, is never adopted.

@@ -82,6 +82,10 @@ steps:
       - resize: { width: 1180, height: 820 }
       - sleep: 300
       - click: { card: thr_uat_queue }
+      # A desktop window asks the host's opener for a split first; with splits
+      # off the ask's deadline opens the board's own pane
+      # (lib/native-one-pane-dance.ts).
+      - sleep: 400
     assert:
       - native_panes: []
       - pane: { threadId: thr_uat_queue }

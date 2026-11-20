@@ -16,6 +16,7 @@ vi.mock("@get-bb/plugin-sdk/app", async () => await import("./helpers/app-fake-s
 import "../app";
 import {
   fakeNativeOpens,
+  fakeSplitPanes,
   registeredNavPanel,
   resetFakeNativeOpens,
   seedFakeLinks,
@@ -123,16 +124,20 @@ function mountBoard(): void {
 }
 
 describe("a card click under the pane rule", () => {
-  it("opens the board's own pane and never asks the host for a split", async () => {
+  it("opens the thread beside the board: the host's opener, then a split", async () => {
     mountBoard();
     await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
 
     fireEvent.click(cardAnchor("thr_focus"));
+    // The click asks the host's own opener for the split (the operator's
+    // ruling), the host places the thread in a right-hand pane, and the board
+    // keeps the pane it had: nothing replaces it and nothing mounts a second
+    // thread surface inside the board.
     await waitFor(() =>
-      expect(document.querySelector('aside[aria-label="Thread: Focused thread"]')).not.toBeNull(),
+      expect(fakeNativeOpens()).toEqual([{ threadId: "thr_focus", split: true }]),
     );
-    expect(fakeNativeOpens()).toEqual([]);
     expect(document.querySelector('[data-focus-board-panel]')).not.toBeNull();
+    expect(document.querySelector('aside[aria-label^="Thread:"]')).toBeNull();
   });
 
   it("still captures the attention freeze at click time: churn holds the clicked card's slot", async () => {
@@ -140,9 +145,10 @@ describe("a card click under the pane rule", () => {
     await waitFor(() => expect(columnCardIds("idle-today")).toEqual(["thr_focus", "thr_older", "thr_backlog"]));
 
     fireEvent.click(cardAnchor("thr_focus"));
-    await waitFor(() =>
-      expect(document.querySelector('aside[aria-label="Thread: Focused thread"]')).not.toBeNull(),
-    );
+    // The click's capture is taken at the click, before the host's answer, so
+    // the split landing reads the card's rendered placement exactly as the
+    // board's own pane did.
+    await waitFor(() => expect(fakeSplitPanes()).toHaveLength(2));
     act(() => {
       seedChurn();
     });

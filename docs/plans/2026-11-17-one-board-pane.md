@@ -1,7 +1,7 @@
 ---
 title: One board-opened thread pane — the card click's replacement rule
 status: shipped
-updated: 2026-11-17
+updated: 2026-11-20
 tags: [pane, split, bb-0.49, click, placement]
 ---
 
@@ -199,3 +199,41 @@ Two host facts were checked before anything was deleted:
 The operator proposed priming a split with something guaranteed to open one (a terminal, a browser pane) and then putting the thread into the pane it created. On paper there is no channel: `BbNavigate` has three destinations, `openFixedTab` addresses only the current surface, and `terminal.open`/`browser.*` exist only as keybinding names. The pane content union is the reason: `qN` in the renderer strictly parses `thread | new-thread | plugin-panel | plugin-detail`, so no terminal or browser can occupy a pane slot at all.
 
 Measured anyway, once, at one pane (`scripts/screenshot/probe-prime-split.mjs`, evidence `docs/screenshots/probe-card-click-focus/prime-split.json`): `POST /api/v1/terminals` answered 201 with a real terminal session and the layout stayed at ONE pane, before and after a reload; the plugin runtime carries no `openFixedTab` at all. Nothing splits a one-pane window except a thread, a new-thread screen, or a plugin panel, and every one of those openers sits behind the same `layout === null → navigate` gate. **There is no priming channel**, so the fallback to the board's own pane at one pane is the answer, not a workaround.
+
+That conclusion was overturned two days later by measuring the gate itself rather than the panes: a one-pane window on 0.50.1 already carries a one-pane layout, so the gate never fires and the opener splits. Section 10 records the measurement, which is why the one-pane click now asks the host.
+
+## 10. The one-pane click, measured on 0.50.1: the opener splits
+
+The operator's ruling `dec_a4lrjn0gqqmk` asked for the deliberate dance, "navigate, then bring the board back", and the commission that carried it asked the second half be proved before it was built. It was measured first, on the installed host (bb 0.50.1, `scripts/screenshot/probe-split-dance.mjs`, evidence in `docs/screenshots/probe-split-dance/`), in a window the probe opened itself, reading `bb.splitLayout`, the route, the board's marker and the rendered panes at every step.
+
+### What the probe found
+
+| Phase | Step | Panes | Board | Route |
+|---|---|---|---|---|
+| A | board alone (a fresh profile) | 1, `pane-1` = the board panel | mounted | the board's |
+| A | a plain thread navigation | 1, `pane-1` = the thread | gone | the thread's |
+| A | the board's panel route with `t/<thread>` | 1, `pane-1` = the board panel, thread in its own in-panel pane | mounted | `/plugins/focus-board/board/t/<thread>` |
+| B | the thread in the only pane | 1 | gone | the thread's |
+| B | the board's panel route again | 1, `pane-1` = the board panel | mounted | the board's |
+| B | the opener for that thread, `split: true` | **2**, `pane-1` board, `pane-2` thread | **mounted** | the thread's |
+| C | the opener for a different thread from a thread-only window | 2, two thread panes | gone | that thread's |
+
+Two facts decide the shape, both 0.50.1 facts rather than the 0.49.0 ones §4 quoted:
+
+1. **A one-pane window already carries a one-pane layout.** The persisted atom holds `{root: pane-1, content: the board's panel}` from the first render of a fresh profile, never null. So the host's opener reaches its placement branch, and `openThreadInSplit`'s `layout === null → plain navigation` gate never fires here.
+2. **`useSidebarSplitLayout()` still answers null**, because the plugin-facing view returns a layout only from two panes up. That is why a one-pane window reads as "no split" to a plugin even though the host has a layout to split.
+
+So the ruling's two steps collapse into its first one: the opener splits, the board keeps its pane, the thread arrives beside it, and nothing unmounts, so there is nothing to bring back.
+
+### What the dance is still for
+
+Two states measured no split, and both are real:
+
+- **Splits off** (bb's own setting) leaves the window with no layout at all, so the opener plainly navigates and the panel is replaced by the thread page. That is the state the operator's report described, and only code outside React can repair it, because the component is gone by the time the answer is visible. The continuation puts the board's panel route back with the thread's subPath, which is the board plus its own in-panel pane (phase A's last row), so the click never ends with the board back and the thread gone.
+- **A host that ignores the ask** leaves the panel mounted, one pane, route untouched; the deadline opens the board's own pane there, which is the contract a window bb will not split already had.
+
+`lib/native-one-pane-dance.ts` carries those rules: one dance at a time (a second click replaces the pending one), a 250ms deadline, module scope so the state outlives the panel, and an observation read from the host's own rendered truth (the count of `data-split-pane-id` pane containers, the board's panel root, the route's thread). A rendered split wins however early the deadline is asked, which is what keeps a slow frame from opening the board's own pane beside a split that landed.
+
+The click's other branches are unchanged: the eight-pane ceiling guard, the compact viewport's own pane, and the replacement rule for a pane the board owns (§2). The UAT suite that owns the click contract, `tests/manual/uat-native-open.yaml`, now drives a one-pane click and asserts what the operator ends with: the thread in a native pane, the board still rendering its cards, and a two-pane layout.
+
+> AGENT GENERATED CONTENT

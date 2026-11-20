@@ -3196,6 +3196,19 @@ async function check(step, page, gestureResults = [], gestureTimings = []) {
         `thread panes ${JSON.stringify(threads)} of ${panes.length} panes`,
       );
     }
+    if (rule.native_pane_count !== undefined) {
+      // The window's own pane count, board pane included: what the operator
+      // ends up with on screen, which a thread-pane list alone cannot say (a
+      // click that leaves the board plus one thread is two panes, and a click
+      // that kept only the thread is one).
+      const want = rule.native_pane_count;
+      const panes = await page.evaluate(() => globalThis.__uat.nativePanes());
+      expect(
+        `native pane count ${want}`,
+        panes.length === want,
+        `${panes.length} panes: ${JSON.stringify(panes)}`,
+      );
+    }
     if (rule.native_route_fell_back !== undefined) {
       // The host's unresolved-thread fallback: the state the operator reported
       // as "switches to home". No card click may land there.

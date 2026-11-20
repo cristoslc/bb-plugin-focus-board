@@ -29,6 +29,7 @@ vi.mock("@get-bb/plugin-sdk/app", async () => await import("./helpers/app-fake-s
 
 import "../app";
 import {
+  fakeSplitPanes,
   registeredNavPanel,
   resetFakePanelPushes,
   resetFakeThreadNavigations,
@@ -231,8 +232,11 @@ describe("opening an unread card recenters the board on it", () => {
     mountBoard();
     await waitFor(() => expect(laneOf("thr_unread")).toBe("unread"));
 
+    // Desktop asks the host for the split (the operator's ruling), so the
+    // board follows the focused native pane's thread here, not an in-panel
+    // one: same reveal claim, same settled lane.
     fireEvent.click(cardAnchor("thr_unread"));
-    await waitFor(() => expect(document.querySelector('aside[aria-label^="Thread:"]')).not.toBeNull());
+    await waitFor(() => expect(fakeSplitPanes()).toHaveLength(2));
 
     markRead();
     await waitFor(() => expect(laneOf("thr_unread")).toBe("idle-recent"));
@@ -246,7 +250,7 @@ describe("opening an unread card recenters the board on it", () => {
     await waitFor(() => expect(laneOf("thr_quiet")).toBe("idle-recent"));
 
     fireEvent.click(cardAnchor("thr_quiet"));
-    await waitFor(() => expect(document.querySelector('aside[aria-label^="Thread:"]')).not.toBeNull());
+    await waitFor(() => expect(fakeSplitPanes()).toHaveLength(2));
     // The operator pans away from the pane's card.
     board().scrollLeft = 0;
 

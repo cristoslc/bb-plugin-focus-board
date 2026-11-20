@@ -11,12 +11,13 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "bb's thread pages"
   },
   {
-    "text": "**Clicking a card opens the thread without costing you the board or a new pane.** A click shows the thread in the board's own pane, and when the board already has a split pane of its own to work with, the click replaces that pane's thread instead. One pane, replaced in place.",
+    "text": "**A card click in a single-pane window opens the thread, then brings the board back beside it.** The thread arrives in a pane of its own and the board keeps the pane it had, so the card you clicked stays on screen next to it.",
     "children": [
-      "No click ever leaves the board on a thread page or unmounts it. A double click neither closes the pane nor opens a second one.",
-      "bb only tells a plugin what its split layout holds once there are two panes or more, so a freshly opened board cannot name a pane of its own. It no longer asks for a split it cannot follow: that ask opened a brand new pane on every click.",
+      "bb reports no split layout below two panes, so the board used to keep every one-pane click to its own in-panel pane. It now asks bb's own opener, which splits the window on screen.",
+      "Where the window will not split, the same ask lands the thread in the board's own pane a moment later, so the click still leaves both surfaces in front of you.",
+      "No click ever ends with the board gone and the thread gone from it. A double click neither closes the pane nor opens a second one.",
       "A pane you opened yourself or pointed at another thread is left alone, and at bb's eight-pane ceiling the click uses the board's own pane rather than evicting the board.",
-      "A narrow window no longer costs you the board either. At 767 pixels wide or less bb answers a split request by navigating, which replaced the board with the thread's own page; the click opens the board's own pane there too."
+      "A narrow window keeps the board's own pane too. At 767 pixels wide or less bb answers a split request by navigating, which used to replace the board with the thread's own page; the click asks there and keeps the pane."
     ],
     "group": "bb's thread pages"
   },

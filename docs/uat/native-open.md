@@ -1,15 +1,15 @@
 # UAT report
 
-_Generated 2026-11-18T00:08:38.059Z by `npm run uat`._
+_Generated 2026-11-20T05:18:24.192Z by `npm run uat`._
 
 ## native-open
 
-Source: `tests/manual/uat-native-open.yaml` · theme dark
+Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_d2gw63jxk8-1/bb-plugin-focus-board/tests/manual/uat-native-open.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
-| Clicking a card opens the thread in the board's own pane, never a host split | pass | ✓ native panes []; ✓ pane shows thr_uat_queue; ✓ url ends with /board/t/thr_uat_queue |
-| A second card click replaces the thread in the board's pane, one pane only | pass | ✓ native panes []; ✓ pane shows thr_rpc_auth; ✓ url ends with /board/t/thr_rpc_auth; ✓ route stayed on a thread |
-| A third card click still leaves one thread pane showing the last thread | pass | ✓ native panes []; ✓ pane shows thr_review_pr |
-| The card menu's "Open thread" entry opens the same pane | pass | ✓ native panes []; ✓ pane shows thr_rpc_auth |
-| Clicking a nested child row opens that child in the board's pane | pass | ✓ native panes []; ✓ pane shows thr_gutter_family_c0 |
+| A card click in a one-pane window opens the thread beside the board | pass | ✓ native open thr_uat_queue with split; ✓ native panes ["thr_uat_queue"]; ✓ native pane count 2; ✓ pane closed; ✓ card thr_review_pr in the columns board's view; ✓ active card is thr_uat_queue |
+| A second card click replaces the thread in the pane, still two panes | pass | ✓ native panes ["thr_rpc_auth"]; ✓ native pane count 2; ✓ pane closed; ✓ route stayed on a thread |
+| With splits off the click still asks, then keeps the thread in the board's own pane | pass | ✓ native open thr_uat_queue with split; ✓ native panes []; ✓ native pane count 1; ✓ pane shows thr_uat_queue; ✓ url ends with /board/t/thr_uat_queue |
+| The card menu's "Open thread" entry takes the same path | pass | ✓ native panes []; ✓ pane shows thr_rpc_auth |
+| Clicking a nested child row opens that child beside the board | pass | ✓ native panes ["thr_gutter_family_c0"]; ✓ native pane count 2; ✓ pane closed |

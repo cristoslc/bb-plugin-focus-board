@@ -97,6 +97,11 @@ import {
   resolveBoardNativePane,
   type BoardNativePane,
 } from "./lib/native-pane-ownership";
+import {
+  onePaneDance,
+  onePaneDanceHost,
+  setOnePaneDanceDebug,
+} from "./lib/native-one-pane-dance";
 import type { SplitPaneLayoutView } from "./lib/split-pane-cap";
 import { createProjectFromPickedFolder } from "./lib/project-create-flow";
 import { paneContextInfo } from "./lib/pane-context";
@@ -403,14 +408,13 @@ interface NativeReplaceIntent {
 /** How long a replacement waits for the host to focus the board's pane. */
 const REPLACE_CONFIRM_MS = 400;
 
-/** How long a native open waits before checking the host did not just replace
- *  the board with the thread page. */
-/** The board's own root element: its presence is how the click knows whether
- *  the plugin panel survived the open. */
 /**
  * The card click's decision trace (2026-11-17: two reports in a row could not
  * be attributed from a screenshot). Off unless the developer setting
- * "trace the card click's pane placement" is on; one line per click.
+ * "trace the card click's pane placement" is on; one line per click. The
+ * one-pane dance writes its own outcome line under the same prefix
+ * (lib/native-one-pane-dance.ts), because it settles after this component may
+ * already be gone.
  */
 function traceNativeOpen(
   enabled: boolean,
@@ -3074,11 +3078,12 @@ function BoardPage({ subPath }: { subPath: string }) {
 
   // The card click's native placement, in three questions
   // (lib/native-pane-ownership.ts carries the host facts and the probe that
-  // measured them):
+  // measured them, lib/native-one-pane-dance.ts the one-pane measurement):
   //
-  // 1. Is there a split? No split (a one-pane window, a compact viewport) means
-  //    the board's own in-panel pane, because bb's opener plainly navigates
-  //    when it has no layout to place into and that replaces the board.
+  // 1. Is there a split? A compact viewport means the board's own in-panel
+  //    pane, because bb's opener plainly navigates there. One pane is not the
+  //    same thing: the window already carries a one-pane layout, so the host's
+  //    opener splits it, and the click asks (the ruling dec_a4lrjn0gqqmk).
   // 2. Is one of those panes Focus Board's? The persisted record says so and
   //    the live layout has to agree.
   // 3. Use it: focus it when the clicked thread is already in it, otherwise
@@ -3131,12 +3136,40 @@ function BoardPage({ subPath }: { subPath: string }) {
         return;
       }
       capturePaneAttention(threadId);
-      // 1. No split to use: no second pane, or a window bb will not split
-      //    (compact). Either way the board's own pane is the only surface that
-      //    keeps the board in place.
-      if (compactViewportRef.current || layout === null) {
-        trace("in-board: no split to use");
+      // 1. A window bb will not split: compact. The board's own pane is the
+      //    only surface that keeps the board in place.
+      if (compactViewportRef.current) {
+        trace("in-board: compact viewport");
         openThreadCard(threadId);
+        return;
+      }
+      // 1b. ONE pane. bb's plugin-facing layout is null here, but the window's
+      //     own layout is not: it holds the board's pane, so the host's opener
+      //     splits it and nothing unmounts (measured on the installed host,
+      //     docs/screenshots/probe-split-dance/). The click asks for the split
+      //     and arms a dance that outlives this component, in case the host has
+      //     no layout to split and plainly navigates instead
+      //     (lib/native-one-pane-dance.ts).
+      //
+      //     With the board's own pane already open, this click is a
+      //     replacement in it (the shipped rule for that pane): the operator is
+      //     reading two surfaces already, and a second one would duplicate the
+      //     thread they just left.
+      if (layout === null) {
+        if (openThreadIdRef.current !== null) {
+          trace("in-board: the board's pane is open");
+          openThreadCard(threadId);
+          return;
+        }
+        // A second click on the same card while the ask is still in flight:
+        // one dance, one ask. The host's answer will settle the first one.
+        if (onePaneDance.pending()?.threadId === threadId) {
+          trace("one-pane: the ask is already in flight");
+          return;
+        }
+        trace("one-pane: asking the opener for the split");
+        onePaneDance.begin({ threadId, subPath: paneSubPathFor(threadId) });
+        actions.open(threadId, { split: true });
         return;
       }
       // A second click while a replacement is still waiting for the host's
@@ -3207,6 +3240,46 @@ function BoardPage({ subPath }: { subPath: string }) {
     ],
   );
 
+  // The one-pane click's two continuations, handed to the dance module
+  // (lib/native-one-pane-dance.ts). Both live outside this component's state
+  // because the click destroys the panel when the host has no layout to split:
+  // the in-panel opener needs a mounted board, so it is released on unmount,
+  // while the route restore only needs the host's router, which outlives the
+  // panel — that is the half that puts the board's route back.
+  useEffect(() => {
+    onePaneDanceHost.openBoardPane = (threadId) => openThreadCard(threadId);
+    onePaneDanceHost.restoreBoardRoute = (subPath) => {
+      navigate.toPluginPanel(PANEL_PATH, { subPath });
+    };
+    return () => {
+      onePaneDanceHost.openBoardPane = null;
+    };
+  }, [navigate, openThreadCard]);
+  // The one-pane click's split landing: the host created a pane for the
+  // clicked thread while the board stayed mounted, so the record adopts it.
+  // Without this the next click would have no pane of the board's to replace
+  // and would open the board's own pane beside a pane the board already owns.
+  useEffect(() => {
+    const dance = onePaneDance.pending();
+    if (dance === null) return;
+    const pane =
+      splitLayout?.panes.find((candidate) => candidate.threadId === dance.threadId) ??
+      null;
+    if (pane === null) return;
+    if (!onePaneDance.noteThreadInPane(dance.threadId)) return;
+    setBoardNativePane({ paneId: pane.paneId, threadId: dance.threadId });
+    traceNativeOpen(nativeOpenDebugRef.current, {
+      threadId: dance.threadId,
+      branch: "one-pane: the host split",
+      paneId: pane.paneId,
+    });
+  }, [splitLayout, setBoardNativePane]);
+  // The dance's own trace switch, so a live window shows the outcome line the
+  // click could not: the developer setting is the same one the click uses.
+  const nativeOpenDebugOn = settingValues?.nativeOpenDebug === true;
+  useEffect(() => {
+    setOnePaneDanceDebug(nativeOpenDebugOn);
+  }, [nativeOpenDebugOn]);
   // Reference chips in the pane (issue #161): labels resolve from the board's
   // current rows — live sidebar threads first, then the archived list — and
   // routing splits on what the board knows: a listed thread opens in the
