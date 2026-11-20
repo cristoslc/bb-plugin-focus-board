@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-11-17T20:51:35.583Z by `npm run uat`._
+_Generated 2026-11-20T14:04:16.060Z by `npm run uat`._
 
 ## pane-history
 
