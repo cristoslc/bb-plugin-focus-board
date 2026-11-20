@@ -304,6 +304,35 @@ describe("version stamps", () => {
     expect(() => plan.setAppVersion({ text: whatsNew, from: "9.9.9", to: "1.3.0" })).toThrow(/stamp:app-version/);
   });
 
+  it("does not read a dependency whose version equals the release number as a stamp", () => {
+    // The 1.8.0 re-arm's live failure: @floating-ui/core and @floating-ui/dom
+    // sat at exactly 1.8.0, so the bare version needle counted four hits.
+    const locked = [
+      "{",
+      '  "name": "x",',
+      '  "version": "1.8.0",',
+      '  "packages": {',
+      '    "": {',
+      '      "name": "x",',
+      '      "version": "1.8.0"',
+      "    },",
+      '    "node_modules/y": {',
+      '      "version": "1.8.0"',
+      "    },",
+      '    "node_modules/z": {',
+      '      "name": "xyz-fork",',
+      '      "version": "1.8.0"',
+      "    }",
+      "  }",
+      "}",
+      "",
+    ].join("\n");
+    const next = plan.setLockVersion({ text: locked, from: "1.8.0", to: "1.8.1-dev" });
+    expect(next.split('"version": "1.8.1-dev"').length - 1).toBe(2);
+    // Both dependency entries stay exactly as npm pinned them.
+    expect(next.split('"version": "1.8.0"').length - 1).toBe(2);
+  });
+
   it("adds the new version to the entries-since expectation once", () => {
     const test = [
       'describe("entriesSince", () => {',

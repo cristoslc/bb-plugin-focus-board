@@ -411,9 +411,41 @@ export function setPackageVersion({ text, from, to }) {
   return rewriteStamp({ text, from, to, expected: 1, file: "package.json" });
 }
 
-/** `package-lock.json`: the root stamp and the `packages[""]` stamp. */
+/**
+ * `package-lock.json`: the root stamp and the `packages[""]` stamp. Both sit
+ * beside the package's own name, so the needle anchors on that name line: a
+ * dependency whose published version happens to equal the release number
+ * (1.8.0 met @floating-ui/core and @floating-ui/dom, the 1.8.0 re-arm's live
+ * refusal) shares the bare version needle and must not read as a stamp. A
+ * lockfile that moved shape stops the release, not be guessed at.
+ */
 export function setLockVersion({ text, from, to }) {
-  return rewriteStamp({ text, from, to, expected: 2, file: "package-lock.json" });
+  const lines = text.split("\n");
+  const needle = `"version": ${JSON.stringify(from)}`;
+  const nameLine = (lines[1] ?? "").trim();
+  if (!nameLine.startsWith('"name": ')) {
+    // A template cannot mix `||` and `??` in one interpolation: unwrap first.
+    const shown = nameLine || (lines[1] ?? "");
+    throw new PlanError(
+      "stamp:lock-shape",
+      `package-lock.json opens with \`${shown}\`, no top-level name to anchor the stamps on`,
+    );
+  }
+  const indexes = [];
+  for (let index = 1; index < lines.length; index += 1) {
+    if (!lines[index].includes(needle) || lines[index - 1].trim() !== nameLine) continue;
+    indexes.push(index);
+  }
+  if (indexes.length !== 2) {
+    throw new PlanError(
+      "stamp:unexpected-count",
+      `package-lock.json carries ${indexes.length} name-anchored \`${needle}\` stamp(s), expected 2`,
+    );
+  }
+  for (const index of indexes) {
+    lines[index] = lines[index].replace(JSON.stringify(from), JSON.stringify(to));
+  }
+  return lines.join("\n");
 }
 
 /** `lib/whats-new.ts`: `APP_VERSION`, which the modal's pulse reads. */
