@@ -1,0 +1,684 @@
+{
+  "app": "http://127.0.0.1:38886/plugins/focus-board/board",
+  "viewport": {
+    "width": 1600,
+    "height": 1200
+  },
+  "steps": [
+    {
+      "name": "01-board-alone",
+      "route": "/plugins/focus-board/board",
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}",
+      "focusedPaneId": "pane-1",
+      "leaves": [
+        {
+          "paneId": "pane-1",
+          "share": 1,
+          "path": [],
+          "content": "plugin-panel",
+          "width": 1280
+        }
+      ],
+      "renderedWidths": {
+        "pane-1": 1280
+      },
+      "boardMounted": true,
+      "cardCount": 91,
+      "compactViewport": false
+    },
+    {
+      "name": "02-before-click",
+      "route": "/plugins/focus-board/board",
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}",
+      "focusedPaneId": "pane-1",
+      "leaves": [
+        {
+          "paneId": "pane-1",
+          "share": 1,
+          "path": [],
+          "content": "plugin-panel",
+          "width": 1280
+        }
+      ],
+      "renderedWidths": {
+        "pane-1": 1280
+      },
+      "boardMounted": true,
+      "cardCount": 91,
+      "compactViewport": false
+    },
+    {
+      "name": "03-after-card-click",
+      "route": "/projects/proj_9da9h742i7/threads/thr_c6858b64qk",
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_9da9h742i7\",\"threadId\":\"thr_c6858b64qk\"}}]},\"focusedPaneId\":\"pane-2\"}}",
+      "focusedPaneId": "pane-2",
+      "leaves": [
+        {
+          "paneId": "pane-1",
+          "share": 0.5,
+          "path": [
+            0
+          ],
+          "content": "plugin-panel",
+          "width": 640
+        },
+        {
+          "paneId": "pane-2",
+          "share": 0.5,
+          "path": [
+            1
+          ],
+          "content": "thread",
+          "width": 640
+        }
+      ],
+      "renderedWidths": {
+        "pane-1": 640,
+        "pane-2": 640
+      },
+      "boardMounted": true,
+      "cardCount": 91,
+      "compactViewport": false
+    },
+    {
+      "name": "04-after-drag-2-to-1",
+      "route": "/projects/proj_9da9h742i7/threads/thr_c6858b64qk",
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.6665363565285379,0.33346364347146207],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_9da9h742i7\",\"threadId\":\"thr_c6858b64qk\"}}]},\"focusedPaneId\":\"pane-2\"}}",
+      "focusedPaneId": "pane-2",
+      "leaves": [
+        {
+          "paneId": "pane-1",
+          "share": 0.6665363565285379,
+          "path": [
+            0
+          ],
+          "content": "plugin-panel",
+          "width": 852
+        },
+        {
+          "paneId": "pane-2",
+          "share": 0.33346364347146207,
+          "path": [
+            1
+          ],
+          "content": "thread",
+          "width": 427
+        }
+      ],
+      "renderedWidths": {
+        "pane-1": 852,
+        "pane-2": 427
+      },
+      "boardMounted": true,
+      "cardCount": 91,
+      "compactViewport": false,
+      "dragged": [
+        {
+          "paneId": "pane-1",
+          "share": 0.6665363565285379,
+          "path": [
+            0
+          ],
+          "content": "plugin-panel",
+          "width": 852
+        },
+        {
+          "paneId": "pane-2",
+          "share": 0.33346364347146207,
+          "path": [
+            1
+          ],
+          "content": "thread",
+          "width": 427
+        }
+      ]
+    },
+    {
+      "name": "05-after-reload",
+      "route": "/projects/proj_9da9h742i7/threads/thr_c6858b64qk",
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.6665363565285379,0.33346364347146207],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_9da9h742i7\",\"threadId\":\"thr_c6858b64qk\"}}]},\"focusedPaneId\":\"pane-2\"}}",
+      "focusedPaneId": "pane-2",
+      "leaves": [
+        {
+          "paneId": "pane-1",
+          "share": 0.6665363565285379,
+          "path": [
+            0
+          ],
+          "content": "plugin-panel",
+          "width": 852
+        },
+        {
+          "paneId": "pane-2",
+          "share": 0.33346364347146207,
+          "path": [
+            1
+          ],
+          "content": "thread",
+          "width": 427
+        }
+      ],
+      "renderedWidths": {
+        "pane-1": 852,
+        "pane-2": 427
+      },
+      "boardMounted": true,
+      "cardCount": 91,
+      "compactViewport": false
+    },
+    {
+      "name": "06-after-close-thread-pane",
+      "route": "/plugins/focus-board/board",
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}",
+      "focusedPaneId": "pane-1",
+      "leaves": [
+        {
+          "paneId": "pane-1",
+          "share": 1,
+          "path": [],
+          "content": "plugin-panel",
+          "width": 1280
+        }
+      ],
+      "renderedWidths": {
+        "pane-1": 1280
+      },
+      "boardMounted": true,
+      "cardCount": 91,
+      "compactViewport": false,
+      "close": {
+        "closed": true,
+        "label": "Close pane",
+        "candidates": [
+          {
+            "label": "Thread actions",
+            "x": 1408,
+            "y": 24,
+            "visible": true
+          },
+          {
+            "label": "Focus Board thread actions",
+            "x": 1444,
+            "y": 24,
+            "visible": true
+          },
+          {
+            "label": "Maximize pane (⇧ ⌘ E)",
+            "x": 1480,
+            "y": 24,
+            "visible": true
+          },
+          {
+            "label": "Close pane",
+            "x": 1510,
+            "y": 24,
+            "visible": true
+          },
+          {
+            "label": "Thread context",
+            "x": 1540,
+            "y": 24,
+            "visible": true
+          },
+          {
+            "label": "Show more",
+            "x": 1535,
+            "y": 404,
+            "visible": true
+          },
+          {
+            "label": "Copy message",
+            "x": 1453,
+            "y": 433,
+            "visible": true
+          },
+          {
+            "label": "Hand off from here",
+            "x": 1481,
+            "y": 433,
+            "visible": true
+          },
+          {
+            "label": "Show as an Iris card",
+            "x": 1509,
+            "y": 433,
+            "visible": true
+          },
+          {
+            "label": "Reply in side chat",
+            "x": 1537,
+            "y": 433,
+            "visible": true
+          },
+          {
+            "label": "Message actions",
+            "x": 1561,
+            "y": 433,
+            "visible": true
+          },
+          {
+            "label": "Worked for 20s",
+            "x": 1387,
+            "y": 461,
+            "visible": true
+          },
+          {
+            "label": "Wrap lines",
+            "x": 1537,
+            "y": 525,
+            "visible": true
+          },
+          {
+            "label": "Copy code",
+            "x": 1559,
+            "y": 525,
+            "visible": true
+          },
+          {
+            "label": "Copy message",
+            "x": 1203,
+            "y": 789,
+            "visible": true
+          },
+          {
+            "label": "Hand off from here",
+            "x": 1231,
+            "y": 789,
+            "visible": true
+          },
+          {
+            "label": "Show as an Iris card",
+            "x": 1259,
+            "y": 789,
+            "visible": true
+          },
+          {
+            "label": "Reply in side chat",
+            "x": 1287,
+            "y": 789,
+            "visible": true
+          },
+          {
+            "label": "Message actions",
+            "x": 1311,
+            "y": 789,
+            "visible": true
+          },
+          {
+            "label": "Scroll to latest event",
+            "x": 1387,
+            "y": 992,
+            "visible": true
+          },
+          {
+            "label": "Parent BV Brain2 Orchestrator (L0)",
+            "x": 1209,
+            "y": 1041,
+            "visible": true
+          },
+          {
+            "label": "Changed files: Uncommitted, 1746 files",
+            "x": 1403,
+            "y": 1041,
+            "visible": true
+          },
+          {
+            "label": "Collapse prompt box",
+            "x": 1558,
+            "y": 1093,
+            "visible": true
+          },
+          {
+            "label": "Prompt actions",
+            "x": 1214,
+            "y": 1159,
+            "visible": true
+          },
+          {
+            "label": "Provider, model and reasoning (⇧ ⌘ M)",
+            "x": 1292,
+            "y": 1159,
+            "visible": true
+          },
+          {
+            "label": "Start voice input",
+            "x": 1514,
+            "y": 1159,
+            "visible": true
+          },
+          {
+            "label": "Submit (Enter)",
+            "x": 1554,
+            "y": 1159,
+            "visible": true
+          },
+          {
+            "label": "Send options",
+            "x": 1570,
+            "y": 1159,
+            "visible": false
+          },
+          {
+            "label": "non-bv/trunk",
+            "x": 1372,
+            "y": 1184,
+            "visible": true
+          },
+          {
+            "label": "New thread in this environment",
+            "x": 1394,
+            "y": 1184,
+            "visible": true
+          },
+          {
+            "label": "Agent options",
+            "x": 1451,
+            "y": 1184,
+            "visible": true
+          },
+          {
+            "label": "Permission mode",
+            "x": 1514,
+            "y": 1184,
+            "visible": true
+          },
+          {
+            "label": "Context window 23% used",
+            "x": 1558,
+            "y": 1184,
+            "visible": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "07-next-click-after-close",
+      "route": "/projects/proj_9da9h742i7/threads/thr_c6858b64qk",
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_9da9h742i7\",\"threadId\":\"thr_c6858b64qk\"}}]},\"focusedPaneId\":\"pane-2\"}}",
+      "focusedPaneId": "pane-2",
+      "leaves": [
+        {
+          "paneId": "pane-1",
+          "share": 0.5,
+          "path": [
+            0
+          ],
+          "content": "plugin-panel",
+          "width": 640
+        },
+        {
+          "paneId": "pane-2",
+          "share": 0.5,
+          "path": [
+            1
+          ],
+          "content": "thread",
+          "width": 640
+        }
+      ],
+      "renderedWidths": {
+        "pane-1": 640,
+        "pane-2": 640
+      },
+      "boardMounted": true,
+      "cardCount": 91,
+      "compactViewport": false
+    }
+  ],
+  "errors": [],
+  "summary": {
+    "insertShares": [
+      {
+        "paneId": "pane-1",
+        "share": 0.5,
+        "width": 640
+      },
+      {
+        "paneId": "pane-2",
+        "share": 0.5,
+        "width": 640
+      }
+    ],
+    "draggedShares": [
+      {
+        "paneId": "pane-1",
+        "share": 0.6665,
+        "width": 852
+      },
+      {
+        "paneId": "pane-2",
+        "share": 0.3335,
+        "width": 427
+      }
+    ],
+    "reloadShares": [
+      {
+        "paneId": "pane-1",
+        "share": 0.6665,
+        "width": 852
+      },
+      {
+        "paneId": "pane-2",
+        "share": 0.3335,
+        "width": 427
+      }
+    ],
+    "closeOutcome": {
+      "closed": true,
+      "label": "Close pane",
+      "candidates": [
+        {
+          "label": "Thread actions",
+          "x": 1408,
+          "y": 24,
+          "visible": true
+        },
+        {
+          "label": "Focus Board thread actions",
+          "x": 1444,
+          "y": 24,
+          "visible": true
+        },
+        {
+          "label": "Maximize pane (⇧ ⌘ E)",
+          "x": 1480,
+          "y": 24,
+          "visible": true
+        },
+        {
+          "label": "Close pane",
+          "x": 1510,
+          "y": 24,
+          "visible": true
+        },
+        {
+          "label": "Thread context",
+          "x": 1540,
+          "y": 24,
+          "visible": true
+        },
+        {
+          "label": "Show more",
+          "x": 1535,
+          "y": 404,
+          "visible": true
+        },
+        {
+          "label": "Copy message",
+          "x": 1453,
+          "y": 433,
+          "visible": true
+        },
+        {
+          "label": "Hand off from here",
+          "x": 1481,
+          "y": 433,
+          "visible": true
+        },
+        {
+          "label": "Show as an Iris card",
+          "x": 1509,
+          "y": 433,
+          "visible": true
+        },
+        {
+          "label": "Reply in side chat",
+          "x": 1537,
+          "y": 433,
+          "visible": true
+        },
+        {
+          "label": "Message actions",
+          "x": 1561,
+          "y": 433,
+          "visible": true
+        },
+        {
+          "label": "Worked for 20s",
+          "x": 1387,
+          "y": 461,
+          "visible": true
+        },
+        {
+          "label": "Wrap lines",
+          "x": 1537,
+          "y": 525,
+          "visible": true
+        },
+        {
+          "label": "Copy code",
+          "x": 1559,
+          "y": 525,
+          "visible": true
+        },
+        {
+          "label": "Copy message",
+          "x": 1203,
+          "y": 789,
+          "visible": true
+        },
+        {
+          "label": "Hand off from here",
+          "x": 1231,
+          "y": 789,
+          "visible": true
+        },
+        {
+          "label": "Show as an Iris card",
+          "x": 1259,
+          "y": 789,
+          "visible": true
+        },
+        {
+          "label": "Reply in side chat",
+          "x": 1287,
+          "y": 789,
+          "visible": true
+        },
+        {
+          "label": "Message actions",
+          "x": 1311,
+          "y": 789,
+          "visible": true
+        },
+        {
+          "label": "Scroll to latest event",
+          "x": 1387,
+          "y": 992,
+          "visible": true
+        },
+        {
+          "label": "Parent BV Brain2 Orchestrator (L0)",
+          "x": 1209,
+          "y": 1041,
+          "visible": true
+        },
+        {
+          "label": "Changed files: Uncommitted, 1746 files",
+          "x": 1403,
+          "y": 1041,
+          "visible": true
+        },
+        {
+          "label": "Collapse prompt box",
+          "x": 1558,
+          "y": 1093,
+          "visible": true
+        },
+        {
+          "label": "Prompt actions",
+          "x": 1214,
+          "y": 1159,
+          "visible": true
+        },
+        {
+          "label": "Provider, model and reasoning (⇧ ⌘ M)",
+          "x": 1292,
+          "y": 1159,
+          "visible": true
+        },
+        {
+          "label": "Start voice input",
+          "x": 1514,
+          "y": 1159,
+          "visible": true
+        },
+        {
+          "label": "Submit (Enter)",
+          "x": 1554,
+          "y": 1159,
+          "visible": true
+        },
+        {
+          "label": "Send options",
+          "x": 1570,
+          "y": 1159,
+          "visible": false
+        },
+        {
+          "label": "non-bv/trunk",
+          "x": 1372,
+          "y": 1184,
+          "visible": true
+        },
+        {
+          "label": "New thread in this environment",
+          "x": 1394,
+          "y": 1184,
+          "visible": true
+        },
+        {
+          "label": "Agent options",
+          "x": 1451,
+          "y": 1184,
+          "visible": true
+        },
+        {
+          "label": "Permission mode",
+          "x": 1514,
+          "y": 1184,
+          "visible": true
+        },
+        {
+          "label": "Context window 23% used",
+          "x": 1558,
+          "y": 1184,
+          "visible": true
+        }
+      ]
+    },
+    "afterCloseRaw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}",
+    "nextInsertShares": [
+      {
+        "paneId": "pane-1",
+        "share": 0.5,
+        "width": 640
+      },
+      {
+        "paneId": "pane-2",
+        "share": 0.5,
+        "width": 640
+      }
+    ]
+  }
+}

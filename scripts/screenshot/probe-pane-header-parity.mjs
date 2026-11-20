@@ -416,13 +416,15 @@ const wireSwap = async (pageLike) => {
 };
 
 // ---------- Desktop pass: split, open the FB pane, measure both ----------
-// bb normalizes a reloaded split's sizes back to 0.5/0.5 (verified: seeds
-// revert at boot and even the app's own drag-persisted sizes are
-// re-normalized at the next load), where the ≈624px board pane content
-// flips the FB pane into its narrow-panel sheet. So every pass re-drags
-// the split to its everyday shape AFTER each load: board pane 768, FB pane
-// side-by-side, native pane ≈512. The narrow readings then come from live
-// drags measured in the same page load.
+// Every pass re-drags the split to its everyday shape AFTER each load:
+// board pane 768, FB pane side-by-side, native pane ≈512. The drag is not a
+// trust exercise about the stored ratio. It is what makes each pass start
+// from the same geometry whether or not the host kept the last one (on bb
+// 0.50.1 a dragged ratio does survive a reload — measured 2026-11-20,
+// docs/screenshots/probe-split-ratio/evidence.json). A fresh split, by
+// contrast, is always halves, and a ≈624px board pane flips the FB pane into
+// its narrow-panel sheet. The narrow readings come from live drags measured
+// in the same page load.
 const page = await browser.newPage();
 await wireSwap(page);
 await page.goto(BOARD, { waitUntil: "networkidle2", timeout: 30000 });
