@@ -1,0 +1,1352 @@
+{
+  "phone": {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "board": {
+      "box": {
+        "x": 0,
+        "y": 57,
+        "width": 390,
+        "height": 787,
+        "right": 390
+      },
+      "padding": "8px 12px 12px"
+    },
+    "lanes": [
+      {
+        "lane": "pinned",
+        "cards": 2,
+        "row": {
+          "x": 12,
+          "y": 65,
+          "width": 366,
+          "height": 288,
+          "right": 378
+        },
+        "header": {
+          "x": 12,
+          "y": 65,
+          "width": 160,
+          "height": 288,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 71,
+          "width": 59,
+          "height": 17,
+          "right": 75
+        },
+        "labelText": "Pinned",
+        "cardList": {
+          "x": 172,
+          "y": 65,
+          "width": 206,
+          "height": 288,
+          "right": 378
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.563,
+        "headerShareOfRow": 0.437,
+        "firstCard": {
+          "x": 178,
+          "y": 71,
+          "width": 240,
+          "height": 77,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 212,
+        "trigger": {
+          "x": 16,
+          "y": 71,
+          "width": 59,
+          "height": 17,
+          "right": 75
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 59,
+          "y": 74,
+          "width": 12,
+          "height": 12,
+          "right": 71
+        },
+        "count": {
+          "text": "2",
+          "box": {
+            "x": 16,
+            "y": 92,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "attention",
+        "cards": 2,
+        "row": {
+          "x": 12,
+          "y": 369,
+          "width": 366,
+          "height": 288,
+          "right": 378
+        },
+        "header": {
+          "x": 12,
+          "y": 369,
+          "width": 160,
+          "height": 288,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 375,
+          "width": 79,
+          "height": 17,
+          "right": 95
+        },
+        "labelText": "Needs you",
+        "cardList": {
+          "x": 172,
+          "y": 369,
+          "width": 206,
+          "height": 288,
+          "right": 378
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.563,
+        "headerShareOfRow": 0.437,
+        "firstCard": {
+          "x": 178,
+          "y": 375,
+          "width": 240,
+          "height": 77,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 212,
+        "trigger": {
+          "x": 16,
+          "y": 375,
+          "width": 79,
+          "height": 17,
+          "right": 95
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 79,
+          "y": 378,
+          "width": 12,
+          "height": 12,
+          "right": 91
+        },
+        "count": {
+          "text": "2",
+          "box": {
+            "x": 16,
+            "y": 396,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "unread",
+        "cards": 3,
+        "row": {
+          "x": 12,
+          "y": 673,
+          "width": 366,
+          "height": 288,
+          "right": 378
+        },
+        "header": {
+          "x": 12,
+          "y": 673,
+          "width": 160,
+          "height": 288,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 679,
+          "width": 61,
+          "height": 17,
+          "right": 77
+        },
+        "labelText": "Unread",
+        "cardList": {
+          "x": 172,
+          "y": 673,
+          "width": 206,
+          "height": 288,
+          "right": 378
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.563,
+        "headerShareOfRow": 0.437,
+        "firstCard": {
+          "x": 178,
+          "y": 679,
+          "width": 240,
+          "height": 77,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 212,
+        "trigger": {
+          "x": 16,
+          "y": 679,
+          "width": 61,
+          "height": 17,
+          "right": 77
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 61,
+          "y": 682,
+          "width": 12,
+          "height": 12,
+          "right": 73
+        },
+        "count": {
+          "text": "3",
+          "box": {
+            "x": 16,
+            "y": 700,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "working",
+        "cards": 8,
+        "row": {
+          "x": 12,
+          "y": 977,
+          "width": 366,
+          "height": 481,
+          "right": 378
+        },
+        "header": {
+          "x": 12,
+          "y": 977,
+          "width": 160,
+          "height": 481,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 983,
+          "width": 66,
+          "height": 17,
+          "right": 82
+        },
+        "labelText": "Working",
+        "cardList": {
+          "x": 172,
+          "y": 977,
+          "width": 206,
+          "height": 481,
+          "right": 378
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.563,
+        "headerShareOfRow": 0.437,
+        "firstCard": {
+          "x": 189,
+          "y": 1000,
+          "width": 240,
+          "height": 77,
+          "right": 429
+        },
+        "firstCardInsetFromRowLeft": 177,
+        "firstCardInsetFromViewportLeft": 189,
+        "firstCardVisibleWidth": 201,
+        "trigger": {
+          "x": 16,
+          "y": 983,
+          "width": 66,
+          "height": 17,
+          "right": 82
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 66,
+          "y": 986,
+          "width": 12,
+          "height": 12,
+          "right": 78
+        },
+        "count": {
+          "text": "3",
+          "box": {
+            "x": 16,
+            "y": 1004,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "idle-recent",
+        "cards": 3,
+        "row": {
+          "x": 12,
+          "y": 1474,
+          "width": 366,
+          "height": 288,
+          "right": 378
+        },
+        "header": {
+          "x": 12,
+          "y": 1474,
+          "width": 160,
+          "height": 288,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 1480,
+          "width": 89,
+          "height": 17,
+          "right": 105
+        },
+        "labelText": "Idle · Recent",
+        "cardList": {
+          "x": 172,
+          "y": 1474,
+          "width": 206,
+          "height": 288,
+          "right": 378
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.563,
+        "headerShareOfRow": 0.437,
+        "firstCard": {
+          "x": 178,
+          "y": 1480,
+          "width": 240,
+          "height": 77,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 212,
+        "trigger": {
+          "x": 16,
+          "y": 1480,
+          "width": 89,
+          "height": 17,
+          "right": 105
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 89,
+          "y": 1482,
+          "width": 12,
+          "height": 12,
+          "right": 101
+        },
+        "count": {
+          "text": "3",
+          "box": {
+            "x": 16,
+            "y": 1501,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "idle-today",
+        "cards": 2,
+        "row": {
+          "x": 12,
+          "y": 1778,
+          "width": 366,
+          "height": 288,
+          "right": 378
+        },
+        "header": {
+          "x": 12,
+          "y": 1778,
+          "width": 160,
+          "height": 288,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 1784,
+          "width": 83,
+          "height": 17,
+          "right": 99
+        },
+        "labelText": "Idle · Today",
+        "cardList": {
+          "x": 172,
+          "y": 1778,
+          "width": 206,
+          "height": 288,
+          "right": 378
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.563,
+        "headerShareOfRow": 0.437,
+        "firstCard": {
+          "x": 178,
+          "y": 1784,
+          "width": 240,
+          "height": 77,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 212,
+        "trigger": {
+          "x": 16,
+          "y": 1784,
+          "width": 83,
+          "height": 17,
+          "right": 99
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 83,
+          "y": 1786,
+          "width": 12,
+          "height": 12,
+          "right": 95
+        },
+        "count": {
+          "text": "2",
+          "box": {
+            "x": 16,
+            "y": 1805,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "idle-earlier",
+        "cards": 2,
+        "row": {
+          "x": 12,
+          "y": 2082,
+          "width": 366,
+          "height": 288,
+          "right": 378
+        },
+        "header": {
+          "x": 12,
+          "y": 2082,
+          "width": 160,
+          "height": 288,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 2088,
+          "width": 86,
+          "height": 17,
+          "right": 102
+        },
+        "labelText": "Idle · Earlier",
+        "cardList": {
+          "x": 172,
+          "y": 2082,
+          "width": 206,
+          "height": 288,
+          "right": 378
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.563,
+        "headerShareOfRow": 0.437,
+        "firstCard": {
+          "x": 178,
+          "y": 2088,
+          "width": 240,
+          "height": 77,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 212,
+        "trigger": {
+          "x": 16,
+          "y": 2088,
+          "width": 86,
+          "height": 17,
+          "right": 102
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 86,
+          "y": 2090,
+          "width": 12,
+          "height": 12,
+          "right": 98
+        },
+        "count": {
+          "text": "2",
+          "box": {
+            "x": 16,
+            "y": 2109,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "idle-awhile",
+        "cards": 14,
+        "row": {
+          "x": 12,
+          "y": 2386,
+          "width": 366,
+          "height": 479,
+          "right": 378
+        },
+        "header": {
+          "x": 12,
+          "y": 2386,
+          "width": 160,
+          "height": 479,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 2392,
+          "width": 113,
+          "height": 17,
+          "right": 129
+        },
+        "labelText": "Idle · A while ago",
+        "cardList": {
+          "x": 172,
+          "y": 2386,
+          "width": 206,
+          "height": 479,
+          "right": 378
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.563,
+        "headerShareOfRow": 0.437,
+        "firstCard": {
+          "x": 178,
+          "y": 2392,
+          "width": 240,
+          "height": 61,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 212,
+        "trigger": {
+          "x": 16,
+          "y": 2392,
+          "width": 113,
+          "height": 17,
+          "right": 129
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 113,
+          "y": 2394,
+          "width": 12,
+          "height": 12,
+          "right": 125
+        },
+        "count": {
+          "text": "5",
+          "box": {
+            "x": 16,
+            "y": 2413,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "done",
+        "cards": 4,
+        "row": {
+          "x": 12,
+          "y": 2881,
+          "width": 366,
+          "height": 288,
+          "right": 378
+        },
+        "header": {
+          "x": 12,
+          "y": 2881,
+          "width": 160,
+          "height": 288,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 2887,
+          "width": 50,
+          "height": 17,
+          "right": 66
+        },
+        "labelText": "Done",
+        "cardList": {
+          "x": 172,
+          "y": 2881,
+          "width": 206,
+          "height": 288,
+          "right": 378
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.563,
+        "headerShareOfRow": 0.437,
+        "firstCard": {
+          "x": 178,
+          "y": 2887,
+          "width": 240,
+          "height": 77,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 212,
+        "trigger": {
+          "x": 16,
+          "y": 2887,
+          "width": 50,
+          "height": 17,
+          "right": 66
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 50,
+          "y": 2889,
+          "width": 12,
+          "height": 12,
+          "right": 62
+        },
+        "count": {
+          "text": "3",
+          "box": {
+            "x": 16,
+            "y": 2908,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      }
+    ]
+  },
+  "desktop": {
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "board": {
+      "box": {
+        "x": 0,
+        "y": 49,
+        "width": 1280,
+        "height": 851,
+        "right": 1280
+      },
+      "padding": "8px 12px 12px"
+    },
+    "lanes": [
+      {
+        "lane": "pinned",
+        "cards": 2,
+        "row": {
+          "x": 12,
+          "y": 57,
+          "width": 1256,
+          "height": 288,
+          "right": 1268
+        },
+        "header": {
+          "x": 12,
+          "y": 57,
+          "width": 160,
+          "height": 288,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 63,
+          "width": 59,
+          "height": 17,
+          "right": 75
+        },
+        "labelText": "Pinned",
+        "cardList": {
+          "x": 172,
+          "y": 57,
+          "width": 1096,
+          "height": 288,
+          "right": 1268
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.873,
+        "headerShareOfRow": 0.127,
+        "firstCard": {
+          "x": 178,
+          "y": 63,
+          "width": 240,
+          "height": 77,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 240,
+        "trigger": {
+          "x": 16,
+          "y": 63,
+          "width": 59,
+          "height": 17,
+          "right": 75
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 59,
+          "y": 66,
+          "width": 12,
+          "height": 12,
+          "right": 71
+        },
+        "count": {
+          "text": "2",
+          "box": {
+            "x": 16,
+            "y": 84,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "attention",
+        "cards": 2,
+        "row": {
+          "x": 12,
+          "y": 361,
+          "width": 1256,
+          "height": 288,
+          "right": 1268
+        },
+        "header": {
+          "x": 12,
+          "y": 361,
+          "width": 160,
+          "height": 288,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 367,
+          "width": 79,
+          "height": 17,
+          "right": 95
+        },
+        "labelText": "Needs you",
+        "cardList": {
+          "x": 172,
+          "y": 361,
+          "width": 1096,
+          "height": 288,
+          "right": 1268
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.873,
+        "headerShareOfRow": 0.127,
+        "firstCard": {
+          "x": 178,
+          "y": 367,
+          "width": 240,
+          "height": 77,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 240,
+        "trigger": {
+          "x": 16,
+          "y": 367,
+          "width": 79,
+          "height": 17,
+          "right": 95
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 79,
+          "y": 370,
+          "width": 12,
+          "height": 12,
+          "right": 91
+        },
+        "count": {
+          "text": "2",
+          "box": {
+            "x": 16,
+            "y": 388,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "unread",
+        "cards": 3,
+        "row": {
+          "x": 12,
+          "y": 665,
+          "width": 1256,
+          "height": 288,
+          "right": 1268
+        },
+        "header": {
+          "x": 12,
+          "y": 665,
+          "width": 160,
+          "height": 288,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 671,
+          "width": 61,
+          "height": 17,
+          "right": 77
+        },
+        "labelText": "Unread",
+        "cardList": {
+          "x": 172,
+          "y": 665,
+          "width": 1096,
+          "height": 288,
+          "right": 1268
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.873,
+        "headerShareOfRow": 0.127,
+        "firstCard": {
+          "x": 178,
+          "y": 671,
+          "width": 240,
+          "height": 77,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 240,
+        "trigger": {
+          "x": 16,
+          "y": 671,
+          "width": 61,
+          "height": 17,
+          "right": 77
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 61,
+          "y": 674,
+          "width": 12,
+          "height": 12,
+          "right": 73
+        },
+        "count": {
+          "text": "3",
+          "box": {
+            "x": 16,
+            "y": 692,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "working",
+        "cards": 8,
+        "row": {
+          "x": 12,
+          "y": 969,
+          "width": 1256,
+          "height": 481,
+          "right": 1268
+        },
+        "header": {
+          "x": 12,
+          "y": 969,
+          "width": 160,
+          "height": 481,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 975,
+          "width": 66,
+          "height": 17,
+          "right": 82
+        },
+        "labelText": "Working",
+        "cardList": {
+          "x": 172,
+          "y": 969,
+          "width": 1096,
+          "height": 481,
+          "right": 1268
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.873,
+        "headerShareOfRow": 0.127,
+        "firstCard": {
+          "x": 189,
+          "y": 992,
+          "width": 240,
+          "height": 77,
+          "right": 429
+        },
+        "firstCardInsetFromRowLeft": 177,
+        "firstCardInsetFromViewportLeft": 189,
+        "firstCardVisibleWidth": 240,
+        "trigger": {
+          "x": 16,
+          "y": 975,
+          "width": 66,
+          "height": 17,
+          "right": 82
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 66,
+          "y": 978,
+          "width": 12,
+          "height": 12,
+          "right": 78
+        },
+        "count": {
+          "text": "3",
+          "box": {
+            "x": 16,
+            "y": 996,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "idle-recent",
+        "cards": 3,
+        "row": {
+          "x": 12,
+          "y": 1466,
+          "width": 1256,
+          "height": 288,
+          "right": 1268
+        },
+        "header": {
+          "x": 12,
+          "y": 1466,
+          "width": 160,
+          "height": 288,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 1472,
+          "width": 89,
+          "height": 17,
+          "right": 105
+        },
+        "labelText": "Idle · Recent",
+        "cardList": {
+          "x": 172,
+          "y": 1466,
+          "width": 1096,
+          "height": 288,
+          "right": 1268
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.873,
+        "headerShareOfRow": 0.127,
+        "firstCard": {
+          "x": 178,
+          "y": 1472,
+          "width": 240,
+          "height": 77,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 240,
+        "trigger": {
+          "x": 16,
+          "y": 1472,
+          "width": 89,
+          "height": 17,
+          "right": 105
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 89,
+          "y": 1474,
+          "width": 12,
+          "height": 12,
+          "right": 101
+        },
+        "count": {
+          "text": "3",
+          "box": {
+            "x": 16,
+            "y": 1493,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "idle-today",
+        "cards": 2,
+        "row": {
+          "x": 12,
+          "y": 1770,
+          "width": 1256,
+          "height": 288,
+          "right": 1268
+        },
+        "header": {
+          "x": 12,
+          "y": 1770,
+          "width": 160,
+          "height": 288,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 1776,
+          "width": 83,
+          "height": 17,
+          "right": 99
+        },
+        "labelText": "Idle · Today",
+        "cardList": {
+          "x": 172,
+          "y": 1770,
+          "width": 1096,
+          "height": 288,
+          "right": 1268
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.873,
+        "headerShareOfRow": 0.127,
+        "firstCard": {
+          "x": 178,
+          "y": 1776,
+          "width": 240,
+          "height": 77,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 240,
+        "trigger": {
+          "x": 16,
+          "y": 1776,
+          "width": 83,
+          "height": 17,
+          "right": 99
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 83,
+          "y": 1778,
+          "width": 12,
+          "height": 12,
+          "right": 95
+        },
+        "count": {
+          "text": "2",
+          "box": {
+            "x": 16,
+            "y": 1797,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "idle-earlier",
+        "cards": 2,
+        "row": {
+          "x": 12,
+          "y": 2074,
+          "width": 1256,
+          "height": 288,
+          "right": 1268
+        },
+        "header": {
+          "x": 12,
+          "y": 2074,
+          "width": 160,
+          "height": 288,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 2080,
+          "width": 86,
+          "height": 17,
+          "right": 102
+        },
+        "labelText": "Idle · Earlier",
+        "cardList": {
+          "x": 172,
+          "y": 2074,
+          "width": 1096,
+          "height": 288,
+          "right": 1268
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.873,
+        "headerShareOfRow": 0.127,
+        "firstCard": {
+          "x": 178,
+          "y": 2080,
+          "width": 240,
+          "height": 77,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 240,
+        "trigger": {
+          "x": 16,
+          "y": 2080,
+          "width": 86,
+          "height": 17,
+          "right": 102
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 86,
+          "y": 2082,
+          "width": 12,
+          "height": 12,
+          "right": 98
+        },
+        "count": {
+          "text": "2",
+          "box": {
+            "x": 16,
+            "y": 2101,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "idle-awhile",
+        "cards": 14,
+        "row": {
+          "x": 12,
+          "y": 2378,
+          "width": 1256,
+          "height": 479,
+          "right": 1268
+        },
+        "header": {
+          "x": 12,
+          "y": 2378,
+          "width": 160,
+          "height": 479,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 2384,
+          "width": 113,
+          "height": 17,
+          "right": 129
+        },
+        "labelText": "Idle · A while ago",
+        "cardList": {
+          "x": 172,
+          "y": 2378,
+          "width": 1096,
+          "height": 479,
+          "right": 1268
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.873,
+        "headerShareOfRow": 0.127,
+        "firstCard": {
+          "x": 178,
+          "y": 2384,
+          "width": 240,
+          "height": 61,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 240,
+        "trigger": {
+          "x": 16,
+          "y": 2384,
+          "width": 113,
+          "height": 17,
+          "right": 129
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 113,
+          "y": 2386,
+          "width": 12,
+          "height": 12,
+          "right": 125
+        },
+        "count": {
+          "text": "5",
+          "box": {
+            "x": 16,
+            "y": 2405,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      },
+      {
+        "lane": "done",
+        "cards": 4,
+        "row": {
+          "x": 12,
+          "y": 2873,
+          "width": 1256,
+          "height": 288,
+          "right": 1268
+        },
+        "header": {
+          "x": 12,
+          "y": 2873,
+          "width": 160,
+          "height": 288,
+          "right": 172
+        },
+        "headerPadding": "6px 4px 4px",
+        "label": {
+          "x": 16,
+          "y": 2879,
+          "width": 50,
+          "height": 17,
+          "right": 66
+        },
+        "labelText": "Done",
+        "cardList": {
+          "x": 172,
+          "y": 2873,
+          "width": 1096,
+          "height": 288,
+          "right": 1268
+        },
+        "cardListOverflowX": "auto",
+        "cardListPad": "6px",
+        "listShareOfRow": 0.873,
+        "headerShareOfRow": 0.127,
+        "firstCard": {
+          "x": 178,
+          "y": 2879,
+          "width": 240,
+          "height": 77,
+          "right": 418
+        },
+        "firstCardInsetFromRowLeft": 166,
+        "firstCardInsetFromViewportLeft": 178,
+        "firstCardVisibleWidth": 240,
+        "trigger": {
+          "x": 16,
+          "y": 2879,
+          "width": 50,
+          "height": 17,
+          "right": 66
+        },
+        "hideLane": null,
+        "caret": {
+          "x": 50,
+          "y": 2881,
+          "width": 12,
+          "height": 12,
+          "right": 62
+        },
+        "count": {
+          "text": "3",
+          "box": {
+            "x": 16,
+            "y": 2900,
+            "width": 7,
+            "height": 13,
+            "right": 23
+          }
+        }
+      }
+    ]
+  }
+}
