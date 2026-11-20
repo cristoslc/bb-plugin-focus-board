@@ -40,6 +40,8 @@ const NOW = Date.now();
 
 afterEach(() => {
   cleanup();
+  hostHeader?.remove();
+  hostHeader = null;
   resetFakeRpcCalls();
 });
 
@@ -69,6 +71,37 @@ function mountControl(): void {
   const Component = registeredThreadHeaderAction.component;
   if (Component === undefined) throw new Error("app-fake-sdk: no thread header action registered");
   render(<Component threadId="thr_x" projectId="proj_a" isCompactViewport={false} />);
+}
+
+/**
+ * The host's own placement of the slot: inside a labelled group span, in the
+ * thread page's header row. On macOS the desktop build gives that row
+ * `transform: translateY(...)` (bb 0.50.1's `app-page-header-content-row`), and
+ * a transformed ancestor is the containing block of every `position: fixed`
+ * descendant. The row is modelled here so a popover that stays inside it can
+ * be caught: its viewport coordinates would resolve against the row instead,
+ * which parks the menu off screen (reported 2026-11-20).
+ */
+let hostHeader: HTMLElement | null = null;
+
+function mountControlInHostHeader(): { row: HTMLElement } {
+  const Component = registeredThreadHeaderAction.component;
+  if (Component === undefined) throw new Error("app-fake-sdk: no thread header action registered");
+  const header = document.createElement("header");
+  header.innerHTML = [
+    '<div data-testid="app-page-header-content-row" style="transform: translateY(-2px)">',
+    '<div class="flex items-center gap-1"><span role="group"></span></div>',
+    "</div>",
+  ].join("");
+  document.body.append(header);
+  hostHeader = header;
+  const row = header.querySelector('[data-testid="app-page-header-content-row"]');
+  const slot = header.querySelector('span[role="group"]');
+  if (row === null || slot === null) throw new Error("host header fixture: missing row or slot");
+  render(<Component threadId="thr_x" projectId="proj_a" isCompactViewport={false} />, {
+    container: slot,
+  });
+  return { row };
 }
 
 /** The picker's quick-pick buttons carry data-snooze-preset={kind}. */
@@ -106,6 +139,24 @@ describe("the thread-header action registration", () => {
     expect(registeredThreadHeaderAction.id).toBe("thread-actions");
     expect(registeredThreadHeaderAction.title).toBe("Focus Board thread actions");
     expect(registeredThreadHeaderAction.component).toBeTypeOf("function");
+  });
+});
+
+describe("the control where the host puts it", () => {
+  it("keeps its popover out of the translated header row, and Done still runs from there", async () => {
+    const { row } = mountControlInHostHeader();
+    await openPopover();
+    const menu = screen.getByRole("menu");
+    // The row's transform re-anchors `position: fixed` (bb 0.50.1, macOS
+    // desktop), so a menu left inside it opens at row-x + its viewport left,
+    // off screen. Out of the row means the coordinates stay viewport ones.
+    expect(row.contains(menu)).toBe(false);
+    expect(document.body.contains(menu)).toBe(true);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Mark Done" }));
+    await waitFor(() => {
+      const call = fakeRpcCalls().find((entry) => entry.method === "done_set");
+      expect(call).toMatchObject({ args: { threadId: "thr_x", done: true } });
+    });
   });
 });
 
