@@ -13,6 +13,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **A thread created from the board opens where your choice says it should.** The New Thread dialog's own spawn now takes the same path as a card click, so the answer "beside the board" puts the created thread in bb's pane instead of the board's.
+
 ## [1.8.0] - 2026-11-20
 
 ### Added

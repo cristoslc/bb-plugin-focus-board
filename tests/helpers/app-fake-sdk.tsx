@@ -557,6 +557,28 @@ export function resetFakeRetryCalls(): void {
   retryCalls.splice(0, retryCalls.length);
 }
 
+// The composer spawn (components/new-thread-modal → sdk.threads.spawn): every
+// request recorded verbatim, with the thread record the spawn answers with. The
+// record is the provisional pane row, so the title is what a suite asserts the
+// pane shows.
+const spawnCalls: Record<string, unknown>[] = [];
+const fakeSpawnedThread = {
+  id: "thr_spawned",
+  title: "Spawned thread",
+  titleFallback: null,
+  status: "idle",
+  projectId: "proj_a",
+};
+
+/** Every `threads.spawn` request the modal made, in order. */
+export function fakeSpawnCalls(): Record<string, unknown>[] {
+  return structuredClone(spawnCalls);
+}
+
+export function resetFakeSpawnCalls(): void {
+  spawnCalls.splice(0, spawnCalls.length);
+}
+
 /** Seed the fake rank store from ordered lists (fresh per test). */
 export function seedFakeRanks(orders: Record<string, string[]>): void {
   fakeRanks = Object.fromEntries(
@@ -913,6 +935,15 @@ const fakeSdk = {
     // seedFakeThreadMetadata, like the host's bridge serves the real one.
     getPluginMetadata: async ({ threadId }: { threadId: string }) =>
       structuredClone(fakeThreadMetadata[threadId] ?? {}),
+    // The board's composer spawn (components/new-thread-modal): the request is
+    // recorded verbatim and the spawn result is the row the pane renders until
+    // the sidebar cache carries the thread. The store stays untouched — a
+    // freshly spawned thread is not in bb's sidebar list on the tick the pane
+    // opens, which is the timing the provisional row exists for.
+    spawn: async (args?: Record<string, unknown>) => {
+      spawnCalls.push(structuredClone(args ?? {}));
+      return structuredClone(fakeSpawnedThread);
+    },
     interactions: {
       list: async () => [],
       respond: async () => ({}),
@@ -1007,7 +1038,40 @@ export function ThreadChat(): ReactNode {
   return <div data-testid="fake-thread-chat" />;
 }
 
-// The new-thread composer: the modal under test here never opens it.
-export function experimental_NewThreadComposer(): ReactNode {
-  return <div data-testid="fake-new-thread-composer" />;
+/**
+ * The spawn request the fake composer submits. The modal forwards a request
+ * verbatim to `threads.spawn` (components/new-thread-modal), so one button is
+ * enough to drive the real spawn path: the host composer's own pickers and
+ * promptbox are not what the board's routing is about.
+ */
+const FAKE_COMPOSE_REQUEST = {
+  prompt: "A thread from the board's own composer",
+  projectId: "proj_a",
+  providerId: "pi",
+} as const;
+
+/**
+ * The new-thread composer: a marker node plus the submit affordance, so an
+ * app-level suite can spawn from the board's own modal exactly as an operator
+ * does (open the board's New Thread control, press this, and the app's spawn
+ * path runs: `threads.spawn`, then wherever the spawn opens the thread).
+ */
+export function experimental_NewThreadComposer(props: {
+  onSubmit: (request: Record<string, unknown>) => Promise<void>;
+}): ReactNode {
+  return (
+    <div data-testid="fake-new-thread-composer">
+      <button
+        type="button"
+        data-fake-composer-submit=""
+        onClick={() => {
+          // The modal rethrows a failed spawn so the host composer can keep
+          // the draft; the stub has no draft, so it only settles the write.
+          props.onSubmit({ ...FAKE_COMPOSE_REQUEST }).catch(() => {});
+        }}
+      >
+        Spawn thread
+      </button>
+    </div>
+  );
 }

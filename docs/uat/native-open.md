@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-11-20T15:03:42.248Z by `npm run uat`._
+_Generated 2026-11-20T18:05:40.306Z by `npm run uat`._
 
 ## native-open
 
@@ -15,3 +15,5 @@ Source: `tests/manual/uat-native-open.yaml` · theme dark
 | Clicking a nested child row opens that child beside the board | pass | ✓ native panes ["thr_gutter_family_c0"]; ✓ native pane count 2; ✓ pane closed |
 | A fresh install is asked where a card opens its thread, and the shipping answer is marked | pass | ✓ text visible: "Where should threads open?"; ✓ text visible: "Beside the board"; ✓ text visible: "In the board panel"; ✓ text visible: "Default" |
 | Choosing the board panel closes the question and every click stays in the board | pass | ✓ text hidden: "Where should threads open?"; ✓ native panes []; ✓ native pane count 1; ✓ pane shows thr_uat_queue |
+| A thread created from the board's New Thread modal opens beside the board | pass | ✓ native open thr_uat_spawned with split; ✓ native panes ["thr_uat_spawned"]; ✓ native pane count 2; ✓ pane closed |
+| With the board-panel answer, a created thread opens in the board's own pane | pass | ✓ native panes []; ✓ native pane count 1; ✓ pane shows thr_uat_spawned; ✓ url ends with /board/t/thr_uat_spawned |
