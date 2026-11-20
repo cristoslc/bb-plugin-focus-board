@@ -29,12 +29,7 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
   {
     "text": "**Sweeping a lane to Done no longer stalls.** Cards go out six at a time and the board repaints once per batch, so a nine-card sweep on a busy board takes about half a second where it used to take a couple.",
     "children": [],
-    "group": "Sweeping a lane"
-  },
-  {
-    "text": "**Splitting or unsplitting the window no longer reloads the board.** bb rebuilds the panel when the pane layout changes, which used to flash the loading screen and drop the scroll position. The board now repaints what you were looking at, where you left it, and the refetch that follows lands behind it.",
-    "children": [],
-    "group": "The board's frame"
+    "group": "The board's lanes"
   },
   {
     "text": "**Opening a card from Unread leaves the board looking at it.** The card moves to its idle lane and the board follows it there, so it no longer reads as vanished behind the pane.",
@@ -42,19 +37,24 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "The board's lanes"
   },
   {
+    "text": "**Splitting or unsplitting the window no longer reloads the board.** bb rebuilds the panel when the pane layout changes, which used to flash the loading screen and drop the scroll position. The board now repaints what you were looking at, where you left it, and the refetch that follows lands behind it.",
+    "children": [],
+    "group": "Board layout"
+  },
+  {
     "text": "**With lane direction set to Horizontal, a family card keeps every child row on the card.** A lane row now grows to fit its tallest card instead of cutting it at a fixed height, so the rest of the family and its Show all control stay on screen.",
     "children": [],
-    "group": "The board's lanes"
+    "group": "Board layout"
   },
   {
     "text": "**On a phone, a Horizontal board puts each lane's label above its cards instead of beside them.** The label strip took 160 of a 366-pixel row there and left every card cut off at the edge. The cards now get the row's whole width and the next one peeks in, so the row also reads as scrollable; the desktop strip is unchanged.",
     "children": [],
-    "group": "The board's lanes"
+    "group": "Board layout"
   },
   {
     "text": "**The board's keys stay on the board.** A letter or `/` typed anywhere you can type inserts text instead of opening the New Thread composer or jumping the search field. Both keys fire only while the board's own pane holds focus, so another pane's keystrokes leave the board alone.",
     "children": [],
-    "group": "The board's shortcuts"
+    "group": "The New thread composer"
   },
   {
     "text": "**Thread and project references in a pane message open the thread or project again.** bb renders an agent-written `@thread:…` mention as a link into the workspace's file preview, which read \"File not found.\"; the pane now claims those clicks itself, and a malformed mention does nothing instead.",

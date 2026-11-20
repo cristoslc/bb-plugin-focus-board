@@ -159,7 +159,7 @@ merging into `dev`, releasing, changelog writing, or tagging.
   family boxes**, **Cards and chips**, **Board layout**, **Touch input**,
   **Search and filters**, **The New thread composer**, **The thread pane**,
   **Magic rename**, **The board's lanes**,
-  **Context menus**. The list grows
+  **bb's thread pages**, **Context menus**. The list grows
   only by deliberate spoke edit, and only when a feature family no standing
   name covers will carry multiple bullets; until then a bullet takes its
   nearest standing surface.
