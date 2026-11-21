@@ -2,7 +2,8 @@
 export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; group?: string }[] = [
   {
     "text": "**Focus Board asks where a thread opens, once per install.** A card can open its thread beside the board in its own pane or inside the board's own panel; the first run asks, and both the gear modal and the configuration page carry the same answer.",
-    "children": []
+    "children": [],
+    "group": "bb's thread pages"
   },
   {
     "text": "**The Focus Board control in bb's thread header is a menu mark now, not a checkbox.** It draws the plugin's icon plus a caret, so it reads as the menu it opens. The thread's done state is the check on the menu's first row, where you act on it.",

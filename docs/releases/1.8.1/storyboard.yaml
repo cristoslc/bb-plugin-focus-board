@@ -1,0 +1,21 @@
+version: 1.8.1
+demos:
+  - bullet: "**Focus Board asks where a thread opens, once per install.**"
+    gif: docs/screenshots/release-demos/v1.8.1-first-run-ask.gif
+    caption: "A fresh install meets the question once the board settles; the pick stores the answer the gear modal and the configuration page carry."
+    steps:
+      - "release-demos/v1.8.1.mjs first-run-ask: the setup dialog on a fresh install (?firstRun=1 drops the stored answer, so the ask is the one thing a new install has)"
+      - "the dialog arrives after the board paints; a real click on the highlighted Beside the board choice writes the declared setting and closes the ask"
+  - bullet: "**A card you open beside the board stays in view when the pane splits.**"
+    gif: docs/screenshots/release-demos/v1.8.1-split-recenter.gif
+    caption: "The card sits at the board's right edge; the click splits the window, the board halves, and the fit brings the clicked card back into view. The right-hand strip is the harness's stand-in for bb's own pane."
+    steps:
+      - "release-demos/v1.8.1.mjs split-recenter: ?nativeSplit=1 arms the harness's split chrome (the mock models bb's halving and panel re-creation)"
+      - "a wheel pan and a deterministic fine-place sit the split card 80px inside the board's right edge; the click opens the thread beside the board, and the narrowed board's keep-in-view fit re-centers the card"
+skips:
+  - bullet: "**The Focus Board control in bb's thread header is a menu mark now, not a checkbox.**"
+    reason: "The control mounts in bb's own thread-page header, which the harness does not render (the mock captures the slot's registration only); the icon-plus-caret draw is asserted by the header-action tests, not filmable."
+  - bullet: "**A thread created from the board opens where your choice says it should.**"
+    reason: "The outcome is the created thread opening in bb's own pane; the harness's split stand-in is placement-only and renders no thread, so the observable is the pane record the uat-native-open suite asserts, and the board-side picture is the split chrome the recenter gif already shows."
+  - bullet: "**The Focus Board control in bb's thread header opens its menu again on macOS.**"
+    reason: "The control and its popover mount in bb's own thread-page header, which the harness does not render; the popover's off-row positioning is asserted by the header-action tests, not filmable."
