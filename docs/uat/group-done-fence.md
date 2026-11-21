@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-12T01:33:10.479Z by `npm run uat`._
+_Generated 2026-11-21T08:43:56.133Z by `npm run uat`._
 
 ## group-done-fence
 
-Source: `tests/manual/uat-group-done-fence.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-group-done-fence.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-18T17:38:30.289Z by `npm run uat`._
+_Generated 2026-11-21T08:43:56.133Z by `npm run uat`._
 
 ## board-touch
 
-Source: `tests/manual/uat-board-touch.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-board-touch.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

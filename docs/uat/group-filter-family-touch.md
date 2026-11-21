@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-11T22:12:09.955Z by `npm run uat`._
+_Generated 2026-11-21T08:43:56.133Z by `npm run uat`._
 
 ## group-filter-family-touch
 
-Source: `tests/manual/uat-group-filter-family-touch.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-group-filter-family-touch.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-08T05:32:42.838Z by `npm run uat`._
+_Generated 2026-11-21T08:43:56.133Z by `npm run uat`._
 
 ## board-views (v1920x1080-dark)
 
-Source: `tests/manual/uat-board-views.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-board-views.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

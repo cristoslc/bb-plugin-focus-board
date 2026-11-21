@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-20T05:18:24.192Z by `npm run uat`._
+_Generated 2026-11-21T08:43:56.133Z by `npm run uat`._
 
 ## grid-view (v1920x1080-dark)
 
-Source: `/Users/cristos/.bb/plugins/environment-git-worktree/host-data/worktrees/thr_d2gw63jxk8-1/bb-plugin-focus-board/tests/manual/uat-grid-view.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-grid-view.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
