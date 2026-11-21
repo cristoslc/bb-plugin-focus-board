@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-08T05:11:00.168Z by `npm run uat`._
+_Generated 2026-11-21T08:43:56.133Z by `npm run uat`._
 
 ## view-choices
 
-Source: `tests/manual/uat-view-choices.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-view-choices.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

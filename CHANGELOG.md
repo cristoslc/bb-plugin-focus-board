@@ -9,6 +9,8 @@ A card click can now open its thread in bb's own pane beside the board, the firs
 
 ### Added
 
+#### bb's thread pages
+
 - **Focus Board asks where a thread opens, once per install.** A card can open its thread beside the board in its own pane or inside the board's own panel; the first run asks, and both the gear modal and the configuration page carry the same answer.
 
 ### Changed

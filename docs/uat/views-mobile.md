@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-20T00:04:24.348Z by `npm run uat`._
+_Generated 2026-11-21T08:43:56.133Z by `npm run uat`._
 
 ## views-mobile
 
-Source: `tests/manual/uat-views-mobile.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-views-mobile.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

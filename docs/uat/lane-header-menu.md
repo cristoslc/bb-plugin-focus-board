@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-18T05:44:25.732Z by `npm run uat`._
+_Generated 2026-11-21T08:43:56.133Z by `npm run uat`._
 
 ## lane-header-menu
 
-Source: `tests/manual/uat-lane-menu.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-lane-menu.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
