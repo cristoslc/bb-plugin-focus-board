@@ -26,7 +26,8 @@
 // This suite reads the installed typings because the property IS the host's
 // API shape, and it fails the moment a release grows a size lever. When it
 // does: pass the ratio at app.tsx's one-pane ask (`openThreadForInteraction`),
-// re-measure with the probe, and update the comment there and this file.
+// re-measure with the probe, and update the comment there and this file. The
+// ask for that lever is filed at https://github.com/get-bb/bb/issues/7965.
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
