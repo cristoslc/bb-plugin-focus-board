@@ -5,6 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [1.8.1] - 2026-11-21
+
 A card click can now open its thread in bb's own pane beside the board, the first run asks which of the two surfaces you want, and the thread pane's header is one row shaped like bb's own. Nothing needs a migration: your board, folds, ranks and filters carry over, and the fixes below are what changed under the new surfaces.
 
 ### Added
