@@ -264,6 +264,64 @@ export function mountRegisteredConfigSection(): void {
   createRoot(rootElement).render(<Section {...( {} as Record<string, never>)} />);
 }
 
+/**
+ * `?page=thread-header`: the harness renders no host thread page, so this
+ * mounts the registered thread-header action on its own, inside a replica of
+ * bb's page-header content row (48px tall, right-aligned 28px controls). The
+ * control is the real component on the real compiled CSS; the row around it
+ * is the replica, and the capture's evidence says which half is which. The
+ * live host page is not driven here (a plugin bundle only reaches it after a
+ * merge, see docs/tech-debt/sdk-thread-header-action-retirement.md).
+ */
+export function mountRegisteredThreadHeaderAction(options: {
+  threadId: string;
+  compact: boolean;
+}): void {
+  const registration = registeredThreadHeaderAction;
+  if (registration === null) throw new Error("harness: no thread header action registered");
+  const Action = (
+    registration as {
+      component: ComponentType<{
+        threadId: string;
+        projectId: string;
+        isCompactViewport: boolean;
+      }>;
+    }
+  ).component;
+  const surface = document.createElement("div");
+  surface.setAttribute("data-focus-board-thread-header-row", "");
+  // The plugin's compiled CSS is scoped to the plugin's host attribute
+  // (`:where([data-bb-plugin=focus-board], [data-bb-plugin-root]:not(...))
+  // .class`), and the harness root carries it. This mount sits outside that
+  // root, so the replica row carries the scope itself — exactly what the host
+  // puts on a portalled surface — or every utility on the control silently
+  // drops and the trigger measures as an unstyled button.
+  surface.setAttribute("data-bb-plugin", "focus-board");
+  // Inline styles, not utilities: the harness renders the plugin's compiled
+  // CSS, which carries only the classes the app itself uses, so a host row
+  // spelled in utilities would silently lose the ones nobody wrote.
+  surface.style.cssText = [
+    "height:48px",
+    "display:flex",
+    "align-items:center",
+    "justify-content:flex-end",
+    "gap:4px",
+    "padding:0 16px",
+    "border-bottom:1px solid var(--border)",
+    "background:var(--background)",
+  ].join(";");
+  const slot = document.createElement("span");
+  slot.setAttribute("role", "group");
+  slot.style.cssText = "display:inline-flex;align-items:center;gap:4px";
+  surface.append(slot);
+  // Prepended: the harness root is a full-height empty div in this page mode,
+  // so appending would park the row off the bottom of the viewport.
+  document.body.prepend(surface);
+  createRoot(slot).render(
+    <Action threadId={options.threadId} projectId="proj_1" isCompactViewport={options.compact} />,
+  );
+}
+
 export function useBbNavigate(): unknown {
   return {
     // bb's route reconciliation lands the route's content in the pane that
@@ -919,12 +977,23 @@ const mockSdk = {
           }))
         : [],
     // The pane resolves the thread's environment once (the inline-code
-    // decoration gates on it); mirror the fixture's own environment id.
+    // decoration gates on it); mirror the fixture's own environment id. The
+    // display title rides along because the native-header control labels its
+    // popover with it, exactly as bb's own page does.
     get: async ({ threadId }: { threadId: string }) => {
       const sim = simThreads.find((candidate) => candidate.id === threadId);
       const environment = sim?.environment as { id?: string } | null;
-      return { environmentId: environment?.id ?? null };
+      return { environmentId: environment?.id ?? null, displayTitle: sim?.displayTitle ?? null };
     },
+    // The board's own metadata namespace for one thread: the read the
+    // native-header control makes on mount and per realtime signal
+    // (components/thread-header-actions.tsx, `readThreadBoardState`). The
+    // harness's done fixtures answer it, so `?page=thread-header` can
+    // photograph the menu's checked row as well as its unchecked one.
+    getPluginMetadata: async ({ threadId }: { threadId: string }) =>
+      simDoneIds.has(threadId)
+        ? { done: SIM_DONE_RECORDS[threadId] ?? { doneAt: new Date().toISOString() } }
+        : {},
     // Restore the most recent archived copy of the thread to the live list.
     unarchive: async ({ threadId }: { threadId: string }) => {
       const restored = [...simArchived].reverse().find((candidate) => candidate.id === threadId);

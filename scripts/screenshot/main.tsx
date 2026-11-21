@@ -23,6 +23,7 @@ benchMark("fb:app-imported");
 import {
   mountRegisteredConfigSection,
   mountRegisteredPanel,
+  mountRegisteredThreadHeaderAction,
   seedSimSettings,
   clearSimSetting,
 } from "./mock-sdk";
@@ -223,7 +224,14 @@ if (loadingViewVariant !== null) {
 // The mount-called mark fences the entry's seeding work from React's first
 // commit (the load bench reads it as "harness work done, React is driving").
 benchMark("fb:mount-called");
-if (params.get("page") === "configuration") {
+if (params.get("page") === "thread-header") {
+  mountRegisteredThreadHeaderAction({
+    // A fixture thread with a title, so the menu's header line is a real one.
+    // `?thread=` picks another (e.g. a Done fixture, for the checked row).
+    threadId: params.get("thread") ?? "thr_permissions",
+    compact: params.get("compact") === "1",
+  });
+} else if (params.get("page") === "configuration") {
   mountRegisteredConfigSection();
 } else {
   mountRegisteredPanel();
