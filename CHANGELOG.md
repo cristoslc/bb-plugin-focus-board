@@ -13,6 +13,10 @@ A card click can now open its thread in bb's own pane beside the board, the firs
 
 ### Changed
 
+#### bb's thread pages
+
+- **The Focus Board control in bb's thread header is a menu mark now, not a checkbox.** It draws the plugin's icon plus a caret, so it reads as the menu it opens. The thread's done state is the check on the menu's first row, where you act on it.
+
 ### Fixed
 
 - **A card you open beside the board stays in view when the pane splits.** The board now fits the card the click focused into its new, narrower range instead of leaving it off screen.

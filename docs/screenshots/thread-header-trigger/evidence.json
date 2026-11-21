@@ -1,0 +1,762 @@
+{
+  "reported": "2026-11-20: the Focus Board menu in bb's thread header reads as a checkbox, which no longer carries its meaning",
+  "surface": "the repo's Chrome harness, ?page=thread-header: the real registered control on the real compiled CSS, inside a replica of bb's page-header content row (48px, right-aligned 28px controls). The live host page is not driven: bb serves the installed bundle, so a candidate build reaches bb's own thread page after a merge.",
+  "runs": {
+    "before": {
+      "reported": "2026-11-20: the Focus Board menu in bb's thread header reads as a checkbox, which no longer carries its meaning",
+      "surface": "the repo's Chrome harness, ?page=thread-header: the real registered control on the real compiled CSS, inside a replica of bb's page-header content row (48px, right-aligned 28px controls). The live host page is not driven: bb serves the installed bundle, so a candidate build reaches bb's own thread page after a merge.",
+      "command": "LABEL=before node scripts/screenshot/probe-thread-header-trigger.mjs",
+      "desktop": {
+        "thread": "thr_permissions",
+        "closed": {
+          "name": "Focus Board thread actions",
+          "title": "Focus Board thread actions",
+          "haspopup": "menu",
+          "expanded": "false",
+          "box": {
+            "x": 1396,
+            "y": 10,
+            "w": 28,
+            "h": 28
+          },
+          "styles": {
+            "display": "block",
+            "gap": "normal",
+            "color": "oklab(0.78 0 0 / 0.6)",
+            "radius": "6px"
+          },
+          "glyphs": [
+            {
+              "icon": "Checkbox",
+              "painted": {
+                "w": 16,
+                "h": 16
+              },
+              "computed": "16px"
+            }
+          ],
+          "checkboxPresent": true
+        },
+        "open": {
+          "trigger": {
+            "name": "Focus Board thread actions",
+            "title": "Focus Board thread actions",
+            "haspopup": "menu",
+            "expanded": "true",
+            "box": {
+              "x": 1396,
+              "y": 10,
+              "w": 28,
+              "h": 28
+            },
+            "styles": {
+              "display": "block",
+              "gap": "normal",
+              "color": "oklab(0.78 0 0 / 0.6)",
+              "radius": "6px"
+            },
+            "glyphs": [
+              {
+                "icon": "Checkbox",
+                "painted": {
+                  "w": 16,
+                  "h": 16
+                },
+                "computed": "16px"
+              }
+            ],
+            "checkboxPresent": true
+          },
+          "menu": {
+            "box": {
+              "x": 1166,
+              "y": 42,
+              "w": 266,
+              "h": 127
+            },
+            "parent": "BODY",
+            "label": "Focus Board thread actions",
+            "rows": [
+              {
+                "role": "menuitem",
+                "label": "Mark Done",
+                "checked": null,
+                "stateMark": false
+              },
+              {
+                "role": "menuitem",
+                "label": "Snooze…",
+                "checked": null,
+                "stateMark": false
+              },
+              {
+                "role": "menuitem",
+                "label": "New child thread…",
+                "checked": null,
+                "stateMark": false
+              }
+            ]
+          }
+        }
+      },
+      "desktopLight": {
+        "thread": "thr_permissions",
+        "closed": {
+          "name": "Focus Board thread actions",
+          "title": "Focus Board thread actions",
+          "haspopup": "menu",
+          "expanded": "false",
+          "box": {
+            "x": 1396,
+            "y": 10,
+            "w": 28,
+            "h": 28
+          },
+          "styles": {
+            "display": "block",
+            "gap": "normal",
+            "color": "oklab(0.45 0 0 / 0.6)",
+            "radius": "6px"
+          },
+          "glyphs": [
+            {
+              "icon": "Checkbox",
+              "painted": {
+                "w": 16,
+                "h": 16
+              },
+              "computed": "16px"
+            }
+          ],
+          "checkboxPresent": true
+        },
+        "open": {
+          "trigger": {
+            "name": "Focus Board thread actions",
+            "title": "Focus Board thread actions",
+            "haspopup": "menu",
+            "expanded": "true",
+            "box": {
+              "x": 1396,
+              "y": 10,
+              "w": 28,
+              "h": 28
+            },
+            "styles": {
+              "display": "block",
+              "gap": "normal",
+              "color": "oklab(0.45 0 0 / 0.6)",
+              "radius": "6px"
+            },
+            "glyphs": [
+              {
+                "icon": "Checkbox",
+                "painted": {
+                  "w": 16,
+                  "h": 16
+                },
+                "computed": "16px"
+              }
+            ],
+            "checkboxPresent": true
+          },
+          "menu": {
+            "box": {
+              "x": 1166,
+              "y": 42,
+              "w": 266,
+              "h": 127
+            },
+            "parent": "BODY",
+            "label": "Focus Board thread actions",
+            "rows": [
+              {
+                "role": "menuitem",
+                "label": "Mark Done",
+                "checked": null,
+                "stateMark": false
+              },
+              {
+                "role": "menuitem",
+                "label": "Snooze…",
+                "checked": null,
+                "stateMark": false
+              },
+              {
+                "role": "menuitem",
+                "label": "New child thread…",
+                "checked": null,
+                "stateMark": false
+              }
+            ]
+          }
+        }
+      },
+      "doneThread": {
+        "thread": "thr_license",
+        "trigger": {
+          "name": "Focus Board thread actions",
+          "title": "Focus Board thread actions",
+          "haspopup": "menu",
+          "expanded": "true",
+          "box": {
+            "x": 1396,
+            "y": 10,
+            "w": 28,
+            "h": 28
+          },
+          "styles": {
+            "display": "block",
+            "gap": "normal",
+            "color": "oklch(0.78 0 0)",
+            "radius": "6px"
+          },
+          "glyphs": [
+            {
+              "icon": "CheckboxChecked",
+              "painted": {
+                "w": 16,
+                "h": 16
+              },
+              "computed": "16px"
+            }
+          ],
+          "checkboxPresent": true
+        },
+        "menu": {
+          "box": {
+            "x": 1256,
+            "y": 42,
+            "w": 176,
+            "h": 127
+          },
+          "parent": "BODY",
+          "label": "Focus Board thread actions",
+          "rows": [
+            {
+              "role": "menuitem",
+              "label": "Mark Not Done",
+              "checked": null,
+              "stateMark": false
+            },
+            {
+              "role": "menuitem",
+              "label": "Snooze…",
+              "checked": null,
+              "stateMark": false
+            },
+            {
+              "role": "menuitem",
+              "label": "New child thread…",
+              "checked": null,
+              "stateMark": false
+            }
+          ]
+        }
+      },
+      "coarse": {
+        "media": {
+          "coarsePointer": true,
+          "maxMd": true,
+          "width": 390
+        },
+        "closed": {
+          "name": "Focus Board thread actions",
+          "title": "Focus Board thread actions",
+          "haspopup": "menu",
+          "expanded": "false",
+          "box": {
+            "x": 338,
+            "y": 6,
+            "w": 36,
+            "h": 36
+          },
+          "styles": {
+            "display": "block",
+            "gap": "normal",
+            "color": "oklab(0.78 0 0 / 0.6)",
+            "radius": "6px"
+          },
+          "glyphs": [
+            {
+              "icon": "Checkbox",
+              "painted": {
+                "w": 20,
+                "h": 20
+              },
+              "computed": "20px"
+            }
+          ],
+          "checkboxPresent": true
+        },
+        "open": {
+          "trigger": {
+            "name": "Focus Board thread actions",
+            "title": "Focus Board thread actions",
+            "haspopup": "menu",
+            "expanded": "true",
+            "box": {
+              "x": 338,
+              "y": 6,
+              "w": 36,
+              "h": 36
+            },
+            "styles": {
+              "display": "block",
+              "gap": "normal",
+              "color": "oklab(0.78 0 0 / 0.6)",
+              "radius": "6px"
+            },
+            "glyphs": [
+              {
+                "icon": "Checkbox",
+                "painted": {
+                  "w": 20,
+                  "h": 20
+                },
+                "computed": "20px"
+              }
+            ],
+            "checkboxPresent": true
+          },
+          "menu": {
+            "box": {
+              "x": 116,
+              "y": 46,
+              "w": 266,
+              "h": 127
+            },
+            "parent": "BODY",
+            "label": "Focus Board thread actions",
+            "rows": [
+              {
+                "role": "menuitem",
+                "label": "Mark Done",
+                "checked": null,
+                "stateMark": false
+              },
+              {
+                "role": "menuitem",
+                "label": "Snooze…",
+                "checked": null,
+                "stateMark": false
+              },
+              {
+                "role": "menuitem",
+                "label": "New child thread…",
+                "checked": null,
+                "stateMark": false
+              }
+            ]
+          }
+        }
+      }
+    },
+    "after": {
+      "reported": "2026-11-20: the Focus Board menu in bb's thread header reads as a checkbox, which no longer carries its meaning",
+      "surface": "the repo's Chrome harness, ?page=thread-header: the real registered control on the real compiled CSS, inside a replica of bb's page-header content row (48px, right-aligned 28px controls). The live host page is not driven: bb serves the installed bundle, so a candidate build reaches bb's own thread page after a merge.",
+      "command": "LABEL=after node scripts/screenshot/probe-thread-header-trigger.mjs",
+      "desktop": {
+        "thread": "thr_permissions",
+        "closed": {
+          "name": "Focus Board thread menu",
+          "title": "Focus Board thread menu",
+          "haspopup": "menu",
+          "expanded": "false",
+          "box": {
+            "x": 1396,
+            "y": 10,
+            "w": 28,
+            "h": 28
+          },
+          "styles": {
+            "display": "flex",
+            "gap": "2px",
+            "color": "oklch(0.78 0 0)",
+            "radius": "6px"
+          },
+          "glyphs": [
+            {
+              "icon": "FocusBoard",
+              "painted": {
+                "w": 16,
+                "h": 16
+              },
+              "computed": "16px"
+            },
+            {
+              "icon": "ChevronDown",
+              "painted": {
+                "w": 10,
+                "h": 10
+              },
+              "computed": "10px"
+            }
+          ],
+          "checkboxPresent": false
+        },
+        "open": {
+          "trigger": {
+            "name": "Focus Board thread menu",
+            "title": "Focus Board thread menu",
+            "haspopup": "menu",
+            "expanded": "true",
+            "box": {
+              "x": 1396,
+              "y": 10,
+              "w": 28,
+              "h": 28
+            },
+            "styles": {
+              "display": "flex",
+              "gap": "2px",
+              "color": "oklch(0.78 0 0)",
+              "radius": "6px"
+            },
+            "glyphs": [
+              {
+                "icon": "FocusBoard",
+                "painted": {
+                  "w": 16,
+                  "h": 16
+                },
+                "computed": "16px"
+              },
+              {
+                "icon": "ChevronDown",
+                "painted": {
+                  "w": 10,
+                  "h": 10
+                },
+                "computed": "10px"
+              }
+            ],
+            "checkboxPresent": false
+          },
+          "menu": {
+            "box": {
+              "x": 1166,
+              "y": 42,
+              "w": 266,
+              "h": 127
+            },
+            "parent": "BODY",
+            "label": "Focus Board thread menu",
+            "rows": [
+              {
+                "role": "menuitemradio",
+                "label": "Mark Done",
+                "checked": "false",
+                "stateMark": false
+              },
+              {
+                "role": "menuitem",
+                "label": "Snooze…",
+                "checked": null,
+                "stateMark": false
+              },
+              {
+                "role": "menuitem",
+                "label": "New child thread…",
+                "checked": null,
+                "stateMark": false
+              }
+            ]
+          }
+        }
+      },
+      "desktopLight": {
+        "thread": "thr_permissions",
+        "closed": {
+          "name": "Focus Board thread menu",
+          "title": "Focus Board thread menu",
+          "haspopup": "menu",
+          "expanded": "false",
+          "box": {
+            "x": 1396,
+            "y": 10,
+            "w": 28,
+            "h": 28
+          },
+          "styles": {
+            "display": "flex",
+            "gap": "2px",
+            "color": "oklch(0.45 0 0)",
+            "radius": "6px"
+          },
+          "glyphs": [
+            {
+              "icon": "FocusBoard",
+              "painted": {
+                "w": 16,
+                "h": 16
+              },
+              "computed": "16px"
+            },
+            {
+              "icon": "ChevronDown",
+              "painted": {
+                "w": 10,
+                "h": 10
+              },
+              "computed": "10px"
+            }
+          ],
+          "checkboxPresent": false
+        },
+        "open": {
+          "trigger": {
+            "name": "Focus Board thread menu",
+            "title": "Focus Board thread menu",
+            "haspopup": "menu",
+            "expanded": "true",
+            "box": {
+              "x": 1396,
+              "y": 10,
+              "w": 28,
+              "h": 28
+            },
+            "styles": {
+              "display": "flex",
+              "gap": "2px",
+              "color": "oklch(0.45 0 0)",
+              "radius": "6px"
+            },
+            "glyphs": [
+              {
+                "icon": "FocusBoard",
+                "painted": {
+                  "w": 16,
+                  "h": 16
+                },
+                "computed": "16px"
+              },
+              {
+                "icon": "ChevronDown",
+                "painted": {
+                  "w": 10,
+                  "h": 10
+                },
+                "computed": "10px"
+              }
+            ],
+            "checkboxPresent": false
+          },
+          "menu": {
+            "box": {
+              "x": 1166,
+              "y": 42,
+              "w": 266,
+              "h": 127
+            },
+            "parent": "BODY",
+            "label": "Focus Board thread menu",
+            "rows": [
+              {
+                "role": "menuitemradio",
+                "label": "Mark Done",
+                "checked": "false",
+                "stateMark": false
+              },
+              {
+                "role": "menuitem",
+                "label": "Snooze…",
+                "checked": null,
+                "stateMark": false
+              },
+              {
+                "role": "menuitem",
+                "label": "New child thread…",
+                "checked": null,
+                "stateMark": false
+              }
+            ]
+          }
+        }
+      },
+      "doneThread": {
+        "thread": "thr_license",
+        "trigger": {
+          "name": "Focus Board thread menu",
+          "title": "Focus Board thread menu",
+          "haspopup": "menu",
+          "expanded": "true",
+          "box": {
+            "x": 1396,
+            "y": 10,
+            "w": 28,
+            "h": 28
+          },
+          "styles": {
+            "display": "flex",
+            "gap": "2px",
+            "color": "oklch(0.78 0 0)",
+            "radius": "6px"
+          },
+          "glyphs": [
+            {
+              "icon": "FocusBoard",
+              "painted": {
+                "w": 16,
+                "h": 16
+              },
+              "computed": "16px"
+            },
+            {
+              "icon": "ChevronDown",
+              "painted": {
+                "w": 10,
+                "h": 10
+              },
+              "computed": "10px"
+            }
+          ],
+          "checkboxPresent": false
+        },
+        "menu": {
+          "box": {
+            "x": 1256,
+            "y": 42,
+            "w": 176,
+            "h": 127
+          },
+          "parent": "BODY",
+          "label": "Focus Board thread menu",
+          "rows": [
+            {
+              "role": "menuitemradio",
+              "label": "Mark Not Done",
+              "checked": "true",
+              "stateMark": true
+            },
+            {
+              "role": "menuitem",
+              "label": "Snooze…",
+              "checked": null,
+              "stateMark": false
+            },
+            {
+              "role": "menuitem",
+              "label": "New child thread…",
+              "checked": null,
+              "stateMark": false
+            }
+          ]
+        }
+      },
+      "coarse": {
+        "media": {
+          "coarsePointer": true,
+          "maxMd": true,
+          "width": 390
+        },
+        "closed": {
+          "name": "Focus Board thread menu",
+          "title": "Focus Board thread menu",
+          "haspopup": "menu",
+          "expanded": "false",
+          "box": {
+            "x": 338,
+            "y": 6,
+            "w": 36,
+            "h": 36
+          },
+          "styles": {
+            "display": "flex",
+            "gap": "2px",
+            "color": "oklch(0.78 0 0)",
+            "radius": "6px"
+          },
+          "glyphs": [
+            {
+              "icon": "FocusBoard",
+              "painted": {
+                "w": 20,
+                "h": 20
+              },
+              "computed": "20px"
+            },
+            {
+              "icon": "ChevronDown",
+              "painted": {
+                "w": 12,
+                "h": 12
+              },
+              "computed": "12px"
+            }
+          ],
+          "checkboxPresent": false
+        },
+        "open": {
+          "trigger": {
+            "name": "Focus Board thread menu",
+            "title": "Focus Board thread menu",
+            "haspopup": "menu",
+            "expanded": "true",
+            "box": {
+              "x": 338,
+              "y": 6,
+              "w": 36,
+              "h": 36
+            },
+            "styles": {
+              "display": "flex",
+              "gap": "2px",
+              "color": "oklch(0.78 0 0)",
+              "radius": "6px"
+            },
+            "glyphs": [
+              {
+                "icon": "FocusBoard",
+                "painted": {
+                  "w": 20,
+                  "h": 20
+                },
+                "computed": "20px"
+              },
+              {
+                "icon": "ChevronDown",
+                "painted": {
+                  "w": 12,
+                  "h": 12
+                },
+                "computed": "12px"
+              }
+            ],
+            "checkboxPresent": false
+          },
+          "menu": {
+            "box": {
+              "x": 116,
+              "y": 46,
+              "w": 266,
+              "h": 127
+            },
+            "parent": "BODY",
+            "label": "Focus Board thread menu",
+            "rows": [
+              {
+                "role": "menuitemradio",
+                "label": "Mark Done",
+                "checked": "false",
+                "stateMark": false
+              },
+              {
+                "role": "menuitem",
+                "label": "Snooze…",
+                "checked": null,
+                "stateMark": false
+              },
+              {
+                "role": "menuitem",
+                "label": "New child thread…",
+                "checked": null,
+                "stateMark": false
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

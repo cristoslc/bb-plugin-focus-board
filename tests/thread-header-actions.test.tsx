@@ -9,12 +9,14 @@
 // probe's evidence, docs/screenshots/probe-native-split-pane/):
 // - the registration: importing the app registers the slot with the
 //   expected id, title, and a component;
+// - the trigger: the plugin's own mark plus a caret, a menu name rather than
+//   a checkbox one, and no done state painted on it (the menu states it);
 // - the control renders ONE trigger that opens a popover with the three
 //   board-owned actions, and nothing else (rename/read/pin/archive stay on
 //   the native page);
 // - Done: the same `done_set` RPC the board writes through, optimistic in
-//   the popover, and any toggle lifts a snooze first — the pane header's
-//   own semantics;
+//   the popover, the row checked while the thread is done, and any toggle
+//   lifts a snooze first — the pane header's own semantics;
 // - Snooze: the SnoozeDialog both set and edit run through, `snooze_set`
 //   on a preset confirm, `snooze_clear` on the edit-mode remove;
 // - New child: the board's modal opens with the parent preset;
@@ -120,7 +122,7 @@ function removeButton(dialog: HTMLElement): HTMLElement {
 
 /** The one inline trigger (the host's 48px chrome row constraint). */
 function trigger(): HTMLElement {
-  return screen.getByRole("button", { name: "Focus Board thread actions" });
+  return screen.getByRole("button", { name: "Focus Board thread menu" });
 }
 
 async function openPopover(): Promise<void> {
@@ -128,10 +130,25 @@ async function openPopover(): Promise<void> {
   await screen.findByRole("menu");
 }
 
+/**
+ * The menu's rows, in DOM order. Two roles because the base renders an action
+ * row as `menuitem` and a state row (the done toggle's checked form) as
+ * `menuitemradio`; a count of "the three entries" has to see both.
+ */
+function menuEntries(): HTMLElement[] {
+  const menu = screen.getByRole("menu");
+  return Array.from(
+    menu.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]'),
+  );
+}
+
 function menuLabels(): string[] {
-  return screen
-    .getAllByRole("menuitem")
-    .map((entry) => entry.textContent ?? "");
+  return menuEntries().map((entry) => entry.textContent ?? "");
+}
+
+/** The done row, by whichever label its current state carries. */
+function doneRow(): HTMLElement {
+  return screen.getByRole("menuitemradio", { name: /^Mark (Not )?Done$/ });
 }
 
 describe("the thread-header action registration", () => {
@@ -152,7 +169,7 @@ describe("the control where the host puts it", () => {
     // off screen. Out of the row means the coordinates stay viewport ones.
     expect(row.contains(menu)).toBe(false);
     expect(document.body.contains(menu)).toBe(true);
-    fireEvent.click(screen.getByRole("menuitem", { name: "Mark Done" }));
+    fireEvent.click(doneRow());
     await waitFor(() => {
       const call = fakeRpcCalls().find((entry) => entry.method === "done_set");
       expect(call).toMatchObject({ args: { threadId: "thr_x", done: true } });
@@ -161,6 +178,36 @@ describe("the control where the host puts it", () => {
 });
 
 describe("the control on a native thread page", () => {
+  it("the trigger is the plugin's mark plus a caret, and reads as a menu", () => {
+    mountControl();
+    const control = trigger();
+    // The operator's report (2026-11-20): a checkbox says "toggle this", but
+    // the click opens a menu. The mark names the plugin; the caret names the
+    // menu.
+    expect(control.querySelector('[data-icon="FocusBoard"]')).not.toBeNull();
+    expect(control.querySelector('[data-icon="ChevronDown"]')).not.toBeNull();
+    expect(control.querySelector('[data-icon="Checkbox"]')).toBeNull();
+    expect(control.querySelector('[data-icon="CheckboxChecked"]')).toBeNull();
+    // A menu trigger's contract, kept from the checkbox build.
+    expect(control.getAttribute("aria-haspopup")).toBe("menu");
+    expect(control.getAttribute("aria-expanded")).toBe("false");
+    // The name describes the menu, and carries no done state: the trigger
+    // paints none, so naming one would tell a screen reader a state the
+    // sighted reader cannot see.
+    expect(control.getAttribute("aria-label")).toBe("Focus Board thread menu");
+    expect(control.getAttribute("aria-label")).not.toMatch(/done/i);
+  });
+
+  it("still reads as the same 28px ghost box the pane chrome uses", () => {
+    mountControl();
+    const control = trigger();
+    // The host's chrome row is 28px tall; the box class is the pane's own, so
+    // the control keeps sitting in that ladder (36px on a coarse pointer).
+    expect(control.className).toContain("h-[28px]");
+    expect(control.className).toContain("w-[28px]");
+    expect(control.className).toContain("max-md:pointer-coarse:h-[36px]");
+  });
+
   it("renders one trigger whose popover carries exactly the three board-owned actions", async () => {
     mountControl();
     await openPopover();
@@ -170,11 +217,35 @@ describe("the control on a native thread page", () => {
   it("marks done through the board's own RPC", async () => {
     mountControl();
     await openPopover();
-    fireEvent.click(screen.getByRole("menuitem", { name: "Mark Done" }));
+    fireEvent.click(doneRow());
     await waitFor(() => {
       const call = fakeRpcCalls().find((entry) => entry.method === "done_set");
       expect(call).toMatchObject({ args: { threadId: "thr_x", done: true } });
     });
+  });
+
+  it("draws the done state as the menu row's check, not on the trigger", async () => {
+    seedFakeThreadMetadata("thr_x", { done: { doneAt: new Date(NOW).toISOString() } });
+    mountControl();
+    await openPopover();
+    // Done lives where it is acted on: the row is a checked radio and draws
+    // the popover base's state mark (the trailing Check, which the row styles
+    // `ml-auto`; the row's leading glyph is the action's own icon).
+    const row = screen.getByRole("menuitemradio", { name: "Mark Not Done" });
+    expect(row.getAttribute("aria-checked")).toBe("true");
+    expect(row.querySelector('[data-icon="Check"].ml-auto')).not.toBeNull();
+    // The trigger is the mark and its caret either way: no state glyph.
+    const control = trigger();
+    expect(control.querySelector('[data-icon="CheckboxChecked"]')).toBeNull();
+    expect(control.querySelector('[data-icon="Checkbox"]')).toBeNull();
+  });
+
+  it("leaves the done row unchecked, with no state mark, when the thread is not done", async () => {
+    mountControl();
+    await openPopover();
+    const row = screen.getByRole("menuitemradio", { name: "Mark Done" });
+    expect(row.getAttribute("aria-checked")).toBe("false");
+    expect(row.querySelector('[data-icon="Check"].ml-auto')).toBeNull();
   });
 
   it("lifts a snooze on a done toggle, the pane header's own rule", async () => {
@@ -183,7 +254,7 @@ describe("the control on a native thread page", () => {
     });
     mountControl();
     await openPopover();
-    fireEvent.click(screen.getByRole("menuitem", { name: "Mark Done" }));
+    fireEvent.click(doneRow());
     await waitFor(() => {
       const methods = fakeRpcCalls().map((entry) => entry.method);
       expect(methods.indexOf("snooze_clear")).toBeGreaterThanOrEqual(0);
@@ -243,7 +314,10 @@ describe("the control on a native thread page", () => {
       fireRealtime("done-changed", { threadId: "thr_x" });
     });
     await waitFor(() => {
-      expect(screen.getByRole("menuitem", { name: "Mark Not Done" })).toBeTruthy();
+      // The row flips label AND state: a board-side flip lands as a checked
+      // "Mark Not Done".
+      const row = screen.getByRole("menuitemradio", { name: "Mark Not Done" });
+      expect(row.getAttribute("aria-checked")).toBe("true");
     });
   });
 });
