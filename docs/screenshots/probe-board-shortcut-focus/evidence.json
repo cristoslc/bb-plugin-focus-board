@@ -1,0 +1,1961 @@
+{
+  "capturedAt": "2026-11-23T20:55:49.861Z",
+  "app": "http://127.0.0.1:38886/plugins/focus-board/board",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.0.0 Safari/537.36",
+  "steps": {
+    "baselineBefore": {
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+      "viewport": {
+        "w": 1600,
+        "h": 1200
+      },
+      "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}",
+      "compact": false,
+      "boardVisible": true,
+      "paneOfBoard": "pane-1",
+      "panes": [
+        {
+          "id": "pane-1",
+          "x": 320,
+          "y": 0,
+          "w": 1280,
+          "h": 1200,
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity h-fu",
+          "hasBoard": true
+        }
+      ],
+      "boardAncestors": [
+        {
+          "tag": "div",
+          "className": "relative flex h-full min-h-0",
+          "attrs": {
+            "data-focus-board-panel": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "contents",
+          "attrs": {
+            "data-bb-plugin-root": "",
+            "data-bb-plugin": "focus-board",
+            "data-bb-plugin-scope-focus-board": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "-m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-5",
+          "attrs": {
+            "data-testid": "plugin-panel-body"
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-5",
+          "attrs": {
+            "data-pane-content": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity h-fu",
+          "attrs": {
+            "data-split-pane-id": "pane-1"
+          }
+        },
+        {
+          "tag": "div",
+          "className": "min-w-0 transition-[flex-grow,flex-basis] duration-[var(--pa",
+          "attrs": {
+            "id": "plugin-panel-main-pane-1",
+            "data-panel-group-id": "_r_15_",
+            "data-panel": "",
+            "data-panel-collapsible": "true",
+            "data-panel-id": "plugin-panel-main-pane-1",
+            "data-panel-size": "100.0"
+          }
+        },
+        {
+          "tag": "div",
+          "className": "@container h-full min-w-0 flex-1",
+          "attrs": {
+            "data-split-resize-grid-root": "",
+            "data-panel-group": "",
+            "data-panel-group-direction": "horizontal",
+            "data-panel-group-id": "_r_15_"
+          }
+        }
+      ],
+      "activeElement": {
+        "tag": "body",
+        "id": null,
+        "ariaLabel": null,
+        "isSearchField": false
+      },
+      "activeChain": [
+        {
+          "tag": "body",
+          "className": "bb-app-shell",
+          "attrs": {}
+        },
+        {
+          "tag": "html",
+          "className": "bb-app-shell-root dark",
+          "attrs": {}
+        }
+      ],
+      "searchFieldPresent": true,
+      "searchFieldFocused": false,
+      "composerOpen": false
+    },
+    "baselineSlash": {
+      "state": {
+        "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        },
+        "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}",
+        "compact": false,
+        "boardVisible": true,
+        "paneOfBoard": "pane-1",
+        "panes": [
+          {
+            "id": "pane-1",
+            "x": 320,
+            "y": 0,
+            "w": 1280,
+            "h": 1200,
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity h-fu",
+            "hasBoard": true
+          }
+        ],
+        "boardAncestors": [
+          {
+            "tag": "div",
+            "className": "relative flex h-full min-h-0",
+            "attrs": {
+              "data-focus-board-panel": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "contents",
+            "attrs": {
+              "data-bb-plugin-root": "",
+              "data-bb-plugin": "focus-board",
+              "data-bb-plugin-scope-focus-board": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "-m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-5",
+            "attrs": {
+              "data-testid": "plugin-panel-body"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-5",
+            "attrs": {
+              "data-pane-content": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity h-fu",
+            "attrs": {
+              "data-split-pane-id": "pane-1"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "min-w-0 transition-[flex-grow,flex-basis] duration-[var(--pa",
+            "attrs": {
+              "id": "plugin-panel-main-pane-1",
+              "data-panel-group-id": "_r_15_",
+              "data-panel": "",
+              "data-panel-collapsible": "true",
+              "data-panel-id": "plugin-panel-main-pane-1",
+              "data-panel-size": "100.0"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "@container h-full min-w-0 flex-1",
+            "attrs": {
+              "data-split-resize-grid-root": "",
+              "data-panel-group": "",
+              "data-panel-group-direction": "horizontal",
+              "data-panel-group-id": "_r_15_"
+            }
+          }
+        ],
+        "activeElement": {
+          "tag": "input",
+          "id": null,
+          "ariaLabel": "Search threads",
+          "isSearchField": true
+        },
+        "activeChain": [
+          {
+            "tag": "input",
+            "className": "flex w-full rounded-md border border-input bg-tran",
+            "attrs": {
+              "autocomplete": "off",
+              "placeholder": "Search title or id…",
+              "aria-label": "Search threads",
+              "value": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "relative w-44 sm:w-56",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex items-center gap-2",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex flex-wrap items-center gap-2 border-b border-",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex h-full min-h-0 min-w-0 flex-1 flex-col",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "relative flex h-full min-h-0",
+            "attrs": {}
+          }
+        ],
+        "searchFieldPresent": true,
+        "searchFieldFocused": true,
+        "composerOpen": false
+      },
+      "keys": [
+        {
+          "key": "/",
+          "defaultPrevented": true,
+          "target": {
+            "tag": "body",
+            "attrs": {}
+          },
+          "activeElement": {
+            "tag": "input",
+            "attrs": {
+              "autocomplete": "off",
+              "placeholder": "Search title or id…",
+              "aria-label": "Search threads",
+              "value": ""
+            }
+          }
+        }
+      ]
+    },
+    "baselineNewThreadKey": {
+      "state": {
+        "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        },
+        "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}",
+        "compact": false,
+        "boardVisible": true,
+        "paneOfBoard": "pane-1",
+        "panes": [
+          {
+            "id": "pane-1",
+            "x": 320,
+            "y": 0,
+            "w": 1280,
+            "h": 1200,
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity h-fu",
+            "hasBoard": true
+          }
+        ],
+        "boardAncestors": [
+          {
+            "tag": "div",
+            "className": "relative flex h-full min-h-0",
+            "attrs": {
+              "data-focus-board-panel": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "contents",
+            "attrs": {
+              "data-bb-plugin-root": "",
+              "data-bb-plugin": "focus-board",
+              "data-bb-plugin-scope-focus-board": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "-m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-5",
+            "attrs": {
+              "data-testid": "plugin-panel-body"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-5",
+            "attrs": {
+              "data-pane-content": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity h-fu",
+            "attrs": {
+              "data-split-pane-id": "pane-1"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "min-w-0 transition-[flex-grow,flex-basis] duration-[var(--pa",
+            "attrs": {
+              "id": "plugin-panel-main-pane-1",
+              "data-panel-group-id": "_r_15_",
+              "data-panel": "",
+              "data-panel-collapsible": "true",
+              "data-panel-id": "plugin-panel-main-pane-1",
+              "data-panel-size": "100.0"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "@container h-full min-w-0 flex-1",
+            "attrs": {
+              "data-split-resize-grid-root": "",
+              "data-panel-group": "",
+              "data-panel-group-direction": "horizontal",
+              "data-panel-group-id": "_r_15_"
+            }
+          }
+        ],
+        "activeElement": {
+          "tag": "div",
+          "id": null,
+          "ariaLabel": "Ask anything.",
+          "isSearchField": false
+        },
+        "activeChain": [
+          {
+            "tag": "div",
+            "className": "tiptap ProseMirror min-h-full whitespace-pre-wrap ",
+            "attrs": {
+              "contenteditable": "true",
+              "role": "textbox",
+              "aria-label": "Ask anything.",
+              "data-placeholder": "Ask anything.",
+              "autocomplete": "off",
+              "enterkeyhint": "send",
+              "translate": "no",
+              "tabindex": "0"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "h-full min-h-full [&_.ProseMirror]:min-h-full [&_.",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "w-full overflow-y-auto bg-transparent px-4 pb-1 pr",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "relative",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "min-h-0 overflow-hidden transition-opacity duratio",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "grid transition-[grid-template-rows] duration-[180",
+            "attrs": {}
+          }
+        ],
+        "searchFieldPresent": true,
+        "searchFieldFocused": false,
+        "composerOpen": true
+      },
+      "keys": [
+        {
+          "key": "c",
+          "defaultPrevented": true,
+          "target": {
+            "tag": "body",
+            "attrs": {
+              "data-scroll-locked": "1"
+            }
+          },
+          "activeElement": {
+            "tag": "div",
+            "attrs": {
+              "contenteditable": "true",
+              "role": "textbox",
+              "aria-label": "Ask anything.",
+              "data-placeholder": "Ask anything.",
+              "autocomplete": "off",
+              "enterkeyhint": "send",
+              "translate": "no",
+              "tabindex": "0"
+            }
+          }
+        }
+      ]
+    },
+    "sidebarRow": {
+      "x": 170,
+      "y": 98,
+      "href": "/projects/proj_9da9h742i7/threads/thr_cvvvkw6rjz"
+    },
+    "splitItem": {
+      "label": "Open in split",
+      "x": 249,
+      "y": 116,
+      "visible": true
+    },
+    "afterSplit": {
+      "url": "http://127.0.0.1:38886/projects/proj_9da9h742i7/threads/thr_cvvvkw6rjz",
+      "viewport": {
+        "w": 1600,
+        "h": 1200
+      },
+      "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_9da9h742i7\",\"threadId\":\"thr_cvvvkw6rjz\"}}]},\"focusedPaneId\":\"pane-2\"}}",
+      "compact": false,
+      "boardVisible": true,
+      "paneOfBoard": "pane-1",
+      "panes": [
+        {
+          "id": "pane-1",
+          "x": 320,
+          "y": 0,
+          "w": 640,
+          "h": 1200,
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "hasBoard": true
+        },
+        {
+          "id": "pane-2",
+          "x": 961,
+          "y": 0,
+          "w": 640,
+          "h": 1200,
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "hasBoard": false
+        }
+      ],
+      "boardAncestors": [
+        {
+          "tag": "div",
+          "className": "relative flex h-full min-h-0",
+          "attrs": {
+            "data-focus-board-panel": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "contents",
+          "attrs": {
+            "data-bb-plugin-root": "",
+            "data-bb-plugin": "focus-board",
+            "data-bb-plugin-scope-focus-board": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "-m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-5",
+          "attrs": {
+            "data-testid": "plugin-panel-body"
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-5 isolate",
+          "attrs": {
+            "data-pane-content": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity dura",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden h-full",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "attrs": {
+            "tabindex": "-1",
+            "data-split-pane-id": "pane-1",
+            "data-focused": "false"
+          }
+        }
+      ],
+      "activeElement": {
+        "tag": "a",
+        "id": null,
+        "ariaLabel": "Open Refine strategic engineering goals",
+        "isSearchField": false
+      },
+      "activeChain": [
+        {
+          "tag": "a",
+          "className": "absolute inset-0 rounded-md outline-none",
+          "attrs": {
+            "href": "/projects/proj_9da9h742i7/threads/thr_cvvvkw6rjz",
+            "draggable": "false",
+            "data-sidebar-thread-shortcut-target": "",
+            "data-sidebar-thread-id": "thr_cvvvkw6rjz",
+            "data-sidebar-rename-anchor": "",
+            "aria-label": "Open Refine strategic engineering goals"
+          }
+        },
+        {
+          "tag": "span",
+          "className": "relative flex min-w-0 flex-1 items-center gap-1.5 ",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "bb-sidebar-hover-actions-row group/thread-row curs",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "relative space-y-0.5",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "relative space-y-0.5",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "mt-1",
+          "attrs": {}
+        }
+      ],
+      "searchFieldPresent": true,
+      "searchFieldFocused": false,
+      "composerOpen": false
+    },
+    "boardClickedBefore": {
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+      "viewport": {
+        "w": 1600,
+        "h": 1200
+      },
+      "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_9da9h742i7\",\"threadId\":\"thr_cvvvkw6rjz\"}}]},\"focusedPaneId\":\"pane-1\"}}",
+      "compact": false,
+      "boardVisible": true,
+      "paneOfBoard": "pane-1",
+      "panes": [
+        {
+          "id": "pane-1",
+          "x": 320,
+          "y": 0,
+          "w": 640,
+          "h": 1200,
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "hasBoard": true
+        },
+        {
+          "id": "pane-2",
+          "x": 961,
+          "y": 0,
+          "w": 640,
+          "h": 1200,
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "hasBoard": false
+        }
+      ],
+      "boardAncestors": [
+        {
+          "tag": "div",
+          "className": "relative flex h-full min-h-0",
+          "attrs": {
+            "data-focus-board-panel": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "contents",
+          "attrs": {
+            "data-bb-plugin-root": "",
+            "data-bb-plugin": "focus-board",
+            "data-bb-plugin-scope-focus-board": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "-m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-5",
+          "attrs": {
+            "data-testid": "plugin-panel-body"
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-5 isolate",
+          "attrs": {
+            "data-pane-content": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity dura",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden h-full",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "attrs": {
+            "tabindex": "-1",
+            "data-split-pane-id": "pane-1",
+            "data-focused": "true"
+          }
+        }
+      ],
+      "activeElement": {
+        "tag": "div",
+        "id": null,
+        "ariaLabel": null,
+        "isSearchField": false
+      },
+      "activeChain": [
+        {
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidd",
+          "attrs": {
+            "tabindex": "-1",
+            "data-split-pane-id": "pane-1",
+            "data-focused": "true"
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-row",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "relative flex h-full min-h-0 min-w-0",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "min-w-0 transition-[flex-grow,flex-basis] duration",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "@container h-full min-w-0 flex-1",
+          "attrs": {}
+        }
+      ],
+      "searchFieldPresent": true,
+      "searchFieldFocused": false,
+      "composerOpen": false
+    },
+    "boardClickedSlash": {
+      "state": {
+        "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        },
+        "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_9da9h742i7\",\"threadId\":\"thr_cvvvkw6rjz\"}}]},\"focusedPaneId\":\"pane-1\"}}",
+        "compact": false,
+        "boardVisible": true,
+        "paneOfBoard": "pane-1",
+        "panes": [
+          {
+            "id": "pane-1",
+            "x": 320,
+            "y": 0,
+            "w": 640,
+            "h": 1200,
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+            "hasBoard": true
+          },
+          {
+            "id": "pane-2",
+            "x": 961,
+            "y": 0,
+            "w": 640,
+            "h": 1200,
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+            "hasBoard": false
+          }
+        ],
+        "boardAncestors": [
+          {
+            "tag": "div",
+            "className": "relative flex h-full min-h-0",
+            "attrs": {
+              "data-focus-board-panel": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "contents",
+            "attrs": {
+              "data-bb-plugin-root": "",
+              "data-bb-plugin": "focus-board",
+              "data-bb-plugin-scope-focus-board": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "-m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-5",
+            "attrs": {
+              "data-testid": "plugin-panel-body"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-5 isolate",
+            "attrs": {
+              "data-pane-content": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity dura",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden h-full",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "true"
+            }
+          }
+        ],
+        "activeElement": {
+          "tag": "div",
+          "id": null,
+          "ariaLabel": null,
+          "isSearchField": false
+        },
+        "activeChain": [
+          {
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidd",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "true"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-row",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "relative flex h-full min-h-0 min-w-0",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "min-w-0 transition-[flex-grow,flex-basis] duration",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "@container h-full min-w-0 flex-1",
+            "attrs": {}
+          }
+        ],
+        "searchFieldPresent": true,
+        "searchFieldFocused": false,
+        "composerOpen": false
+      },
+      "keys": [
+        {
+          "key": "Escape",
+          "defaultPrevented": true,
+          "target": {
+            "tag": "div",
+            "attrs": {
+              "contenteditable": "true",
+              "role": "textbox",
+              "aria-label": "Ask anything.",
+              "data-placeholder": "Ask anything.",
+              "autocomplete": "off",
+              "enterkeyhint": "send",
+              "translate": "no",
+              "tabindex": "0"
+            }
+          },
+          "activeElement": {
+            "tag": "div",
+            "attrs": {
+              "contenteditable": "true",
+              "role": "textbox",
+              "aria-label": "Ask anything.",
+              "data-placeholder": "Ask anything.",
+              "autocomplete": "off",
+              "enterkeyhint": "send",
+              "translate": "no",
+              "tabindex": "0"
+            }
+          }
+        },
+        {
+          "key": "/",
+          "defaultPrevented": false,
+          "target": {
+            "tag": "div",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "true"
+            }
+          },
+          "activeElement": {
+            "tag": "div",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "true"
+            }
+          }
+        }
+      ]
+    },
+    "boardClickedNewThreadKey": {
+      "state": {
+        "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        },
+        "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_9da9h742i7\",\"threadId\":\"thr_cvvvkw6rjz\"}}]},\"focusedPaneId\":\"pane-1\"}}",
+        "compact": false,
+        "boardVisible": true,
+        "paneOfBoard": "pane-1",
+        "panes": [
+          {
+            "id": "pane-1",
+            "x": 320,
+            "y": 0,
+            "w": 640,
+            "h": 1200,
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+            "hasBoard": true
+          },
+          {
+            "id": "pane-2",
+            "x": 961,
+            "y": 0,
+            "w": 640,
+            "h": 1200,
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+            "hasBoard": false
+          }
+        ],
+        "boardAncestors": [
+          {
+            "tag": "div",
+            "className": "relative flex h-full min-h-0",
+            "attrs": {
+              "data-focus-board-panel": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "contents",
+            "attrs": {
+              "data-bb-plugin-root": "",
+              "data-bb-plugin": "focus-board",
+              "data-bb-plugin-scope-focus-board": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "-m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-5",
+            "attrs": {
+              "data-testid": "plugin-panel-body"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-5 isolate",
+            "attrs": {
+              "data-pane-content": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity dura",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden h-full",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "true"
+            }
+          }
+        ],
+        "activeElement": {
+          "tag": "div",
+          "id": null,
+          "ariaLabel": null,
+          "isSearchField": false
+        },
+        "activeChain": [
+          {
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidd",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "true"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-row",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "relative flex h-full min-h-0 min-w-0",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "min-w-0 transition-[flex-grow,flex-basis] duration",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "@container h-full min-w-0 flex-1",
+            "attrs": {}
+          }
+        ],
+        "searchFieldPresent": true,
+        "searchFieldFocused": false,
+        "composerOpen": false
+      },
+      "keys": [
+        {
+          "key": "c",
+          "defaultPrevented": false,
+          "target": {
+            "tag": "div",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "true"
+            }
+          },
+          "activeElement": {
+            "tag": "div",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "true"
+            }
+          }
+        }
+      ]
+    },
+    "afterComposerClose": {
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+      "viewport": {
+        "w": 1600,
+        "h": 1200
+      },
+      "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_9da9h742i7\",\"threadId\":\"thr_cvvvkw6rjz\"}}]},\"focusedPaneId\":\"pane-1\"}}",
+      "compact": false,
+      "boardVisible": true,
+      "paneOfBoard": "pane-1",
+      "panes": [
+        {
+          "id": "pane-1",
+          "x": 320,
+          "y": 0,
+          "w": 640,
+          "h": 1200,
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "hasBoard": true
+        },
+        {
+          "id": "pane-2",
+          "x": 961,
+          "y": 0,
+          "w": 640,
+          "h": 1200,
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "hasBoard": false
+        }
+      ],
+      "boardAncestors": [
+        {
+          "tag": "div",
+          "className": "relative flex h-full min-h-0",
+          "attrs": {
+            "data-focus-board-panel": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "contents",
+          "attrs": {
+            "data-bb-plugin-root": "",
+            "data-bb-plugin": "focus-board",
+            "data-bb-plugin-scope-focus-board": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "-m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-5",
+          "attrs": {
+            "data-testid": "plugin-panel-body"
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-5 isolate",
+          "attrs": {
+            "data-pane-content": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity dura",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden h-full",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "attrs": {
+            "tabindex": "-1",
+            "data-split-pane-id": "pane-1",
+            "data-focused": "true"
+          }
+        }
+      ],
+      "activeElement": {
+        "tag": "div",
+        "id": null,
+        "ariaLabel": null,
+        "isSearchField": false
+      },
+      "activeChain": [
+        {
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidd",
+          "attrs": {
+            "tabindex": "-1",
+            "data-split-pane-id": "pane-1",
+            "data-focused": "true"
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-row",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "relative flex h-full min-h-0 min-w-0",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "min-w-0 transition-[flex-grow,flex-basis] duration",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "@container h-full min-w-0 flex-1",
+          "attrs": {}
+        }
+      ],
+      "searchFieldPresent": true,
+      "searchFieldFocused": false,
+      "composerOpen": false
+    },
+    "cardPoint": {
+      "threadId": "thr_ucyukpxd7i",
+      "x": 465,
+      "y": 106
+    },
+    "afterCardPress": {
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+      "viewport": {
+        "w": 1600,
+        "h": 1200
+      },
+      "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_9da9h742i7\",\"threadId\":\"thr_cvvvkw6rjz\"}}]},\"focusedPaneId\":\"pane-1\"}}",
+      "compact": false,
+      "boardVisible": true,
+      "paneOfBoard": "pane-1",
+      "panes": [
+        {
+          "id": "pane-1",
+          "x": 320,
+          "y": 0,
+          "w": 640,
+          "h": 1200,
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "hasBoard": true
+        },
+        {
+          "id": "pane-2",
+          "x": 961,
+          "y": 0,
+          "w": 640,
+          "h": 1200,
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "hasBoard": false
+        }
+      ],
+      "boardAncestors": [
+        {
+          "tag": "div",
+          "className": "relative flex h-full min-h-0",
+          "attrs": {
+            "data-focus-board-panel": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "contents",
+          "attrs": {
+            "data-bb-plugin-root": "",
+            "data-bb-plugin": "focus-board",
+            "data-bb-plugin-scope-focus-board": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "-m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-5",
+          "attrs": {
+            "data-testid": "plugin-panel-body"
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-5 isolate",
+          "attrs": {
+            "data-pane-content": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity dura",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden h-full",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "attrs": {
+            "tabindex": "-1",
+            "data-split-pane-id": "pane-1",
+            "data-focused": "true"
+          }
+        }
+      ],
+      "activeElement": {
+        "tag": "div",
+        "id": null,
+        "ariaLabel": null,
+        "isSearchField": false
+      },
+      "activeChain": [
+        {
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidd",
+          "attrs": {
+            "tabindex": "-1",
+            "data-split-pane-id": "pane-1",
+            "data-focused": "true"
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-row",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "relative flex h-full min-h-0 min-w-0",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "min-w-0 transition-[flex-grow,flex-basis] duration",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "@container h-full min-w-0 flex-1",
+          "attrs": {}
+        }
+      ],
+      "searchFieldPresent": true,
+      "searchFieldFocused": false,
+      "composerOpen": false
+    },
+    "boardClickedAgain": {
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+      "viewport": {
+        "w": 1600,
+        "h": 1200
+      },
+      "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_9da9h742i7\",\"threadId\":\"thr_cvvvkw6rjz\"}}]},\"focusedPaneId\":\"pane-1\"}}",
+      "compact": false,
+      "boardVisible": true,
+      "paneOfBoard": "pane-1",
+      "panes": [
+        {
+          "id": "pane-1",
+          "x": 320,
+          "y": 0,
+          "w": 640,
+          "h": 1200,
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "hasBoard": true
+        },
+        {
+          "id": "pane-2",
+          "x": 961,
+          "y": 0,
+          "w": 640,
+          "h": 1200,
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "hasBoard": false
+        }
+      ],
+      "boardAncestors": [
+        {
+          "tag": "div",
+          "className": "relative flex h-full min-h-0",
+          "attrs": {
+            "data-focus-board-panel": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "contents",
+          "attrs": {
+            "data-bb-plugin-root": "",
+            "data-bb-plugin": "focus-board",
+            "data-bb-plugin-scope-focus-board": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "-m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-5",
+          "attrs": {
+            "data-testid": "plugin-panel-body"
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-5 isolate",
+          "attrs": {
+            "data-pane-content": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity dura",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden h-full",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "attrs": {
+            "tabindex": "-1",
+            "data-split-pane-id": "pane-1",
+            "data-focused": "true"
+          }
+        }
+      ],
+      "activeElement": {
+        "tag": "div",
+        "id": null,
+        "ariaLabel": null,
+        "isSearchField": false
+      },
+      "activeChain": [
+        {
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidd",
+          "attrs": {
+            "tabindex": "-1",
+            "data-split-pane-id": "pane-1",
+            "data-focused": "true"
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-row",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "relative flex h-full min-h-0 min-w-0",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "min-w-0 transition-[flex-grow,flex-basis] duration",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "@container h-full min-w-0 flex-1",
+          "attrs": {}
+        }
+      ],
+      "searchFieldPresent": true,
+      "searchFieldFocused": false,
+      "composerOpen": false
+    },
+    "boardClickedAgainSlash": {
+      "state": {
+        "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        },
+        "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_9da9h742i7\",\"threadId\":\"thr_cvvvkw6rjz\"}}]},\"focusedPaneId\":\"pane-1\"}}",
+        "compact": false,
+        "boardVisible": true,
+        "paneOfBoard": "pane-1",
+        "panes": [
+          {
+            "id": "pane-1",
+            "x": 320,
+            "y": 0,
+            "w": 640,
+            "h": 1200,
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+            "hasBoard": true
+          },
+          {
+            "id": "pane-2",
+            "x": 961,
+            "y": 0,
+            "w": 640,
+            "h": 1200,
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+            "hasBoard": false
+          }
+        ],
+        "boardAncestors": [
+          {
+            "tag": "div",
+            "className": "relative flex h-full min-h-0",
+            "attrs": {
+              "data-focus-board-panel": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "contents",
+            "attrs": {
+              "data-bb-plugin-root": "",
+              "data-bb-plugin": "focus-board",
+              "data-bb-plugin-scope-focus-board": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "-m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-5",
+            "attrs": {
+              "data-testid": "plugin-panel-body"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-5 isolate",
+            "attrs": {
+              "data-pane-content": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity dura",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden h-full",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "true"
+            }
+          }
+        ],
+        "activeElement": {
+          "tag": "div",
+          "id": null,
+          "ariaLabel": null,
+          "isSearchField": false
+        },
+        "activeChain": [
+          {
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidd",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "true"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-row",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "relative flex h-full min-h-0 min-w-0",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "min-w-0 transition-[flex-grow,flex-basis] duration",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "@container h-full min-w-0 flex-1",
+            "attrs": {}
+          }
+        ],
+        "searchFieldPresent": true,
+        "searchFieldFocused": false,
+        "composerOpen": false
+      },
+      "keys": [
+        {
+          "key": "Escape",
+          "defaultPrevented": false,
+          "target": {
+            "tag": "div",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "true"
+            }
+          },
+          "activeElement": {
+            "tag": "div",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "true"
+            }
+          }
+        },
+        {
+          "key": "/",
+          "defaultPrevented": false,
+          "target": {
+            "tag": "div",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "true"
+            }
+          },
+          "activeElement": {
+            "tag": "div",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "true"
+            }
+          }
+        }
+      ]
+    },
+    "foreignPanePoint": {
+      "x": 1280,
+      "y": 600
+    },
+    "foreignPaneBefore": {
+      "url": "http://127.0.0.1:38886/projects/proj_9da9h742i7/threads/thr_cvvvkw6rjz",
+      "viewport": {
+        "w": 1600,
+        "h": 1200
+      },
+      "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_9da9h742i7\",\"threadId\":\"thr_cvvvkw6rjz\"}}]},\"focusedPaneId\":\"pane-2\"}}",
+      "compact": false,
+      "boardVisible": true,
+      "paneOfBoard": "pane-1",
+      "panes": [
+        {
+          "id": "pane-1",
+          "x": 320,
+          "y": 0,
+          "w": 640,
+          "h": 1200,
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "hasBoard": true
+        },
+        {
+          "id": "pane-2",
+          "x": 961,
+          "y": 0,
+          "w": 640,
+          "h": 1200,
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "hasBoard": false
+        }
+      ],
+      "boardAncestors": [
+        {
+          "tag": "div",
+          "className": "relative flex h-full min-h-0",
+          "attrs": {
+            "data-focus-board-panel": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "contents",
+          "attrs": {
+            "data-bb-plugin-root": "",
+            "data-bb-plugin": "focus-board",
+            "data-bb-plugin-scope-focus-board": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "-m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-5",
+          "attrs": {
+            "data-testid": "plugin-panel-body"
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-5 isolate",
+          "attrs": {
+            "data-pane-content": ""
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity dura",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden h-full",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+          "attrs": {
+            "tabindex": "-1",
+            "data-split-pane-id": "pane-1",
+            "data-focused": "false"
+          }
+        }
+      ],
+      "activeElement": {
+        "tag": "div",
+        "id": null,
+        "ariaLabel": null,
+        "isSearchField": false
+      },
+      "activeChain": [
+        {
+          "tag": "div",
+          "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidd",
+          "attrs": {
+            "tabindex": "-1",
+            "data-split-pane-id": "pane-2",
+            "data-focused": "true"
+          }
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "flex min-h-0 min-w-0 flex-1 flex-row",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "relative flex h-full min-h-0 min-w-0",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "min-w-0 transition-[flex-grow,flex-basis] duration",
+          "attrs": {}
+        },
+        {
+          "tag": "div",
+          "className": "@container h-full min-w-0 flex-1",
+          "attrs": {}
+        }
+      ],
+      "searchFieldPresent": true,
+      "searchFieldFocused": false,
+      "composerOpen": false
+    },
+    "foreignPaneSlash": {
+      "state": {
+        "url": "http://127.0.0.1:38886/projects/proj_9da9h742i7/threads/thr_cvvvkw6rjz",
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        },
+        "splitLayout": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_9da9h742i7\",\"threadId\":\"thr_cvvvkw6rjz\"}}]},\"focusedPaneId\":\"pane-2\"}}",
+        "compact": false,
+        "boardVisible": true,
+        "paneOfBoard": "pane-1",
+        "panes": [
+          {
+            "id": "pane-1",
+            "x": 320,
+            "y": 0,
+            "w": 640,
+            "h": 1200,
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+            "hasBoard": true
+          },
+          {
+            "id": "pane-2",
+            "x": 961,
+            "y": 0,
+            "w": 640,
+            "h": 1200,
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+            "hasBoard": false
+          }
+        ],
+        "boardAncestors": [
+          {
+            "tag": "div",
+            "className": "relative flex h-full min-h-0",
+            "attrs": {
+              "data-focus-board-panel": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "contents",
+            "attrs": {
+              "data-bb-plugin-root": "",
+              "data-bb-plugin": "focus-board",
+              "data-bb-plugin-scope-focus-board": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "-m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-5",
+            "attrs": {
+              "data-testid": "plugin-panel-body"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col p-4 md:p-5 isolate",
+            "attrs": {
+              "data-pane-content": ""
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col transition-opacity dura",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden h-full",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidden",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-1",
+              "data-focused": "false"
+            }
+          }
+        ],
+        "activeElement": {
+          "tag": "div",
+          "id": null,
+          "ariaLabel": null,
+          "isSearchField": false
+        },
+        "activeChain": [
+          {
+            "tag": "div",
+            "className": "relative flex min-h-0 min-w-0 flex-1 overflow-hidd",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-2",
+              "data-focused": "true"
+            }
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "flex min-h-0 min-w-0 flex-1 flex-row",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "relative flex h-full min-h-0 min-w-0",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "min-w-0 transition-[flex-grow,flex-basis] duration",
+            "attrs": {}
+          },
+          {
+            "tag": "div",
+            "className": "@container h-full min-w-0 flex-1",
+            "attrs": {}
+          }
+        ],
+        "searchFieldPresent": true,
+        "searchFieldFocused": false,
+        "composerOpen": false
+      },
+      "keys": [
+        {
+          "key": "/",
+          "defaultPrevented": false,
+          "target": {
+            "tag": "div",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-2",
+              "data-focused": "true"
+            }
+          },
+          "activeElement": {
+            "tag": "div",
+            "attrs": {
+              "tabindex": "-1",
+              "data-split-pane-id": "pane-2",
+              "data-focused": "true"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "shots": [
+    "01-board-alone.png",
+    "02-board-alone-slash.png",
+    "03-board-alone-new-thread-key.png",
+    "04-after-split.png",
+    "05-board-clicked.png",
+    "06-board-clicked-slash.png",
+    "07-board-clicked-new-thread-key.png",
+    "08-after-card-press.png",
+    "09-board-clicked-again-slash.png",
+    "10-foreign-pane-slash.png"
+  ],
+  "consoleLines": []
+}

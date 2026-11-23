@@ -442,13 +442,29 @@ if (mockStaleNativePane) refreshMockSplit();
  * keep-in-view assertion after a native open would pass without measuring the
  * thing the split does. The pane element is a bare stand-in: the suites assert
  * the mock's pane records (`__uat.nativePanes()`), never this DOM.
+ *
+ * Both panes carry what bb's pane containers carry on the installed 0.50.1
+ * build (`scripts/screenshot/probe-board-shortcut-focus.mjs`): the
+ * `data-split-pane-id` the layout reports, `tabindex="-1"`, and
+ * `data-focused`. The board's own container matters most: bb focuses it on
+ * pointerdown, so a keystroke after a click inside the board is aimed at the
+ * container AROUND the plugin panel. Without the attribute and the tabindex the
+ * harness's board always sits outside any pane container, which is exactly the
+ * state in which the board's single-key shortcuts stand down — the shape that
+ * let the 2026-11-23 "/" bug live in the harness and only in the harness.
  */
 function applyMockSplitChrome(): void {
   const rootElement = document.getElementById("root");
   if (rootElement === null) return;
   const split = mockSplitsEnabled && mockHostPanes.length >= 2;
+  const boardContainer = document.getElementById("mock-split-board-pane");
   if (!split) {
     document.getElementById("mock-split-pane")?.remove();
+    if (boardContainer !== null) {
+      boardContainer.parentElement?.insertBefore(rootElement, boardContainer);
+      boardContainer.remove();
+    }
+    rootElement.style.cssText = "";
     return;
   }
   let host = document.getElementById("mock-split-host");
@@ -459,16 +475,36 @@ function applyMockSplitChrome(): void {
     rootElement.parentElement?.insertBefore(host, rootElement);
     host.append(rootElement);
   }
-  rootElement.style.cssText = "flex:1 1 0;min-width:0;height:100%;overflow:hidden;";
+  let boardPane = boardContainer;
+  if (boardPane === null) {
+    boardPane = document.createElement("div");
+    boardPane.id = "mock-split-board-pane";
+    boardPane.setAttribute("data-split-pane-id", "pane-1");
+    boardPane.setAttribute("tabindex", "-1");
+    host.insertBefore(boardPane, rootElement);
+    boardPane.append(rootElement);
+  }
+  boardPane.style.cssText = "flex:1 1 0;min-width:0;height:100%;overflow:hidden;";
+  rootElement.style.cssText = "width:100%;height:100%;overflow:hidden;";
   let pane = document.getElementById("mock-split-pane");
   if (pane === null) {
     pane = document.createElement("div");
     pane.id = "mock-split-pane";
     pane.setAttribute("data-split-pane-id", "pane-2");
+    pane.setAttribute("tabindex", "-1");
     pane.setAttribute("data-probe-mock-pane", "");
     pane.style.cssText =
       "flex:1 1 0;min-width:0;height:100%;border-left:1px solid var(--border);";
     host.append(pane);
+  }
+  // The host's focus styling, from the layout the board reads: one pane is
+  // focused, and its container says so.
+  for (const [container, paneId] of [
+    [boardPane, "pane-1"],
+    [pane, "pane-2"],
+  ] as const) {
+    const record = mockHostPanes.find((candidate) => candidate.paneId === paneId);
+    container.setAttribute("data-focused", record?.isFocused === true ? "true" : "false");
   }
 }
 
@@ -515,6 +551,32 @@ function focusMockPane(
   paneId: string,
 ): MockSplitPane[] {
   return panes.map((pane) => ({ ...pane, isFocused: pane.paneId === paneId }));
+}
+/**
+ * bb moves pane focus on pointerdown: its pane container is the focusable
+ * element, and the layout's focused pane follows the click. The harness has to
+ * move it too, or a click on the board leaves the layout naming the OTHER pane
+ * while the board's container holds the keyboard — a state bb never reaches,
+ * and the state in which the board's single-key shortcuts correctly stand
+ * down. The DOM focus itself comes from the container's `tabindex="-1"`; this
+ * only brings the layout's focus record along.
+ */
+if (typeof document !== "undefined") {
+  document.addEventListener(
+    "pointerdown",
+    (event) => {
+      if (!mockSplitsEnabled || mockHostPanes.length < 2) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const paneId =
+        target.closest("[data-split-pane-id]")?.getAttribute("data-split-pane-id") ?? null;
+      if (paneId === null) return;
+      const focused = mockHostPanes.find((pane) => pane.isFocused);
+      if (focused !== undefined && focused.paneId === paneId) return;
+      setMockHostPanes(focusMockPane(mockHostPanes, paneId));
+    },
+    { capture: true },
+  );
 }
 /** bb's `openThreadInSplit`, placement only. */
 function mockPlaceSplitOpen(threadId: string): void {
