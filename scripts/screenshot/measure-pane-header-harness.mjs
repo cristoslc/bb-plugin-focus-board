@@ -1,7 +1,10 @@
 // Harness-based header measurement for the pane-header parity work: opens
 // the named thread's pane on the screenshot harness (which serves the built
 // dist/app.css against the real app) and reads the header row's shape, per
-// viewport and theme. Artifacts: docs/screenshots/pane-header-parity/<label>/.
+// viewport and theme. Artifacts: docs/screenshots/pane-header-parity/harness-
+// <label>/, kept apart from the live probe's `<label>/` frames
+// (scripts/screenshot/probe-pane-header-parity.mjs) so a harness reading never
+// overwrites a live one.
 //
 // Usage: node scripts/screenshot/measure-pane-header-harness.mjs <label>
 // [THREAD_ID=...] Honors HARNESS_URL, CHROME_PATH, OUT_DIR.
@@ -12,7 +15,7 @@ const label = process.argv[2] ?? "run";
 const args = Object.fromEntries(process.argv.slice(3).map((a) => a.split("=")));
 const THREAD_ID = args.THREAD_ID ?? "thr_uat_queue";
 const HARNESS = process.env.HARNESS_URL ?? "http://localhost:4173/";
-const OUT_DIR = process.env.OUT_DIR ?? `docs/screenshots/pane-header-parity/${label}`;
+const OUT_DIR = process.env.OUT_DIR ?? `docs/screenshots/pane-header-parity/harness-${label}`;
 const CHROME =
   process.env.CHROME_PATH ??
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";

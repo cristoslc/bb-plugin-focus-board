@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-23T08:43:00.321Z by `npm run uat`._
+_Generated 2026-11-23T13:08:51.097Z by `npm run uat`._
 
 ## pane-board-floor
 
-Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-pane-board-floor.yaml` · theme dark
+Source: `tests/manual/uat-pane-board-floor.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
