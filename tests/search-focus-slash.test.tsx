@@ -57,9 +57,14 @@ function splitLayout(focusedPaneId: string): PaneLayout {
   };
 }
 
-/** The board's panel root inside the host's pane container for it. */
+/** The board's panel root inside the host's pane container for it, as bb
+ *  0.50.1 renders a plugin panel: the container is focusable (tabindex -1), so
+ *  a click anywhere inside the board leaves the keyboard on the container
+ *  ABOVE the panel root (probe-board-shortcut-focus.mjs). */
 function boardPane(paneId = "pane-1"): HTMLElement {
-  const container = mount(element("div", { "data-split-pane-id": paneId }));
+  const container = mount(
+    element("div", { "data-split-pane-id": paneId, tabindex: "-1" }),
+  );
   return element("div", { "data-focus-board-panel": "" }, container);
 }
 
@@ -195,6 +200,45 @@ describe("useSearchFocusOnSlash", () => {
     const event = pressSlash(element("div", {}, panel));
     expect(event.defaultPrevented).toBe(true);
     expect(document.activeElement).toBe(searchInput);
+  });
+
+  it("with the host's pane container holding focus, '/' focuses search", () => {
+    // bb focuses its pane container on pointerdown (tabindex -1), so after any
+    // click inside the board the keystroke's target is the container around
+    // the panel, not an element inside it. That container is the pane the
+    // layout already proved is the board's, so "/" is still the board's.
+    const { searchInput, panel } = harnessWithSearch(true);
+    const container = panel.closest("[data-split-pane-id]") as HTMLElement;
+    container.focus();
+    expect(document.activeElement).toBe(container);
+    const event = pressSlash(container);
+    expect(event.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(searchInput);
+  });
+
+  it("host chrome inside the board's pane (not in the panel) is still the board's", () => {
+    // The pane header, the pane's maximize/close buttons: host chrome inside
+    // the pane the layout named as the board's. Nothing there accepts text.
+    const { searchInput, panel } = harnessWithSearch(true);
+    const container = panel.closest("[data-split-pane-id]") as HTMLElement;
+    const headerButton = element("button", { type: "button" }, container);
+    const event = pressSlash(headerButton);
+    expect(event.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(searchInput);
+  });
+
+  it("the other pane's container never gets '/', even mid-layout", () => {
+    // The widening stops at the board's own pane: a keystroke aimed at the
+    // container of the pane beside it (bb focuses that container the same way)
+    // belongs to that pane.
+    const { searchInput } = harnessWithSearch(true);
+    const otherPane = mount(
+      element("div", { "data-split-pane-id": "pane-2", tabindex: "-1" }),
+    );
+    otherPane.focus();
+    const event = pressSlash(otherPane);
+    expect(event.defaultPrevented).toBe(false);
+    expect(document.activeElement).not.toBe(searchInput);
   });
 
   it("a '/' pressed inside an open dialog does not jump to search", () => {

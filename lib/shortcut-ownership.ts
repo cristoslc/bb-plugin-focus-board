@@ -25,13 +25,26 @@
 //      down rather than guess: the failure this rule exists to stop is a
 //      letter stolen from a surface the operator is actually using.
 //   2. The keystroke happens in the board's own surface: inside the panel root,
-//      or on the document body while the board's pane holds host focus. The
-//      body case is the deliberate reading of "focused": with the board's pane
-//      focused and nothing clicked yet, no element anywhere owns the keyboard,
-//      so requiring an element inside the panel would leave the hotkey dead
-//      until the operator clicked the board. The pane half is what makes the
-//      body keystroke the board's; the panel half still refuses every other
-//      surface.
+//      in the host's pane container that holds the panel, or on the document
+//      body while the board's pane holds host focus. Three cases, one fact:
+//      no other surface is aiming the key.
+//      - The pane container is the load-bearing one: bb gives it
+//        `tabindex="-1"` and focuses it on pointerdown (observed on the
+//        installed 0.50.1 build by
+//        `scripts/screenshot/probe-board-shortcut-focus.mjs`), so after the
+//        operator clicks anywhere on the board the next keystroke's target is
+//        that container, which sits ABOVE the panel root. Refusing it left "/"
+//        dead in a split and alive in a one-pane window, where the container
+//        carries no tabindex and the key lands on the body (issue: "/" did
+//        nothing with a pane open, 2026-11-23).
+//      - The body case is the deliberate reading of "focused": with the board's
+//        pane focused and nothing clicked yet, no element anywhere owns the
+//        keyboard, so requiring an element inside the panel would leave the
+//        hotkey dead until the operator clicked the board.
+//      The pane half is what makes both of those the board's; the panel half
+//      still refuses every other surface, and the container half stops at the
+//      board's own pane: a keystroke aimed at the container of the pane beside
+//      it belongs to that pane, which is refused by the arming half anyway.
 //
 // The listener cannot outlive the board being on screen: a plugin panel leaves
 // the document when the route leaves it (observed live by
@@ -54,11 +67,19 @@
 import { HOST_PANEL_ATTR } from "@/components/host-link-glue";
 
 /** bb's pane container attribute: the pane id the split layout reports under
- *  the same name (a host contract, observed by the native-pane probes). */
+ *  the same name (a host contract, observed by the native-pane probes, and
+ *  re-read on the installed 0.50.1 build by
+ *  `scripts/screenshot/probe-board-shortcut-focus.mjs`). */
 const HOST_SPLIT_PANE_ATTR = "data-split-pane-id";
 
 /** The board's own panel root (app.tsx sets the attribute). */
 const BOARD_PANEL_SELECTOR = `[${HOST_PANEL_ATTR}]`;
+
+/** The host's pane container the board's panel sits in, or null when the host
+ *  does not name one. */
+function boardPaneContainer(panel: Element): Element | null {
+  return panel.closest(`[${HOST_SPLIT_PANE_ATTR}]`);
+}
 
 /** Surfaces that own every key while they are up. */
 const CLAIMING_ANCESTOR_SELECTOR =
@@ -113,9 +134,7 @@ export function boardPaneIsFocused(
   const focused = layout.panes.find((pane) => pane.isFocused);
   // A layout mid-update names no focused pane; the board cannot prove focus.
   if (focused === undefined) return false;
-  const paneId =
-    panel.closest(`[${HOST_SPLIT_PANE_ATTR}]`)?.getAttribute(HOST_SPLIT_PANE_ATTR) ??
-    null;
+  const paneId = boardPaneContainer(panel)?.getAttribute(HOST_SPLIT_PANE_ATTR) ?? null;
   // A host that does not name its pane containers cannot be asked which pane
   // holds focus, so the board stands down instead of guessing.
   if (paneId === null) return false;
@@ -149,6 +168,12 @@ export function boardOwnsKeystroke(
   // the board's.
   if (!(target instanceof Element)) return true;
   if (target.closest(BOARD_PANEL_SELECTOR) !== null) return true;
+  // bb focuses its pane container on pointerdown, so a click inside the board
+  // aims the next keystroke at the container ABOVE the panel root. That is the
+  // pane the arming half just proved is the board's, host chrome included, and
+  // nothing in it accepts text (editable targets were refused above).
+  const paneContainer = panel === null ? null : boardPaneContainer(panel);
+  if (paneContainer !== null && paneContainer.contains(target)) return true;
   // Nothing focused: the browser aims the key at the body (or the root).
   if (target === document.body || target === document.documentElement) return true;
   return false;

@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-23T08:43:00.321Z by `npm run uat`._
+_Generated 2026-11-23T21:04:28.453Z by `npm run uat`._
 
 ## search-field
 
-Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-search.yaml` · theme dark
+Source: `tests/manual/uat-search.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
