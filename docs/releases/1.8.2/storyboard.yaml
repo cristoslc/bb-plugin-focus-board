@@ -1,0 +1,9 @@
+version: 1.8.2
+# The 1.8.2 nightly storyboard (2026-11-23). One Fixed bullet, judged against
+# docs/releases/demo-gif-convention.md. The stale-record state stages in the
+# harness (`?nativeSplit=1&staleNativePane=1`, the uat-native-open suite
+# asserts it), but no gesture moves a pixel: skip below.
+demos: []
+skips:
+  - bullet: "**A card click opens its thread in bb's pane even after you changed the thread in that pane.**"
+    reason: "The pane a click opens is bb's own chrome, and the harness's split stand-in renders placement only with no thread content (the limit the 1.8.1 storyboard recorded). The fixed path's one visible delta is an absence, the board's own panel staying closed, and the staged state is asserted by the uat-native-open suite instead."
