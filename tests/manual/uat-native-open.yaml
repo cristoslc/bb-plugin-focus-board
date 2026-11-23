@@ -60,6 +60,41 @@ steps:
       - pane: { open: false }
       - native_route_fell_back: false
 
+  # The reported regression (2026-11-21): "clicking on a card then opens the
+  # legacy focus board thread pane instead of swapping the native one ... after
+  # an action is taken in the native pane". A pane navigated from inside itself
+  # (a mention, a child row, a sidebar row, `bb thread open`) stops matching the
+  # board's `{paneId, threadId}` record, and the click used to answer that with
+  # its own in-panel pane — the symptom, caught live with the click's trace
+  # (docs/screenshots/probe-card-click-after-right-panel/). `?staleNativePane=1`
+  # opens the window in that state; the click must keep the native surface.
+  - id: a-stale-record-asks-for-a-fresh-pane-beside-the-board
+    title: With its record stale, a card click opens a fresh native pane instead of the board's own
+    goto: "?groupBy=status&nativeSplit=1&staleNativePane=1"
+    gestures:
+      - click: { card: thr_uat_queue }
+      - sleep: 500
+    assert:
+      - native_open: { threadId: thr_uat_queue, split: true }
+      # The operator's pane is untouched, and a second thread pane appeared
+      # beside the board: three panes, never the board's own in-panel pane.
+      - native_panes: [thr_uat_queue, thr_review_pr]
+      - native_pane_count: 3
+      - pane: { open: false }
+
+  - id: the-fresh-pane-is-the-boards-from-the-next-click-on
+    title: The pane a stale-record click created is replaced by the next card click
+    goto: "?groupBy=status&nativeSplit=1&staleNativePane=1"
+    gestures:
+      - click: { card: thr_uat_queue }
+      - sleep: 500
+      - click: { card: thr_rpc_auth }
+      - sleep: 500
+    assert:
+      - native_panes: [thr_rpc_auth, thr_review_pr]
+      - native_pane_count: 3
+      - pane: { open: false }
+
   # The reported regression (2026-11-20): "keeping the focused card in view (by
   # scrolling) isn't fully working in conjunction with the pane split". The
   # board is panned to a far-right lane, the card is clicked, and the split
