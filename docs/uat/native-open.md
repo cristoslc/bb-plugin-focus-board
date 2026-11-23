@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-23T03:56:39.735Z by `npm run uat`._
+_Generated 2026-11-23T08:43:00.321Z by `npm run uat`._
 
 ## native-open
 
-Source: `tests/manual/uat-native-open.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-native-open.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |
