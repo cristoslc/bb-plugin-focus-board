@@ -1,5 +1,5 @@
 // The choke point: ONE routing entry opens a thread for interaction, and the
-// in-panel primitive has exactly one caller (reported 2026-11-20).
+// in-panel primitive has only audited callers (reported 2026-11-20).
 //
 // The bug this pins: the board grew a second way to open a thread — the New
 // Thread modal's spawn called the in-panel primitive directly — so a created
@@ -51,7 +51,7 @@ const beforeHandler = app.slice(0, app.indexOf("const openThreadForInteraction =
 const afterHandler = app.slice(app.indexOf("// The one-pane request's two continuations"));
 
 /**
- * The audits' deliberate exceptions, each with the reason it stays: the two
+ * The audits' deliberate exceptions, each with the reason it stays: the three
  * continuations of a request the handler already made, the reference chip that
  * names a thread the board does not list, and the pane's own maximize.
  */
@@ -70,10 +70,14 @@ describe("the routing entry owns the in-panel primitive", () => {
     // The definition exists once, and nothing before the handler calls it.
     expect(app.split("const openThreadCard = useCallback(").length - 1).toBe(1);
     expect(codeLinesMentioning(beforeHandler, "openThreadCard(")).toEqual([]);
-    // The one-pane dance's in-panel continuation is the handler's fallback
-    // half: the host has already answered, so re-planning would ask again.
+    // The two in-panel continuations are the handler's fallback half: the host
+    // has already answered, so re-planning would ask it again. The one-pane
+    // dance's (a window that will not split) and the fresh pane ask's
+    // (lib/native-fresh-pane.ts: the host gave the asked thread no pane, so the
+    // board's own is the one surface left).
     expect(codeLinesMentioning(afterHandler, "openThreadCard(")).toEqual([
       "onePaneDanceHost.openBoardPane = (threadId) => openThreadCard(threadId);",
+      "openThreadCard(ask.threadId);",
     ]);
     // Inside the handler: every in-panel outcome is a call on the primitive.
     expect(codeLinesMentioning(handler, "openThreadCard(threadId)").length).toBeGreaterThan(0);

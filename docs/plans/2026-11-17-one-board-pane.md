@@ -1,7 +1,7 @@
 ---
 title: One board-opened thread pane — the card click's replacement rule
 status: shipped
-updated: 2026-11-20
+updated: 2026-11-22
 tags: [pane, split, bb-0.49, click, placement]
 ---
 
@@ -245,5 +245,51 @@ Unknown keeps the ask, which is the one place the module does not fall back to i
 ### The live rerun on the merged build
 
 After the branch merged, the plugin was rebuilt and reloaded from the main checkout, and the click probe was run again against the served build in a fresh browser context (`docs/screenshots/probe-native-one-click/post-484/evidence.json`). One click on a card in a one-pane window now reads two panes: `freshFirstClickOpenedAPane: true`, the thread pane holds the clicked thread, the board is still mounted, and the route is the thread's page. A second click on another card keeps two panes and replaces the thread in that pane. A double click on the same card leaves the same two panes. Before this change the same probe read one pane, the board mounted, and no thread pane at all.
+
+## 11. The fourth report: a pane the operator navigated sent every click to the legacy pane
+
+Operator, 2026-11-21: "sometimes (uncertain on repro steps) when the native thread pane is open, clicking on a card then opens the legacy focus board thread pane instead of swapping the native one. This may be occurring after an action is taken in the native pane that causes the right sidebar to open in bb."
+
+### What reproduced, and what did not
+
+`scripts/screenshot/probe-card-click-after-right-panel.mjs` drives the board's own cards on the installed host in a throwaway browser profile with the click trace on (`nativeOpenDebug`), and reads `bb.splitLayout`, the board's record and the DOM after every step. Evidence and frames: `docs/screenshots/probe-card-click-after-right-panel/`.
+
+| Phase | What the operator did in the native pane | Next card click |
+|---|---|---|
+| A | nothing (the baseline) | replaced the pane's thread |
+| B | opened bb's right panel | replaced the pane's thread |
+| C | clicked a sidebar row, which navigates the pane from inside itself | **opened the board's own in-panel pane** |
+| D | right panel open, then the same navigation | **opened the board's own in-panel pane** |
+
+So the right panel alone is not the trigger: it changes nothing the click reads, the pane ids and the record keep matching, and the replacement works. The navigation is the trigger, and it reproduces the report exactly. The click's own trace names the branch it took:
+
+```json
+{"threadId":"thr_cvvvkw6rjz","branch":"in-board: no pane of the board's to use",
+ "layout":[{"paneId":"pane-1","threadId":null,"focused":true},{"paneId":"pane-2","threadId":"thr_bkg7afa7nv","focused":false}],
+ "record":{"paneId":"pane-2","threadId":"thr_9hvf4kvdnn"}}
+```
+
+A native pane's thread is part of the board's record (`{paneId, threadId}`), so anything that navigates the pane — a sidebar row, a mention, a child row, `bb thread open` for another thread — leaves the record naming a thread the pane no longer shows. The click read that as "no pane of the board's to use" and opened its own in-panel pane, which is the surface the operator calls the legacy pane. Every one of those gestures is "an action taken in the native pane", which is why the guess pointed at the pane.
+
+### The rule now
+
+A record that does not resolve is not a reason to leave the native surface. Where the window can still hold a pane (not compact, below bb's eight-pane ceiling, and a layout that exists — the refusals above), the click re-plans from the host's rendered truth: it asks the host's opener for the CLICKED thread (`open(threadId, { split: true })`), which splits beside the focused pane — the board, because a card press focuses it — and adopts the pane that appeared.
+
+Two things it may not do, both load-bearing:
+
+- **Claim a pane that was already there.** The adopted pane is a pane showing the asked thread whose id was NOT in the window when the click asked. A pane that was already there is the operator's own; the ask only focuses it (which is what the host's opener does for a thread already open) and the board records nothing. The stale record is dropped rather than left to fail on the next click.
+- **Leave the operator with three surfaces in one pane.** When the board's own in-panel pane is already open, the click keeps its reading and replaces in that pane.
+
+The premise was measured before the repair was written (phase E, same probe): from the stale state, with the board focused, bb's own split placement for a third thread produced `pane-1` (the board, still its slot), `pane-3` (the new thread, focused) and the operator's `pane-2` untouched. `lib/native-fresh-pane.ts` carries the rule: one ask at a time (a second click replaces the pending one), a 400ms deadline for a host that gives the thread no pane, module scope because bb re-creates the plugin panel's subtree when the split lands, and the board settles the ask on every layout change and on mount.
+
+### What it changes for the operator
+
+- A rethreaded pane no longer costs the board's surface: the next card click opens a fresh native pane for the clicked thread, and the click after that replaces in it.
+- A window with two panes and no record at all (the operator opened a thread pane from bb's sidebar) now opens its own native pane too, instead of the in-panel one. Same reason: the click does not know the pane is theirs, so it creates its own rather than taking it or retreating.
+- The legacy pane keeps its jobs: a compact viewport, the eight-pane ceiling, a host known older than 0.50, the operator's stored "in the board panel" answer, splits off from a one-pane window, and the board's own pane when it is already up.
+
+### Tests
+
+`tests/app-card-click-replaces-board-pane.test.tsx` gains a "a record that no longer matches the window" describe that drives the reproduced shape through the fake host's own placement rules (a fresh ask, the adoption, a second click replacing, an operator pane never claimed, no record, a board pane already open, a double click), and three older tests that pinned the legacy fallback for a stale record now pin the fresh pane. `tests/native-fresh-pane.test.ts` pins the ask's four answers, the one-ask rule, the deadline, and the trace. The UAT suite `tests/manual/uat-native-open.yaml` gains two steps over the harness's `?staleNativePane=1` window, which opens with the record naming one thread and the operator's pane showing another.
 
 > AGENT GENERATED CONTENT

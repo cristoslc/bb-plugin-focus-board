@@ -55,8 +55,11 @@
 //
 // A record that no longer matches the live layout — pane closed, pane showing
 // another thread, thread gone from the board's list — is ignored, and ignoring
-// it is always safe: the click opens the board's own pane, which is what a
-// click does before Focus Board has a pane of its own.
+// it is always safe: the click re-plans from what the host renders rather than
+// guessing a pane (`lib/native-fresh-pane.ts` carries that rule, its live
+// trace, and the report it answers: the fallback used to be the board's own
+// in-panel pane, which is not what an operator reading a native pane asked
+// for).
 //
 // Pure module: no host, no SDK, no React, no DOM.
 

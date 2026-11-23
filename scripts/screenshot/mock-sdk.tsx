@@ -388,7 +388,38 @@ const BOARD_ONLY_PANES: readonly MockSplitPane[] = [
 const mockSplitsEnabled = new URLSearchParams(
   typeof location === "undefined" ? "" : location.search,
 ).has("nativeSplit");
-let mockHostPanes: readonly MockSplitPane[] = BOARD_ONLY_PANES;
+/**
+ * The stale-record shape the operator reported (2026-11-21): the board's
+ * record names a pane that the operator has since navigated to another thread,
+ * so `resolveBoardNativePane` cannot match it. `?staleNativePane=1` (with
+ * `?nativeSplit=1`) opens the window with the board focused, the operator's
+ * pane showing `STALE_PANE_THREAD`, and the record naming `STALE_RECORD_THREAD`
+ * in that same pane. The record is seeded into localStorage because the board
+ * reads it at mount (lib/native-pane-ownership.ts `nativePaneStorageKey`), and
+ * a suite cannot write it in time from the outside.
+ */
+const mockStaleNativePane = new URLSearchParams(
+  typeof location === "undefined" ? "" : location.search,
+).has("staleNativePane");
+const STALE_PANE_THREAD = "thr_review_pr";
+const STALE_RECORD_THREAD = "thr_rpc_auth";
+let mockHostPanes: readonly MockSplitPane[] = mockStaleNativePane
+  ? [
+      { paneId: "pane-1", threadId: null, isFocused: true },
+      { paneId: "pane-2", threadId: STALE_PANE_THREAD, isFocused: false },
+    ]
+  : BOARD_ONLY_PANES;
+if (mockStaleNativePane) {
+  try {
+    window.localStorage.setItem(
+      "focus-board:boardNativeThreadPane",
+      JSON.stringify({ paneId: "pane-2", threadId: STALE_RECORD_THREAD }),
+    );
+  } catch {
+    // A storage-less context has no record: the suite then reads "no pane of
+    // the board's" from an absent record instead of a stale one.
+  }
+}
 /** The app's route thread, and whether a navigation fell back because the
  *  host could not resolve the thread. */
 let mockRouteThreadId: string | null = null;
@@ -400,6 +431,10 @@ function refreshMockSplit(): void {
     !mockSplitsEnabled || mockHostPanes.length < 2 ? null : { panes: mockHostPanes };
   for (const listener of [...splitLayoutListenerSet]) listener();
 }
+// A window that opens WITH a split (`?staleNativePane=1`) publishes its layout
+// before the board mounts: every other suite starts at one pane and lets the
+// click do the splitting, which reads null through this hook.
+if (mockStaleNativePane) refreshMockSplit();
 /**
  * The host's split chrome, which the harness otherwise leaves out. bb places
  * the board's pane and a thread pane side by side at equal widths, so a split

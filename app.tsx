@@ -106,6 +106,12 @@ import {
   onePaneDanceHost,
   setOnePaneDanceDebug,
 } from "./lib/native-one-pane-dance";
+import {
+  freshPaneAsk,
+  freshPaneAskHost,
+  setFreshPaneAskDebug,
+  setFreshPaneAskLayout,
+} from "./lib/native-fresh-pane";
 import type { SplitPaneLayoutView } from "./lib/split-pane-cap";
 import { createProjectFromPickedFolder } from "./lib/project-create-flow";
 import { paneContextInfo } from "./lib/pane-context";
@@ -1432,6 +1438,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   // pane — never wakes the memoized Board through its prop handoff.
   const splitLayoutRef = useRef<Parameters<typeof nativeOpenWouldEvictBoard>[0]>(null);
   splitLayoutRef.current = splitLayout;
+  // The same latest-value bridge for the fresh pane ask (lib/native-fresh-
+  // pane.ts): the ask's deadline settles against the layout the board last
+  // rendered, which is the only layout it can honestly judge.
+  setFreshPaneAskLayout(splitLayout);
   // The host surfaces the board compensates for (lib/host-capabilities.ts).
   // Mounted here, and not only in the pane or the composer, because the
   // one-pane click reads the one-pane verdict with NO pane open: nothing else
@@ -3221,7 +3231,10 @@ function BoardPage({ subPath }: { subPath: string }) {
   //    on screen when the host cannot split).
   // 2. The split pane the board already owns: focus it, and replace the thread
   //    in it when the gesture names another one. The persisted record decides
-  //    (lib/native-pane-ownership.ts), and the live layout has to agree.
+  //    (lib/native-pane-ownership.ts), and the live layout has to agree; a
+  //    record that does not agree asks the host for a fresh pane beside the
+  //    board and adopts it (lib/native-fresh-pane.ts) rather than retreating
+  //    into the board's own in-panel pane.
   // 3. The two side effects the outcomes need: the attention freeze for a
   //    native pane (the in-panel primitive captures its own, because the
   //    pane's placement freeze belongs with the pane that reads it) and, for
@@ -3354,13 +3367,36 @@ function BoardPage({ subPath }: { subPath: string }) {
         return;
       }
       // 2. A pane Focus Board opened, still showing the thread the board put
-      //    there. A record whose pane is gone, rethreaded by the operator, or
-      //    naming a thread bb can no longer resolve (it has left the board's
-      //    list) is stale, and the request falls back rather than guessing.
+      //    there. A record whose pane is gone, rethreaded by the operator (a
+      //    mention, a child row, a sidebar row: anything that navigates the
+      //    pane from inside itself), or naming a thread bb can no longer
+      //    resolve (it has left the board's list) does not resolve.
+      //
+      //    That is not a reason to leave the native surface — which is exactly
+      //    what the operator reported it did (2026-11-21: a rethreaded pane
+      //    sent every later card click to the board's own in-panel pane).
+      //    Where the window can still hold a pane (not compact, below bb's
+      //    ceiling, and a layout that exists: every refusal above), the click
+      //    re-plans from the host's rendered truth: it asks the opener for the
+      //    CLICKED thread, which splits beside the board, and adopts the pane
+      //    that appeared (lib/native-fresh-pane.ts carries the rule, the live
+      //    trace, and why a pane that was already there is never claimed).
       const owned = resolveBoardNativePane(layout, boardNativePaneRef.current);
       if (owned === null || !liveThreadIdsRef.current.includes(owned.threadId)) {
-        trace("in-board: no pane of the board's to use");
-        openThreadCard(threadId);
+        // The board's own pane is up: the operator is already reading two
+        // surfaces in one pane, and a fresh native pane would make three.
+        // Their reading continues there, which is the shipped rule for it.
+        if (openThreadIdRef.current !== null) {
+          trace("in-board: the board's pane is open");
+          openThreadCard(threadId);
+          return;
+        }
+        // The panes the window holds now: the ask may adopt a pane showing the
+        // clicked thread that is NOT one of these, and never one that is.
+        const priorPaneIds = layout.panes.map((pane) => pane.paneId);
+        trace("fresh pane: asking the opener beside the board", { priorPaneIds });
+        freshPaneAsk.begin({ threadId, priorPaneIds });
+        actions.open(threadId, { split: true });
         return;
       }
       // 3a. The requested thread is already in Focus Board's pane: the host's
@@ -3447,11 +3483,57 @@ function BoardPage({ subPath }: { subPath: string }) {
       paneId: pane.paneId,
     });
   }, [splitLayout, setBoardNativePane]);
+  // The fresh pane ask's consequences (lib/native-fresh-pane.ts). The ask is
+  // made by the click, settled by this board on every layout change and on
+  // mount (bb re-creates the panel's subtree when the split lands, so the
+  // instance that reads it is often not the one that asked), and its outcome
+  // decides the record: adopt the pane the host created, drop a record that
+  // turned out to name the operator's own pane, or — a host that gave the
+  // thread no pane — open the board's own, which is the one surface left.
+  useEffect(() => {
+    freshPaneAskHost.onSettle = (ask, settlement) => {
+      if (settlement.kind === "adopted") {
+        setBoardNativePane({ paneId: settlement.paneId, threadId: ask.threadId });
+        traceNativeOpen(nativeOpenDebugRef.current, {
+          threadId: ask.threadId,
+          branch: "fresh pane: the host split",
+          paneId: settlement.paneId,
+          priorPaneIds: ask.priorPaneIds,
+        });
+        return;
+      }
+      if (settlement.kind === "theirs") {
+        setBoardNativePane(null);
+        traceNativeOpen(nativeOpenDebugRef.current, {
+          threadId: ask.threadId,
+          branch: "fresh pane: the operator's pane, focused",
+          paneId: settlement.paneId,
+        });
+        return;
+      }
+      if (settlement.kind === "unanswered") {
+        traceNativeOpen(nativeOpenDebugRef.current, {
+          threadId: ask.threadId,
+          branch: "in-board: the host gave the thread no pane",
+        });
+        openThreadCard(ask.threadId);
+      }
+    };
+    return () => {
+      freshPaneAskHost.onSettle = null;
+    };
+  }, [openThreadCard, setBoardNativePane]);
+  // The ask's settlement point: every layout the board renders, plus mount.
+  useEffect(() => {
+    if (freshPaneAsk.pending() === null) return;
+    freshPaneAsk.settle();
+  }, [splitLayout]);
   // The dance's own trace switch, so a live window shows the outcome line the
   // click could not: the developer setting is the same one the click uses.
   const nativeOpenDebugOn = settingValues?.nativeOpenDebug === true;
   useEffect(() => {
     setOnePaneDanceDebug(nativeOpenDebugOn);
+    setFreshPaneAskDebug(nativeOpenDebugOn);
   }, [nativeOpenDebugOn]);
   // Reference chips in the pane (issue #161): labels resolve from the board's
   // current rows — live sidebar threads first, then the archived list — and
