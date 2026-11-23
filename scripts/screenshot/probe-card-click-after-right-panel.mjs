@@ -29,6 +29,19 @@
 //      second replaces that pane's thread.
 //   B  the same, with bb's right panel opened in the native pane between the
 //      two clicks (the pane header's own "Show right panel" control).
+//   C  the pane rethreaded from inside it (a sidebar row), then a card click.
+//   D  the right panel open, then the same rethread.
+//   E  the stale state, then bb's own "Open in split" for a third thread: what
+//      a fresh host split does there.
+//   F  the pane navigated to a NON-THREAD route (the rail's Decisions entry),
+//      then a card click. The operator's 2026-11-23 report names this shape
+//      ("mostly when I navigate the native pane to a different location (like
+//      Decisions)"): the layout reports that pane with `threadId: null`, which
+//      is the one shape A-E never produced.
+//   G  F repeated with a DIFFERENT page each cycle: a page route lands in the
+//      pane that already holds it, or replaces the focused pane, so a new page
+//      each time costs the window a pane. Measures what the fresh split leaves
+//      behind.
 //
 // Usage: node scripts/screenshot/probe-card-click-after-right-panel.mjs
 // Honors BB_APP, CHROME_PATH, OUT_DIR. Reads only apart from navigation and the
@@ -405,6 +418,85 @@ async function focusBoardPane() {
   return point;
 }
 
+/** bb's rail entry for a PAGE, clicked plainly: the app route becomes that
+ *  page and bb's reconciliation lands it in the pane that already holds it,
+ *  or else in the FOCUSED pane. A page is not a thread, so the pane the
+ *  operator navigated this way survives with no thread at all — the state
+ *  phase F measures. Labels are the rail button's own (`Decisions, 39 pending
+ *  decisions`), matched by prefix because the count changes. */
+async function navigateFocusedPaneToPage(label) {
+  const point = await page.evaluate((wanted) => {
+    const button = [...document.querySelectorAll("button")].find(
+      (el) =>
+        (el.getAttribute("aria-label") ?? "").startsWith(wanted) &&
+        el.getBoundingClientRect().width > 0,
+    );
+    if (button === undefined) return null;
+    const r = button.getBoundingClientRect();
+    return {
+      label: button.getAttribute("aria-label"),
+      x: Math.round(r.x + r.width / 2),
+      y: Math.round(r.y + r.height / 2),
+    };
+  }, label);
+  if (point === null) return null;
+  await page.mouse.click(point.x, point.y);
+  await sleep(2500);
+  return point;
+}
+
+/** A card whose thread no pane holds: the click has to ask the host for
+ *  placement, which is the only ask that can cost a pane. Picking by index
+ *  would re-click a thread that is already in a pane once the board narrows,
+ *  and the ask would then only focus it. */
+async function clickFreeCard() {
+  const point = await page.evaluate(() => {
+    let layout = null;
+    try {
+      const raw = localStorage.getItem("bb.splitLayout");
+      if (raw !== null) {
+        const parsed = JSON.parse(raw);
+        layout = parsed && parsed.layout ? parsed.layout : parsed;
+      }
+    } catch {}
+    const panes = [];
+    const flatten = (node) => {
+      if (node === null || node === undefined) return;
+      if (node.type === "pane") {
+        panes.push(node);
+        return;
+      }
+      for (const child of node.children ?? []) flatten(child);
+    };
+    flatten(layout === null ? null : layout.root);
+    const taken = new Set(
+      panes
+        .filter((pane) => pane.content && pane.content.kind === "thread")
+        .map((pane) => pane.content.threadId),
+    );
+    const cards = [...document.querySelectorAll("[data-thread-card]")].filter(
+      (el) => el.parentElement?.closest("[data-thread-card]") === null,
+    );
+    const card = cards.find((el) => !taken.has(el.getAttribute("data-thread-card")));
+    if (card === undefined) return null;
+    const anchor = card.querySelector("a");
+    if (anchor === null) return null;
+    anchor.scrollIntoView({ block: "center", inline: "center" });
+    const r = anchor.getBoundingClientRect();
+    return {
+      threadId: card.getAttribute("data-thread-card"),
+      x: Math.round(r.x + r.width / 2),
+      y: Math.round(r.y + r.height / 2),
+    };
+  });
+  if (point === null) return null;
+  await page.mouse.move(point.x, point.y);
+  await sleep(350);
+  await page.mouse.click(point.x, point.y);
+  await sleep(2200);
+  return point;
+}
+
 // ---------------------------------------------------------------------------
 // A. Baseline: two clicks, no right panel.
 // ---------------------------------------------------------------------------
@@ -513,6 +605,74 @@ if (freshThread !== null) {
   evidence.phases.E.afterSplit = await read("5-after-host-split");
 }
 
+// ---------------------------------------------------------------------------
+// F. The native pane navigated to a NON-THREAD route (the rail's Decisions
+//    page), then a card click: the shape the operator reported on 2026-11-23
+//    ("mostly when I navigate the native pane to a different location (like
+//    Decisions)"). The pane survives the navigation with `threadId: null`, so
+//    the board's `{paneId, threadId}` record no longer matches it — the same
+//    mismatch phase C produces, reached a different way.
+// ---------------------------------------------------------------------------
+currentPhase = "F";
+await startPhase();
+evidence.phases.F = {};
+evidence.phases.F.board = await read("1-board");
+evidence.phases.F.firstCard = await clickCard(0);
+evidence.phases.F.firstClick = await read("2-first-click");
+evidence.phases.F.pageEntry = await navigateFocusedPaneToPage("Decisions");
+evidence.phases.F.navigated = await read("3-decisions-in-the-pane");
+// The record is unchanged by the navigation: the board still believes the pane
+// holds the thread it put there.
+evidence.phases.F.recordAfterNavigation = evidence.phases.F.navigated.record;
+evidence.phases.F.sampledClick = await clickCardSampled(1, "card-click-after-decisions");
+evidence.phases.F.cardClickAfterDecisions = await read("4-card-click-after-decisions");
+
+// ---------------------------------------------------------------------------
+// G. F repeated, a DIFFERENT page each cycle. bb's own navigation rule lands a
+//    route in the pane that already holds it and otherwise replaces the
+//    focused pane, so a page the window has not shown yet takes a pane of its
+//    own. Three cycles is enough to see the direction, and the board narrows
+//    as panes accumulate, so the loop stops when no free card is left to click.
+// ---------------------------------------------------------------------------
+currentPhase = "G";
+await startPhase();
+evidence.phases.G = {};
+evidence.phases.G.board = await read("1-board");
+evidence.phases.G.firstCard = await clickCard(0);
+evidence.phases.G.firstClick = await read("2-first-click");
+evidence.phases.G.cycles = [];
+for (const page of ["Automations", "Decisions", "Activity Overview"]) {
+  const entry = await navigateFocusedPaneToPage(page);
+  if (entry === null) {
+    evidence.phases.G.cycles.push({ page, entry: null, note: "no rail entry" });
+    continue;
+  }
+  const navigated = await read(`${evidence.phases.G.cycles.length + 3}-${page.replace(/\W+/g, "-").toLowerCase()}`);
+  const clicked = await clickFreeCard();
+  if (clicked === null) {
+    evidence.phases.G.cycles.push({
+      page,
+      entry,
+      paneCountAfterNavigation: navigated.paneCount,
+      card: null,
+      note: "the board had no free card left to click",
+    });
+    break;
+  }
+  const after = await read(`${evidence.phases.G.cycles.length + 3}-${page.replace(/\W+/g, "-").toLowerCase()}-clicked`);
+  evidence.phases.G.cycles.push({
+    page,
+    entry,
+    paneCountAfterNavigation: navigated.paneCount,
+    panesAfterNavigation: navigated.panes,
+    card: clicked.threadId,
+    paneCountAfterClick: after.paneCount,
+    panesAfterClick: after.panes,
+    record: after.record,
+    inBoardPane: after.inBoardPane,
+  });
+}
+
 writeFileSync(`${OUT_DIR}/evidence.json`, JSON.stringify(evidence, null, 2));
 
 const summarize = (state) => ({
@@ -530,7 +690,7 @@ const summarize = (state) => ({
   rightPanel: state?.rightPanel,
 });
 
-for (const phase of ["A", "B", "C", "D", "E"]) {
+for (const phase of ["A", "B", "C", "D", "E", "F", "G"]) {
   const rows = Object.fromEntries(
     Object.entries(evidence.phases[phase])
       .filter(([, value]) => value?.label !== undefined)
@@ -539,6 +699,8 @@ for (const phase of ["A", "B", "C", "D", "E"]) {
   console.log(`=== ${phase} ===`);
   console.log(JSON.stringify(rows, null, 2));
 }
+console.log("=== G cycles ===");
+console.log(JSON.stringify(evidence.phases.G.cycles, null, 2));
 console.log("=== trace ===");
 console.log(JSON.stringify(evidence.trace, null, 2));
 console.log("=== errors ===", evidence.errors);
