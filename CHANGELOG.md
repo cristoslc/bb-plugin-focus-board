@@ -11,6 +11,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+## [1.8.2] - 2026-11-23
+
+### Added
+
+### Changed
+
+### Fixed
+
 #### bb's thread pages
 
 - **A card click opens its thread in bb's pane even after you changed the thread in that pane.** Navigating the pane to another thread used to send the next card click to the board's own panel; the board now opens a fresh pane beside itself and keeps replacing in it.
