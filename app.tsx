@@ -132,12 +132,7 @@ import { majorityGroupSpawnSeed, type GroupSpawnSeed } from "./lib/group-spawn-s
 import { spawnInheritedGroupId } from "./lib/group-inheritance";
 import { maximizeComposerToMainView } from "./lib/compose-maximize";
 import { SnoozeDialog } from "./components/snooze-dialog";
-import {
-  snoozeMenuActions,
-  snoozeWakeAtMs,
-  type SnoozeMenuAction,
-  type SnoozeRecord,
-} from "./lib/snooze";
+import { snoozeWakeAtMs, type SnoozeRecord } from "./lib/snooze";
 import {
   applyInteractionFlags,
   interactionFlagChangeFromEvent,
@@ -4983,11 +4978,10 @@ function BoardPage({ subPath }: { subPath: string }) {
             });
             void actions.setPinned(openThreadId, !openThreadActive.isPinned);
           }}
-          snoozeMenuItems={snoozeMenuActions({
-            snoozed: snoozedIds.has(openThread.id),
-            clearSnooze: () => clearSnooze(openThread.id),
-            openPicker: () => setSnoozeDialogFor(openThread.id),
-          })}
+          // The header's Focus Board control opens the same snooze picker the
+          // cards and bb's own thread page open (components/focus-board-thread-
+          // menu.tsx), so the pane keeps ONE snooze path.
+          onOpenSnoozePicker={() => setSnoozeDialogFor(openThread.id)}
           onNewChildThread={() => openNewChildThread(openThread.id)}
           onRevealBrowserTab={() => {
             // The card menu's same gesture (app.tsx menuActionsFor), wired to
