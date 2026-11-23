@@ -9,6 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+#### bb's thread pages
+
+- **The thread pane's header wears the same Focus Board control as bb's own thread page.** The mark plus caret opens Mark Done, Snooze and New child thread, so the pane's old checkbox is gone and the two headers line up row for row.
+
 ### Fixed
 
 ## [1.8.2] - 2026-11-23

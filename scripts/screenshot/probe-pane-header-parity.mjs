@@ -73,6 +73,7 @@ const MEASURE_EL = `(function (el) {
     box: { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) },
     fontSize: s.fontSize, fontWeight: s.fontWeight, color: s.color,
     bg: s.backgroundColor, radius: s.borderRadius, padding: s.padding,
+    borderBottom: s.borderBottomWidth + '|' + s.borderBottomColor,
     gap: s.gap, display: s.display,
     overflow: s.overflow + '/' + s.textOverflow, whiteSpace: s.whiteSpace,
     minWidth: s.minWidth, flex: s.flex,
@@ -100,6 +101,7 @@ const FB_HEADER = `(function () {
     gap: c.gap, display: c.display, overflow: c.overflow,
     chromeRowVar: c.getPropertyValue('--bb-app-chrome-row-height'),
     rowBox: row === null ? null : ${MEASURE_EL}(row).box,
+    row: row === null ? null : ${MEASURE_EL}(row),
     children,
     buttons: [...root.querySelectorAll('button')].map(${MEASURE_EL}),
     titleSpan: titleSpan === null ? null : ${MEASURE_EL}(titleSpan),
@@ -202,12 +204,24 @@ const setTheme = (page, theme) =>
     window.__fbThemeSet = t;
   }, theme);
 
-/** Open the Focus Board thread pane inside the plugin panel (card click). */
-async function openFocusPane(page) {
-  const opened = await page
+const fbPaneOpen = (page) =>
+  page
     .evaluate(() => document.querySelector('aside[role="complementary"][aria-label^="Thread:"]') !== null)
     .catch(() => false);
-  if (opened === true) return true;
+
+/** Open the Focus Board thread pane inside the plugin panel.
+ *
+ *  Two ways in, in order:
+ *  1. a card click, which reaches the pane only when the operator's open
+ *     target is "in the board panel";
+ *  2. the pane's own panel route (`lib/pane-route.ts`: the open pane lives in
+ *     the panel URL as `t/<threadId>`). This probe must not change host
+ *     settings, so on an install whose open target is the split pane the card
+ *     click opens bb's own pane instead, and the route is how the board's pane
+ *     is reached without touching that setting. A reload is fine here: the
+ *     probe re-fits the split after every navigation anyway. */
+async function openFocusPane(page) {
+  if ((await fbPaneOpen(page)) === true) return true;
   const box = await page.evaluate((id) => {
     const card = document.querySelector(`[data-thread-card="${id}"]`);
     if (card === null) return null;
@@ -215,13 +229,18 @@ async function openFocusPane(page) {
     const r = card.getBoundingClientRect();
     return { x: r.x + r.width / 2, y: r.y + Math.min(r.height / 2, 40) };
   }, THREAD_ID);
-  if (box === null) return false;
-  await sleep(500);
-  await page.mouse.click(box.x, box.y);
-  await sleep(2200);
-  return page.evaluate(
-    () => document.querySelector('aside[role="complementary"][aria-label^="Thread:"]') !== null,
-  );
+  if (box !== null) {
+    await sleep(500);
+    await page.mouse.click(box.x, box.y);
+    await sleep(2200);
+    if ((await fbPaneOpen(page)) === true) return true;
+  }
+  await page.goto(`${BOARD.replace(/\/$/, "")}/t/${THREAD_ID}`, {
+    waitUntil: "networkidle2",
+    timeout: 30000,
+  });
+  await sleep(3000);
+  return fbPaneOpen(page);
 }
 
 async function shot(page, name) {
@@ -342,40 +361,55 @@ const evidence = { label: LABEL, threadId: THREAD_ID, desktop: {}, phone: {} };
 // ---------- Optional candidate-build swap (SERVE_BUNDLE): sniff which
 // plugin-app-assets URLs are the board's app.js / app.css and answer them
 // from the candidate build, so the measured pane runs the tree's code
-// against the real host without touching the install. ----------
+// against the real host without touching the install.
+//
+// The two assets are paired by the build hash in the route: bb serves every
+// plugin as `/plugin-app-assets/<hash>/app.{js,css}`, and the board's JS is
+// the one carrying its panel marker. The CSS request also carries bb's own
+// `?host-tailwind=<hash>` query, which is why this matches the route with the
+// query allowed and pairs by hash instead of trusting "the only .css" (every
+// installed plugin serves one). Serving a candidate JS over the installed CSS
+// measured the wrong thing once: `text-[15px]` and the compact packing
+// classes exist only in the candidate sheet, so their absence read as a
+// styling gap rather than a stale stylesheet. ----------
 let swap = null;
 if (SERVE_BUNDLE !== null) {
-  const assets = new Set();
+  /** hash → { js, css } request URLs, query included. */
+  const assets = new Map();
   const bodies = [];
   const sniff = await browser.newPage();
   await sniff.setCacheEnabled(false);
   sniff.on("response", (response) => {
     const url = response.url();
-    if (!/\/plugin-app-assets\/[a-f0-9]+\/app\.(js|css)$/.test(url)) return;
-    assets.add(url);
-    bodies.push(
-      response.text().then((body) => ({
-        url,
-        hasBoard: body.includes(BUNDLE_MARKER) || (url.endsWith(".css") && body.includes(".fb-")),
-      })),
-    );
+    const match = /\/plugin-app-assets\/([a-f0-9]+)\/app\.(js|css)(?:\?|$)/.exec(url);
+    if (match === null) return;
+    const hash = match[1];
+    const kind = match[2];
+    const entry = assets.get(hash) ?? {};
+    entry[kind] = url;
+    assets.set(hash, entry);
+    if (kind !== "js") return;
+    bodies.push(response.text().then((body) => ({ hash, url, hasBoard: body.includes(BUNDLE_MARKER) })));
   });
   await sniff.goto(BOARD, { waitUntil: "networkidle2", timeout: 30000 });
   await sleep(1500);
   const all = await Promise.all(bodies);
   await sniff.close();
-  const jsUrl = all.find((e) => e.url.endsWith(".js") && e.hasBoard)?.url ?? null;
-  const cssUrl = all.find((e) => e.url.endsWith(".css"))?.url ?? null;
-  if (jsUrl === null) {
-    console.error("Could not identify the board's app.js among the served plugin assets.");
+  const boardBundle = all.find((entry) => entry.hasBoard) ?? null;
+  const jsUrl = boardBundle?.url ?? null;
+  const cssUrl = (boardBundle === null ? undefined : assets.get(boardBundle.hash)?.css) ?? null;
+  if (jsUrl === null || cssUrl === null) {
+    console.error(
+      `Could not identify the board's app.js / app.css among the served plugin assets (js: ${jsUrl}, css: ${cssUrl}).`,
+    );
     await browser.close();
     process.exit(1);
   }
   const js = readFileSync(`${SERVE_BUNDLE}/app.js`, "utf8");
-  const css = cssUrl === null ? null : readFileSync(`${SERVE_BUNDLE}/app.css`, "utf8");
+  const css = readFileSync(`${SERVE_BUNDLE}/app.css`, "utf8");
   swap = { jsUrl, cssUrl, js, css };
   evidence.bundleSwap = { servedBy: SERVE_BUNDLE, jsUrl, cssUrl, marker: "swapped" };
-  console.log(`serving ${SERVE_BUNDLE}/app.{js,css} for ${jsUrl}`);
+  console.log(`serving ${SERVE_BUNDLE}/app.{js,css} for ${jsUrl} + ${cssUrl}`);
 }
 /** The page records the swap marker so the evidence proves the candidate ran. */
 const armSwapMarker = (pageLike) =>
@@ -437,9 +471,11 @@ const setupEveryday = async () => {
     await openInSplit(page);
     await sleep(2000);
   }
-  // Board pane → 768: the FB pane goes side-by-side, native ≈512.
-  const widths = await growGutterTo(page, 768);
   await openFocusPane(page);
+  // Board pane → 768: the FB pane goes side-by-side, native ≈512. Re-fitted
+  // AFTER the pane opens, because the pane's route is a navigation and the
+  // host re-reads its stored ratio on every document start.
+  const widths = await growGutterTo(page, 768);
   await sleep(1500);
   return widths;
 };
@@ -449,12 +485,13 @@ for (const theme of ["dark", "light"]) {
   await setTheme(page, theme);
   await page.reload({ waitUntil: "networkidle2", timeout: 30000 });
   await sleep(4000);
+  const widths = await setupEveryday();
   const fb = await page.evaluate(FB_HEADER);
   const native = await page.evaluate(NATIVE_HEADER);
   evidence.desktop[theme] = {
     bodyBg: await page.evaluate(BODY_BG),
     served: await page.evaluate(() => window.__fbServedBundle ?? null),
-    widths: await setupEveryday(),
+    widths,
     fb,
     native,
   };

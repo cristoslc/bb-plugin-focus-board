@@ -1,15 +1,23 @@
 // @vitest-environment jsdom
-// The thread pane header on a phone (compact viewport): the full-screen
-// button is hidden there, so the "More thread actions" menu must carry a
-// Full Screen item to reach the main view; on desktop there is no
-// standalone full-screen button either — the action lives in the open
-// dropdown as "Maximize pane", and the menu does not duplicate it.
+// The thread pane header's shape at each width, as the native chrome row
+// taught it (2026-11-20) and the header unification kept (2026-11-23):
+//
+// - the full-screen affordance has no standalone button at either width (the
+//   open dropdown carries "Maximize pane" on desktop, and the phone's ⋯
+//   overflow carries "Full Screen");
+// - on a phone the read toggle is a one-tap primary with an attached caret,
+//   a split control whose caret drops the overflow; on a desktop pane the row
+//   carries no labeled read control and the overflow is a standalone ⋯, the
+//   shape bb's own header has;
+// - pin (and its archived-row absence) stays in that overflow, as on bb's own
+//   page. The board's own three actions (Done, Snooze, New child thread) are
+//   NOT here: they live in the Focus Board control beside the overflow, pinned
+//   by tests/thread-pane-header-board-menu.test.tsx.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createElement, type ReactNode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ThreadPane } from "../components/thread-pane";
 import { CompactViewportOverrideProvider } from "../components/ui/hooks/use-compact-viewport";
-import { snoozeMenuActions } from "../lib/snooze";
 
 vi.mock("@get-bb/plugin-sdk/app", () => ({
   // The pane's embedded chat is only imported for render; the actions menu
@@ -34,20 +42,16 @@ function renderPane({
   compact,
   pinned = false,
   archived = false,
-  done = false,
   onTogglePinned = noop,
-  onDoneToggle = noop,
   onNewChildThread,
-  snoozeMenuItems,
+  onOpenSnoozePicker,
 }: {
   compact: boolean;
   pinned?: boolean;
   archived?: boolean;
-  done?: boolean;
   onTogglePinned?: () => void;
-  onDoneToggle?: (done: boolean) => void;
   onNewChildThread?: () => void;
-  snoozeMenuItems?: Parameters<typeof ThreadPane>[0]["snoozeMenuItems"];
+  onOpenSnoozePicker?: () => void;
 }) {
   return render(
     createElement(
@@ -62,8 +66,8 @@ function renderPane({
           isPinned: pinned,
         },
         isArchived: archived,
-        isDone: done,
-        onToggleDone: onDoneToggle,
+        isDone: false,
+        onToggleDone: noop,
         onToggleArchived: noop,
         onTogglePinned,
         onToggleUnread: noop,
@@ -72,7 +76,7 @@ function renderPane({
         onClose: noop,
         escStopsRunningThread: false,
         onNewChildThread,
-        snoozeMenuItems,
+        onOpenSnoozePicker,
       }),
     ),
   );
@@ -117,15 +121,15 @@ describe("compact viewport thread pane header", () => {
     expect(trigger.className).toContain("rounded-l-none");
   });
 
-  it("the compact caret opens the same menu carrying the read-state items plus Full Screen", () => {
+  it("the compact caret opens the overflow carrying the read-state items plus Full Screen", () => {
     renderPane({ compact: true });
     openActionsMenu();
     expect(screen.getByRole("menuitem", { name: "Full Screen" })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: "Mark Done" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "Mark Unread" })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: "Archive" })).toBeTruthy();
   });
 
-  it("offers Full Screen in the actions menu and maximizes on click", () => {
+  it("offers Full Screen in the overflow and maximizes on click", () => {
     renderPane({ compact: true });
     openActionsMenu();
     const item = screen.getByRole("menuitem", { name: "Full Screen" });
@@ -169,101 +173,18 @@ describe("desktop thread pane header", () => {
     expect(trigger.querySelector('[data-icon="MoreHorizontal"]')).not.toBeNull();
     expect(trigger.closest('[class*="items-stretch"]')).toBeNull();
   });
-});
 
-describe("snooze entries in the actions menu", () => {
-  function renderPaneWithSnooze(
-    items: Parameters<typeof ThreadPane>[0]["snoozeMenuItems"],
-  ) {
-    return render(
-      createElement(
-        CompactViewportOverrideProvider,
-        { isCompactViewport: false },
-        createElement(ThreadPane, {
-          thread: {
-            id: "thr_test",
-            displayTitle: "Test thread",
-            status: "idle",
-            isUnread: false,
-            isPinned: false,
-          },
-          isArchived: false,
-          isDone: false,
-          onToggleDone: noop,
-          onToggleArchived: noop,
-          onTogglePinned: noop,
-          onToggleUnread: noop,
-          snoozeMenuItems: items,
-          onRename: async () => {},
-          onMaximize,
-          onClose: noop,
-          escStopsRunningThread: false,
-        }),
-      ),
-    );
-  }
-
-  it("an open-thread pane gets ONE Snooze… entry that opens the picker", () => {
-    const openPicker = vi.fn();
-    renderPaneWithSnooze(
-      snoozeMenuActions({
-        snoozed: false,
-        clearSnooze: vi.fn(),
-        openPicker,
-      }),
-    );
+  it("the board's three actions have no second home in the overflow", () => {
+    renderPane({ compact: false, onNewChildThread: noop, onOpenSnoozePicker: noop });
     openActionsMenu();
-    const item = screen.getByRole("menuitem", { name: "Snooze…" });
-    expect(screen.getAllByRole("menuitem")).toHaveLength(5); // Done, Pin, Read, Snooze…, Archive
-    fireEvent.click(item);
-    expect(openPicker).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("menuitem", { name: "Snooze…" })).toBeNull();
-  });
-
-  it("a snoozed thread's pane offers Edit snooze… that opens the picker", () => {
-    const openPicker = vi.fn();
-    renderPaneWithSnooze(
-      snoozeMenuActions({
-        snoozed: true,
-        clearSnooze: vi.fn(),
-        openPicker,
-      }),
-    );
-    openActionsMenu();
-    const item = screen.getByRole("menuitem", { name: "Edit snooze…" });
-    expect(screen.getAllByRole("menuitem")).toHaveLength(5); // Pin, Done, Read, Edit snooze…, Archive
-    expect(screen.queryByRole("menuitem", { name: "Snooze…" })).toBeNull();
-    fireEvent.click(item);
-    expect(openPicker).toHaveBeenCalledTimes(1);
-  });
-
-  it("the snooze entry renders under its divider, between the read toggle and Archive", () => {
-    renderPaneWithSnooze(
-      snoozeMenuActions({
-        snoozed: false,
-        clearSnooze: vi.fn(),
-        openPicker: vi.fn(),
-      }),
-    );
-    openActionsMenu();
-    const menu = screen.getByRole("menu");
+    const menu = screen.getByRole("menu", { name: "More thread actions" });
     const labels = Array.from(menu.querySelectorAll("[role='menuitem']")).map(
       (item) => item.textContent,
     );
-    expect(labels).toEqual(["Mark Done", "Pin", "Mark Unread", "Snooze…", "Archive"]);
-    const head = Array.from(menu.querySelectorAll("[role='menuitem']")).find(
-      (item) => item.textContent === "Snooze…",
-    );
-    if (head === undefined) throw new Error("missing snooze entry");
-    expect(head.className).toContain("border-t");
-    expect(head.className).toContain("mt-1");
-  });
-
-  it("without the prop the menu carries no snooze entry (back-compat)", () => {
-    renderPane({ compact: false });
-    openActionsMenu();
-    expect(screen.queryByRole("menuitem", { name: "Snooze…" })).toBeNull();
-    expect(screen.getByRole("menuitem", { name: "Mark Done" })).toBeTruthy();
+    expect(labels).toEqual(["Pin", "Mark Unread", "Archive"]);
+    expect(screen.queryByRole("menuitem", { name: /^Mark (Not )?Done$/ })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: /snooze…$/ })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "New child thread…" })).toBeNull();
   });
 });
 
@@ -295,119 +216,16 @@ describe("pin entry in the actions menu", () => {
   });
 });
 
-describe("new child thread entry in the actions menu", () => {
-  const onNewChildThread = vi.fn();
-  beforeEach(() => {
-    onNewChildThread.mockClear();
-  });
-
-  it("sits below the snooze entry and opens the child composer on click", () => {
-    renderPane({ compact: false, onNewChildThread });
-    openActionsMenu();
-    // The state toggles lead the menu in frequency-of-use order (Done,
-    // Pin, Read); the creation entry trails the snooze, categorically apart
-    // from Mark Done / Pin.
-    const menu = screen.getByRole("menu");
-    const labels = Array.from(menu.querySelectorAll("[role='menuitem']")).map(
-      (item) => item.textContent,
-    );
-    expect(labels).toEqual(["Mark Done", "Pin", "Mark Unread", "New child thread…", "Archive"]);
-    fireEvent.click(screen.getByRole("menuitem", { name: "New child thread…" }));
-    expect(onNewChildThread).toHaveBeenCalledTimes(1);
-    // The menu closes on selection, leaving no stale overlay.
-    expect(screen.queryByRole("menuitem", { name: "New child thread…" })).toBeNull();
-  });
-
-  it("with snooze, the child spawn trails the snooze entry", () => {
-    renderPane({
-      compact: false,
-      onNewChildThread,
-      snoozeMenuItems: snoozeMenuActions({
-        snoozed: false,
-        clearSnooze: vi.fn(),
-        openPicker: vi.fn(),
-      }),
-    });
-    openActionsMenu();
-    const menu = screen.getByRole("menu");
-    const labels = Array.from(menu.querySelectorAll("[role='menuitem']")).map(
-      (item) => item.textContent,
-    );
-    expect(labels).toEqual(["Mark Done", "Pin", "Mark Unread", "Snooze…", "New child thread…", "Archive"]);
-  });
-
-  it("an archived thread's pane still offers the child spawn", () => {
-    renderPane({ compact: false, archived: true, onNewChildThread });
-    openActionsMenu();
-    expect(screen.getByRole("menuitem", { name: "New child thread…" })).toBeTruthy();
-  });
-
-  it("without the prop the menu carries no child entry (back-compat)", () => {
-    renderPane({ compact: false });
-    openActionsMenu();
-    expect(screen.queryByRole("menuitem", { name: "New child thread…" })).toBeNull();
-  });
-});
-
-describe("done checkbox in the pane header", () => {
-  // The pane header keeps no chat icon: the slot left of the title carries
-  // the done checkbox instead, the same checkbox language the board cards
-  // reveal over their state dot (Checkbox / CheckboxChecked icons).
-  function headerOf() {
-    return screen.getByRole("complementary", { name: "Thread: Test thread" });
-  }
-
-  it.each([false, true])(
-    "shows no chat icon (compact: %s)",
-    (compact) => {
-      renderPane({ compact });
-      expect(headerOf().querySelector('svg[data-icon="MessageSquare"]')).toBeNull();
-      expect(headerOf().querySelector('svg[data-icon="Loading"]')).toBeNull();
-    },
-  );
-
-  it("marks a not-done thread done on one click", () => {
-    const onToggleDone = vi.fn();
-    renderPane({ compact: false, done: false, onDoneToggle: onToggleDone });
-    const checkbox = screen.getByRole("button", { name: "Mark done" });
-    expect(checkbox.querySelector('svg[data-icon="Checkbox"]')).not.toBeNull();
-    fireEvent.click(checkbox);
-    expect(onToggleDone).toHaveBeenCalledWith(true);
-  });
-
-  it("marks a done thread not done on one click, showing the checked box", () => {
-    const onToggleDone = vi.fn();
-    renderPane({ compact: false, done: true, onDoneToggle: onToggleDone });
-    const checkbox = screen.getByRole("button", { name: "Mark not done" });
-    expect(checkbox.querySelector('svg[data-icon="CheckboxChecked"]')).not.toBeNull();
-    fireEvent.click(checkbox);
-    expect(onToggleDone).toHaveBeenCalledWith(false);
-  });
-
-  it("at compact width the checkbox sits before the title; on desktop it rides the right cluster", () => {
-    for (const compact of [false, true]) {
-      cleanup();
-      renderPane({ compact });
-      const header = headerOf();
-      const checkbox = screen.getByRole("button", { name: "Mark done" });
-      const title = header.querySelector('button[title="Rename thread"]');
-      expect(title).toBeTruthy();
-      expect(header.contains(checkbox)).toBe(true);
-      expect(
-        (compact ? checkbox.compareDocumentPosition(title as Node) : title.compareDocumentPosition(checkbox as Node)) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-    }
-  });
-
-  it("on desktop the checkbox is a 28px ghost button, as in the native header's own action row", () => {
-    renderPane({ compact: false });
-    const checkbox = screen.getByRole("button", { name: "Mark done" });
-    // The native pane renders Focus Board's own header action as a 28px
-    // ghost icon button; the pane header's toggle carries the same size
-    // (the constant spells it as arbitrary values), so both checkboxes
-    // read as one control family.
-    expect(checkbox.className).toContain("h-[28px]");
-    expect(checkbox.className).toContain("w-[28px]");
+describe("the pane header keeps no chat icon", () => {
+  // The slot left of the title used to carry the done checkbox; it now carries
+  // nothing (Done moved into the Focus Board control's menu), and it must not
+  // drift back into a chat-status glyph either.
+  it.each([false, true])("shows no chat icon (compact: %s)", (compact) => {
+    renderPane({ compact });
+    const header = screen
+      .getByRole("complementary", { name: "Thread: Test thread" })
+      .querySelector("header");
+    expect(header?.querySelector('svg[data-icon="MessageSquare"]')).toBeNull();
+    expect(header?.querySelector('svg[data-icon="Loading"]')).toBeNull();
   });
 });

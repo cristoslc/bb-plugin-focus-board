@@ -1,23 +1,23 @@
 // @vitest-environment jsdom
 // The pane header's affordance inventory, the contract behind the native
-// header restyle of 2026-11-20: every action the header offered the day it
-// was restyled to bb's native chrome row (48px row of 28px ghost icon
-// buttons, overflow menu carrying the read toggle) must remain reachable in
-// EVERY surface shape — one click or one click + one menu entry, never
-// gone. A future restyle that quietly drops one of these fails here.
+// header restyle of 2026-11-20 and the header unification of 2026-11-23:
+// every action the header offers the reader must remain reachable in EVERY
+// surface shape — one click or one click + one menu entry, never gone. A
+// future restyle that quietly drops one of these fails here.
 //
 // Desktop (side-by-side pane and the squeezed panel sheet alike use the
 // desktop branch when the window itself is wide): title rename, ✨
-// autotitle, done toggle, read toggle, pin, snooze, new child thread,
-// archive, workspace open + its dropdown, maximize, close.
-// Compact (phone sheet): back replaces… nothing, and full screen joins the
-// menu; the read toggle stays a one-tap primary there.
+// autotitle, the Focus Board control's Done / Snooze / New child thread
+// rows, read toggle, pin, archive, workspace open + its dropdown, maximize,
+// close.
+// Compact (phone sheet): back, the same Focus Board control (Done reachable
+// through its menu), full screen joining the overflow, and the read toggle
+// staying a one-tap primary.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createElement, type ReactNode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ThreadPane } from "../components/thread-pane";
 import { CompactViewportOverrideProvider } from "../components/ui/hooks/use-compact-viewport";
-import { snoozeMenuActions } from "../lib/snooze";
 
 const noop = () => {};
 const onMaximize = vi.fn();
@@ -72,9 +72,17 @@ vi.mock("@get-bb/plugin-sdk/app", () => ({
 
 afterEach(cleanup);
 
+/** The ⋯ overflow: bb's own thread actions on every surface. */
 function openMenu() {
 	fireEvent.click(screen.getByRole("button", { name: "More thread actions" }));
 	return screen.getByRole("menu", { name: "More thread actions" });
+}
+
+/** The Focus Board control: the board's three actions, shared with bb's own
+ *  thread page. */
+function openBoardMenu() {
+	fireEvent.click(screen.getByRole("button", { name: "Focus Board thread menu" }));
+	return screen.getByRole("menu", { name: "Focus Board thread menu" });
 }
 
 function openWorkspaceDropdown() {
@@ -85,11 +93,12 @@ function openWorkspaceDropdown() {
 /** Assert EVERY affordance is reachable at one width, and exercise each
  *  trigger once. */
 describe("thread pane header affordance inventory", () => {
-	it("desktop: rename, autotitle, done, read, pin, snooze, new child, archive, workspace, maximize, close", async () => {
-		let done = false;
+	it("desktop: rename, autotitle, done, snooze, new child, read, pin, archive, workspace, maximize, close", async () => {
+		const onToggleDone = vi.fn();
+		const onOpenSnoozePicker = vi.fn();
+		const onNewChildThread = vi.fn();
 		const onToggleUnread = vi.fn();
 		const onTogglePinned = vi.fn();
-		const openPicker = vi.fn();
 		const onRename = vi.fn(async () => {});
 		render(
 			createElement(
@@ -104,10 +113,8 @@ describe("thread pane header affordance inventory", () => {
 						isPinned: false,
 					},
 					isArchived: false,
-					isDone: done,
-					onToggleDone: (next) => {
-						done = next;
-					},
+					isDone: false,
+					onToggleDone,
 					onToggleArchived: noop,
 					onTogglePinned,
 					onToggleUnread,
@@ -115,12 +122,8 @@ describe("thread pane header affordance inventory", () => {
 					onMaximize,
 					onClose: noop,
 					escStopsRunningThread: false,
-					onNewChildThread: noop,
-					snoozeMenuItems: snoozeMenuActions({
-						snoozed: false,
-						clearSnooze: noop,
-						openPicker,
-					}),
+					onOpenSnoozePicker,
+					onNewChildThread,
 				}),
 			),
 		);
@@ -130,21 +133,33 @@ describe("thread pane header affordance inventory", () => {
 		expect(screen.getByRole("textbox", { name: "Thread title" })).toBeTruthy();
 		expect(screen.getByLabelText("Auto-rename from the thread prompt")).toBeTruthy();
 
-		// Done toggle: one click, in the header.
-		fireEvent.click(screen.getByRole("button", { name: "Mark done" }));
+		// The Focus Board control: Done, Snooze, New child thread — the same
+		// three rows bb's own thread page carries.
+		openBoardMenu();
+		expect(
+			Array.from(
+				screen
+					.getByRole("menu", { name: "Focus Board thread menu" })
+					.querySelectorAll('[role="menuitem"], [role="menuitemradio"]'),
+			).map((row) => row.textContent),
+		).toEqual(["Mark Done", "Snooze…", "New child thread…"]);
+		fireEvent.click(screen.getByRole("menuitemradio", { name: "Mark Done" }));
+		expect(onToggleDone).toHaveBeenCalledWith(true);
+		openBoardMenu();
+		fireEvent.click(screen.getByRole("menuitem", { name: "Snooze…" }));
+		expect(onOpenSnoozePicker).toHaveBeenCalledTimes(1);
+		openBoardMenu();
+		fireEvent.click(screen.getByRole("menuitem", { name: "New child thread…" }));
+		expect(onNewChildThread).toHaveBeenCalledTimes(1);
 
-		// The overflow menu: read, done, pin, snooze, new child, archive.
+		// The ⋯ overflow: bb's own actions, the ones its thread page keeps
+		// there.
 		openMenu();
 		expect(screen.getByRole("menuitem", { name: "Mark Unread" })).toBeTruthy();
-		expect(screen.getByRole("menuitem", { name: "Mark Done" })).toBeTruthy();
 		const pin = screen.getByRole("menuitem", { name: "Pin" });
 		fireEvent.click(pin);
 		expect(onTogglePinned).toHaveBeenCalledTimes(1);
 		openMenu();
-		fireEvent.click(screen.getByRole("menuitem", { name: "Snooze…" }));
-		expect(openPicker).toHaveBeenCalledTimes(1);
-		openMenu();
-		expect(screen.getByRole("menuitem", { name: "New child thread…" })).toBeTruthy();
 		expect(screen.getByRole("menuitem", { name: "Archive" })).toBeTruthy();
 		fireEvent.click(screen.getByRole("menuitem", { name: "Mark Unread" }));
 		expect(onToggleUnread).toHaveBeenCalledTimes(1);
@@ -172,7 +187,8 @@ describe("thread pane header affordance inventory", () => {
 		expect(screen.getByRole("button", { name: "Close thread pane" })).toBeTruthy();
 	});
 
-	it("compact: back, done, one-tap read primary, menu, workspace, close — and Full Screen in the menu", async () => {
+	it("compact: back, the board control, one-tap read primary, overflow, workspace, close — and Full Screen in the overflow", async () => {
+		const onToggleDone = vi.fn();
 		render(
 			createElement(
 				CompactViewportOverrideProvider,
@@ -187,7 +203,7 @@ describe("thread pane header affordance inventory", () => {
 					},
 					isArchived: false,
 					isDone: false,
-					onToggleDone: noop,
+					onToggleDone,
 					onToggleArchived: noop,
 					onTogglePinned: noop,
 					onToggleUnread: noop,
@@ -195,17 +211,16 @@ describe("thread pane header affordance inventory", () => {
 					onMaximize,
 					onClose: noop,
 					escStopsRunningThread: false,
+					onOpenSnoozePicker: noop,
 					onNewChildThread: noop,
-					snoozeMenuItems: snoozeMenuActions({
-						snoozed: false,
-						clearSnooze: noop,
-						openPicker: noop,
-					}),
 				}),
 			),
 		);
 		expect(screen.getByRole("button", { name: "Back to board" })).toBeTruthy();
-		expect(screen.getByRole("button", { name: "Mark done" })).toBeTruthy();
+		// Done stays reachable on the phone: the mark's menu, one tap away.
+		openBoardMenu();
+		fireEvent.click(screen.getByRole("menuitemradio", { name: "Mark Done" }));
+		expect(onToggleDone).toHaveBeenCalledWith(true);
 		// One-tap read primary (the pane's phone affordance, kept).
 		expect(
 			screen.getByRole("button", { name: "Mark thread unread" }),
@@ -214,15 +229,7 @@ describe("thread pane header affordance inventory", () => {
 		const labels = Array.from(menu.querySelectorAll("[role='menuitem']")).map(
 			(item) => item.textContent,
 		);
-		expect(labels).toEqual([
-			"Mark Done",
-			"Pin",
-			"Mark Unread",
-			"Snooze…",
-			"New child thread…",
-			"Archive",
-			"Full Screen",
-		]);
+		expect(labels).toEqual(["Pin", "Mark Unread", "Archive", "Full Screen"]);
 		// Close the overflow before opening the workspace dropdown, or two
 		// role=menu trees are on screen at once.
 		fireEvent.click(screen.getByRole("button", { name: "More thread actions" }));
@@ -234,7 +241,7 @@ describe("thread pane header affordance inventory", () => {
 		expect(screen.getByRole("button", { name: "Close thread pane" })).toBeTruthy();
 	});
 
-	it("an archived thread's pane still reaches pin's only exit through the menu", () => {
+	it("an archived thread's pane still reaches pin's only exit through the overflow", () => {
 		render(
 			createElement(
 				CompactViewportOverrideProvider,
