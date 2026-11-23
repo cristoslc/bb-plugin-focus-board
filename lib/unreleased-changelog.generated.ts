@@ -4,5 +4,10 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "text": "**The thread pane's header wears the same Focus Board control as bb's own thread page.** The mark plus caret opens Mark Done, Snooze and New child thread, so the pane's old checkbox is gone and the two headers line up row for row.",
     "children": [],
     "group": "bb's thread pages"
+  },
+  {
+    "text": "**`/` focuses the search field again with a thread open beside the board.** The board now treats bb's pane container as its own surface, which is where the keyboard sits after any click inside the board. The New Thread key comes back with it.",
+    "children": [],
+    "group": "The board"
   }
 ];

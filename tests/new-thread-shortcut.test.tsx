@@ -66,9 +66,12 @@ function splitLayout(focusedPaneId: string): PaneLayout {
 }
 
 /** The board's own panel root, inside the host's pane container for it, as
- *  bb renders a plugin panel. */
+ *  bb renders a plugin panel (the container is focusable; a click inside the
+ *  board lands focus on it — probe-board-shortcut-focus.mjs). */
 function boardPane(paneId = "pane-1"): HTMLElement {
-  const container = mount(element("div", { "data-split-pane-id": paneId }));
+  const container = mount(
+    element("div", { "data-split-pane-id": paneId, tabindex: "-1" }),
+  );
   return element("div", { "data-focus-board-panel": "" }, container);
 }
 
@@ -265,6 +268,31 @@ describe("useNewThreadComposerShortcut", () => {
     const event = pressOn(element("div", {}, panel), "c");
     expect(onActivate).toHaveBeenCalledTimes(1);
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("with the host's pane container holding focus, the letter opens the composer", () => {
+    // The same host fact as the "/" case (tests/search-focus-slash.test.tsx):
+    // bb focuses its pane container on pointerdown, so after a click inside the
+    // board the target is the container around the panel.
+    const { onActivate, panel } = harness(true, {
+      layout: splitLayout("pane-1"),
+    });
+    const container = panel.closest("[data-split-pane-id]") as HTMLElement;
+    container.focus();
+    expect(document.activeElement).toBe(container);
+    const event = pressOn(container, "c");
+    expect(onActivate).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("the other pane's container keeps its own letters", () => {
+    const { onActivate } = harness(true, { layout: splitLayout("pane-1") });
+    const otherPane = mount(
+      element("div", { "data-split-pane-id": "pane-2", tabindex: "-1" }),
+    );
+    const event = pressOn(otherPane, "c");
+    expect(onActivate).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it("with a thread pane focused beside the board, the letter on nothing does nothing", () => {
