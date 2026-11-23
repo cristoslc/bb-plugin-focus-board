@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-11-21T08:43:56.133Z by `npm run uat`._
+_Generated 2026-11-23T08:43:00.321Z by `npm run uat`._
 
 ## lane-reveal
 
