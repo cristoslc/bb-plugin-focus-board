@@ -3,10 +3,10 @@
 // manual door. The component suites (tests/sweep-button.test.tsx,
 // tests/lane-header-menu.test.tsx) inject `sweepCandidatesFor`, so they pin
 // the pill's rendering law but not the eligibility the app actually computes.
-// This suite drives the app's own law end to end — `done_list` + the sweep
-// config through the fake host, then the Board's header — on the shape the
-// operator reported (an Idle · Earlier lane and a Done lane, both without a
-// pill):
+// This suite drives the app's own law end to end: `done_list` plus the sweep
+// config through the fake host, then the Board's header. It runs on the shape
+// the operator reported (an Idle · Earlier lane and a Done lane, both without
+// a pill):
 //
 // 1. Done is a PRESELECTING arm: a done thread past `doneArchiveMs` puts the
 //    broom and its count on the lane. That is the case a wiring regression

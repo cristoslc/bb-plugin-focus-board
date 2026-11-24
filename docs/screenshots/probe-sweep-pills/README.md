@@ -29,9 +29,11 @@ Every lane's pill is absent for a reason the rule names:
 - **Idle · Earlier** is manual-only. The 2026-10-03 arming decision demoted
   the fresher idle buckets (`idle-earlier`, `idle-today`, `idle-recent`) to
   manual arming, so `sweepArmPreselects` is false for them, the app's dispatch
-  returns no candidates, and the pill has nothing to propose. The lane is 1–7
-  days idle; of its 61 threads, 5 are past the 2-day threshold, and the rule
-  still proposes none of them.
+  returns no candidates, and the pill has nothing to propose. The lane holds
+  threads that went quiet 1–7 days ago, and some of them are past the same
+  2-day threshold the proposing arms use. The rule never asks, because that
+  bucket is curated by hand. Its door is the lane menu's "Sweep this lane…",
+  which arms the lane empty for the operator to build click by click.
 - **Done** preselects, so an empty pill means an empty eligible set. The lane
   held 14 done threads, and not one was eligible: the only thread past the
   2-day threshold (`thr_uyu3s59q3b`, 3.42 days done) carried a `keep` flag,
