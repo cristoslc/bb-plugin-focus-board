@@ -1,0 +1,25 @@
+version: 1.8.3
+# The 1.8.3 nightly storyboard (2026-11-24). Four bullets, judged against
+# docs/releases/demo-gif-convention.md. The two pane-placement bullets
+# observe what bb's native pane SHOWS, and the harness's split stand-in is
+# placement-only with no thread content — the limit the 1.8.1 and 1.8.2
+# storyboards recorded; the race fix also needs a slowed pane mount the
+# harness cannot stage honestly.
+demos:
+  - bullet: "**The thread pane's header wears the same Focus Board control as bb's own thread page.**"
+    gif: docs/screenshots/release-demos/v1.8.3-pane-header-menu.gif
+    caption: "The pane's header carries the mark-plus-caret control instead of its old checkbox; the menu holds Mark Done, Snooze and New child thread, and Done reads the checked row the checkbox used to draw."
+    steps:
+      - "release-demos/v1.8.3.mjs pane-header-menu: the board's own pane deep-linked open (the uat-pane suites' /t/ route), the header control sat where the pane's old checkbox was"
+      - "the control's click opens the shared Focus Board menu; Mark Done from the menu's checked first row settles the card"
+  - bullet: "**`/` focuses the search field again with a thread open beside the board.**"
+    gif: docs/screenshots/release-demos/v1.8.3-slash-search-focus.gif
+    caption: "A click inside the board puts the keyboard in bb's pane container; / focuses the search and typing filters the board while the thread stays open beside it. The right-hand strip is the harness's stand-in for bb's own pane."
+    steps:
+      - "release-demos/v1.8.3.mjs slash-search-focus: a card click splits the window (?nativeSplit=1), then a click inside the board hands the keyboard to bb's pane container"
+      - "/ focuses the search field (the capture asserts focus, not a silent film), and typing a query filters the board live"
+skips:
+  - bullet: "**A card click puts its thread in the pane the board already owns, even when that pane shows a page.**"
+    reason: "What the click replaces is the native pane's content, and the harness's split stand-in renders placement only with no thread content — the limit the 1.8.1 and 1.8.2 storyboards recorded — so the fixed path's visible deltas are the pane count and the record the click settles against, both asserted by the uat-native-open suite."
+  - bullet: "**One card click no longer leaves two thread panes on a slow window.**"
+    reason: "The fix closes a settle-time race, and its before-state needs a slowed pane mount the harness cannot stage honestly; the settled single-pane end state it produces is asserted by the uat-native-open suite and the live smoke's replace ruling."
