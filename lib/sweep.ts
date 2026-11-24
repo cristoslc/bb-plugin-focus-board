@@ -120,22 +120,32 @@ export function sweepCandidatesForIdleColumn(
  * did not build by hand. There is deliberately no candidate function for
  * these arms: the dispatch returns an empty pre-selection for them.
  *
- * The same decision demoted the idle buckets fresher than A-while-ago
- * (`idle-earlier`, `idle-today`, `idle-recent`) to manual-only arming; the
- * predicate below, not a candidate function, carries that split.
+ * The same decision demoted the fresher idle buckets (`idle-today`,
+ * `idle-recent`) to manual-only arming. `idle-earlier` was demoted with them
+ * and came back by operator ruling on 2026-11-24 (dec_m34jysxr6ltv, corpus
+ * `dl-20261124T154509-35ce`): the bucket
+ * that holds the threads which actually aged out is the one whose bulk action
+ * the operator needs, and the fresher two stay manual because their items are
+ * hours old. The predicate below, not a candidate function, carries the split.
  */
 
 /**
  * Whether arming this column's sweep pre-selects its candidates. Only the
  * arms whose whole point is "these aged out" start selected: the Done arm
- * (past the archive threshold) and the A-while-ago arms (past the idle
- * threshold, both groupings' twins). Every other sweepable arm — Pinned,
- * Unread, the fresher idle buckets — enters sweep mode empty; the operator
- * clicks cards to build the sweep. Non-sweepable columns return false.
+ * (past the archive threshold), the A-while-ago arms (past the idle
+ * threshold, both groupings' twins), and the Earlier bucket (the oldest idle
+ * bucket, whose threads are past the same idle threshold by construction —
+ * operator ruling 2026-11-24). The fresher two idle buckets, Pinned and
+ * Unread enter sweep mode empty; the operator clicks cards to build those
+ * sweeps. Non-sweepable columns return false.
  */
 export function sweepArmPreselects(columnId: string): boolean {
   if (columnId === "done") return true;
-  return columnId === "idle-awhile" || columnId === "awhile";
+  return (
+    columnId === "idle-earlier" ||
+    columnId === "idle-awhile" ||
+    columnId === "awhile"
+  );
 }
 
 export type SweepColumnKind = "done" | "idle-bucket" | "pinned" | "unread";
