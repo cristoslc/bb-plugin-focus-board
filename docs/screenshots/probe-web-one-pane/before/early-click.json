@@ -1,0 +1,254 @@
+[
+  {
+    "run": 0,
+    "before": {
+      "route": "/plugins/focus-board/board",
+      "paneCount": 1,
+      "rendered": [
+        "pane-1"
+      ],
+      "board": true,
+      "cards": 68,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}"
+    },
+    "at300": {
+      "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+      "paneCount": 2,
+      "rendered": [
+        "pane-1",
+        "pane-2"
+      ],
+      "board": true,
+      "cards": 68,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_jaxhi5icse\",\"threadId\":\"thr_tf8zuywpur\"}}]},\"focusedPaneId\":\"pane-2\"}}"
+    },
+    "settled": {
+      "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+      "paneCount": 2,
+      "rendered": [
+        "pane-1",
+        "pane-2"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_jaxhi5icse\",\"threadId\":\"thr_tf8zuywpur\"}}]},\"focusedPaneId\":\"pane-2\"}}"
+    },
+    "trace": [
+      "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: asking the opener for the split\",\"compactViewport\":false,\"layout\":null,\"record\":null}",
+      "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: the host split\",\"paneId\":\"pane-2\"}"
+    ]
+  },
+  {
+    "run": 1,
+    "before": {
+      "route": "/plugins/focus-board/board",
+      "paneCount": 1,
+      "rendered": [
+        "pane-1"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}"
+    },
+    "at300": {
+      "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+      "paneCount": 2,
+      "rendered": [
+        "pane-1",
+        "pane-2"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_jaxhi5icse\",\"threadId\":\"thr_tf8zuywpur\"}}]},\"focusedPaneId\":\"pane-2\"}}"
+    },
+    "settled": {
+      "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+      "paneCount": 2,
+      "rendered": [
+        "pane-1",
+        "pane-2"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_jaxhi5icse\",\"threadId\":\"thr_tf8zuywpur\"}}]},\"focusedPaneId\":\"pane-2\"}}"
+    },
+    "trace": [
+      "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: asking the opener for the split\",\"compactViewport\":false,\"layout\":null,\"record\":null}",
+      "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: the host split\",\"paneId\":\"pane-2\"}"
+    ]
+  },
+  {
+    "run": 2,
+    "before": {
+      "route": "/plugins/focus-board/board",
+      "paneCount": 1,
+      "rendered": [
+        "pane-1"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}"
+    },
+    "at300": {
+      "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+      "paneCount": 2,
+      "rendered": [
+        "pane-1",
+        "pane-2"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_jaxhi5icse\",\"threadId\":\"thr_tf8zuywpur\"}}]},\"focusedPaneId\":\"pane-2\"}}"
+    },
+    "settled": {
+      "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+      "paneCount": 2,
+      "rendered": [
+        "pane-1",
+        "pane-2"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_jaxhi5icse\",\"threadId\":\"thr_tf8zuywpur\"}}]},\"focusedPaneId\":\"pane-2\"}}"
+    },
+    "trace": [
+      "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: asking the opener for the split\",\"compactViewport\":false,\"layout\":null,\"record\":null}",
+      "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: the host split\",\"paneId\":\"pane-2\"}"
+    ]
+  },
+  {
+    "run": 3,
+    "before": {
+      "route": "/plugins/focus-board/board",
+      "paneCount": 1,
+      "rendered": [
+        "pane-1"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}"
+    },
+    "at300": {
+      "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+      "paneCount": 2,
+      "rendered": [
+        "pane-1",
+        "pane-2"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_jaxhi5icse\",\"threadId\":\"thr_tf8zuywpur\"}}]},\"focusedPaneId\":\"pane-2\"}}"
+    },
+    "settled": {
+      "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+      "paneCount": 2,
+      "rendered": [
+        "pane-1",
+        "pane-2"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_jaxhi5icse\",\"threadId\":\"thr_tf8zuywpur\"}}]},\"focusedPaneId\":\"pane-2\"}}"
+    },
+    "trace": [
+      "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: asking the opener for the split\",\"compactViewport\":false,\"layout\":null,\"record\":null}",
+      "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: the host split\",\"paneId\":\"pane-2\"}"
+    ]
+  },
+  {
+    "run": 4,
+    "before": {
+      "route": "/plugins/focus-board/board",
+      "paneCount": 1,
+      "rendered": [
+        "pane-1"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}"
+    },
+    "at300": {
+      "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+      "paneCount": 2,
+      "rendered": [
+        "pane-1",
+        "pane-2"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_jaxhi5icse\",\"threadId\":\"thr_tf8zuywpur\"}}]},\"focusedPaneId\":\"pane-2\"}}"
+    },
+    "settled": {
+      "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+      "paneCount": 2,
+      "rendered": [
+        "pane-1",
+        "pane-2"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_jaxhi5icse\",\"threadId\":\"thr_tf8zuywpur\"}}]},\"focusedPaneId\":\"pane-2\"}}"
+    },
+    "trace": [
+      "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: asking the opener for the split\",\"compactViewport\":false,\"layout\":null,\"record\":null}",
+      "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: the host split\",\"paneId\":\"pane-2\"}"
+    ]
+  },
+  {
+    "run": 5,
+    "before": {
+      "route": "/plugins/focus-board/board",
+      "paneCount": 1,
+      "rendered": [
+        "pane-1"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},\"focusedPaneId\":\"pane-1\"}}"
+    },
+    "at300": {
+      "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+      "paneCount": 2,
+      "rendered": [
+        "pane-1",
+        "pane-2"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_jaxhi5icse\",\"threadId\":\"thr_tf8zuywpur\"}}]},\"focusedPaneId\":\"pane-2\"}}"
+    },
+    "settled": {
+      "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+      "paneCount": 2,
+      "rendered": [
+        "pane-1",
+        "pane-2"
+      ],
+      "board": true,
+      "cards": 77,
+      "inPane": null,
+      "raw": "{\"version\":1,\"layout\":{\"root\":{\"type\":\"split\",\"dir\":\"row\",\"sizes\":[0.5,0.5],\"children\":[{\"type\":\"pane\",\"paneId\":\"pane-1\",\"content\":{\"kind\":\"plugin-panel\",\"pluginId\":\"focus-board\",\"panelPath\":\"board\",\"subPath\":\"\"}},{\"type\":\"pane\",\"paneId\":\"pane-2\",\"content\":{\"kind\":\"thread\",\"projectId\":\"proj_jaxhi5icse\",\"threadId\":\"thr_tf8zuywpur\"}}]},\"focusedPaneId\":\"pane-2\"}}"
+    },
+    "trace": [
+      "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: asking the opener for the split\",\"compactViewport\":false,\"layout\":null,\"record\":null}",
+      "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: the host split\",\"paneId\":\"pane-2\"}"
+    ]
+  }
+]

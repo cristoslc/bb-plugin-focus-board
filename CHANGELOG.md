@@ -15,6 +15,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+#### bb's thread pages
+
+- **A card click that bb answers by navigating the whole page still lands on the board.** The click's split ask now keeps its repair armed wherever it asks, so the board comes back with the thread in its own pane instead of vanishing. A host that answers late, after the board's own pane already opened, is caught too.
+
 ## [1.8.3] - 2026-11-24
 
 ### Added

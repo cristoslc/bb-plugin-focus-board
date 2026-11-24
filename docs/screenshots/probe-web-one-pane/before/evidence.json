@@ -1,0 +1,914 @@
+{
+  "app": "http://127.0.0.1:38886/plugins/focus-board/board",
+  "phases": {
+    "wide-1600": {
+      "phase": "wide-1600",
+      "viewport": {
+        "width": 1600,
+        "height": 1200
+      },
+      "before": {
+        "bootMarker": 1795537212368,
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "",
+            "focused": true
+          }
+        ],
+        "renderedPanes": [
+          "pane-1"
+        ],
+        "boardMounted": true,
+        "cardCount": 77,
+        "inBoardPane": null,
+        "compactViewport": false,
+        "threadPage": null,
+        "navType": "navigate"
+      },
+      "card": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202,
+        "visible": true
+      },
+      "samples": [
+        {
+          "at": 0,
+          "bootMarker": 1795537212368,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        },
+        {
+          "at": 50,
+          "bootMarker": 1795537212368,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        },
+        {
+          "at": 150,
+          "bootMarker": 1795537212368,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        },
+        {
+          "at": 300,
+          "bootMarker": 1795537212368,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        },
+        {
+          "at": 600,
+          "bootMarker": 1795537212368,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        },
+        {
+          "at": 1000,
+          "bootMarker": 1795537212368,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        },
+        {
+          "at": 2000,
+          "bootMarker": 1795537212368,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        },
+        {
+          "at": 4000,
+          "bootMarker": 1795537212368,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        }
+      ],
+      "trace": [
+        "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: asking the opener for the split\",\"compactViewport\":false,\"layout\":null,\"record\":null}",
+        "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: the host split\",\"paneId\":\"pane-2\"}"
+      ],
+      "navEvents": [
+        "http://127.0.0.1:38886/plugins/focus-board/board",
+        "http://127.0.0.1:38886/plugins/focus-board/board",
+        "http://127.0.0.1:38886/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur"
+      ],
+      "consoleErrors": [],
+      "outcome": "split (2 panes)"
+    },
+    "desktop-1024": {
+      "phase": "desktop-1024",
+      "viewport": {
+        "width": 1024,
+        "height": 900
+      },
+      "before": {
+        "bootMarker": 1795537223078,
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "",
+            "focused": true
+          }
+        ],
+        "renderedPanes": [
+          "pane-1"
+        ],
+        "boardMounted": true,
+        "cardCount": 77,
+        "inBoardPane": null,
+        "compactViewport": false,
+        "threadPage": null,
+        "navType": "navigate"
+      },
+      "card": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202,
+        "visible": true
+      },
+      "samples": [
+        {
+          "at": 0,
+          "bootMarker": 1795537223078,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        },
+        {
+          "at": 50,
+          "bootMarker": 1795537223078,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        },
+        {
+          "at": 150,
+          "bootMarker": 1795537223078,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        },
+        {
+          "at": 300,
+          "bootMarker": 1795537223078,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        },
+        {
+          "at": 600,
+          "bootMarker": 1795537223078,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        },
+        {
+          "at": 1000,
+          "bootMarker": 1795537223078,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        },
+        {
+          "at": 2000,
+          "bootMarker": 1795537223078,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        },
+        {
+          "at": 4000,
+          "bootMarker": 1795537223078,
+          "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "panelPath": null,
+              "subPath": null,
+              "focused": true
+            }
+          ],
+          "renderedPanes": [
+            "pane-1",
+            "pane-2"
+          ],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": false,
+          "threadPage": "thr_tf8zuywpur",
+          "navType": "navigate"
+        }
+      ],
+      "trace": [
+        "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: asking the opener for the split\",\"compactViewport\":false,\"layout\":null,\"record\":null}",
+        "[focus-board:native-open] {\"threadId\":\"thr_tf8zuywpur\",\"branch\":\"one-pane: the host split\",\"paneId\":\"pane-2\"}"
+      ],
+      "navEvents": [
+        "http://127.0.0.1:38886/plugins/focus-board/board",
+        "http://127.0.0.1:38886/plugins/focus-board/board",
+        "http://127.0.0.1:38886/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur"
+      ],
+      "consoleErrors": [],
+      "outcome": "split (2 panes)"
+    },
+    "compact-700": {
+      "phase": "compact-700",
+      "viewport": {
+        "width": 700,
+        "height": 900
+      },
+      "before": {
+        "bootMarker": 1795537233538,
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "panelPath": "board",
+            "subPath": "",
+            "focused": true
+          }
+        ],
+        "renderedPanes": [],
+        "boardMounted": true,
+        "cardCount": 77,
+        "inBoardPane": null,
+        "compactViewport": true,
+        "threadPage": null,
+        "navType": "navigate"
+      },
+      "card": {
+        "threadId": "thr_9hvf4kvdnn",
+        "x": 125,
+        "y": 196,
+        "visible": true
+      },
+      "samples": [
+        {
+          "at": 0,
+          "bootMarker": 1795537233538,
+          "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "",
+              "focused": true
+            }
+          ],
+          "renderedPanes": [],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": null,
+          "compactViewport": true,
+          "threadPage": null,
+          "navType": "navigate"
+        },
+        {
+          "at": 50,
+          "bootMarker": 1795537233538,
+          "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "t/thr_9hvf4kvdnn",
+              "focused": true
+            }
+          ],
+          "renderedPanes": [],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+          "compactViewport": true,
+          "threadPage": null,
+          "navType": "navigate"
+        },
+        {
+          "at": 150,
+          "bootMarker": 1795537233538,
+          "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "t/thr_9hvf4kvdnn",
+              "focused": true
+            }
+          ],
+          "renderedPanes": [],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+          "compactViewport": true,
+          "threadPage": null,
+          "navType": "navigate"
+        },
+        {
+          "at": 300,
+          "bootMarker": 1795537233538,
+          "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "t/thr_9hvf4kvdnn",
+              "focused": true
+            }
+          ],
+          "renderedPanes": [],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+          "compactViewport": true,
+          "threadPage": null,
+          "navType": "navigate"
+        },
+        {
+          "at": 600,
+          "bootMarker": 1795537233538,
+          "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "t/thr_9hvf4kvdnn",
+              "focused": true
+            }
+          ],
+          "renderedPanes": [],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+          "compactViewport": true,
+          "threadPage": null,
+          "navType": "navigate"
+        },
+        {
+          "at": 1000,
+          "bootMarker": 1795537233538,
+          "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "t/thr_9hvf4kvdnn",
+              "focused": true
+            }
+          ],
+          "renderedPanes": [],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+          "compactViewport": true,
+          "threadPage": null,
+          "navType": "navigate"
+        },
+        {
+          "at": 2000,
+          "bootMarker": 1795537233538,
+          "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "t/thr_9hvf4kvdnn",
+              "focused": true
+            }
+          ],
+          "renderedPanes": [],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+          "compactViewport": true,
+          "threadPage": null,
+          "navType": "navigate"
+        },
+        {
+          "at": 4000,
+          "bootMarker": 1795537233538,
+          "route": "/plugins/focus-board/board/t/thr_9hvf4kvdnn",
+          "paneCount": 1,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "panelPath": "board",
+              "subPath": "t/thr_9hvf4kvdnn",
+              "focused": true
+            }
+          ],
+          "renderedPanes": [],
+          "boardMounted": true,
+          "cardCount": 77,
+          "inBoardPane": "Thread: BV Brain2 Orchestrator (L0)",
+          "compactViewport": true,
+          "threadPage": null,
+          "navType": "navigate"
+        }
+      ],
+      "trace": [
+        "[focus-board:native-open] {\"threadId\":\"thr_9hvf4kvdnn\",\"branch\":\"in-board: compact viewport\",\"compactViewport\":true,\"layout\":null,\"record\":null}"
+      ],
+      "navEvents": [
+        "http://127.0.0.1:38886/plugins/focus-board/board",
+        "http://127.0.0.1:38886/plugins/focus-board/board",
+        "http://127.0.0.1:38886/plugins/focus-board/board/t/thr_9hvf4kvdnn"
+      ],
+      "consoleErrors": [],
+      "outcome": "in-board pane (Thread: BV Brain2 Orchestrator (L0))"
+    }
+  },
+  "notes": [],
+  "servedBundle": {
+    "hash": "bd255bbfbd268032",
+    "url": "http://127.0.0.1:38886/api/v1/plugin-app-assets/bd255bbfbd268032/app.js",
+    "bytes": 563539,
+    "carriesSplitGuard": false
+  }
+}

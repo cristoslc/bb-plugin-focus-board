@@ -18,6 +18,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   createOnePaneDance,
+  ONE_PANE_WATCH_MS,
   routeThreadIdFromPath,
   settleOnePaneDance,
   type OnePaneDance,
@@ -83,6 +84,34 @@ describe("settling the dance against what the host did", () => {
         observation({ boardMounted: false, routeThreadId: "thr_b" }),
       ),
     ).toEqual({ kind: "expire" });
+  });
+
+  it("defers to the live board when the ask was made with a layout", () => {
+    // A fresh-pane or replacement ask: the board is on screen and owns the
+    // settlement (`lib/native-fresh-pane.ts`, the replacement's net), so the
+    // guard has nothing to do while it is alive.
+    expect(
+      settleOnePaneDance(
+        { ...dance(), repair: "restore-only" },
+        observation({ boardMounted: true, routeThreadId: null }),
+      ),
+    ).toEqual({ kind: "defer" });
+  });  it("restores when the route is any thread the click asked the host to open", () => {
+    // A replacement asks the host twice: it focuses the thread the board's
+    // pane shows, then navigates to the clicked one. A plain navigation to
+    // EITHER is this click's, so the board comes back with the clicked thread
+    // in its own pane.
+    const replacement: OnePaneDance = {
+      ...dance("thr_a"),
+      askedThreadIds: ["thr_a", "thr_focused"],
+      repair: "restore-only",
+    };
+    expect(
+      settleOnePaneDance(
+        replacement,
+        observation({ boardMounted: false, routeThreadId: "thr_focused" }),
+      ),
+    ).toEqual({ kind: "restore" });
   });
 });
 
@@ -212,6 +241,76 @@ describe("one dance at a time", () => {
     expect(host.openBoardPane).not.toHaveBeenCalled();
     expect(controller.pending()).not.toBeNull();
     expect(timers.size).toBe(1);
+  });
+
+  it("leaves a live board alone when a fresh-pane or replacement ask armed it", () => {
+    // The operator's report needs the repair precisely where the panel dies.
+    // A board that is still on screen is the fresh-pane settlement's job, so
+    // the guard neither opens the board's own pane nor pushes a route.
+    const { controller, host, advance, timers } = harness();
+    controller.begin({
+      threadId: "thr_a",
+      subPath: "t/thr_a",
+      repair: "restore-only",
+    });
+    advance(DEADLINE);
+    expect(host.openBoardPane).not.toHaveBeenCalled();
+    expect(host.restoreBoardRoute).not.toHaveBeenCalled();
+    expect(controller.pending()).toBeNull();
+    // One watch is armed for a late answer, and it lapses instead of looping.
+    advance(ONE_PANE_WATCH_MS);
+    expect(host.openBoardPane).not.toHaveBeenCalled();
+    expect(host.restoreBoardRoute).not.toHaveBeenCalled();
+    expect(timers.size).toBe(0);
+  });
+
+  it("repairs a late whole-page answer to a fresh-pane or replacement ask", () => {
+    // The host's opener can defer its whole decision to an RPC, so the answer
+    // can land after the guard deferred to the live board. That is the
+    // operator's reported state, from the branch that has no React settler
+    // left alive once the panel is gone.
+    const { controller, host, observed, advance } = harness();
+    controller.begin({
+      threadId: "thr_a",
+      subPath: "t/thr_a",
+      repair: "restore-only",
+    });
+    advance(DEADLINE);
+    expect(host.restoreBoardRoute).not.toHaveBeenCalled();
+
+    observed.boardMounted = false;
+    observed.routeThreadId = "thr_a";
+    advance(ONE_PANE_WATCH_MS);
+    expect(host.restoreBoardRoute).toHaveBeenCalledWith("t/thr_a");
+  });
+
+  it("repairs the host's late plain navigation after opening the board's pane", () => {
+    // The host's opener can defer its decision to an RPC, so its whole-page
+    // navigation can land AFTER the deadline opened the board's own pane.
+    // Without the second check the operator is left on the thread page with
+    // the board gone: the reported "just navs whole page".
+    const { controller, host, observed, advance } = harness();
+    controller.begin({ threadId: "thr_a", subPath: "t/thr_a" });
+
+    advance(DEADLINE);
+    expect(host.openBoardPane.mock.calls).toEqual([["thr_a"]]);
+    expect(host.restoreBoardRoute).not.toHaveBeenCalled();
+
+    // The late answer: the pane was replaced by the thread page.
+    observed.boardMounted = false;
+    observed.routeThreadId = "thr_a";
+    advance(ONE_PANE_WATCH_MS);
+    expect(host.restoreBoardRoute).toHaveBeenCalledWith("t/thr_a");
+  });
+
+  it("lets the late watch lapse when the board is still there", () => {
+    const { controller, host, advance } = harness();
+    controller.begin({ threadId: "thr_a", subPath: "t/thr_a" });
+    advance(DEADLINE);
+    advance(ONE_PANE_WATCH_MS * 4);
+    expect(host.openBoardPane.mock.calls).toEqual([["thr_a"]]);
+    expect(host.restoreBoardRoute).not.toHaveBeenCalled();
+    expect(controller.pending()).toBeNull();
   });
 });
 
