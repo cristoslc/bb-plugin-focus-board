@@ -31,9 +31,14 @@ import {
   fakePanelPushes,
   fakeSplitPanes,
   fakeThreadNavigations,
+  holdFakeNativeOpens,
+  holdFakeThreadNavigations,
   registeredNavPanel,
+  releaseFakeNativeOpens,
+  releaseFakeThreadNavigations,
   resetFakeNativeOpens,
   resetFakePanelPushes,
+  resetFakeSlowHost,
   resetFakeThreadNavigations,
   seedFakeLinks,
   seedFakeThreads,
@@ -76,6 +81,7 @@ beforeEach(() => {
   seedFakeLinks({});
   seedFakeThreads(fixtureThreads());
   resetFakeNativeOpens();
+  resetFakeSlowHost();
   setFakeRouteThread(null);
   resetFakeThreadNavigations();
   setFakeSplitsOff(false);
@@ -823,6 +829,95 @@ describe("a record that names the board's own pane", () => {
     expect(fakeSplitPanes()).toHaveLength(3);
     expect(hostPane.contains(document.querySelector("[data-focus-board-panel]"))).toBe(true);
     expect(fakeThreadNavigations()).toEqual([]);
+  });
+});
+
+describe("a slow host", () => {
+  // The operator's report of 2026-11-24, with a screenshot: "clicking a card
+  // BOTH took over the (correct) existing pane AND also launched the in-fb-pane
+  // side panel. EXPECTED: existing pane takeover, NO in-fb-pane panel." One
+  // click, two thread surfaces.
+  //
+  // The click asks the host twice (focus the board's pane, then a route
+  // navigation the host reconciles into it) and arms a 400ms net for a host
+  // that never answers. On a window the size of the operator's board (308
+  // threads) the host can apply either step on the far side of that net, and
+  // the net used to act on the intent alone: it opened the board's own pane
+  // while the host's answer was still on its way, so when the answer arrived the
+  // native pane showed the thread too. The first test holds the route
+  // application back, the second holds the focus step back; both assert the
+  // click leaves ONE surface.
+  //
+  // The deadline also settles against the rendered layout before it gives up
+  // (a landed replacement keeps the record and opens nothing). That half is
+  // defensive: the landing effect clears the intent on the same commit that
+  // shows the clicked thread in the pane, so a live layout cannot be both
+  // landed and pending in this app. It is the rule the click's net has to obey
+  // if a host or a refactor ever separates those two moments.
+
+  it("does not open the board's pane when the host's landing arrives after the net", async () => {
+    seedOwnedPane("thr_older");
+    // The host applies the route navigation on a later flush: the pane still
+    // shows the old thread when the net fires at 400ms.
+    holdFakeThreadNavigations();
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+
+    fireEvent.click(cardAnchor("thr_focus"));
+
+    // The focus step landed and the landing navigation was issued; the host has
+    // not applied it.
+    await waitFor(() => expect(fakeThreadNavigations()).toEqual(["thr_focus"]));
+    expect(fakeSplitPanes()).toEqual([
+      { paneId: "pane-1", threadId: null, isFocused: false },
+      { paneId: "pane-2", threadId: "thr_older", isFocused: true },
+    ]);
+
+    // Past the net with the pane still on the old thread: the click must wait
+    // for the host it already asked, not buy a second surface.
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(fakePanelPushes()).toEqual([]);
+    expect(threadPanes()).toEqual(["thr_older"]);
+
+    // Now the host applies it.
+    releaseFakeThreadNavigations();
+    await waitFor(() => expect(threadPanes()).toEqual(["thr_focus"]));
+    expect(fakeSplitPanes()).toHaveLength(2);
+    expect(inBoardPaneTitle()).toBeNull();
+    expect(fakePanelPushes()).toEqual([]);
+    expect(
+      JSON.parse(
+        window.localStorage.getItem("focus-board:boardNativeThreadPane") ?? "null",
+      ),
+    ).toEqual({ paneId: "pane-2", threadId: "thr_focus" });
+    // One surface, and no second navigation once the landing settled.
+    expect(fakeThreadNavigations()).toEqual(["thr_focus"]);
+  });
+
+  it("still opens the board's pane when focus never lands, and never navigates later", async () => {
+    // The net's actual job: a host that never answers. The click opens the
+    // board's own pane, and the late focus step must not then navigate a second
+    // surface into being.
+    seedOwnedPane("thr_older");
+    holdFakeNativeOpens();
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+
+    fireEvent.click(cardAnchor("thr_focus"));
+    await waitFor(
+      () =>
+        expect(fakePanelPushes().at(-1)).toMatchObject({
+          path: "board",
+          subPath: "t/thr_focus",
+        }),
+      { timeout: 3_000 },
+    );
+
+    releaseFakeNativeOpens();
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(fakeThreadNavigations()).toEqual([]);
+    expect(threadPanes()).toEqual(["thr_older"]);
+    expect(inBoardPaneTitle()).toBe("Focused thread");
   });
 });
 

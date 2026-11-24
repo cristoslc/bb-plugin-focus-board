@@ -1950,25 +1950,31 @@ function BoardPage({ subPath }: { subPath: string }) {
     }
   }, [nativeAttentionThreadId, capturePaneAttention, openThreadId]);
   // The card click's replacement (lib/native-pane-ownership.ts): land the
-  // clicked thread in Focus Board's pane, once the layout shows the host
-  // focused that pane.
+  // clicked thread in Focus Board's pane, once the host focused that pane.
   //
   // The landing navigation replaces whatever pane is FOCUSED, and pressing a
   // card focuses the board (measured: probe-card-click-focus-trace.mjs), so
   // this waits for the focus to move before it navigates. It waits on the
   // LAYOUT, never on an object identity: a focus step that changed nothing
   // leaves an identity comparison equal forever, which is how an earlier
-  // version swallowed clicks. The click's deadline settles a wait that never
-  // resolves.
+  // version swallowed clicks.
+  //
+  // SUCCESS is the pane's content, not its focus: the replacement landed when
+  // the board's pane shows the clicked thread, whether or not it still holds
+  // the focus. Focus gates the navigation below and nothing else, so a layout
+  // that lands the thread and then loses the focus cannot leave the intent
+  // stuck until the deadline opens a second surface.
   useEffect(() => {
     if (nativeReplace === null) return;
-    const focused = splitLayout?.panes.find((pane) => pane.isFocused) ?? null;
-    if (focused === null || focused.paneId !== nativeReplace.paneId) return;
-    if (focused.threadId === nativeReplace.threadId) {
-      // Landed: the board's pane shows the clicked thread and has the focus.
+    const target =
+      splitLayout?.panes.find((pane) => pane.paneId === nativeReplace.paneId) ?? null;
+    if (target === null) return;
+    if (target.threadId === nativeReplace.threadId) {
+      // Landed: the board's pane shows the clicked thread.
       setNativeReplace(null);
       return;
     }
+    if (!target.isFocused) return;
     if (nativeNavigationRef.current === nativeReplace) return;
     nativeNavigationRef.current = nativeReplace;
     // The clicked thread is in no pane, so this navigation replaces the
@@ -3473,11 +3479,43 @@ function BoardPage({ subPath }: { subPath: string }) {
       replaceTimerRef.current = window.setTimeout(() => {
         replaceTimerRef.current = null;
         if (nativeReplaceRef.current !== intent) return;
-        // The host never focused the board's pane inside the window. The
-        // request must still open the thread, and it must not cost a new pane:
-        // the board's own pane shows it, and the record is dropped so the next
-        // request re-plans from what the host actually holds.
-        abandonReplace(intent, "in-board: replacement not confirmed");
+        // The net settles against what the host RENDERS, never against the
+        // intent alone. The click asked the host for two things (focus the
+        // board's pane, then a navigation it reconciles into that pane), and on
+        // a window the size of the operator's board either one can land after
+        // this net fires. Opening the board's own pane on the intent alone is
+        // what produced the operator's 2026-11-24 screenshot: the native pane
+        // took the clicked thread a moment later and the board's own pane was
+        // already open, so one click left two thread surfaces on screen.
+        const target =
+          splitLayoutRef.current?.panes.find((pane) => pane.paneId === intent.paneId) ??
+          null;
+        if (target !== null && target.threadId === intent.threadId) {
+          // Landed after all: keep the record (the pane shows the clicked
+          // thread) and open nothing.
+          setNativeReplace(null);
+          trace("replace: landed after the net", { paneId: intent.paneId });
+          return;
+        }
+        if (target !== null && nativeNavigationRef.current === intent) {
+          // The host already has the landing navigation and owes its commit.
+          // A second surface now would be the reported double pane, so leave
+          // the wait to the landing effect: it clears the intent when the pane
+          // shows the clicked thread. A later click replaces the intent, and a
+          // pane that disappears settles in the fallback below.
+          trace("replace: the host still owes the landing", { paneId: intent.paneId });
+          return;
+        }
+        // The host never answered: it never focused the board's pane (so the
+        // navigation was never issued), or the pane is gone. The board's own
+        // pane is the one surface left, and the record is dropped so the next
+        // click re-plans from what the host holds.
+        abandonReplace(
+          intent,
+          target === null
+            ? "in-board: the board's pane is gone"
+            : "in-board: the host never focused the pane",
+        );
       }, REPLACE_CONFIRM_MS);
       // The focus step, and the one case where there is none: the pane already
       // holds the focus, so the landing effect navigates on its next commit.

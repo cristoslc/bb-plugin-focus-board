@@ -21,6 +21,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **`/` focuses the search field again with a thread open beside the board.** The board now treats bb's pane container as its own surface, which is where the keyboard sits after any click inside the board. The New Thread key comes back with it.
 
+#### bb's thread pages
+
+- **One card click no longer leaves two thread panes on a slow window.** The click now settles against what the pane actually shows instead of opening the board's own pane at a fixed moment, so a big board with a slower renderer gets the takeover and not the extra panel.
+
 ## [1.8.2] - 2026-11-23
 
 ### Added

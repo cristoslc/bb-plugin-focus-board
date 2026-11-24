@@ -1,0 +1,1925 @@
+{
+  "app": "http://127.0.0.1:38886/plugins/focus-board/board",
+  "cpuRates": [
+    3,
+    5,
+    10,
+    20
+  ],
+  "phases": {
+    "rate-3": {
+      "rate": 3,
+      "board": {
+        "at": 12528,
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": null,
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202
+      },
+      "firstClick": {
+        "at": 18100,
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": false
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "label": "2-first-click"
+      },
+      "secondCard": {
+        "threadId": "thr_r282wvvnkf",
+        "x": 448,
+        "y": 453
+      },
+      "samples": [
+        {
+          "at": 19246,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 19491,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 19626,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 19743,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 19861,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 19983,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 20433,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 20562,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 20713,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 20983,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 21110,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 21213,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 21317,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 21421,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 21525,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 21629,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 21731,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 21835,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 21939,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 22041,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 22144,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        }
+      ],
+      "clickedThread": "thr_r282wvvnkf",
+      "bothSurfaces": null,
+      "inBoardPaneSamples": 15,
+      "paneThreadSamples": 0,
+      "final": {
+        "at": 22402,
+        "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+        "paneCount": 2,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": true
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur",
+            "focused": false
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+        "record": null,
+        "label": "4-final"
+      }
+    },
+    "rate-5": {
+      "rate": 5,
+      "board": {
+        "at": 11441,
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": null,
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202
+      },
+      "firstClick": {
+        "at": 17589,
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": false
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "label": "2-first-click"
+      },
+      "secondCard": {
+        "threadId": "thr_r282wvvnkf",
+        "x": 448,
+        "y": 453
+      },
+      "samples": [
+        {
+          "at": 19053,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 19185,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 19298,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 19411,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 19549,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 19676,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 19802,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 19938,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 20077,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 20195,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 20321,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 21151,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 21368,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 21836,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 21978,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        }
+      ],
+      "clickedThread": "thr_r282wvvnkf",
+      "bothSurfaces": null,
+      "inBoardPaneSamples": 4,
+      "paneThreadSamples": 0,
+      "final": {
+        "at": 22201,
+        "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+        "paneCount": 2,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": true
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur",
+            "focused": false
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+        "record": null,
+        "label": "4-final"
+      }
+    },
+    "rate-10": {
+      "rate": 10,
+      "board": {
+        "at": 10450,
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": null,
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202
+      },
+      "firstClick": {
+        "at": 22465,
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": false
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "label": "2-first-click"
+      },
+      "secondCard": {
+        "threadId": "thr_r282wvvnkf",
+        "x": 448,
+        "y": 453
+      },
+      "samples": [
+        {
+          "at": 26055,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 26527,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 26738,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 26890,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 27051,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 27167,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 27313,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 27462,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 27617,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 27766,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 27915,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 28053,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 28205,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 28353,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 30545,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-1",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+          "record": null,
+          "label": "3-replacement"
+        }
+      ],
+      "clickedThread": "thr_r282wvvnkf",
+      "bothSurfaces": null,
+      "inBoardPaneSamples": 1,
+      "paneThreadSamples": 0,
+      "final": {
+        "at": 31233,
+        "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+        "paneCount": 2,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": true
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur",
+            "focused": false
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": "Thread: HomeLab Infrastructure (L0) orchestrator",
+        "record": null,
+        "label": "4-final"
+      }
+    },
+    "rate-20": {
+      "rate": 20,
+      "board": {
+        "at": 10561,
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": null,
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202
+      },
+      "firstClick": {
+        "at": 28844,
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": false
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "label": "2-first-click"
+      },
+      "secondCard": {
+        "threadId": "thr_r282wvvnkf",
+        "x": 448,
+        "y": 453
+      },
+      "samples": [
+        {
+          "at": 42932,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 43959,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        },
+        {
+          "at": 46004,
+          "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": null,
+          "label": "3-replacement"
+        }
+      ],
+      "clickedThread": "thr_r282wvvnkf",
+      "bothSurfaces": null,
+      "inBoardPaneSamples": 0,
+      "paneThreadSamples": 0,
+      "final": {
+        "at": 49307,
+        "route": "/plugins/focus-board/board/t/thr_r282wvvnkf",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": false
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": null,
+        "label": "4-final"
+      }
+    }
+  },
+  "trace": [
+    {
+      "phase": "rate-3",
+      "rate": 3,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "rate-3",
+      "rate": 3,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "rate-3",
+      "rate": 3,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur"
+        }
+      ]
+    },
+    {
+      "phase": "rate-3",
+      "rate": 3,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "in-board: replacement not confirmed",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_r282wvvnkf"
+          }
+        }
+      ]
+    },
+    {
+      "phase": "rate-5",
+      "rate": 5,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "rate-5",
+      "rate": 5,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "rate-5",
+      "rate": 5,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur"
+        }
+      ]
+    },
+    {
+      "phase": "rate-5",
+      "rate": 5,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "in-board: replacement not confirmed",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_r282wvvnkf"
+          }
+        }
+      ]
+    },
+    {
+      "phase": "rate-10",
+      "rate": 10,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "rate-10",
+      "rate": 10,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "rate-10",
+      "rate": 10,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur"
+        }
+      ]
+    },
+    {
+      "phase": "rate-10",
+      "rate": 10,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "in-board: replacement not confirmed",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_r282wvvnkf"
+          }
+        }
+      ]
+    },
+    {
+      "phase": "rate-20",
+      "rate": 20,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "rate-20",
+      "rate": 20,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "rate-20",
+      "rate": 20,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur"
+        }
+      ]
+    },
+    {
+      "phase": "rate-20",
+      "rate": 20,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "in-board: replacement not confirmed",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_r282wvvnkf"
+          }
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "servedBundle": "/Users/cristos/Documents/code/bb-plugin-focus-board/dist/app.js"
+}
