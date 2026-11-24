@@ -1,0 +1,1005 @@
+{
+  "run": "20261124T052428",
+  "app": "http://127.0.0.1:38886/plugins/focus-board/board",
+  "hostVersion": "0.50.1",
+  "pluginVersion": "1.8.3-dev",
+  "ruling": "fresh-pane",
+  "cards": [
+    {
+      "id": "thr_r282wvvnkf",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf"
+    },
+    {
+      "id": "thr_29gxjg77x4",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4"
+    },
+    {
+      "id": "thr_8nbzpbmm3c",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_8nbzpbmm3c"
+    },
+    {
+      "id": "thr_bcymmhtpms",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_bcymmhtpms"
+    },
+    {
+      "id": "thr_tf8zuywpur",
+      "href": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur"
+    },
+    {
+      "id": "thr_9hvf4kvdnn",
+      "href": "/projects/proj_9da9h742i7/threads/thr_9hvf4kvdnn"
+    },
+    {
+      "id": "thr_bkg7afa7nv",
+      "href": "/projects/proj_9da9h742i7/threads/thr_bkg7afa7nv"
+    },
+    {
+      "id": "thr_cvvvkw6rjz",
+      "href": "/projects/proj_9da9h742i7/threads/thr_cvvvkw6rjz"
+    },
+    {
+      "id": "thr_p7udn6q2mr",
+      "href": "/projects/proj_xkd2gczj6w/threads/thr_p7udn6q2mr"
+    },
+    {
+      "id": "thr_nwfrtpa6pt",
+      "href": "/projects/proj_8z8ipz6yup/threads/thr_nwfrtpa6pt"
+    },
+    {
+      "id": "thr_8k6d652cjw",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_8k6d652cjw"
+    },
+    {
+      "id": "thr_jtdjf8af9m",
+      "href": "/projects/proj_7k2wuv6nbq/threads/thr_jtdjf8af9m"
+    },
+    {
+      "id": "thr_ze3fypk9jr",
+      "href": "/projects/proj_anan4wqv4k/threads/thr_ze3fypk9jr"
+    },
+    {
+      "id": "thr_ew6jh4rch8",
+      "href": "/threads/thr_ew6jh4rch8"
+    },
+    {
+      "id": "thr_8a3rjhfqdh",
+      "href": "/threads/thr_8a3rjhfqdh"
+    },
+    {
+      "id": "thr_6kcadz3nq9",
+      "href": "/threads/thr_6kcadz3nq9"
+    },
+    {
+      "id": "thr_3y2fifb8xb",
+      "href": "/projects/proj_8z8ipz6yup/threads/thr_3y2fifb8xb"
+    },
+    {
+      "id": "thr_gy4zhsrdvq",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_gy4zhsrdvq"
+    },
+    {
+      "id": "thr_u77sfumfxq",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_u77sfumfxq"
+    },
+    {
+      "id": "thr_bgnt8swbff",
+      "href": "/projects/proj_jajjic4hi3/threads/thr_bgnt8swbff"
+    },
+    {
+      "id": "thr_zvkpwgy849",
+      "href": "/projects/proj_pkbe9hfas2/threads/thr_zvkpwgy849"
+    },
+    {
+      "id": "thr_kmer7fmfc8",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_kmer7fmfc8"
+    },
+    {
+      "id": "thr_6d38n33qmm",
+      "href": "/projects/proj_9da9h742i7/threads/thr_6d38n33qmm"
+    },
+    {
+      "id": "thr_ksexuty3dj",
+      "href": "/projects/proj_5pvsh6u4k3/threads/thr_ksexuty3dj"
+    },
+    {
+      "id": "thr_7xqzfamimg",
+      "href": "/threads/thr_7xqzfamimg"
+    },
+    {
+      "id": "thr_maufmdmr5q",
+      "href": "/projects/proj_p4562js7v2/threads/thr_maufmdmr5q"
+    },
+    {
+      "id": "thr_nusa59caqp",
+      "href": "/projects/proj_rzv6zurfm8/threads/thr_nusa59caqp"
+    },
+    {
+      "id": "thr_j4dyg9irgk",
+      "href": "/projects/proj_q5mu8uzub2/threads/thr_j4dyg9irgk"
+    },
+    {
+      "id": "thr_fj92jbzhpy",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_fj92jbzhpy"
+    },
+    {
+      "id": "thr_ni9nuffsvh",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_ni9nuffsvh"
+    },
+    {
+      "id": "thr_2wdxs2tzq3",
+      "href": "/projects/proj_9da9h742i7/threads/thr_2wdxs2tzq3"
+    },
+    {
+      "id": "thr_w55hwbxwws",
+      "href": "/projects/proj_9da9h742i7/threads/thr_w55hwbxwws"
+    },
+    {
+      "id": "thr_r8zvh6283a",
+      "href": "/projects/proj_9da9h742i7/threads/thr_r8zvh6283a"
+    },
+    {
+      "id": "thr_cxsqcyfb42",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_cxsqcyfb42"
+    },
+    {
+      "id": "thr_ds2tjzs6g6",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_ds2tjzs6g6"
+    },
+    {
+      "id": "thr_bacrmsajeh",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_bacrmsajeh"
+    },
+    {
+      "id": "thr_nycqm2r5an",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_nycqm2r5an"
+    },
+    {
+      "id": "thr_5u29w266v9",
+      "href": "/projects/proj_973agsveh5/threads/thr_5u29w266v9"
+    },
+    {
+      "id": "thr_cyyyqxsvix",
+      "href": "/projects/proj_yaqrz9j6js/threads/thr_cyyyqxsvix"
+    },
+    {
+      "id": "thr_5hrwrfkfiv",
+      "href": "/projects/proj_vqkih4eauv/threads/thr_5hrwrfkfiv"
+    },
+    {
+      "id": "thr_z96v9bwja7",
+      "href": "/projects/proj_6p5riztz6q/threads/thr_z96v9bwja7"
+    },
+    {
+      "id": "thr_4n84cr3jqr",
+      "href": "/projects/proj_8z8ipz6yup/threads/thr_4n84cr3jqr"
+    },
+    {
+      "id": "thr_g6grp7rzwj",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_g6grp7rzwj"
+    },
+    {
+      "id": "thr_5kfcjh5n43",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_5kfcjh5n43"
+    },
+    {
+      "id": "thr_cuw3jfn59x",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_cuw3jfn59x"
+    },
+    {
+      "id": "thr_rgtvecjygt",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_rgtvecjygt"
+    },
+    {
+      "id": "thr_khwt9jksr5",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_khwt9jksr5"
+    },
+    {
+      "id": "thr_d5czst35a2",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_d5czst35a2"
+    },
+    {
+      "id": "thr_3wycru4qpx",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_3wycru4qpx"
+    },
+    {
+      "id": "thr_xc9ddgfspz",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_xc9ddgfspz"
+    },
+    {
+      "id": "thr_n35z5g42jh",
+      "href": "/projects/proj_9da9h742i7/threads/thr_n35z5g42jh"
+    },
+    {
+      "id": "thr_msyjn52jwr",
+      "href": "/projects/proj_9da9h742i7/threads/thr_msyjn52jwr"
+    },
+    {
+      "id": "thr_xu665qscr2",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_xu665qscr2"
+    },
+    {
+      "id": "thr_jgw7nsadws",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_jgw7nsadws"
+    },
+    {
+      "id": "thr_ytbg7jhus6",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_ytbg7jhus6"
+    },
+    {
+      "id": "thr_xwcvapiaea",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_xwcvapiaea"
+    },
+    {
+      "id": "thr_g2y83a69s2",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_g2y83a69s2"
+    },
+    {
+      "id": "thr_cxqm8gnzg7",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_cxqm8gnzg7"
+    },
+    {
+      "id": "thr_zc3hh2swsn",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_zc3hh2swsn"
+    },
+    {
+      "id": "thr_2u2xwtkn4v",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_2u2xwtkn4v"
+    },
+    {
+      "id": "thr_e85xiwvqna",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_e85xiwvqna"
+    },
+    {
+      "id": "thr_67zeyqhpcs",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_67zeyqhpcs"
+    },
+    {
+      "id": "thr_mrvi4rqws4",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_mrvi4rqws4"
+    },
+    {
+      "id": "thr_ydxgxcnngd",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_ydxgxcnngd"
+    },
+    {
+      "id": "thr_977f6z7249",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_977f6z7249"
+    },
+    {
+      "id": "thr_54rve5zgjx",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_54rve5zgjx"
+    },
+    {
+      "id": "thr_yya554i7yu",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_yya554i7yu"
+    },
+    {
+      "id": "thr_brna2svmbs",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_brna2svmbs"
+    },
+    {
+      "id": "thr_p4ndfk65yx",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_p4ndfk65yx"
+    },
+    {
+      "id": "thr_m58h7gwf9s",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_m58h7gwf9s"
+    },
+    {
+      "id": "thr_xca9ekusbk",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_xca9ekusbk"
+    },
+    {
+      "id": "thr_q3yz5ixux7",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_q3yz5ixux7"
+    },
+    {
+      "id": "thr_3xmaz464av",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_3xmaz464av"
+    },
+    {
+      "id": "thr_nhkuunjfhe",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_nhkuunjfhe"
+    },
+    {
+      "id": "thr_4zwkbb24hz",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_4zwkbb24hz"
+    },
+    {
+      "id": "thr_j6pdnvq4uj",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_j6pdnvq4uj"
+    },
+    {
+      "id": "thr_jkkxbxupff",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_jkkxbxupff"
+    },
+    {
+      "id": "thr_wmbdghnc82",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_wmbdghnc82"
+    },
+    {
+      "id": "thr_4esg8tkfju",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_4esg8tkfju"
+    },
+    {
+      "id": "thr_qmcz62nqyw",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_qmcz62nqyw"
+    },
+    {
+      "id": "thr_7d37prfbk8",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_7d37prfbk8"
+    },
+    {
+      "id": "thr_rb8jren6gy",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_rb8jren6gy"
+    },
+    {
+      "id": "thr_dbi57zy6ub",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_dbi57zy6ub"
+    },
+    {
+      "id": "thr_hztn8eyh2w",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_hztn8eyh2w"
+    },
+    {
+      "id": "thr_u77vw3hrqc",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_u77vw3hrqc"
+    },
+    {
+      "id": "thr_y6vst9cbjk",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_y6vst9cbjk"
+    },
+    {
+      "id": "thr_pnrez6jaj9",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_pnrez6jaj9"
+    },
+    {
+      "id": "thr_ja8yv9vcge",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_ja8yv9vcge"
+    },
+    {
+      "id": "thr_npsz5urytm",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_npsz5urytm"
+    },
+    {
+      "id": "thr_t69ri7pbpc",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_t69ri7pbpc"
+    },
+    {
+      "id": "thr_mbdati389b",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_mbdati389b"
+    },
+    {
+      "id": "thr_juj5qpbagn",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_juj5qpbagn"
+    },
+    {
+      "id": "thr_2dp6i2cwpm",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_2dp6i2cwpm"
+    },
+    {
+      "id": "thr_6tej7q3xdf",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_6tej7q3xdf"
+    },
+    {
+      "id": "thr_pninr56n3x",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_pninr56n3x"
+    },
+    {
+      "id": "thr_4wtm6np3ad",
+      "href": "/threads/thr_4wtm6np3ad"
+    },
+    {
+      "id": "thr_w4tzp9jq6h",
+      "href": "/projects/proj_6p5riztz6q/threads/thr_w4tzp9jq6h"
+    },
+    {
+      "id": "thr_itcbdxcawp",
+      "href": "/threads/thr_itcbdxcawp"
+    },
+    {
+      "id": "thr_ceypwshk35",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_ceypwshk35"
+    },
+    {
+      "id": "thr_eqqq6bmzug",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_eqqq6bmzug"
+    },
+    {
+      "id": "thr_br7a2g9ajm",
+      "href": "/threads/thr_br7a2g9ajm"
+    },
+    {
+      "id": "thr_94qgzefi9v",
+      "href": "/threads/thr_94qgzefi9v"
+    },
+    {
+      "id": "thr_x6j2a8wq6b",
+      "href": "/projects/proj_6p5riztz6q/threads/thr_x6j2a8wq6b"
+    },
+    {
+      "id": "thr_sgkjki4brn",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_sgkjki4brn"
+    },
+    {
+      "id": "thr_rumecchp9s",
+      "href": "/projects/proj_anmgqnjns2/threads/thr_rumecchp9s"
+    },
+    {
+      "id": "thr_7ff3m77i5x",
+      "href": "/projects/proj_yjxm446dtc/threads/thr_7ff3m77i5x"
+    },
+    {
+      "id": "thr_3b2768nyjz",
+      "href": "/projects/proj_p4562js7v2/threads/thr_3b2768nyjz"
+    },
+    {
+      "id": "thr_q45wdpwryh",
+      "href": "/threads/thr_q45wdpwryh"
+    },
+    {
+      "id": "thr_59fdq4wc7g",
+      "href": "/threads/thr_59fdq4wc7g"
+    },
+    {
+      "id": "thr_ke8pz2idma",
+      "href": "/threads/thr_ke8pz2idma"
+    },
+    {
+      "id": "thr_uyu3s59q3b",
+      "href": "/projects/proj_9da9h742i7/threads/thr_uyu3s59q3b"
+    },
+    {
+      "id": "thr_suczq88bec",
+      "href": "/projects/proj_p4562js7v2/threads/thr_suczq88bec"
+    },
+    {
+      "id": "thr_5n2udb32z2",
+      "href": "/projects/proj_p4562js7v2/threads/thr_5n2udb32z2"
+    }
+  ],
+  "threads": [
+    {
+      "id": "thr_29gxjg77x4",
+      "readAtStart": "read"
+    },
+    {
+      "id": "thr_8nbzpbmm3c",
+      "readAtStart": "read"
+    },
+    {
+      "id": "thr_bcymmhtpms",
+      "readAtStart": "read"
+    }
+  ],
+  "steps": [
+    {
+      "label": "one-pane-card-click",
+      "before": {
+        "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "renderedPaneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": true,
+            "holdsBoard": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": null,
+        "searchField": true,
+        "searchFieldFocused": false,
+        "composerOpen": false,
+        "composerBox": null,
+        "dialogText": null,
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        }
+      },
+      "after": {
+        "url": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+        "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+        "paneCount": 2,
+        "renderedPaneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_29gxjg77x4",
+            "focused": true,
+            "holdsBoard": false
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}",
+        "searchField": true,
+        "searchFieldFocused": false,
+        "composerOpen": false,
+        "composerBox": null,
+        "dialogText": null,
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        }
+      }
+    },
+    {
+      "label": "second-card-click",
+      "before": {
+        "url": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+        "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+        "paneCount": 2,
+        "renderedPaneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_29gxjg77x4",
+            "focused": true,
+            "holdsBoard": false
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}",
+        "searchField": true,
+        "searchFieldFocused": false,
+        "composerOpen": false,
+        "composerBox": null,
+        "dialogText": null,
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        }
+      },
+      "after": {
+        "url": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_8nbzpbmm3c",
+        "route": "/projects/proj_yjxm446dtc/threads/thr_8nbzpbmm3c",
+        "paneCount": 2,
+        "renderedPaneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_8nbzpbmm3c",
+            "focused": true,
+            "holdsBoard": false
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_8nbzpbmm3c\"}",
+        "searchField": true,
+        "searchFieldFocused": false,
+        "composerOpen": false,
+        "composerBox": null,
+        "dialogText": null,
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        }
+      }
+    },
+    {
+      "label": "click-after-rethread",
+      "before": {
+        "url": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_8nbzpbmm3c",
+        "route": "/projects/proj_yjxm446dtc/threads/thr_8nbzpbmm3c",
+        "paneCount": 2,
+        "renderedPaneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_8nbzpbmm3c",
+            "focused": true,
+            "holdsBoard": false
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_8nbzpbmm3c\"}",
+        "searchField": true,
+        "searchFieldFocused": false,
+        "composerOpen": false,
+        "composerBox": null,
+        "dialogText": null,
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        }
+      },
+      "rethreadThread": "thr_bkg7afa7nv",
+      "rethreaded": {
+        "url": "http://127.0.0.1:38886/projects/proj_9da9h742i7/threads/thr_bkg7afa7nv",
+        "route": "/projects/proj_9da9h742i7/threads/thr_bkg7afa7nv",
+        "paneCount": 2,
+        "renderedPaneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_bkg7afa7nv",
+            "focused": true,
+            "holdsBoard": false
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_8nbzpbmm3c\"}",
+        "searchField": true,
+        "searchFieldFocused": false,
+        "composerOpen": false,
+        "composerBox": null,
+        "dialogText": null,
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        }
+      },
+      "priorPaneIds": [
+        "pane-1",
+        "pane-2"
+      ],
+      "after": {
+        "url": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_bcymmhtpms",
+        "route": "/projects/proj_yjxm446dtc/threads/thr_bcymmhtpms",
+        "paneCount": 3,
+        "renderedPaneCount": 3,
+        "focusedPaneId": "pane-3",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true
+          },
+          {
+            "paneId": "pane-3",
+            "kind": "thread",
+            "threadId": "thr_bcymmhtpms",
+            "focused": true,
+            "holdsBoard": false
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_bkg7afa7nv",
+            "focused": false,
+            "holdsBoard": false
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_bcymmhtpms\"}",
+        "searchField": true,
+        "searchFieldFocused": false,
+        "composerOpen": false,
+        "composerBox": null,
+        "dialogText": null,
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        }
+      }
+    },
+    {
+      "label": "header-parity",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board/t/thr_29gxjg77x4",
+      "measured": {
+        "inPanel": {
+          "header": {
+            "y": 48,
+            "h": 48
+          },
+          "row": {
+            "y": 48,
+            "h": 48
+          },
+          "triggers": 1,
+          "trigger": {
+            "aria": "Focus Board thread menu",
+            "w": 28,
+            "h": 28,
+            "x": 601,
+            "mark": true,
+            "caret": true,
+            "checkbox": false
+          },
+          "maximizeX": null,
+          "checkboxes": 0
+        },
+        "native": {
+          "header": {
+            "y": 0,
+            "h": 48
+          },
+          "row": {
+            "y": 0,
+            "h": 48
+          },
+          "triggers": 1,
+          "trigger": {
+            "aria": "Focus Board thread menu",
+            "w": 28,
+            "h": 28,
+            "x": 1033,
+            "mark": true,
+            "caret": true,
+            "checkbox": false
+          },
+          "maximizeX": 1069,
+          "checkboxes": 0
+        },
+        "nativePanePresent": true
+      }
+    },
+    {
+      "label": "shortcuts",
+      "before": {
+        "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+        "route": "/plugins/focus-board/board",
+        "paneCount": 3,
+        "renderedPaneCount": 3,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": true,
+            "holdsBoard": true
+          },
+          {
+            "paneId": "pane-3",
+            "kind": "thread",
+            "threadId": "thr_bcymmhtpms",
+            "focused": false,
+            "holdsBoard": false
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_bkg7afa7nv",
+            "focused": false,
+            "holdsBoard": false
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_bcymmhtpms\"}",
+        "searchField": true,
+        "searchFieldFocused": false,
+        "composerOpen": false,
+        "composerBox": null,
+        "dialogText": null,
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        }
+      },
+      "focused": {
+        "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+        "route": "/plugins/focus-board/board",
+        "paneCount": 3,
+        "renderedPaneCount": 3,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": true,
+            "holdsBoard": true
+          },
+          {
+            "paneId": "pane-3",
+            "kind": "thread",
+            "threadId": "thr_bcymmhtpms",
+            "focused": false,
+            "holdsBoard": false
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_bkg7afa7nv",
+            "focused": false,
+            "holdsBoard": false
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_bcymmhtpms\"}",
+        "searchField": true,
+        "searchFieldFocused": false,
+        "composerOpen": false,
+        "composerBox": null,
+        "dialogText": null,
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        }
+      },
+      "slash": {
+        "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+        "route": "/plugins/focus-board/board",
+        "paneCount": 3,
+        "renderedPaneCount": 3,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": true,
+            "holdsBoard": true
+          },
+          {
+            "paneId": "pane-3",
+            "kind": "thread",
+            "threadId": "thr_bcymmhtpms",
+            "focused": false,
+            "holdsBoard": false
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_bkg7afa7nv",
+            "focused": false,
+            "holdsBoard": false
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_bcymmhtpms\"}",
+        "searchField": true,
+        "searchFieldFocused": true,
+        "composerOpen": false,
+        "composerBox": null,
+        "dialogText": null,
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        }
+      },
+      "composer": {
+        "url": "http://127.0.0.1:38886/plugins/focus-board/board",
+        "route": "/plugins/focus-board/board",
+        "paneCount": 3,
+        "renderedPaneCount": 3,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": true,
+            "holdsBoard": true
+          },
+          {
+            "paneId": "pane-3",
+            "kind": "thread",
+            "threadId": "thr_bcymmhtpms",
+            "focused": false,
+            "holdsBoard": false
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_bkg7afa7nv",
+            "focused": false,
+            "holdsBoard": false
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-3\",\"threadId\":\"thr_bcymmhtpms\"}",
+        "searchField": true,
+        "searchFieldFocused": false,
+        "composerOpen": true,
+        "composerBox": {
+          "w": 730,
+          "h": 256
+        },
+        "dialogText": "New threadYour draft is saved as you type, even if you close and come back later",
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        }
+      }
+    },
+    {
+      "label": "thread-page-menu",
+      "threadUrl": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+      "trigger": {
+        "aria": "Focus Board thread menu",
+        "x": 1450,
+        "y": 24,
+        "visible": true
+      },
+      "menu": {
+        "label": "Focus Board thread menu",
+        "box": {
+          "x": 1416,
+          "y": 42,
+          "w": 176,
+          "h": 101,
+          "right": 1592,
+          "bottom": 143
+        },
+        "viewport": {
+          "w": 1600,
+          "h": 1200
+        },
+        "rows": [
+          "Mark Done",
+          "Snooze…",
+          "New child thread…"
+        ],
+        "transformAncestors": []
+      }
+    }
+  ],
+  "errors": [],
+  "threadUrl": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4"
+}
