@@ -29,3 +29,15 @@ steps:
     assert:
       - pane: { threadId: thr_uat_queue }
       - no_visible_error: true
+  - id: mark-done-from-the-sheet-header-closes-it
+    title: Mark Done in the pane header closes the sheet, and the card it moved is in the Done lane
+    # The operator's ask of 2026-11-24: the done card lands at the top of the
+    # Done lane, so the close is what puts it in plain sight. The sheet closes
+    # through the same handler its back arrow runs.
+    gestures:
+      - click_aria: { label: "Focus Board thread menu" }
+      - click_aria: { label: "Mark Done" }
+    assert:
+      - pane: { open: false }
+      - column_contains: { column: done, id: thr_uat_queue }
+      - no_visible_error: true

@@ -30,3 +30,17 @@ steps:
       - click_aria: { label: "More thread actions" }
     assert:
       - text_visible: "Unarchive"
+  - id: mark-done-from-the-pane-header-closes-the-pane
+    title: Mark Done in the pane header closes the pane, and the card it moved is in the Done lane
+    # The same header control, the other side of the rule: Archive above stays
+    # in the pane it acted on, and Mark Done closes it. Done puts the card at
+    # the top of the Done lane, so the close is what shows it to the operator
+    # (the operator's ask of 2026-11-24).
+    goto: "?groupBy=status#/plugins/focus-board/board/t/thr_uat_queue"
+    gestures:
+      - click_aria: { label: "Focus Board thread menu" }
+      - click_aria: { label: "Mark Done" }
+    assert:
+      - pane: { open: false }
+      - column_contains: { column: done, id: thr_uat_queue }
+      - no_visible_error: true

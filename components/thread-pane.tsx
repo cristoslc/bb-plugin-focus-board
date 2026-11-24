@@ -131,7 +131,13 @@ interface ThreadPaneProps {
   thread: ThreadPaneThread;
   isArchived: boolean;
   isDone: boolean;
-  onToggleDone: (done: boolean) => void;
+  /**
+   * Flip the thread's done state. Hands back the `done_set` write's promise
+   * when the caller has one: the header's control holds its close until that
+   * write settles, so a rejected mark leaves the pane open
+   * (components/focus-board-thread-menu.tsx).
+   */
+  onToggleDone: (done: boolean) => Promise<unknown> | void;
   onToggleArchived: () => void;
   onTogglePinned: () => void;
   onToggleUnread: () => void;
@@ -1079,7 +1085,14 @@ export function ThreadPane({
     <FocusBoardThreadMenu
       state={{ done: isDone, snoozeWakeAt, title: thread.displayTitle }}
       isCompactViewport={isCompact}
-      onToggleDone={() => onToggleDone(!isDone)}
+      onToggleDone={onToggleDone}
+      // The operator's ask of 2026-11-24: a Mark Done from this header also
+      // closes the pane. Done puts the card at the top of the Done lane, so
+      // closing is what shows the operator the card they just acted on. The
+      // close is the pane's own `onClose` — the X on a desktop pane, the back
+      // arrow on a phone — so one close path serves every exit, and only the
+      // Done transition takes it ("Mark Not Done" is the undo and stays put).
+      onMarkedDone={onClose}
       onOpenSnoozePicker={onOpenSnoozePicker}
       onOpenNewChild={onNewChildThread}
     />

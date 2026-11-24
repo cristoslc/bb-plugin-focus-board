@@ -50,14 +50,36 @@ export function FocusBoardThreadMenu({
   state,
   isCompactViewport,
   onToggleDone,
+  onMarkedDone,
   onOpenSnoozePicker,
   onOpenNewChild,
 }: {
   state: ThreadMenuState;
   isCompactViewport: boolean;
-  /** Flip the thread's done state. The surface decides what else that lifts
-   *  (both surfaces lift a snooze first). */
-  onToggleDone: () => void;
+  /**
+   * Flip the thread's done state to `done`. The surface decides what else that
+   * lifts (both surfaces lift a snooze first), and hands back its write's
+   * promise when it has one, so a continuation can wait for the mark to land.
+   * A synchronous surface returns nothing.
+   */
+  onToggleDone: (done: boolean) => Promise<unknown> | void;
+  /**
+   * The optional continuation a Mark Done runs, once and only once its write
+   * has settled: the operator's ask of 2026-11-24 is that marking a thread
+   * done from a thread-panel header also closes that panel, because the done
+   * card lands at the top of the Done lane and the close is what puts it in
+   * plain sight. The close belongs to the surface that owns one (the in-panel
+   * pane), so a surface passes it here rather than duplicating the rule.
+   *
+   * Three rules ride the control, in one place for both headers:
+   * - only the Done transition continues. "Mark Not Done" is the undo, and
+   *   closing would hide the thread the operator just put back;
+   * - it waits for the write: a close dispatched on the click would close on
+   *   a mark that never landed;
+   * - a rejected write skips it. The surface keeps its own write path, and the
+   *   panel stays exactly where it was instead of vanishing with no mark.
+   */
+  onMarkedDone?: () => void;
   /** Open the surface's snooze picker (set, edit, remove). Absent on a
    *  surface with no picker wired: the row is then not offered at all, rather
    *  than offered dead. */
@@ -127,7 +149,20 @@ export function FocusBoardThreadMenu({
           checked={state.done}
           onRun={() => {
             closePopover();
-            onToggleDone();
+            const done = !state.done;
+            const write = onToggleDone(done);
+            if (!done || onMarkedDone === undefined) return;
+            // The Done transition, and only that one, continues once the
+            // surface's write settles (see `onMarkedDone`). The rejection is
+            // handled here so a failed mark is never an unhandled rejection;
+            // the close is simply skipped, leaving the surface's own failure
+            // path where it already was.
+            void Promise.resolve(write).then(
+              () => {
+                onMarkedDone();
+              },
+              () => {},
+            );
           }}
         />
         {onOpenSnoozePicker === undefined ? null : (

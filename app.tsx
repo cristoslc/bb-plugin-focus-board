@@ -5081,7 +5081,15 @@ function BoardPage({ subPath }: { subPath: string }) {
               else next.delete(openThreadId);
               return next;
             });
-            rpc.call("done_set", { threadId: openThreadId, done }).catch(() => {});
+            // Returned rather than dropped: after a Mark Done the pane header
+            // closes itself, and it holds that close until this write settles
+            // (components/focus-board-thread-menu.tsx). The rejection is
+            // handled here exactly as before — this board's state writes are
+            // silent and bb's own toast owns the failure — and the settle is
+            // what the header reads, so a rejected mark leaves the pane open.
+            const write = rpc.call("done_set", { threadId: openThreadId, done });
+            write.catch(() => {});
+            return write;
           }}
           onToggleArchived={() => {
             if (openThreadId === null) return;
