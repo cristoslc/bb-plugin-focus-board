@@ -894,6 +894,41 @@ describe("a slow host", () => {
     expect(fakeThreadNavigations()).toEqual(["thr_focus"]);
   });
 
+  it("clears the intent when the host lands the thread and moves the focus in one layout", async () => {
+    // A host commit can carry both facts at once: the board's pane now shows the
+    // clicked thread, and the layout's focus sits on another pane (a press, the
+    // host's own refocus, a re-render that resolves both together). Landed is
+    // the pane's CONTENT, so the intent clears and the net finds nothing to do.
+    // Judging arrival by focus would leave the intent stuck here, and the net
+    // would open the board's own pane 400ms later with the thread already on
+    // screen beside it.
+    seedOwnedPane("thr_older");
+    holdFakeThreadNavigations();
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+
+    fireEvent.click(cardAnchor("thr_focus"));
+    await waitFor(() => expect(fakeThreadNavigations()).toEqual(["thr_focus"]));
+    // The landing and the focus move reach the board in one commit.
+    act(() => {
+      setFakeSplitLayout([
+        { paneId: "pane-1", threadId: null, isFocused: true },
+        { paneId: "pane-2", threadId: "thr_focus", isFocused: false },
+      ]);
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(fakePanelPushes()).toEqual([]);
+    expect(inBoardPaneTitle()).toBeNull();
+    expect(threadPanes()).toEqual(["thr_focus"]);
+    expect(fakeSplitPanes()).toHaveLength(2);
+    expect(
+      JSON.parse(
+        window.localStorage.getItem("focus-board:boardNativeThreadPane") ?? "null",
+      ),
+    ).toEqual({ paneId: "pane-2", threadId: "thr_focus" });
+  });
+
   it("still opens the board's pane when focus never lands, and never navigates later", async () => {
     // The net's actual job: a host that never answers. The click opens the
     // board's own pane, and the late focus step must not then navigate a second
