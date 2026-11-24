@@ -94,26 +94,25 @@ const PANE_ATTR = "data-split-pane-id";
  * The pane ruling this gate asserts after the board's pane was navigated away,
  * and where it comes from.
  *
- * As built (bb 0.50.1 + the dev tree at 1.8.3-dev) `app.tsx`'s
- * `openThreadForInteraction` treats a `{paneId, threadId}` record that no
- * longer resolves as "the operator put something else in that pane": it
- * re-plans from the host's rendered truth and asks the opener for the CLICKED
- * thread, which bb places in a FRESH pane beside the board
- * (lib/native-fresh-pane.ts carries the rule and its live trace). So today's
- * outcome for check 3 is a third pane.
+ * The operator ruled "always take the pane back" (dec_okjt7e62rg2x, corpus
+ * `dl-20261124T050924-68ea`), and PR #518 implemented it: `app.tsx`'s
+ * `openThreadForInteraction` resolves a recorded pane by id alone, so a pane
+ * the operator navigated away is FOCUSED and the clicked thread is navigated
+ * into it. The window stays at two panes (measured 2 → 2 → 2 over three
+ * navigations, `docs/screenshots/probe-card-click-after-right-panel/`), which
+ * is what check 3 asserts.
  *
- * The always-replace rule that changes this is in flight in
- * `bb/enforce-board-ownership-of-pane-id-thr_mdtar7xjwz`. When it merges, flip
- * this constant to "replace": check 3 then asserts the flat two-pane count and
- * the clicked thread in the board's own pane. Asserting exactly one of the two
- * is the point — a gate that accepted either would pass through the change
- * without noticing it.
+ * The constant stays because the assertion has to name ONE ruling. If the rule
+ * ever goes back to a fresh split (`lib/native-fresh-pane.ts` still carries
+ * that path for a recorded pane that is gone), flip it to "fresh-pane" and the
+ * check fails here first, naming the flip. A gate that accepted either answer
+ * would pass through the change without noticing it.
  */
-const NAVIGATED_PANE_RULING = "fresh-pane";
+const NAVIGATED_PANE_RULING = "replace";
 
 /** What to do when check 3's pane count says the ruling changed. */
 const RULING_HINT =
-  "if the always-replace work merged (bb/enforce-board-ownership-of-pane-id-thr_mdtar7xjwz), flip NAVIGATED_PANE_RULING in scripts/uat/live-smoke.mjs to \"replace\" and rerun";
+  "if the pane rule changed, flip NAVIGATED_PANE_RULING in scripts/uat/live-smoke.mjs between \"replace\" and \"fresh-pane\" and rerun";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
