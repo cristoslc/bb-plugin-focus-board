@@ -435,16 +435,18 @@ describe("arm pre-selection", () => {
     expect(sweepArmPreselects("done")).toBe(true);
     expect(sweepArmPreselects("idle-awhile")).toBe(true);
     expect(sweepArmPreselects("awhile")).toBe(true);
+    // Operator ruling 2026-11-24: the Earlier bucket holds the threads that
+    // actually aged out, so it proposes again. The fresher two stay manual.
+    expect(sweepArmPreselects("idle-earlier")).toBe(true);
   });
 
   it("every other sweepable arm enters sweep mode with nothing selected", () => {
-    // 2026-10-03 operator decision: Pinned, Unread, and the idle buckets
-    // fresher than A-while-ago are curated by clicking cards — arming
+    // 2026-10-03 operator decision, narrowed 2026-11-24: Pinned, Unread and
+    // the two freshest idle buckets are curated by clicking cards — arming
     // pre-selects nothing, so the pill never proposes a bulk sweep the
     // operator did not build by hand.
     expect(sweepArmPreselects("pinned")).toBe(false);
     expect(sweepArmPreselects("unread")).toBe(false);
-    expect(sweepArmPreselects("idle-earlier")).toBe(false);
     expect(sweepArmPreselects("idle-today")).toBe(false);
     expect(sweepArmPreselects("idle-recent")).toBe(false);
   });

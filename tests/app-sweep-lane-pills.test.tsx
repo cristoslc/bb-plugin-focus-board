@@ -14,9 +14,10 @@
 //    identical on screen.
 // 2. Eligibility still excludes the three threads a Done sweep may not take:
 //    a kept one, a live-child parent, and anything under the threshold.
-// 3. Idle · Earlier is MANUAL-ONLY by the 2026-10-03 arming decision: a
-//    thread three days idle (past the same 2-day threshold) proposes
-//    nothing, and the lane menu's "Sweep this lane…" enters sweep mode empty.
+// 3. Idle · Earlier PROPOSES (operator ruling 2026-11-24): a thread three
+//    days idle (past the same 2-day threshold) puts the pill on that lane, and
+//    arming it from the lane menu starts with that thread selected. The two
+//    fresher idle buckets stay manual-only from the 2026-10-03 decision.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
@@ -168,8 +169,8 @@ describe("the Done lane proposes its aged-out threads", () => {
   });
 });
 
-describe("the fresher idle buckets are manual-only", () => {
-  it("Earlier proposes nothing even with a thread past the idle threshold", async () => {
+describe("the Earlier bucket proposes, the fresher two stay manual", () => {
+  it("Earlier proposes its past-threshold thread (operator ruling 2026-11-24)", async () => {
     seedFakeThreads([
       sidebarThread({ id: "thr_idle_earlier", updatedAt: Date.now() - 3 * DAY }),
     ]);
@@ -177,13 +178,30 @@ describe("the fresher idle buckets are manual-only", () => {
     await waitFor(() => {
       expect(document.querySelector('section[data-column-id="idle-earlier"]')).not.toBeNull();
     });
-    expect(lanePill("idle-earlier")).toBeNull();
-    // Not a wired-off lane: the manual door is in the lane's own menu.
-    fireEvent.click(laneMenuTrigger("idle-earlier"));
+    // The bucket holds the threads that actually aged out, so it is the arm
+    // whose pill the operator needs: eligibility plus count, per the pill law.
+    // Unarmed, the pill reads its count alone; arming adds the destination.
+    expect(lanePill("idle-earlier")?.textContent).toBe("1");
+    expect(lanePill("idle-earlier")?.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("the two freshest buckets still propose nothing", async () => {
+    seedFakeThreads([
+      sidebarThread({ id: "thr_idle_today", updatedAt: Date.now() - 3 * 60 * 60_000 }),
+      sidebarThread({ id: "thr_idle_recent", updatedAt: Date.now() - 20 * 60_000 }),
+    ]);
+    mountBoard();
+    await waitFor(() => {
+      expect(document.querySelector('section[data-column-id="idle-today"]')).not.toBeNull();
+    });
+    expect(lanePill("idle-today")).toBeNull();
+    expect(lanePill("idle-recent")).toBeNull();
+    // Not wired off: each lane's own menu still carries the manual door.
+    fireEvent.click(laneMenuTrigger("idle-today"));
     expect(screen.getByRole("menuitem", { name: "Sweep this lane…" })).not.toBeNull();
   });
 
-  it("the menu's sweep entry arms the lane empty, and the pill then carries the arm", async () => {
+  it("arming Earlier from its menu starts with its candidates selected", async () => {
     seedFakeThreads([
       sidebarThread({ id: "thr_idle_earlier", updatedAt: Date.now() - 3 * DAY }),
     ]);
@@ -194,10 +212,10 @@ describe("the fresher idle buckets are manual-only", () => {
     fireEvent.click(laneMenuTrigger("idle-earlier"));
     fireEvent.click(screen.getByRole("menuitem", { name: "Sweep this lane…" }));
     await waitFor(() => {
-      expect(lanePill("idle-earlier")?.textContent).toBe("0 → Done");
+      expect(lanePill("idle-earlier")?.textContent).toBe("1 → Done");
     });
     expect(lanePill("idle-earlier")?.getAttribute("aria-pressed")).toBe("true");
-    // An empty selection cannot confirm: the operator builds it by clicking.
-    expect(lanePill("idle-earlier")?.disabled).toBe(true);
+    // A preselected arm can confirm: the proposal is the operator's own door.
+    expect(lanePill("idle-earlier")?.disabled).toBe(false);
   });
 });
