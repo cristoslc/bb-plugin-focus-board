@@ -13,11 +13,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **The thread pane's header wears the same Focus Board control as bb's own thread page.** The mark plus caret opens Mark Done, Snooze and New child thread, so the pane's old checkbox is gone and the two headers line up row for row.
 
+- **A card click puts its thread in the pane the board already owns, even when that pane shows a page.** The window stops growing a pane per navigation, and the trade is that whatever you were reading in that pane gives way.
+
 ### Fixed
 
 #### The board
 
 - **`/` focuses the search field again with a thread open beside the board.** The board now treats bb's pane container as its own surface, which is where the keyboard sits after any click inside the board. The New Thread key comes back with it.
+
+#### bb's thread pages
+
+- **One card click no longer leaves two thread panes on a slow window.** The click now settles against what the pane actually shows instead of opening the board's own pane at a fixed moment, so a big board with a slower renderer gets the takeover and not the extra panel.
 
 ## [1.8.2] - 2026-11-23
 

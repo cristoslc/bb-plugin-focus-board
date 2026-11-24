@@ -1,12 +1,14 @@
-# Operator-assisted E2E: the card click's contract, fourth revision, after the
-# operator's ruling dec_a4lrjn0gqqmk ("Navigate, then bring the board back").
+# Operator-assisted E2E: the card click's contract, fifth revision, after the
+# operator's ruling dec_okjt7e62rg2x ("Always take the pane back", 2026-11-24):
+# the pane is the board's BY ID whatever it shows, so a click replaces in the
+# recorded pane instead of buying another one.
 #
-# The measured host fact (scripts/screenshot/probe-split-dance.mjs, evidence in
-# docs/screenshots/probe-split-dance/): a one-pane window ALREADY carries a
-# one-pane layout, so bb's own opener splits it — the board keeps its pane and
-# the thread arrives beside it, nothing unmounts. bb's plugin-facing layout
-# hook reads null below two panes, which is why the click used to open the
-# board's own in-panel pane instead of asking.
+# The measured host fact behind the earlier revision (scripts/screenshot/
+# probe-split-dance.mjs, evidence in docs/screenshots/probe-split-dance/): a
+# one-pane window ALREADY carries a one-pane layout, so bb's own opener splits
+# it — the board keeps its pane and the thread arrives beside it, nothing
+# unmounts. bb's plugin-facing layout hook reads null below two panes, which is
+# why the click used to open the board's own in-panel pane instead of asking.
 #
 # The click still asks where the host cannot split (splits off, an older host),
 # and then ends in the board's own pane: the ask's deadline is what keeps the
@@ -62,28 +64,27 @@ steps:
 
   # The reported regression (2026-11-21): "clicking on a card then opens the
   # legacy focus board thread pane instead of swapping the native one ... after
-  # an action is taken in the native pane". A pane navigated from inside itself
-  # (a mention, a child row, a sidebar row, `bb thread open`) stops matching the
-  # board's `{paneId, threadId}` record, and the click used to answer that with
-  # its own in-panel pane — the symptom, caught live with the click's trace
-  # (docs/screenshots/probe-card-click-after-right-panel/). `?staleNativePane=1`
-  # opens the window in that state; the click must keep the native surface.
-  - id: a-stale-record-asks-for-a-fresh-pane-beside-the-board
-    title: With its record stale, a card click opens a fresh native pane instead of the board's own
+  # an action is taken in the native pane". The operator's ruling of 2026-11-24
+  # (dec_okjt7e62rg2x, "always take the pane back") answers it: the pane is the
+  # board's BY ID, so a pane the operator navigated from inside itself is
+  # replaced in place. `?staleNativePane=1` opens the window in that state.
+  - id: a-rethreaded-pane-is-replaced-in-place
+    title: With the board's pane rethreaded by the operator, a card click replaces in that pane
     goto: "?groupBy=status&nativeSplit=1&staleNativePane=1"
     gestures:
       - click: { card: thr_uat_queue }
       - sleep: 500
     assert:
-      - native_open: { threadId: thr_uat_queue, split: true }
-      # The operator's pane is untouched, and a second thread pane appeared
-      # beside the board: three panes, never the board's own in-panel pane.
-      - native_panes: [thr_uat_queue, thr_review_pr]
-      - native_pane_count: 3
+      # The focus step: the thread the pane shows now, which the host's opener
+      # focuses. The clicked thread lands in that same pane.
+      - native_open: { threadId: thr_review_pr, split: true }
+      - native_panes: [thr_uat_queue]
+      - native_pane_count: 2
       - pane: { open: false }
+      - native_route_fell_back: false
 
-  - id: the-fresh-pane-is-the-boards-from-the-next-click-on
-    title: The pane a stale-record click created is replaced by the next card click
+  - id: the-rethreaded-pane-is-the-boards-from-the-next-click-on
+    title: The pane the operator rethreaded is replaced again by the next card click
     goto: "?groupBy=status&nativeSplit=1&staleNativePane=1"
     gestures:
       - click: { card: thr_uat_queue }
@@ -91,9 +92,27 @@ steps:
       - click: { card: thr_rpc_auth }
       - sleep: 500
     assert:
-      - native_panes: [thr_rpc_auth, thr_review_pr]
-      - native_pane_count: 3
+      - native_panes: [thr_rpc_auth]
+      - native_pane_count: 2
       - pane: { open: false }
+
+  # The shape the operator named on 2026-11-23 ("mostly when I navigate the
+  # native pane to a different location (like Decisions)"): the pane shows a
+  # PAGE, which the host reports with no thread at all, so there is no thread to
+  # open to focus it. The click presses the pane's own container instead
+  # (lib/native-pane-focus.ts; measured live by
+  # scripts/screenshot/probe-pane-focus-lever.mjs) and lands the thread there.
+  - id: a-page-in-the-boards-pane-is-replaced-by-the-clicked-thread
+    title: With a page in the board's pane, a card click puts the thread in that same pane
+    goto: "?groupBy=status&nativeSplit=1&pageNativePane=1"
+    gestures:
+      - click: { card: thr_uat_queue }
+      - sleep: 800
+    assert:
+      - native_panes: [thr_uat_queue]
+      - native_pane_count: 2
+      - pane: { open: false }
+      - native_route_fell_back: false
 
   # The reported regression (2026-11-20): "keeping the focused card in view (by
   # scrolling) isn't fully working in conjunction with the pane split". The

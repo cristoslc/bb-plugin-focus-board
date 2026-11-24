@@ -101,6 +101,8 @@ import {
   resolveBoardNativePane,
   type BoardNativePane,
 } from "./lib/native-pane-ownership";
+import { pressPaneContainer } from "./lib/native-pane-focus";
+import { boardPaneId } from "./lib/shortcut-ownership";
 import {
   onePaneDance,
   onePaneDanceHost,
@@ -411,9 +413,11 @@ const BOARD_STATE_MOUNT_KEYS = [
  */
 interface NativeReplaceIntent {
   readonly paneId: string;
-  /** The thread the pane shows while the focus step runs: what the host
-   *  focuses. Focus Board's record already names the clicked one. */
-  readonly from: string;
+  /** The thread the pane shows while the focus step runs: what the host's
+   *  opener focuses. Null when the pane shows no thread at all (a route page),
+   *  where the focus step is a press on the pane's own container instead.
+   *  Focus Board's record already names the clicked thread. */
+  readonly from: string | null;
   readonly threadId: string;
 }
 
@@ -1500,12 +1504,7 @@ function BoardPage({ subPath }: { subPath: string }) {
   // The deadline that turns an unconfirmed replacement into the board's own
   // pane: one click always opens one surface.
   const replaceTimerRef = useRef<number | null>(null);
-  // The threads the board still lists, as a ref for the identity-stable click
-  // callback: a record naming a thread that has left this list is stale,
-  // because the host's opener cannot resolve that thread either.
-  const liveThreadIdsRef = useRef<readonly string[]>([]);
-  liveThreadIdsRef.current = threads.map((thread) => thread.id);
-  // The sidebar rows themselves, as a ref for the same identity-stable
+  // The sidebar rows themselves, as a ref for the identity-stable
   // callback: the card click reads the clicked thread's read state off this
   // one to decide whether opening it is a gesture that will relocate it.
   const liveThreadsRef = useRef<readonly PluginSidebarThread[]>([]);
@@ -1951,25 +1950,31 @@ function BoardPage({ subPath }: { subPath: string }) {
     }
   }, [nativeAttentionThreadId, capturePaneAttention, openThreadId]);
   // The card click's replacement (lib/native-pane-ownership.ts): land the
-  // clicked thread in Focus Board's pane, once the layout shows the host
-  // focused that pane.
+  // clicked thread in Focus Board's pane, once the host focused that pane.
   //
   // The landing navigation replaces whatever pane is FOCUSED, and pressing a
   // card focuses the board (measured: probe-card-click-focus-trace.mjs), so
   // this waits for the focus to move before it navigates. It waits on the
   // LAYOUT, never on an object identity: a focus step that changed nothing
   // leaves an identity comparison equal forever, which is how an earlier
-  // version swallowed clicks. The click's deadline settles a wait that never
-  // resolves.
+  // version swallowed clicks.
+  //
+  // SUCCESS is the pane's content, not its focus: the replacement landed when
+  // the board's pane shows the clicked thread, whether or not it still holds
+  // the focus. Focus gates the navigation below and nothing else, so a layout
+  // that lands the thread and then loses the focus cannot leave the intent
+  // stuck until the deadline opens a second surface.
   useEffect(() => {
     if (nativeReplace === null) return;
-    const focused = splitLayout?.panes.find((pane) => pane.isFocused) ?? null;
-    if (focused === null || focused.paneId !== nativeReplace.paneId) return;
-    if (focused.threadId === nativeReplace.threadId) {
-      // Landed: the board's pane shows the clicked thread and has the focus.
+    const target =
+      splitLayout?.panes.find((pane) => pane.paneId === nativeReplace.paneId) ?? null;
+    if (target === null) return;
+    if (target.threadId === nativeReplace.threadId) {
+      // Landed: the board's pane shows the clicked thread.
       setNativeReplace(null);
       return;
     }
+    if (!target.isFocused) return;
     if (nativeNavigationRef.current === nativeReplace) return;
     nativeNavigationRef.current = nativeReplace;
     // The clicked thread is in no pane, so this navigation replaces the
@@ -3225,11 +3230,18 @@ function BoardPage({ subPath }: { subPath: string }) {
   //    split), and a window with splits off (the ask's dance keeps the thread
   //    on screen when the host cannot split).
   // 2. The split pane the board already owns: focus it, and replace the thread
-  //    in it when the gesture names another one. The persisted record decides
-  //    (lib/native-pane-ownership.ts), and the live layout has to agree; a
-  //    record that does not agree asks the host for a fresh pane beside the
-  //    board and adopts it (lib/native-fresh-pane.ts) rather than retreating
-  //    into the board's own in-panel pane.
+  //    in it when the gesture names another one. Ownership is the PANE ID (the
+  //    operator's ruling of 2026-11-24, dec_okjt7e62rg2x): a recorded pane the
+  //    live layout still holds is the board's whatever it shows, so the click
+  //    replaces in it rather than buying another pane. Only a record whose pane
+  //    is gone (or one naming the board's own pane) asks the host for a fresh
+  //    pane beside the board and adopts it (lib/native-fresh-pane.ts) instead
+  //    of retreating into the board's own in-panel pane.
+  //    The focus step differs by what the pane shows: a thread is focused by
+  //    opening it, a page by pressing the pane's own container
+  //    (lib/native-pane-focus.ts). Either way the landing waits for the layout
+  //    to show the focus moved, because a navigation while the board is still
+  //    focused replaces the board.
   // 3. The two side effects the outcomes need: the attention freeze for a
   //    native pane (the in-panel primitive captures its own, because the
   //    pane's placement freeze belongs with the pane that reads it) and, for
@@ -3272,6 +3284,41 @@ function BoardPage({ subPath }: { subPath: string }) {
           record: boardNativePaneRef.current,
           ...extra,
         });
+      // The focus step of a replace, in the two shapes a pane has. A pane
+      // showing a thread is focused by opening that thread: the host's opener
+      // focuses the pane that already holds it, which is the lever this click
+      // has always used. A pane showing NO thread (a route page) has nothing to
+      // open, so its own container takes a press — the lever
+      // scripts/screenshot/probe-pane-focus-lever.mjs measured on the installed
+      // host (lib/native-pane-focus.ts carries the table).
+      //
+      // False means the focus cannot land: no thread to open AND no container
+      // to press. The caller must not navigate on that answer.
+      const focusBoardNativePane = (
+        paneId: string,
+        shownThreadId: string | null,
+      ): boolean => {
+        if (shownThreadId !== null) {
+          actions.open(shownThreadId, { split: true });
+          return true;
+        }
+        return pressPaneContainer(document, paneId) === "pressed";
+      };
+      // The one fallback: the thread opens in the board's own pane, and the
+      // record is dropped so the next click re-plans from what the host holds.
+      // Never a navigation here: a navigation while the board is still the
+      // focused pane makes bb replace the BOARD, which is the single outcome
+      // this click must never ship.
+      const abandonReplace = (intent: NativeReplaceIntent, branch: string): void => {
+        if (replaceTimerRef.current !== null) {
+          window.clearTimeout(replaceTimerRef.current);
+          replaceTimerRef.current = null;
+        }
+        setNativeReplace((current) => (current === intent ? null : current));
+        setBoardNativePane(null);
+        trace(branch);
+        openThreadCard(intent.threadId);
+      };
       // 0. The operator's chosen surface (the setup dialog or either settings
       //    surface).
       if (openTargetRef.current === "panel") {
@@ -3349,35 +3396,40 @@ function BoardPage({ subPath }: { subPath: string }) {
       }
       // A second request while a replacement is still waiting for the host's
       // focus step: the record already names the requested thread, so the
-      // layout no longer resolves it. Re-ask for the focus (idempotent: the
-      // pane still shows the thread it focuses) and let the first request
-      // land. Re-planning here would read a layout that is mid-replacement and
-      // stack a pane. Cheap insurance for a slow landing: the harness's host
-      // lands inside the request's own flush, so only a live window reaches
-      // this.
+      // layout no longer resolves it. Re-ask the focus (idempotent: the same
+      // pane, the same lever) and let the first request land. Re-planning here
+      // would read a layout that is mid-replacement and stack a pane. Cheap
+      // insurance for a slow landing: the harness's host lands inside the
+      // request's own flush, so only a live window reaches this.
       const inFlight = nativeReplaceRef.current;
       if (inFlight !== null && inFlight.threadId === threadId) {
         trace("focus: replacement in flight");
-        actions.open(inFlight.from, { split: true });
+        focusBoardNativePane(inFlight.paneId, inFlight.from);
         return;
       }
-      // 2. A pane Focus Board opened, still showing the thread the board put
-      //    there. A record whose pane is gone, rethreaded by the operator (a
-      //    mention, a child row, a sidebar row: anything that navigates the
-      //    pane from inside itself), or naming a thread bb can no longer
-      //    resolve (it has left the board's list) does not resolve.
+      // 2. A pane Focus Board opened. Ownership is the PANE ID (the operator's
+      //    ruling of 2026-11-24, dec_okjt7e62rg2x): a recorded pane the live
+      //    layout still holds is the board's whatever it shows — another
+      //    thread the operator navigated to, a page like Decisions, or none.
+      //    The thread half of the record is advisory, and the board's own pane
+      //    is refused there so this can never navigate into the board itself
+      //    (lib/native-pane-ownership.ts carries the ruling, its measurement
+      //    and its residual risk).
       //
-      //    That is not a reason to leave the native surface — which is exactly
-      //    what the operator reported it did (2026-11-21: a rethreaded pane
-      //    sent every later card click to the board's own in-panel pane).
-      //    Where the window can still hold a pane (not compact, below bb's
-      //    ceiling, and a layout that exists: every refusal above), the click
-      //    re-plans from the host's rendered truth: it asks the opener for the
-      //    CLICKED thread, which splits beside the board, and adopts the pane
-      //    that appeared (lib/native-fresh-pane.ts carries the rule, the live
-      //    trace, and why a pane that was already there is never claimed).
-      const owned = resolveBoardNativePane(layout, boardNativePaneRef.current);
-      if (owned === null || !liveThreadIdsRef.current.includes(owned.threadId)) {
+      //    A record whose pane is GONE does not resolve, and neither does a
+      //    record that named the board's own pane. That is not a reason to
+      //    leave the native surface, which is exactly what it used to do: the
+      //    click re-plans from the host's rendered truth and asks the opener
+      //    for the CLICKED thread, which splits beside the board, then adopts
+      //    the pane that appeared (lib/native-fresh-pane.ts carries the rule,
+      //    the live trace, and why a pane that was already there is never
+      //    claimed).
+      const owned = resolveBoardNativePane(
+        layout,
+        boardNativePaneRef.current,
+        boardPaneId(panelRef.current),
+      );
+      if (owned === null) {
         // The board's own pane is up: the operator is already reading two
         // surfaces in one pane, and a fresh native pane would make three.
         // Their reading continues there, which is the shipped rule for it.
@@ -3395,9 +3447,13 @@ function BoardPage({ subPath }: { subPath: string }) {
         return;
       }
       // 3a. The requested thread is already in Focus Board's pane: the host's
-      //     opener focuses that pane and nothing moves.
-      if (owned.threadId === threadId) {
-        trace("focus: already in the board's pane");
+      //     opener focuses that pane and nothing moves. The record's advisory
+      //     thread follows what the pane actually holds.
+      if (owned.shownThreadId === threadId) {
+        trace("focus: already in the board's pane", { paneId: owned.paneId });
+        if (owned.shownThreadId !== owned.threadId) {
+          setBoardNativePane({ paneId: owned.paneId, threadId });
+        }
         actions.open(threadId, { split: true });
         return;
       }
@@ -3406,12 +3462,16 @@ function BoardPage({ subPath }: { subPath: string }) {
       //     React state can be gone before the host answers. Then the focus
       //     step, then the landing (the effect below, once the layout shows the
       //     focus moved), then the deadline if it never does.
-      trace("replace", { paneId: owned.paneId, from: owned.threadId });
+      trace("replace", {
+        paneId: owned.paneId,
+        from: owned.threadId,
+        shownThreadId: owned.shownThreadId,
+      });
       setBoardNativePane({ paneId: owned.paneId, threadId });
       nativeNavigationRef.current = null;
       const intent: NativeReplaceIntent = {
         paneId: owned.paneId,
-        from: owned.threadId,
+        from: owned.shownThreadId,
         threadId,
       };
       setNativeReplace(intent);
@@ -3419,17 +3479,52 @@ function BoardPage({ subPath }: { subPath: string }) {
       replaceTimerRef.current = window.setTimeout(() => {
         replaceTimerRef.current = null;
         if (nativeReplaceRef.current !== intent) return;
-        // The host never focused the board's pane inside the window. The
-        // request must still open the thread, and it must not cost a new pane:
-        // the board's own pane shows it, and the record is dropped so the next
-        // request re-plans from what the host actually holds.
-        setNativeReplace(null);
-        setBoardNativePane(null);
-        trace("in-board: replacement not confirmed");
-        openThreadCard(threadId);
+        // The net settles against what the host RENDERS, never against the
+        // intent alone. The click asked the host for two things (focus the
+        // board's pane, then a navigation it reconciles into that pane), and on
+        // a window the size of the operator's board either one can land after
+        // this net fires. Opening the board's own pane on the intent alone is
+        // what produced the operator's 2026-11-24 screenshot: the native pane
+        // took the clicked thread a moment later and the board's own pane was
+        // already open, so one click left two thread surfaces on screen.
+        const target =
+          splitLayoutRef.current?.panes.find((pane) => pane.paneId === intent.paneId) ??
+          null;
+        if (target !== null && target.threadId === intent.threadId) {
+          // Landed after all: keep the record (the pane shows the clicked
+          // thread) and open nothing.
+          setNativeReplace(null);
+          trace("replace: landed after the net", { paneId: intent.paneId });
+          return;
+        }
+        if (target !== null && nativeNavigationRef.current === intent) {
+          // The host already has the landing navigation and owes its commit.
+          // A second surface now would be the reported double pane, so leave
+          // the wait to the landing effect: it clears the intent when the pane
+          // shows the clicked thread. A later click replaces the intent, and a
+          // pane that disappears settles in the fallback below.
+          trace("replace: the host still owes the landing", { paneId: intent.paneId });
+          return;
+        }
+        // The host never answered: it never focused the board's pane (so the
+        // navigation was never issued), or the pane is gone. The board's own
+        // pane is the one surface left, and the record is dropped so the next
+        // click re-plans from what the host holds.
+        abandonReplace(
+          intent,
+          target === null
+            ? "in-board: the board's pane is gone"
+            : "in-board: the host never focused the pane",
+        );
       }, REPLACE_CONFIRM_MS);
-      // The focus step: the thread the pane shows NOW, which the host focuses.
-      actions.open(owned.threadId, { split: true });
+      // The focus step, and the one case where there is none: the pane already
+      // holds the focus, so the landing effect navigates on its next commit.
+      if (!owned.isFocused && !focusBoardNativePane(owned.paneId, owned.shownThreadId)) {
+        // No container to press (or no thread to open): the focus CANNOT land,
+        // so navigating now would replace the still-focused pane — the board.
+        // Give the gesture the board's own pane instead, and say why.
+        abandonReplace(intent, "in-board: the pane cannot be focused");
+      }
     },
     [
       actions,

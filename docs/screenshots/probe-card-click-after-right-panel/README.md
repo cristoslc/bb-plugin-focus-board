@@ -16,6 +16,9 @@ Operator reports on 2026-11-21 and 2026-11-23, reproduced here in a throwaway br
 | F | clicked the rail's **Decisions** entry: the pane navigated to a page, not a thread | the shipped bundle: a fresh native pane beside the board (three panes, the page pane untouched). The pre-1.8.2 bundle: **the board's own in-panel pane** (two panes) |
 | G | F repeated, a different page each cycle | the shipped bundle: one extra pane per page the window has not shown yet (2 → 3 → 4 → 5). The pre-1.8.2 bundle: no growth, the in-panel pane every time |
 
+The F and G rows describe the bundle that shipped BEFORE the operator's 2026-11-24 ruling (`dec_okjt7e62rg2x`, "always take the pane back"). Under the ruling the click replaces in the recorded pane instead of buying one: the same probe re-run against the ruling's bundle stays at two panes, and that run is below
+(`after-pane-ownership/`).
+
 ## What the trace said, before the fix (`before/`)
 
 Phase C and D, one line per click, verbatim:
@@ -80,9 +83,38 @@ That is the reported symptom, exactly, and `before-1.8.2/F-4-card-click-after-de
 
 ## What phase G measures
 
-A page route lands in the pane that already holds it, and otherwise replaces the focused pane, so a page the window has not shown yet costs a pane of its own. On the shipped bundle each cycle of "navigate the board's pane to a new page, click a card" adds one: 2 → 3 → 4 → 5 panes over three cycles. The board keeps tracking the pane it adopts, so every later card click replaces there correctly. What is left over is the page pane the board no longer names, and the split the first click after each navigation spends.
+A page route lands in the pane that already holds it, and otherwise replaces the focused pane, so a page the window has not shown yet costs a pane of its own. On the bundle that shipped before the 2026-11-24 ruling each cycle of "navigate the board's pane to a new page, click a card" added one: 2 → 3 → 4 → 5 panes over three cycles. The board kept tracking the pane it adopted, so every later card click replaced there correctly. What was left over is the page pane the board no longer named, and the split the first click after each navigation spent.
 
 On the pre-1.8.2 bundle the count never moves off two, because the click never splits: the thread always lands in the board's own pane, which is the same reason the window feels stuck on that pane.
+
+## Phase G after the ruling (`after-pane-ownership/`)
+
+The operator ruled on 2026-11-24 that the pane is the board's BY ID, whatever it shows (`dec_okjt7e62rg2x`, "always take the pane back"; corpus entry `dl-20261124T050924-68ea`). The accepted cost: clicking a card while reading another thread, or a page, in that pane replaces what is there. The gain is the count. The same probe with the ruling's bundle served (`SERVE_BUNDLE=dist/app.js`, every state line's `candidateBundle` reading `swapped`) measures it:
+
+| Cycle | Page navigated into the board's pane | Panes after the navigation | Panes after the click | The pane after the click |
+|---|---|---|---|---|
+| 1 | Automations | 2 | 2 | `pane-2` on the clicked thread, focused, recorded |
+| 2 | Decisions | 2 | 2 | `pane-2` on the clicked thread, focused, recorded |
+| 3 | Activity Overview | 2 | 2 | `pane-2` on the clicked thread, focused, recorded |
+
+Flat at two panes across all three navigations, where the pre-ruling bundle ended at five. Phase F is the single-navigation version of the same shape: Decisions in the pane, then a card click ends with `pane-1` (the board) and `pane-2` on the clicked thread, two panes, no in-board `Thread:` aside. The trace, two of the run's `[focus-board:native-open]` payloads (line breaks added here):
+
+```json
+{"threadId":"thr_tf8zuywpur","branch":"replace","compactViewport":false,
+ "layout":[{"paneId":"pane-1","threadId":null,"focused":true},
+           {"paneId":"pane-2","threadId":null,"focused":false}],
+ "record":{"paneId":"pane-2","threadId":"thr_tf8zuywpur"},
+ "paneId":"pane-2","from":"thr_tf8zuywpur","shownThreadId":null}
+{"threadId":"thr_r282wvvnkf","branch":"replace","compactViewport":false,
+ "layout":[{"paneId":"pane-1","threadId":null,"focused":true},
+           {"paneId":"pane-2","threadId":null,"focused":false}],
+ "record":{"paneId":"pane-2","threadId":"thr_tf8zuywpur"},
+ "paneId":"pane-2","from":"thr_tf8zuywpur","shownThreadId":null}
+```
+
+`shownThreadId: null` is the page pane: there is no thread to open to focus it, so the click presses the pane's own container instead (`lib/native-pane-focus.ts`; the lever's own measurement is `docs/screenshots/probe-pane-focus-lever/`). The record then follows the thread the click put there, so the next click takes the ordinary replacement path again.
+
+The frames are `F-3-decisions-in-the-pane.png`, `F-4-card-click-after-decisions.png`, `G-3-automations.png` … `G-5-activity-overview-clicked.png`, and `evidence.json` carries every state and trace payload of the run.
 
 ## The exact sequence
 
@@ -115,6 +147,18 @@ Phases A–E: reproduced and fixed. A card click in a window with a native pane 
 
 Phase F, the page-route shape, does not reproduce on the bundle bb serves today: the click opens a fresh native pane and the board's own pane never appears. It does reproduce on the bundle from before the fresh-pane rule, so the window that showed the operator the in-panel pane was running that older bundle and has not loaded the new one. A reload of that window is what changes the behaviour, not another code change.
 
-Phase G records what the fresh split leaves behind: a page pane the board no longer names, and one extra split the first click after each navigation pays for. Reusing the recorded pane when it holds no thread would remove both, and that is the open question this run leaves, not a defect it found.
+Phase G records what the fresh split left behind: a page pane the board no longer names, and one extra split the first click after each navigation pays for. Reusing the recorded pane when it holds no thread would remove both, and that is the open question this run leaves, not a defect it found.
+
+That open question was ruled on 2026-11-24 (`dec_okjt7e62rg2x`): the recorded pane is reused whatever it shows, so both costs are gone and the window stops growing (the `after-pane-ownership/` run above). What replaces them is the cost the operator accepted: a card click while reading something else in that pane replaces it.
+
+## Re-running the ruling's comparison
+
+```sh
+bb plugin config focus-board set nativeOpenDebug true
+npm run build && SERVE_BUNDLE=dist/app.js \
+  OUT_DIR=docs/screenshots/probe-card-click-after-right-panel/after-pane-ownership \
+  node scripts/screenshot/probe-card-click-after-right-panel.mjs
+bb plugin config focus-board set nativeOpenDebug false
+```
 
 > AGENT GENERATED CONTENT

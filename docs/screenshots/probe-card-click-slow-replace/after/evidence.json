@@ -1,0 +1,1496 @@
+{
+  "app": "http://127.0.0.1:38886/plugins/focus-board/board",
+  "cpuRates": [
+    3,
+    5,
+    10,
+    20
+  ],
+  "phases": {
+    "rate-3": {
+      "rate": 3,
+      "board": {
+        "at": 11675,
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": null,
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202
+      },
+      "firstClick": {
+        "at": 17324,
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": false
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "label": "2-first-click"
+      },
+      "secondCard": {
+        "threadId": "thr_r282wvvnkf",
+        "x": 448,
+        "y": 453
+      },
+      "samples": [
+        {
+          "at": 18472,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 18582,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 18696,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 19240,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 19542,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 19792,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 19997,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 20108,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 20212,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 20317,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 20420,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 20523,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 20626,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 20730,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 20850,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 20953,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 21057,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 21160,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 21276,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 21380,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        }
+      ],
+      "clickedThread": "thr_r282wvvnkf",
+      "bothSurfaces": null,
+      "inBoardPaneSamples": 0,
+      "paneThreadSamples": 17,
+      "final": {
+        "at": 21685,
+        "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": false
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_r282wvvnkf",
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+        "label": "4-final"
+      }
+    },
+    "rate-5": {
+      "rate": 5,
+      "board": {
+        "at": 11011,
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": null,
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202
+      },
+      "firstClick": {
+        "at": 17453,
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": false
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "label": "2-first-click"
+      },
+      "secondCard": {
+        "threadId": "thr_r282wvvnkf",
+        "x": 448,
+        "y": 453
+      },
+      "samples": [
+        {
+          "at": 19276,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 19409,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 19533,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 19663,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 19793,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 19920,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 20752,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 21325,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 21978,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 22114,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        }
+      ],
+      "clickedThread": "thr_r282wvvnkf",
+      "bothSurfaces": null,
+      "inBoardPaneSamples": 0,
+      "paneThreadSamples": 4,
+      "final": {
+        "at": 22411,
+        "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": false
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_r282wvvnkf",
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+        "label": "4-final"
+      }
+    },
+    "rate-10": {
+      "rate": 10,
+      "board": {
+        "at": 10168,
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 124,
+        "inBoardPane": null,
+        "record": null,
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202
+      },
+      "firstClick": {
+        "at": 24038,
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": false
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "label": "2-first-click"
+      },
+      "secondCard": {
+        "threadId": "thr_r282wvvnkf",
+        "x": 448,
+        "y": 453
+      },
+      "samples": [
+        {
+          "at": 30403,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 31951,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 124,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 35090,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 124,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        }
+      ],
+      "clickedThread": "thr_r282wvvnkf",
+      "bothSurfaces": null,
+      "inBoardPaneSamples": 0,
+      "paneThreadSamples": 1,
+      "final": {
+        "at": 39412,
+        "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": false
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_r282wvvnkf",
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 124,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+        "label": "4-final"
+      }
+    },
+    "rate-20": {
+      "rate": 20,
+      "board": {
+        "at": 10594,
+        "route": "/plugins/focus-board/board",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": null,
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202
+      },
+      "firstClick": {
+        "at": 32225,
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": false
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "label": "2-first-click"
+      },
+      "secondCard": {
+        "threadId": "thr_r282wvvnkf",
+        "x": 448,
+        "y": 453
+      },
+      "samples": [
+        {
+          "at": 50859,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        },
+        {
+          "at": 57018,
+          "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+          "paneCount": 2,
+          "focusedPaneId": "pane-2",
+          "panes": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": false
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true
+            }
+          ],
+          "boardMounted": true,
+          "boardCards": 123,
+          "inBoardPane": null,
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "label": "3-replacement"
+        }
+      ],
+      "clickedThread": "thr_r282wvvnkf",
+      "bothSurfaces": null,
+      "inBoardPaneSamples": 0,
+      "paneThreadSamples": 1,
+      "final": {
+        "at": 63719,
+        "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "threadId": null,
+            "focused": false
+          },
+          {
+            "paneId": "pane-2",
+            "threadId": "thr_r282wvvnkf",
+            "focused": true
+          }
+        ],
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+        "label": "4-final"
+      }
+    }
+  },
+  "trace": [
+    {
+      "phase": "rate-3",
+      "rate": 3,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "rate-3",
+      "rate": 3,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "rate-3",
+      "rate": 3,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur",
+          "shownThreadId": "thr_tf8zuywpur"
+        }
+      ]
+    },
+    {
+      "phase": "rate-3",
+      "rate": 3,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace: the host still owes the landing",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_r282wvvnkf"
+          },
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "rate-5",
+      "rate": 5,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "rate-5",
+      "rate": 5,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "rate-5",
+      "rate": 5,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur",
+          "shownThreadId": "thr_tf8zuywpur"
+        }
+      ]
+    },
+    {
+      "phase": "rate-5",
+      "rate": 5,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace: the host still owes the landing",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_r282wvvnkf"
+          },
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "rate-10",
+      "rate": 10,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "rate-10",
+      "rate": 10,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "rate-10",
+      "rate": 10,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur",
+          "shownThreadId": "thr_tf8zuywpur"
+        }
+      ]
+    },
+    {
+      "phase": "rate-10",
+      "rate": 10,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace: the host still owes the landing",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_r282wvvnkf"
+          },
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "rate-20",
+      "rate": 20,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "rate-20",
+      "rate": 20,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "rate-20",
+      "rate": 20,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur",
+          "shownThreadId": "thr_tf8zuywpur"
+        }
+      ]
+    },
+    {
+      "phase": "rate-20",
+      "rate": 20,
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace: the host still owes the landing",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_r282wvvnkf"
+          },
+          "paneId": "pane-2"
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "servedBundle": "dist/app.js"
+}

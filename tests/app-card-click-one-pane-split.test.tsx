@@ -178,6 +178,14 @@ describe("a card click in a one-pane window", () => {
 
     // The second click is the shipped replacement rule: the record names the
     // pane, the host's opener focuses it, and the clicked thread lands in it.
+    // The card press focuses the board first (the host does that on
+    // pointerdown, measured: probe-card-click-focus-trace.mjs), so the pane is
+    // not focused when the click runs.
+    act(() => {
+      setFakeSplitLayout(
+        fakeSplitPanes().map((pane) => ({ ...pane, isFocused: pane.paneId === "pane-1" })),
+      );
+    });
     fireEvent.click(cardAnchor("thr_older"));
     await waitFor(() =>
       expect(fakeNativeOpens()).toEqual([

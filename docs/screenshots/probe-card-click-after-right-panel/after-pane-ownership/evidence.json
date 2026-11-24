@@ -1,0 +1,3656 @@
+{
+  "app": "http://127.0.0.1:38886/plugins/focus-board/board",
+  "phases": {
+    "A": {
+      "board": {
+        "route": "/plugins/focus-board/board",
+        "candidateBundle": "swapped",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": true,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 1280,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 1,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": null,
+        "rightPanelToggle": {
+          "label": "Show right panel",
+          "expanded": null
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202,
+        "hitInCard": true
+      },
+      "firstClick": {
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 961,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "2-first-click"
+      },
+      "secondCard": {
+        "threadId": "thr_r282wvvnkf",
+        "x": 448,
+        "y": 453,
+        "hitInCard": true
+      },
+      "secondClick": {
+        "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_r282wvvnkf",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 961,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "3-second-click"
+      }
+    },
+    "B": {
+      "board": {
+        "route": "/plugins/focus-board/board",
+        "candidateBundle": "swapped",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": true,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 1280,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 1,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": null,
+        "rightPanelToggle": {
+          "label": "Show right panel",
+          "expanded": null
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202,
+        "hitInCard": true
+      },
+      "firstClick": {
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 961,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "2-first-click"
+      },
+      "panelToggle": {
+        "label": "Show right panel (⌘ J)",
+        "x": 1570,
+        "y": 24
+      },
+      "panelOpen": {
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 319,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 640,
+              "y": 0,
+              "w": 319,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Hide right panel (⌘ J)",
+          "expanded": "true"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 640
+            },
+            {
+              "w": 1
+            },
+            {
+              "w": 640
+            }
+          ]
+        },
+        "label": "3-right-panel-open"
+      },
+      "secondCard": {
+        "threadId": "thr_r282wvvnkf",
+        "x": 448,
+        "y": 453,
+        "hitInCard": true
+      },
+      "secondClick": {
+        "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 319,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_r282wvvnkf",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 640,
+              "y": 0,
+              "w": 319,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+        "rightPanelToggle": {
+          "label": "Hide right panel (⌘ J)",
+          "expanded": "true"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 640
+            },
+            {
+              "w": 1
+            },
+            {
+              "w": 640
+            }
+          ]
+        },
+        "label": "4-second-click"
+      }
+    },
+    "C": {
+      "board": {
+        "route": "/plugins/focus-board/board",
+        "candidateBundle": "swapped",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": true,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 1280,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 1,
+        "boardMounted": true,
+        "boardCards": 61,
+        "inBoardPane": null,
+        "record": null,
+        "rightPanelToggle": {
+          "label": "Show right panel",
+          "expanded": null
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 183,
+        "hitInCard": true
+      },
+      "firstClick": {
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 961,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "2-first-click"
+      },
+      "rethreaded": {
+        "x": 170,
+        "y": 128
+      },
+      "rethreadedState": {
+        "route": "/projects/proj_9da9h742i7/threads/thr_bkg7afa7nv",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_bkg7afa7nv",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 961,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "3-rethreaded"
+      },
+      "sampledClick": {
+        "point": {
+          "threadId": "thr_29gxjg77x4",
+          "x": 448,
+          "y": 606,
+          "hitInCard": true
+        },
+        "label": "card-click-after-rethread",
+        "samples": [
+          {
+            "at": 100,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 200,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 300,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 400,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 500,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 600,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 700,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 800,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 900,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1000,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1100,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1200,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1300,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1400,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1500,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1600,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1700,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1800,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1900,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 2000,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 2100,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 2200,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 2300,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 2400,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 2500,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          }
+        ]
+      },
+      "cardClickAfterRethread": {
+        "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_29gxjg77x4",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 961,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "4-card-click-after-rethread"
+      }
+    },
+    "D": {
+      "board": {
+        "route": "/plugins/focus-board/board",
+        "candidateBundle": "swapped",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": true,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 1280,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 1,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": null,
+        "rightPanelToggle": {
+          "label": "Show right panel",
+          "expanded": null
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202,
+        "hitInCard": true
+      },
+      "firstClick": {
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 961,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "2-first-click"
+      },
+      "panelToggle": {
+        "label": "Show right panel (⌘ J)",
+        "x": 1570,
+        "y": 24
+      },
+      "panelOpen": {
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 319,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 640,
+              "y": 0,
+              "w": 319,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Hide right panel (⌘ J)",
+          "expanded": "true"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 640
+            },
+            {
+              "w": 1
+            },
+            {
+              "w": 640
+            }
+          ]
+        },
+        "label": "3-right-panel-open"
+      },
+      "rethreaded": {
+        "x": 170,
+        "y": 128
+      },
+      "rethreadedState": {
+        "route": "/projects/proj_9da9h742i7/threads/thr_bkg7afa7nv",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 319,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_bkg7afa7nv",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 640,
+              "y": 0,
+              "w": 319,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Hide right panel (⌘ J)",
+          "expanded": "true"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 640
+            },
+            {
+              "w": 1
+            },
+            {
+              "w": 640
+            }
+          ]
+        },
+        "label": "4-rethreaded"
+      },
+      "sampledClick": {
+        "point": {
+          "threadId": "thr_29gxjg77x4",
+          "x": 448,
+          "y": 606,
+          "hitInCard": true
+        },
+        "label": "card-click-after-rethread",
+        "samples": [
+          {
+            "at": 100,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 200,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 300,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 400,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 500,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 600,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 700,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 800,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 900,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1000,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1100,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1200,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1300,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1400,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1500,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1600,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1700,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1800,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 1900,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 2000,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 2100,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 2200,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 2300,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 2400,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          },
+          {
+            "at": 2500,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_29gxjg77x4:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}"
+          }
+        ]
+      },
+      "cardClickAfterRethread": {
+        "route": "/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 319,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_29gxjg77x4",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 640,
+              "y": 0,
+              "w": 319,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_29gxjg77x4\"}",
+        "rightPanelToggle": {
+          "label": "Hide right panel (⌘ J)",
+          "expanded": "true"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 640
+            },
+            {
+              "w": 1
+            },
+            {
+              "w": 640
+            }
+          ]
+        },
+        "label": "5-card-click-after-rethread"
+      }
+    },
+    "E": {
+      "board": {
+        "route": "/plugins/focus-board/board",
+        "candidateBundle": "swapped",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": true,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 1280,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 1,
+        "boardMounted": true,
+        "boardCards": 123,
+        "inBoardPane": null,
+        "record": null,
+        "rightPanelToggle": {
+          "label": "Show right panel",
+          "expanded": null
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202,
+        "hitInCard": true
+      },
+      "firstClick": {
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 961,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "2-first-click"
+      },
+      "rethreaded": {
+        "x": 170,
+        "y": 128
+      },
+      "rethreadedState": {
+        "route": "/projects/proj_9da9h742i7/threads/thr_bkg7afa7nv",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_bkg7afa7nv",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 961,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "3-rethreaded"
+      },
+      "boardFocused": {
+        "x": 640,
+        "y": 68
+      },
+      "boardFocusedState": {
+        "route": "/plugins/focus-board/board",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": true,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_bkg7afa7nv",
+            "focused": false,
+            "holdsBoard": false,
+            "rect": {
+              "x": 961,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "4-board-focused"
+      },
+      "freshThread": "thr_bcymmhtpms",
+      "splitEntry": {
+        "label": "Open in split",
+        "x": 249,
+        "y": 176,
+        "visible": true
+      },
+      "afterSplit": {
+        "route": "/projects/proj_yjxm446dtc/threads/thr_bcymmhtpms",
+        "candidateBundle": "swapped",
+        "paneCount": 3,
+        "focusedPaneId": "pane-3",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 426,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-3",
+            "kind": "thread",
+            "threadId": "thr_bcymmhtpms",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 747,
+              "y": 0,
+              "w": 426,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_bkg7afa7nv",
+            "focused": false,
+            "holdsBoard": false,
+            "rect": {
+              "x": 1174,
+              "y": 0,
+              "w": 426,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 3,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "5-after-host-split"
+      }
+    },
+    "F": {
+      "board": {
+        "route": "/plugins/focus-board/board",
+        "candidateBundle": "swapped",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": true,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 1280,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 1,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": null,
+        "rightPanelToggle": {
+          "label": "Show right panel",
+          "expanded": null
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202,
+        "hitInCard": true
+      },
+      "firstClick": {
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 961,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "2-first-click"
+      },
+      "pageEntry": {
+        "label": "Decisions, 35 pending decisions",
+        "x": 24,
+        "y": 126
+      },
+      "navigated": {
+        "route": "/plugins/decisions/decisions",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 961,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "3-decisions-in-the-pane"
+      },
+      "recordAfterNavigation": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+      "sampledClick": {
+        "point": {
+          "threadId": "thr_r282wvvnkf",
+          "x": 448,
+          "y": 453,
+          "hitInCard": true
+        },
+        "label": "card-click-after-decisions",
+        "samples": [
+          {
+            "at": 100,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 200,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 300,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 400,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 500,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 600,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 700,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 800,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 900,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 1000,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 1100,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 1200,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 1300,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 1400,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 1500,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 1600,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 1700,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 1800,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 1900,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 2000,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 2100,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 2200,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 2300,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 2400,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          },
+          {
+            "at": 2500,
+            "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+            "paneCount": 2,
+            "focusedPaneId": "pane-2",
+            "panes": [
+              "pane-1:plugin-panel",
+              "pane-2:thr_r282wvvnkf:F"
+            ],
+            "inBoardPane": null,
+            "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}"
+          }
+        ]
+      },
+      "cardClickAfterDecisions": {
+        "route": "/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_r282wvvnkf",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 961,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "4-card-click-after-decisions"
+      }
+    },
+    "G": {
+      "board": {
+        "route": "/plugins/focus-board/board",
+        "candidateBundle": "swapped",
+        "paneCount": 1,
+        "focusedPaneId": "pane-1",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": true,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 1280,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 1,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": null,
+        "rightPanelToggle": {
+          "label": "Show right panel",
+          "expanded": null
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "1-board"
+      },
+      "firstCard": {
+        "threadId": "thr_tf8zuywpur",
+        "x": 445,
+        "y": 202,
+        "hitInCard": true
+      },
+      "firstClick": {
+        "route": "/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur",
+        "candidateBundle": "swapped",
+        "paneCount": 2,
+        "focusedPaneId": "pane-2",
+        "panes": [
+          {
+            "paneId": "pane-1",
+            "kind": "plugin-panel",
+            "threadId": null,
+            "focused": false,
+            "holdsBoard": true,
+            "rect": {
+              "x": 320,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          },
+          {
+            "paneId": "pane-2",
+            "kind": "thread",
+            "threadId": "thr_tf8zuywpur",
+            "focused": true,
+            "holdsBoard": false,
+            "rect": {
+              "x": 961,
+              "y": 0,
+              "w": 640,
+              "h": 1200
+            }
+          }
+        ],
+        "renderedPaneCount": 2,
+        "boardMounted": true,
+        "boardCards": 122,
+        "inBoardPane": null,
+        "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+        "rightPanelToggle": {
+          "label": "Show right panel (⌘ J)",
+          "expanded": "false"
+        },
+        "rightPanel": {
+          "panels": [
+            {
+              "w": 1280
+            },
+            {
+              "w": 0
+            }
+          ]
+        },
+        "label": "2-first-click"
+      },
+      "cycles": [
+        {
+          "page": "Automations",
+          "entry": {
+            "label": "Automations",
+            "x": 24,
+            "y": 186
+          },
+          "paneCountAfterNavigation": 2,
+          "panesAfterNavigation": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": false,
+              "holdsBoard": true,
+              "rect": {
+                "x": 320,
+                "y": 0,
+                "w": 640,
+                "h": 1200
+              }
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": true,
+              "holdsBoard": false,
+              "rect": {
+                "x": 961,
+                "y": 0,
+                "w": 640,
+                "h": 1200
+              }
+            }
+          ],
+          "card": "thr_tf8zuywpur",
+          "paneCountAfterClick": 2,
+          "panesAfterClick": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": false,
+              "holdsBoard": true,
+              "rect": {
+                "x": 320,
+                "y": 0,
+                "w": 640,
+                "h": 1200
+              }
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_tf8zuywpur",
+              "focused": true,
+              "holdsBoard": false,
+              "rect": {
+                "x": 961,
+                "y": 0,
+                "w": 640,
+                "h": 1200
+              }
+            }
+          ],
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_tf8zuywpur\"}",
+          "inBoardPane": null
+        },
+        {
+          "page": "Decisions",
+          "entry": {
+            "label": "Decisions, 35 pending decisions",
+            "x": 24,
+            "y": 126
+          },
+          "paneCountAfterNavigation": 2,
+          "panesAfterNavigation": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": false,
+              "holdsBoard": true,
+              "rect": {
+                "x": 320,
+                "y": 0,
+                "w": 640,
+                "h": 1200
+              }
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": true,
+              "holdsBoard": false,
+              "rect": {
+                "x": 961,
+                "y": 0,
+                "w": 640,
+                "h": 1200
+              }
+            }
+          ],
+          "card": "thr_r282wvvnkf",
+          "paneCountAfterClick": 2,
+          "panesAfterClick": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": false,
+              "holdsBoard": true,
+              "rect": {
+                "x": 320,
+                "y": 0,
+                "w": 640,
+                "h": 1200
+              }
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true,
+              "holdsBoard": false,
+              "rect": {
+                "x": 961,
+                "y": 0,
+                "w": 640,
+                "h": 1200
+              }
+            }
+          ],
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "inBoardPane": null
+        },
+        {
+          "page": "Activity Overview",
+          "entry": {
+            "label": "Activity Overview",
+            "x": 24,
+            "y": 156
+          },
+          "paneCountAfterNavigation": 2,
+          "panesAfterNavigation": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": false,
+              "holdsBoard": true,
+              "rect": {
+                "x": 320,
+                "y": 0,
+                "w": 640,
+                "h": 1200
+              }
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": true,
+              "holdsBoard": false,
+              "rect": {
+                "x": 961,
+                "y": 0,
+                "w": 640,
+                "h": 1200
+              }
+            }
+          ],
+          "card": "thr_r282wvvnkf",
+          "paneCountAfterClick": 2,
+          "panesAfterClick": [
+            {
+              "paneId": "pane-1",
+              "kind": "plugin-panel",
+              "threadId": null,
+              "focused": false,
+              "holdsBoard": true,
+              "rect": {
+                "x": 320,
+                "y": 0,
+                "w": 640,
+                "h": 1200
+              }
+            },
+            {
+              "paneId": "pane-2",
+              "kind": "thread",
+              "threadId": "thr_r282wvvnkf",
+              "focused": true,
+              "holdsBoard": false,
+              "rect": {
+                "x": 961,
+                "y": 0,
+                "w": 640,
+                "h": 1200
+              }
+            }
+          ],
+          "record": "{\"paneId\":\"pane-2\",\"threadId\":\"thr_r282wvvnkf\"}",
+          "inBoardPane": null
+        }
+      ]
+    }
+  },
+  "trace": [
+    {
+      "phase": "A",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "A",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "A",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur",
+          "shownThreadId": "thr_tf8zuywpur"
+        }
+      ]
+    },
+    {
+      "phase": "B",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "B",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "B",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_tf8zuywpur",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur",
+          "shownThreadId": "thr_tf8zuywpur"
+        }
+      ]
+    },
+    {
+      "phase": "C",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "C",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "C",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_29gxjg77x4",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_bkg7afa7nv",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur",
+          "shownThreadId": "thr_bkg7afa7nv"
+        }
+      ]
+    },
+    {
+      "phase": "D",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "D",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "D",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_29gxjg77x4",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": "thr_bkg7afa7nv",
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur",
+          "shownThreadId": "thr_bkg7afa7nv"
+        }
+      ]
+    },
+    {
+      "phase": "E",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "E",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "F",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "F",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "F",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": null,
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur",
+          "shownThreadId": null
+        }
+      ]
+    },
+    {
+      "phase": "G",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: asking the opener for the split",
+          "compactViewport": false,
+          "layout": null,
+          "record": null
+        }
+      ]
+    },
+    {
+      "phase": "G",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "one-pane: the host split",
+          "paneId": "pane-2"
+        }
+      ]
+    },
+    {
+      "phase": "G",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_tf8zuywpur",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": null,
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur",
+          "shownThreadId": null
+        }
+      ]
+    },
+    {
+      "phase": "G",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": null,
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_tf8zuywpur"
+          },
+          "paneId": "pane-2",
+          "from": "thr_tf8zuywpur",
+          "shownThreadId": null
+        }
+      ]
+    },
+    {
+      "phase": "G",
+      "payloads": [
+        "[focus-board:native-open]",
+        {
+          "threadId": "thr_r282wvvnkf",
+          "branch": "replace",
+          "compactViewport": false,
+          "layout": [
+            {
+              "paneId": "pane-1",
+              "threadId": null,
+              "focused": true
+            },
+            {
+              "paneId": "pane-2",
+              "threadId": null,
+              "focused": false
+            }
+          ],
+          "record": {
+            "paneId": "pane-2",
+            "threadId": "thr_r282wvvnkf"
+          },
+          "paneId": "pane-2",
+          "from": "thr_r282wvvnkf",
+          "shownThreadId": null
+        }
+      ]
+    }
+  ],
+  "console": [
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/cfcde1f3bcdcdfd4/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/7a740397ffdff804/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/48ec85614e2ec007/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/17739821dcf4b0a7/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=owned-root-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/416ed6207375148f/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/102a82143decffcf/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/885b3f4bcfcf8a81/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/17eb29b570eb85b7/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/8746def88d9b5ec6/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/6aaf0f05b65dcc46/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/2653b3ad9efdc2bf/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/3173e6948f43c622/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/b4affd80b7768303/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/fac830c562288df8/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/d7e36d1aa4709f40/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/71498bc88c9e0e72/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/2446b599ace68049/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/0a6c956d51cafcb0/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/ada7bf3ad1fb660d/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/adb0b0a92f475095/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/da3f64a1b64cb6c3/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/51354cf332c03b75/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=owned-root-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/e7201bb5a1e79348/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=owned-root-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/897983361f0ea3ab/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/3b11dd415a704cce/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/67e5489ae332b830/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/e13dc2a0239e395a/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/b17a6e542c02c532/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/492e3699c196fa26/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/841570d9c5ff203b/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/461b1587003846e9/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/9ceabacbf9486c4f/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/901916fe573a5b32/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/f642fc63811af053/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/c0dcebc021f9a333/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/f11db24c039f738a/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/6620f376f2f68fdf/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "C",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/885b3f4bcfcf8a81/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=owned-root-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/cfcde1f3bcdcdfd4/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/7a740397ffdff804/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/48ec85614e2ec007/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/17739821dcf4b0a7/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=owned-root-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/416ed6207375148f/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/102a82143decffcf/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/885b3f4bcfcf8a81/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/17eb29b570eb85b7/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/8746def88d9b5ec6/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/6aaf0f05b65dcc46/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/2653b3ad9efdc2bf/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/3173e6948f43c622/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/b4affd80b7768303/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/fac830c562288df8/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/d7e36d1aa4709f40/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/71498bc88c9e0e72/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/2446b599ace68049/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/0a6c956d51cafcb0/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/adb0b0a92f475095/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/da3f64a1b64cb6c3/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/51354cf332c03b75/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=owned-root-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/e7201bb5a1e79348/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=owned-root-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/897983361f0ea3ab/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/3b11dd415a704cce/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/67e5489ae332b830/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/e13dc2a0239e395a/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/b17a6e542c02c532/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/492e3699c196fa26/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/841570d9c5ff203b/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/461b1587003846e9/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/9ceabacbf9486c4f/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/901916fe573a5b32/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/f642fc63811af053/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/c0dcebc021f9a333/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/f11db24c039f738a/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/6620f376f2f68fdf/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=plugin-attribute-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    },
+    {
+      "phase": "D",
+      "type": "warn",
+      "text": "The resource http://127.0.0.1:38886/api/v1/plugin-app-assets/885b3f4bcfcf8a81/app.css?host-tailwind=90105b453d213b90e1c3f988b900bdc9fbb0a5f2677466f83df3227db69320f9&css-scope=owned-root-v1 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+    }
+  ],
+  "navigations": [
+    {
+      "phase": "A",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "A",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "A",
+      "url": "http://127.0.0.1:38886/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur"
+    },
+    {
+      "phase": "A",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "A",
+      "url": "http://127.0.0.1:38886/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur"
+    },
+    {
+      "phase": "A",
+      "url": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf"
+    },
+    {
+      "phase": "B",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "B",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "B",
+      "url": "http://127.0.0.1:38886/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur"
+    },
+    {
+      "phase": "B",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "B",
+      "url": "http://127.0.0.1:38886/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur"
+    },
+    {
+      "phase": "B",
+      "url": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf"
+    },
+    {
+      "phase": "C",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "C",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "C",
+      "url": "http://127.0.0.1:38886/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur"
+    },
+    {
+      "phase": "C",
+      "url": "http://127.0.0.1:38886/projects/proj_9da9h742i7/threads/thr_bkg7afa7nv"
+    },
+    {
+      "phase": "C",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "C",
+      "url": "http://127.0.0.1:38886/projects/proj_9da9h742i7/threads/thr_bkg7afa7nv"
+    },
+    {
+      "phase": "C",
+      "url": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4"
+    },
+    {
+      "phase": "D",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "D",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "D",
+      "url": "http://127.0.0.1:38886/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur"
+    },
+    {
+      "phase": "D",
+      "url": "http://127.0.0.1:38886/projects/proj_9da9h742i7/threads/thr_bkg7afa7nv"
+    },
+    {
+      "phase": "D",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "D",
+      "url": "http://127.0.0.1:38886/projects/proj_9da9h742i7/threads/thr_bkg7afa7nv"
+    },
+    {
+      "phase": "D",
+      "url": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_29gxjg77x4"
+    },
+    {
+      "phase": "E",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "E",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "E",
+      "url": "http://127.0.0.1:38886/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur"
+    },
+    {
+      "phase": "E",
+      "url": "http://127.0.0.1:38886/projects/proj_9da9h742i7/threads/thr_bkg7afa7nv"
+    },
+    {
+      "phase": "E",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "E",
+      "url": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_bcymmhtpms"
+    },
+    {
+      "phase": "F",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "F",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "F",
+      "url": "http://127.0.0.1:38886/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur"
+    },
+    {
+      "phase": "F",
+      "url": "http://127.0.0.1:38886/plugins/decisions/decisions"
+    },
+    {
+      "phase": "F",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "F",
+      "url": "http://127.0.0.1:38886/plugins/decisions/decisions"
+    },
+    {
+      "phase": "F",
+      "url": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/plugins/automations/automations"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/plugins/automations/automations"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/projects/proj_jaxhi5icse/threads/thr_tf8zuywpur"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/plugins/decisions/decisions"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/plugins/decisions/decisions"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/plugins/activity-overview/board"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/plugins/focus-board/board"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/plugins/activity-overview/board"
+    },
+    {
+      "phase": "G",
+      "url": "http://127.0.0.1:38886/projects/proj_yjxm446dtc/threads/thr_r282wvvnkf"
+    }
+  ],
+  "errors": [],
+  "servedBundle": "dist/app.js"
+}

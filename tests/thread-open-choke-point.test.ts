@@ -61,7 +61,12 @@ describe("the routing entry owns the in-panel primitive", () => {
     // fallbacks, and the pane-ownership rule all live inside it.
     expect(handler).toContain("openTargetRef.current === \"panel\"");
     expect(handler).toContain("nativeOpenWouldEvictBoard(layout)");
-    expect(handler).toContain("resolveBoardNativePane(layout, boardNativePaneRef.current)");
+    // Ownership is the pane id, and the board's own pane is refused: the click
+    // resolves the record against the live layout AND the pane the board sits
+    // in (operator ruling dec_okjt7e62rg2x, lib/native-pane-ownership.ts).
+    expect(handler).toContain("resolveBoardNativePane(");
+    expect(handler).toContain("boardNativePaneRef.current,");
+    expect(handler).toContain("boardPaneId(panelRef.current),");
     expect(handler).toContain("pendingStateClaimsRef.current.set(threadId");
     expect(handler).toContain("capturePaneAttention(threadId)");
   });

@@ -181,12 +181,41 @@ export function fakeNativeOpens(): Array<{ threadId: string; split?: boolean }> 
 export function resetFakeNativeOpens(): void {
   nativeOpens.splice(0, nativeOpens.length);
 }
+/**
+ * The host's own two steps, held back on purpose.
+ *
+ * The card click's replacement asks the host twice: `open(thread, { split })`
+ * to focus the board's pane, then a route navigation the host reconciles into
+ * that pane. On a small window both land inside the click's own flush, which is
+ * why the click's 400ms net never fires there. The operator's window (308
+ * threads on the board) takes longer, and the click's net can fire on either
+ * side of either step. These two holds model that: the call is recorded and
+ * applied on `release` instead of immediately, so a test can drive the window
+ * between the click's request and the host's answer.
+ */
+let nativeOpensHeld = false;
+const heldNativeOpens: string[] = [];
+export function holdFakeNativeOpens(): void {
+  nativeOpensHeld = true;
+}
+export function releaseFakeNativeOpens(): void {
+  nativeOpensHeld = false;
+  for (const threadId of heldNativeOpens.splice(0, heldNativeOpens.length)) {
+    placeSplitOpen(threadId);
+  }
+}
 const fakeActions = {
   open: (threadId: string, options?: { split?: boolean }) => {
     nativeOpens.push({ threadId, split: options?.split });
+    if (options?.split === true) {
+      if (nativeOpensHeld) {
+        heldNativeOpens.push(threadId);
+        return;
+      }
+      placeSplitOpen(threadId);
+    }
     fakeRouteThreadId = threadId;
     fakeRouteIsFallback = false;
-    if (options?.split === true) placeSplitOpen(threadId);
   },
   openNewThread: () => {},
   setPinned: (threadId: string, pinned: boolean) =>
@@ -429,6 +458,10 @@ const fakeNavigate = {
     }
     fakeRouteThreadId = threadId;
     fakeRouteIsFallback = false;
+    if (threadNavigationsHeld) {
+      heldThreadNavigations.push(threadId);
+      return;
+    }
     reconcileFakeRoute(threadId);
   },
   toPluginPanel: (path: string, options?: { subPath?: string; replace?: boolean }): boolean => {
@@ -436,6 +469,28 @@ const fakeNavigate = {
     return false;
   },
 };
+
+/** The route navigation's reconciliation, held: the route is the clicked
+ *  thread, the host has not put it in a pane yet (see `holdFakeNativeOpens`
+ *  for the other host step). */
+let threadNavigationsHeld = false;
+const heldThreadNavigations: string[] = [];
+export function holdFakeThreadNavigations(): void {
+  threadNavigationsHeld = true;
+}
+export function releaseFakeThreadNavigations(): void {
+  threadNavigationsHeld = false;
+  for (const threadId of heldThreadNavigations.splice(0, heldThreadNavigations.length)) {
+    reconcileFakeRoute(threadId);
+  }
+}
+/** Drop both holds and anything they queued (call in `beforeEach`). */
+export function resetFakeSlowHost(): void {
+  nativeOpensHeld = false;
+  heldNativeOpens.splice(0, heldNativeOpens.length);
+  threadNavigationsHeld = false;
+  heldThreadNavigations.splice(0, heldThreadNavigations.length);
+}
 
 export function useBbNavigate(): unknown {
   return fakeNavigate;
