@@ -1,14 +1,17 @@
 ---
 title: Interaction surface design note: decision picker plus decision history
-status: draft for the operator's decision
+status: superseded (host surface; issue #159 closed 2026-11-24)
 date: 2026-10-28
-updated: 2026-10-28
+updated: 2026-11-24
 owner: thr_hxiyebt8z7
-tags: [thread-pane, decisions, ux, issue-159]
+tags: [thread-pane, decisions, ux, issue-159, superseded]
 supersedes: docs/plans/2026-10-15-interaction-surface-decision-layer-thr_3a4twsefrp.md (unmerged branch bb/fix-focusboard-ux-thr_3a4twsefrp)
+superseded-by: bb's own pending-question banner and the transcript's answered rows (CHANGELOG 1.7.7)
 ---
 
 # Interaction surface: decision picker plus decision history
+
+> **Superseded, 2026-11-24.** Both subjects of this note were removed in 1.7.7: bb 0.48's own banner now renders the pending question inside the pane's embedded chat and persists partial answers itself, and the transcript's answered rows replaced the recent-decisions card. [Issue #159](https://github.com/cristoslc/bb-plugin-focus-board/issues/159) is closed, and the plugin has no surface here to design. The note stays as the record of the reasoning about states, attention and desktop-versus-phone mechanics; read it as history, not as work to build.
 
 The design note that [issue #159](https://github.com/cristoslc/bb-plugin-focus-board/issues/159) asks for before implementation. It covers the surface's states for desktop and phone and the mechanics that could serve each one. It states options and a recommendation per state, and it leaves the final shape to the operator. No component changes ride with it.
 
