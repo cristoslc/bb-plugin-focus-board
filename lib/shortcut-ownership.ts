@@ -69,8 +69,10 @@ import { HOST_PANEL_ATTR } from "@/components/host-link-glue";
 /** bb's pane container attribute: the pane id the split layout reports under
  *  the same name (a host contract, observed by the native-pane probes, and
  *  re-read on the installed 0.50.1 build by
- *  `scripts/screenshot/probe-board-shortcut-focus.mjs`). */
-const HOST_SPLIT_PANE_ATTR = "data-split-pane-id";
+ *  `scripts/screenshot/probe-board-shortcut-focus.mjs`). Exported because the
+ *  card click's focus lever addresses the same containers
+ *  (`lib/native-pane-focus.ts`). */
+export const HOST_SPLIT_PANE_ATTR = "data-split-pane-id";
 
 /** The board's own panel root (app.tsx sets the attribute). */
 const BOARD_PANEL_SELECTOR = `[${HOST_PANEL_ATTR}]`;
@@ -79,6 +81,19 @@ const BOARD_PANEL_SELECTOR = `[${HOST_PANEL_ATTR}]`;
  *  does not name one. */
 function boardPaneContainer(panel: Element): Element | null {
   return panel.closest(`[${HOST_SPLIT_PANE_ATTR}]`);
+}
+
+/**
+ * The id of the pane the board's own panel sits in, or null when the host does
+ * not name one (or no panel is mounted).
+ *
+ * The card click reads it to refuse a pane record that has come to name the
+ * board's own pane: navigating into that pane would replace the board
+ * (`lib/native-pane-ownership.ts`).
+ */
+export function boardPaneId(panel: Element | null): string | null {
+  if (panel === null) return null;
+  return boardPaneContainer(panel)?.getAttribute(HOST_SPLIT_PANE_ATTR) ?? null;
 }
 
 /** Surfaces that own every key while they are up. */

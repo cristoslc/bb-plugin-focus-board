@@ -13,6 +13,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **The thread pane's header wears the same Focus Board control as bb's own thread page.** The mark plus caret opens Mark Done, Snooze and New child thread, so the pane's old checkbox is gone and the two headers line up row for row.
 
+- **A card click puts its thread in the pane the board already owns, even when that pane shows a page.** The window stops growing a pane per navigation, and the trade is that whatever you were reading in that pane gives way.
+
 ### Fixed
 
 #### The board

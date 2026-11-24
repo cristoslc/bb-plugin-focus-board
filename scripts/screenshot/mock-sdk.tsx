@@ -242,6 +242,11 @@ export function mountRegisteredPanel(): void {
   const panelPath = registeredNavPanel.path;
   if (panelPath === undefined) throw new Error("harness: no nav panel registered");
   installMockRouter(panelPath);
+  // A window that OPENS with a split (`?staleNativePane=1`, `?pageNativePane=1`)
+  // renders bb's pane chrome before the first layout change: the click's focus
+  // lever for a pane showing no thread is a press on that chrome, so it has to
+  // exist before the click, not only after one.
+  applyMockSplitChrome();
   mockRender();
 }
 
@@ -401,15 +406,33 @@ const mockSplitsEnabled = new URLSearchParams(
 const mockStaleNativePane = new URLSearchParams(
   typeof location === "undefined" ? "" : location.search,
 ).has("staleNativePane");
+/**
+ * The page-route shape the operator reported on 2026-11-23 ("mostly when I
+ * navigate the native pane to a different location (like Decisions)"): the
+ * board's pane has been navigated to a PAGE, which the host reports with
+ * `threadId: null`, so there is no thread to open in order to focus that pane.
+ * `?pageNativePane=1` (with `?nativeSplit=1`) opens the window that way: the
+ * board focused, its pane showing no thread at all, and the record naming that
+ * pane. The click's focus lever there is a press on the pane's own container
+ * (lib/native-pane-focus.ts), which this harness models like bb's pane chrome.
+ */
+const mockPageNativePane = new URLSearchParams(
+  typeof location === "undefined" ? "" : location.search,
+).has("pageNativePane");
 const STALE_PANE_THREAD = "thr_review_pr";
 const STALE_RECORD_THREAD = "thr_rpc_auth";
-let mockHostPanes: readonly MockSplitPane[] = mockStaleNativePane
-  ? [
-      { paneId: "pane-1", threadId: null, isFocused: true },
-      { paneId: "pane-2", threadId: STALE_PANE_THREAD, isFocused: false },
-    ]
-  : BOARD_ONLY_PANES;
-if (mockStaleNativePane) {
+let mockHostPanes: readonly MockSplitPane[] =
+  mockStaleNativePane || mockPageNativePane
+    ? [
+        { paneId: "pane-1", threadId: null, isFocused: true },
+        {
+          paneId: "pane-2",
+          threadId: mockPageNativePane ? null : STALE_PANE_THREAD,
+          isFocused: false,
+        },
+      ]
+    : BOARD_ONLY_PANES;
+if (mockStaleNativePane || mockPageNativePane) {
   try {
     window.localStorage.setItem(
       "focus-board:boardNativeThreadPane",
@@ -431,10 +454,10 @@ function refreshMockSplit(): void {
     !mockSplitsEnabled || mockHostPanes.length < 2 ? null : { panes: mockHostPanes };
   for (const listener of [...splitLayoutListenerSet]) listener();
 }
-// A window that opens WITH a split (`?staleNativePane=1`) publishes its layout
-// before the board mounts: every other suite starts at one pane and lets the
-// click do the splitting, which reads null through this hook.
-if (mockStaleNativePane) refreshMockSplit();
+// A window that opens WITH a split (`?staleNativePane=1`, `?pageNativePane=1`)
+// publishes its layout before the board mounts: every other suite starts at one
+// pane and lets the click do the splitting, which reads null through this hook.
+if (mockStaleNativePane || mockPageNativePane) refreshMockSplit();
 /**
  * The host's split chrome, which the harness otherwise leaves out. bb places
  * the board's pane and a thread pane side by side at equal widths, so a split

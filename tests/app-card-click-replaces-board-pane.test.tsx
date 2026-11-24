@@ -1,14 +1,24 @@
 // @vitest-environment jsdom
-// The card click's pane contract, third revision (2026-11-17): "still opening
-// new, not replacing, panes."
+// The card click's pane contract, fourth revision (2026-11-24): "always take
+// the pane back" (operator ruling dec_okjt7e62rg2x).
 //
-// bb's `useSidebarSplitLayout()` answers null for a one-pane layout (its hook
-// requires more than one pane), so a freshly opened board cannot name a single
-// pane. Asking the host for a split from that state is a blind ask: the board
-// cannot learn which pane it got, and the next click asks again. The rule now
-// reads: a native split is only ever asked for to FOCUS or REPLACE a pane the
-// board can name; every other click opens the board's own in-panel pane, one
-// pane that changes thread. Live evidence and the trace lines:
+// The board's record used to be a PAIR — `{paneId, threadId}` — and a pane
+// whose thread had changed stopped matching it, so the click read "no pane of
+// the board's to use" and bought a fresh split (third revision, below). The
+// operator measured what that cost: on today's build the window grew 2 → 3 → 4
+// → 5 over three "navigate the pane to a page, click a card" cycles
+// (docs/screenshots/probe-card-click-after-right-panel/, phase G).
+//
+// The ruling: the pane is the board's BY ID, whatever it shows. A recorded
+// pane still in the layout is used: the click focuses it and navigates the
+// clicked thread into it. The thread half of the record is advisory. A fresh
+// split is asked for only when the recorded pane is GONE.
+//
+// Third revision (2026-11-17), kept because its lesson still holds: bb's
+// `useSidebarSplitLayout()` answers null for a one-pane layout, so a freshly
+// opened board cannot name a single pane. A native split is only ever asked for
+// to FOCUS or REPLACE a pane the board can name; the one-pane ask has its own
+// dance (lib/native-one-pane-dance.ts). Live evidence:
 // docs/plans/2026-11-17-one-board-pane.md section 8.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
@@ -20,6 +30,7 @@ import {
   fakeNativeOpens,
   fakePanelPushes,
   fakeSplitPanes,
+  fakeThreadNavigations,
   registeredNavPanel,
   resetFakeNativeOpens,
   resetFakePanelPushes,
@@ -74,6 +85,10 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  // The stand-in pane containers are plain DOM, not React trees: `cleanup`
+  // removes what RTL mounted and leaves them, and a stale container would let a
+  // later test's press land in a previous layout.
+  document.body.innerHTML = "";
 });
 
 function threadFixture(id: string, title: string, updatedAt: number) {
@@ -172,6 +187,35 @@ async function clickCardInBoard(threadId: string): Promise<void> {
 async function clickCardNative(threadId: string): Promise<void> {
   fireEvent.click(cardAnchor(threadId));
   await waitFor(() => expect(threadPanes()).toContain(threadId));
+}
+
+/**
+ * The host's pane containers, as bb renders them: one `[data-split-pane-id]`
+ * element per pane, whose own pointer handler focuses that pane. bb's pane
+ * chrome does exactly this (`onPointerDown` → `onFocusPane(paneId)`, measured
+ * live by scripts/screenshot/probe-pane-focus-lever.mjs), and the click's
+ * replace rule focuses a pane through it when the pane shows no thread.
+ *
+ * `focuses` decides which panes this stand-in host actually focuses: a pane
+ * container that does not is the failed-focus shape the click must survive.
+ */
+function mountHostPaneContainers(options: { focuses?: boolean } = {}): void {
+  const focuses = options.focuses ?? true;
+  for (const pane of fakeSplitPanes()) {
+    const element = document.createElement("div");
+    element.setAttribute("data-split-pane-id", pane.paneId);
+    if (focuses) {
+      element.addEventListener("pointerdown", () => {
+        setFakeSplitLayout(
+          fakeSplitPanes().map((current) => ({
+            ...current,
+            isFocused: current.paneId === pane.paneId,
+          })),
+        );
+      });
+    }
+    document.body.append(element);
+  }
 }
 
 describe("a click in a window the host will not split", () => {
@@ -356,10 +400,24 @@ describe("a pane the board owns", () => {
     expect(inBoardPaneTitle()).toBeNull();
   });
 
-  it("leaves a pane the operator re-threaded alone, and asks for its own beside the board", async () => {
-    // The reported shape (2026-11-21): their pane now shows another thread, so
-    // the record does not resolve. The repair keeps the native surface — a
-    // fresh pane for the clicked thread — and touches nothing of theirs.
+  it("still replaces in the pane when the record's thread left the board's list", async () => {
+    // The thread half is advisory: a thread the board no longer lists says
+    // nothing about the pane, which the layout still holds by id.
+    seedOwnedPane("thr_missing");
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+
+    fireEvent.click(cardAnchor("thr_focus"));
+    await waitFor(() => expect(threadPanes()).toEqual(["thr_focus"]));
+    expect(fakeSplitPanes()).toHaveLength(2);
+    expect(inBoardPaneTitle()).toBeNull();
+  });
+
+  it("replaces in a pane the operator re-threaded, and opens no second pane", async () => {
+    // The 2026-11-21 report and the 2026-11-24 ruling in one shape: the
+    // operator navigated the board's pane to another thread. The pane is still
+    // the board's by id, so the click focuses it and puts the clicked thread
+    // there. The cost the operator accepted: what they were reading goes.
     window.localStorage.setItem(
       "focus-board:boardNativeThreadPane",
       JSON.stringify({ paneId: "pane-2", threadId: "thr_older" }),
@@ -375,20 +433,13 @@ describe("a pane the board owns", () => {
     await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
 
     await clickCardNative("thr_focus");
-    // Their thread is untouched, and the click opened a native pane of its own.
-    expect(threadPanes()).toEqual(["thr_focus", "thr_other"]);
+    expect(threadPanes()).toEqual(["thr_focus"]);
+    expect(fakeSplitPanes()).toHaveLength(2);
     expect(inBoardPaneTitle()).toBeNull();
     expect(fakePanelPushes()).toEqual([]);
-  });
-
-  it("a record naming a thread the board no longer lists asks for a fresh pane", async () => {
-    seedOwnedPane("thr_missing");
-    mountBoard();
-    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
-
-    await clickCardNative("thr_focus");
-    expect(threadPanes()).toEqual(["thr_focus", "thr_missing"]);
-    expect(inBoardPaneTitle()).toBeNull();
+    // The focus step names the thread the pane showed, never the clicked one:
+    // asking for the clicked thread is the host's "new pane on the right".
+    expect(fakeNativeOpens().map((open) => open.threadId)).not.toContain("thr_focus");
   });
 
   it("a dragged pane is still the board's: position does not decide ownership", async () => {
@@ -411,20 +462,121 @@ describe("a pane the board owns", () => {
   });
 });
 
-describe("a record that no longer matches the window", () => {
+describe("a recorded pane the operator navigated", () => {
   // The reproduction behind these tests (operator report 2026-11-21: "clicking
   // on a card then opens the legacy focus board thread pane instead of
-  // swapping the native one", docs/screenshots/probe-card-click-after-right-panel/):
-  // the board's record names `{paneId, threadId}` and the live layout has to
-  // agree. A native pane the operator NAVIGATES from inside itself — a sidebar
-  // row, a mention, a child row — stops agreeing, and the click used to read
-  // that as "no pane of the board's to use" and open the board's own in-panel
-  // pane: the reported symptom, measured live with the trace on. The rule now:
-  // where the window can still hold a native pane, the click re-plans from the
-  // host's rendered truth — it asks the host's opener for the clicked thread,
-  // which splits beside the board, and adopts the pane that appeared.
-  /** The stale shape, seeded: the operator's pane shows another thread. */
-  function seedRethreadedPane(): void {
+  // swapping the native one") and the ruling that followed (2026-11-24,
+  // dec_okjt7e62rg2x): the pane is the board's BY ID, whatever it shows. A
+  // pane the operator navigates from inside itself — a sidebar row, a mention,
+  // a child row, a rail page like Decisions — is still the board's, so the
+  // click focuses it and puts the clicked thread there. The cost the operator
+  // accepted is exactly what these tests assert: what the pane was showing is
+  // replaced.
+  /** The page-route shape: the rail's Decisions entry, reported by the host
+   *  with `threadId: null` (measured: probe-card-click-after-right-panel,
+   *  phase F). */
+  function seedPagePaneHere(): void {
+    window.localStorage.setItem(
+      "focus-board:boardNativeThreadPane",
+      JSON.stringify({ paneId: "pane-2", threadId: "thr_older" }),
+    );
+    act(() => {
+      setFakeSplitLayout([
+        { paneId: "pane-1", threadId: null, isFocused: true },
+        { paneId: "pane-2", threadId: null, isFocused: false },
+      ]);
+    });
+  }
+
+  it("replaces the page in the pane the operator navigated to it", async () => {
+    seedPagePaneHere();
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+    // The host's own pane containers, whose pointer handler focuses the pane:
+    // the click's focus lever for a pane that shows no thread.
+    mountHostPaneContainers();
+
+    fireEvent.click(cardAnchor("thr_focus"));
+
+    await waitFor(() => expect(threadPanes()).toEqual(["thr_focus"]));
+    expect(fakeSplitPanes()).toHaveLength(2);
+    expect(focusedPaneId()).toBe("pane-2");
+    // No fresh split was asked for: the clicked thread is navigated into the
+    // pane the board already named.
+    expect(fakeNativeOpens()).toEqual([]);
+    expect(fakeThreadNavigations()).toEqual(["thr_focus"]);
+    expect(inBoardPaneTitle()).toBeNull();
+    expect(fakePanelPushes()).toEqual([]);
+    expect(document.querySelector('[data-focus-board-panel]')).not.toBeNull();
+  });
+
+  it("keeps owning the pane, so a second click replaces there too", async () => {
+    seedPagePaneHere();
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+    mountHostPaneContainers();
+
+    fireEvent.click(cardAnchor("thr_focus"));
+    await waitFor(() => expect(threadPanes()).toEqual(["thr_focus"]));
+    // The next card press focuses the board first (the host does that on
+    // pointerdown, measured: probe-card-click-focus-trace.mjs), so the pane is
+    // not focused when the second click runs.
+    act(() => {
+      setFakeSplitLayout(
+        fakeSplitPanes().map((pane) => ({ ...pane, isFocused: pane.paneId === "pane-1" })),
+      );
+    });
+    fireEvent.click(cardAnchor("thr_backlog"));
+    await waitFor(() => expect(threadPanes()).toEqual(["thr_backlog"]));
+    expect(fakeSplitPanes()).toHaveLength(2);
+    // The page pane's replacement became a thread pane, so the second click is
+    // the ordinary focus-and-navigate shape: the thread the pane shows is
+    // opened to focus it, and the clicked one is navigated in.
+    expect(fakeNativeOpens().at(-1)).toEqual({ threadId: "thr_focus", split: true });
+    expect(fakeThreadNavigations()).toEqual(["thr_focus", "thr_backlog"]);
+  });
+  /** The unresolved shape, seeded: the record names a pane the window no
+   *  longer holds (the operator closed it). A pane id absent from the layout is
+   *  the ONLY record that does not resolve under the 2026-11-24 ruling. */
+  function seedGonePaneHere(): void {
+    window.localStorage.setItem(
+      "focus-board:boardNativeThreadPane",
+      JSON.stringify({ paneId: "pane-3", threadId: "thr_older" }),
+    );
+    act(() => {
+      setFakeSplitLayout([
+        { paneId: "pane-1", threadId: null, isFocused: true },
+        { paneId: "pane-2", threadId: "thr_other", isFocused: false },
+      ]);
+    });
+  }
+
+  it("asks for a fresh native pane when the recorded pane is gone", async () => {
+    seedGonePaneHere();
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+
+    fireEvent.click(cardAnchor("thr_focus"));
+
+    // The ask names the CLICKED thread: a thread in no pane, so the host splits
+    // beside the board, and the pane that appeared is adopted.
+    expect(fakeNativeOpens()).toEqual([{ threadId: "thr_focus", split: true }]);
+    await waitFor(() => expect(threadPanes()).toEqual(["thr_focus", "thr_other"]));
+    expect(fakeSplitPanes()).toHaveLength(3);
+    const created = fakeSplitPanes().find((pane) => pane.threadId === "thr_focus");
+    expect(
+      JSON.parse(
+        window.localStorage.getItem("focus-board:boardNativeThreadPane") ?? "null",
+      ),
+    ).toEqual({ paneId: created?.paneId, threadId: "thr_focus" });
+    expect(inBoardPaneTitle()).toBeNull();
+    expect(fakePanelPushes()).toEqual([]);
+  });
+
+  it("focuses the recorded pane when the operator navigated it back to the clicked thread", async () => {
+    // The pane shows the clicked thread again, so nothing moves: the host's
+    // opener focuses the pane that already holds it, and the record's advisory
+    // thread follows what the pane holds now.
     window.localStorage.setItem(
       "focus-board:boardNativeThreadPane",
       JSON.stringify({ paneId: "pane-2", threadId: "thr_older" }),
@@ -435,66 +587,21 @@ describe("a record that no longer matches the window", () => {
         { paneId: "pane-2", threadId: "thr_other", isFocused: false },
       ]);
     });
-  }
-
-  it("asks for a fresh native pane instead of opening the board's own", async () => {
-    seedRethreadedPane();
-    mountBoard();
-    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
-
-    fireEvent.click(cardAnchor("thr_focus"));
-
-    // One ask, naming the CLICKED thread: a thread in no pane, so the host
-    // splits beside the board.
-    expect(fakeNativeOpens()).toEqual([{ threadId: "thr_focus", split: true }]);
-    await waitFor(() => expect(threadPanes()).toEqual(["thr_focus", "thr_other"]));
-    // The pane the operator rethreaded is untouched, and the board never opens
-    // its own pane beside it.
-    expect(inBoardPaneTitle()).toBeNull();
-    expect(fakePanelPushes()).toEqual([]);
-    expect(document.querySelector('[data-focus-board-panel]')).not.toBeNull();
-  });
-
-  it("adopts the pane the host created, so the next click replaces it", async () => {
-    seedRethreadedPane();
-    mountBoard();
-    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
-
-    fireEvent.click(cardAnchor("thr_focus"));
-    await waitFor(() => expect(threadPanes()).toEqual(["thr_focus", "thr_other"]));
-    const created = fakeSplitPanes().find((pane) => pane.threadId === "thr_focus");
-    expect(
-      JSON.parse(
-        window.localStorage.getItem("focus-board:boardNativeThreadPane") ?? "null",
-      ),
-    ).toEqual({ paneId: created?.paneId, threadId: "thr_focus" });
-
-    // The next click replaces in that pane: no fourth pane, and the ask names
-    // the thread the pane shows rather than the clicked one.
-    fireEvent.click(cardAnchor("thr_backlog"));
-    await waitFor(() => expect(threadPanes()).toEqual(["thr_backlog", "thr_other"]));
-    expect(fakeSplitPanes()).toHaveLength(3);
-    expect(fakeNativeOpens().at(-1)).toEqual({ threadId: "thr_focus", split: true });
-  });
-
-  it("never claims a pane the operator already had, even when it shows the clicked thread", async () => {
-    seedRethreadedPane();
     mountBoard();
     await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_other"));
 
-    // The clicked thread is already in the operator's own pane: the ask focuses
-    // that pane and the board adopts nothing, because that pane was there
-    // before the click asked.
     fireEvent.click(cardAnchor("thr_other"));
 
     expect(fakeNativeOpens()).toEqual([{ threadId: "thr_other", split: true }]);
     await waitFor(() => expect(focusedPaneId()).toBe("pane-2"));
     expect(fakeSplitPanes()).toHaveLength(2);
+    expect(fakeThreadNavigations()).toEqual([]);
     expect(inBoardPaneTitle()).toBeNull();
-    // The stale record is dropped rather than left to fail on the next click.
     expect(
-      window.localStorage.getItem("focus-board:boardNativeThreadPane"),
-    ).toBeNull();
+      JSON.parse(
+        window.localStorage.getItem("focus-board:boardNativeThreadPane") ?? "null",
+      ),
+    ).toEqual({ paneId: "pane-2", threadId: "thr_other" });
   });
 
   it("splits beside the board when the board has no record and a pane is already open", async () => {
@@ -521,7 +628,7 @@ describe("a record that no longer matches the window", () => {
     // The second press arrives before the first ask has settled: the ask is
     // superseded rather than stacked (lib/native-fresh-pane.ts keeps one), and
     // the pane the host created is still adopted, so the next click replaces.
-    seedRethreadedPane();
+    seedGonePaneHere();
     mountBoard();
     await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
 
@@ -540,9 +647,10 @@ describe("a record that no longer matches the window", () => {
 
   it("stays in the board when its own pane is already open", async () => {
     // The board's own pane is up (the operator is reading a thread in it) and
-    // the record is stale: a fresh native pane would put three surfaces on
-    // screen, so the click replaces in the pane that is already there.
-    seedRethreadedPane();
+    // the record names a pane that is gone: a fresh native pane would put three
+    // surfaces on screen, so the click replaces in the pane that is already
+    // there.
+    seedGonePaneHere();
     const Component = registeredNavPanel.component;
     if (Component === undefined) throw new Error("app-fake-sdk: no nav panel registered");
     render(<Component subPath="t/thr_older" />);
@@ -555,6 +663,76 @@ describe("a record that no longer matches the window", () => {
     );
     expect(fakeNativeOpens()).toEqual([]);
     expect(fakeSplitPanes()).toHaveLength(2);
+  });
+});
+
+describe("a focus that does not land", () => {
+  // The one outcome this rule must never ship: navigating while the board's
+  // pane is still the focused one, which makes bb replace the BOARD. The click
+  // therefore treats its focus step as a request and waits for the layout to
+  // show the focus moved (app.tsx's landing effect); these two tests pin the
+  // two ways the wait ends without it.
+
+  it("opens the board's own pane when the target pane has no container to press", async () => {
+    window.localStorage.setItem(
+      "focus-board:boardNativeThreadPane",
+      JSON.stringify({ paneId: "pane-2", threadId: "thr_older" }),
+    );
+    act(() => {
+      setFakeSplitLayout([
+        { paneId: "pane-1", threadId: null, isFocused: true },
+        { paneId: "pane-2", threadId: null, isFocused: false },
+      ]);
+    });
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+    // No `[data-split-pane-id]` elements at all: the click cannot press the
+    // pane, so it knows the focus step failed and does not ask the host to
+    // navigate into a pane that is not focused.
+
+    fireEvent.click(cardAnchor("thr_focus"));
+
+    await waitFor(() =>
+      expect(fakePanelPushes().at(-1)).toMatchObject({ path: "board", subPath: "t/thr_focus" }),
+    );
+    expect(fakeThreadNavigations()).toEqual([]);
+    expect(focusedPaneId()).toBe("pane-1");
+    expect(threadPanes()).toEqual([]);
+    // The record is dropped: the next click re-plans from what the host holds.
+    expect(window.localStorage.getItem("focus-board:boardNativeThreadPane")).toBeNull();
+  });
+
+  it("opens the board's own pane when the press does not move the focus", async () => {
+    // A pane container that exists but focuses nothing, the shape a host
+    // change would produce: the deadline is the only thing that ends the wait,
+    // and it ends in the board's own pane, never in a navigation.
+    window.localStorage.setItem(
+      "focus-board:boardNativeThreadPane",
+      JSON.stringify({ paneId: "pane-2", threadId: "thr_older" }),
+    );
+    act(() => {
+      setFakeSplitLayout([
+        { paneId: "pane-1", threadId: null, isFocused: true },
+        { paneId: "pane-2", threadId: null, isFocused: false },
+      ]);
+    });
+    mountBoard();
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+    mountHostPaneContainers({ focuses: false });
+
+    fireEvent.click(cardAnchor("thr_focus"));
+
+    await waitFor(
+      () =>
+        expect(fakePanelPushes().at(-1)).toMatchObject({
+          path: "board",
+          subPath: "t/thr_focus",
+        }),
+      { timeout: 3_000 },
+    );
+    expect(fakeThreadNavigations()).toEqual([]);
+    expect(focusedPaneId()).toBe("pane-1");
+    expect(threadPanes()).toEqual([]);
   });
 });
 
@@ -606,6 +784,45 @@ describe("the developer trace", () => {
       debug.mock.calls.filter((call) => call[0] === "[focus-board:native-open]"),
     ).toEqual([]);
     debug.mockRestore();
+  });
+});
+
+describe("a record that names the board's own pane", () => {
+  it("refuses it and asks for a fresh pane rather than navigating into the board", async () => {
+    // bb names panes `pane-N` and reuses the lowest free number, so a recorded
+    // id can come to name the pane the board itself sits in — after a drag of
+    // the board, or after the pane it named was destroyed and re-created. The
+    // click's focus step would then press the BOARD's container (a no-op, the
+    // board is focused anyway) and the landing navigation would replace the
+    // board itself. The record must not resolve there.
+    window.localStorage.setItem(
+      "focus-board:boardNativeThreadPane",
+      JSON.stringify({ paneId: "pane-2", threadId: "thr_older" }),
+    );
+    act(() => {
+      setFakeSplitLayout([
+        { paneId: "pane-3", threadId: "thr_other", isFocused: false },
+        { paneId: "pane-2", threadId: null, isFocused: true },
+      ]);
+    });
+    const hostPane = document.createElement("div");
+    hostPane.setAttribute("data-split-pane-id", "pane-2");
+    document.body.append(hostPane);
+    const Component = registeredNavPanel.component;
+    if (Component === undefined) throw new Error("app-fake-sdk: no nav panel registered");
+    render(<Component subPath="" />, { container: hostPane });
+    await waitFor(() => expect(columnCardIds("idle-today")).toContain("thr_focus"));
+
+    fireEvent.click(cardAnchor("thr_focus"));
+
+    // The fresh pane is inserted beside the focused pane (the board), so the
+    // layout's order is not the point: the set of thread panes is.
+    await waitFor(() =>
+      expect([...threadPanes()].sort()).toEqual(["thr_focus", "thr_other"]),
+    );
+    expect(fakeSplitPanes()).toHaveLength(3);
+    expect(hostPane.contains(document.querySelector("[data-focus-board-panel]"))).toBe(true);
+    expect(fakeThreadNavigations()).toEqual([]);
   });
 });
 

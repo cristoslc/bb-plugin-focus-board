@@ -6,6 +6,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "bb's thread pages"
   },
   {
+    "text": "**A card click puts its thread in the pane the board already owns, even when that pane shows a page.** The window stops growing a pane per navigation, and the trade is that whatever you were reading in that pane gives way.",
+    "children": [],
+    "group": "bb's thread pages"
+  },
+  {
     "text": "**`/` focuses the search field again with a thread open beside the board.** The board now treats bb's pane container as its own surface, which is where the keyboard sits after any click inside the board. The New Thread key comes back with it.",
     "children": [],
     "group": "The board"

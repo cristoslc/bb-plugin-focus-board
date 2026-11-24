@@ -1,9 +1,16 @@
 // The card click's native pane record, as a pure module: which pane Focus
-// Board opened, and whether the live layout still agrees. The click's branches
-// are exercised through the gesture in
+// Board opened, and whether the live layout still holds it. The click's
+// branches are exercised through the gesture in
 // tests/app-card-click-replaces-board-pane.test.tsx; this file pins the record
 // itself, including the corrupted, stale, and legacy shapes the gesture can
 // only reach from storage.
+//
+// The rule these tests pin is the operator's ruling of 2026-11-24
+// (dec_okjt7e62rg2x, "always take the pane back", corpus entry
+// dl-20261124T050924-68ea): ownership is the PANE ID. A recorded pane present
+// in the live layout is the board's whatever thread it shows, including none.
+// The thread half is advisory — it names the thread the board last put there —
+// and decides nothing.
 import { describe, expect, it } from "vitest";
 
 import {
@@ -90,8 +97,44 @@ describe("the record against the live layout", () => {
     expect(resolveBoardNativePane(BOARD_AND_OWNED, OWNED)).toEqual({
       paneId: "pane-2",
       threadId: "thr_a",
+      shownThreadId: "thr_a",
       isFocused: true,
     });
+  });
+
+  it("holds while the recorded pane shows another thread — the operator rethreaded it", () => {
+    // The operator's ruling (dec_okjt7e62rg2x, "always take the pane back"): the
+    // pane is the board's by id whatever it shows. A navigation the operator
+    // made inside the pane does not hand the board's pane to them.
+    const rethreaded = layout([
+      { paneId: "pane-1", threadId: null, isFocused: false },
+      { paneId: "pane-2", threadId: "thr_elsewhere", isFocused: true },
+    ]);
+    expect(resolveBoardNativePane(rethreaded, OWNED)).toEqual({
+      paneId: "pane-2",
+      threadId: "thr_a",
+      shownThreadId: "thr_elsewhere",
+      isFocused: true,
+    });
+  });
+
+  it("holds while the recorded pane shows no thread at all — a page route", () => {
+    // The rail's Decisions entry navigates the pane to a page, which the host
+    // reports with `threadId: null`. That is still the board's pane.
+    const page = layout([{ paneId: "pane-2", threadId: null, isFocused: false }]);
+    expect(resolveBoardNativePane(page, OWNED)).toEqual({
+      paneId: "pane-2",
+      threadId: "thr_a",
+      shownThreadId: null,
+      isFocused: false,
+    });
+  });
+
+  it("holds while the record names a thread the board no longer lists", () => {
+    // The thread half is advisory: it names what the board last put there, and
+    // a thread that left the board's list says nothing about the pane.
+    const stale = layout([{ paneId: "pane-2", threadId: "thr_gone", isFocused: false }]);
+    expect(resolveBoardNativePane(stale, OWNED)?.paneId).toBe("pane-2");
   });
 
   it("lapses when the pane is gone — the operator closed it", () => {
@@ -99,29 +142,26 @@ describe("the record against the live layout", () => {
     expect(resolveBoardNativePane(withoutPane, OWNED)).toBeNull();
   });
 
-  it("lapses when the pane shows another thread — the operator took it over", () => {
-    const rethreaded = layout([
-      { paneId: "pane-1", threadId: null, isFocused: false },
-      { paneId: "pane-2", threadId: "thr_elsewhere", isFocused: true },
+  it("lapses when the recorded id names the board's own pane", () => {
+    // pane ids are recycled (`pane-N`, lowest free number wins), so a recorded
+    // id can come to name the pane the board itself sits in — after a drag, or
+    // after the pane it named was destroyed and re-created. Navigating "into"
+    // that pane would replace the board, which is the one outcome the click
+    // must never ship, so the record does not resolve there.
+    const boardPane = layout([
+      { paneId: "pane-1", threadId: "thr_b", isFocused: false },
+      { paneId: "pane-2", threadId: null, isFocused: true },
     ]);
-    expect(resolveBoardNativePane(rethreaded, OWNED)).toBeNull();
+    expect(resolveBoardNativePane(boardPane, OWNED, "pane-2")).toBeNull();
   });
 
-  it("lapses when a recycled pane id names a non-thread pane", () => {
-    // bb names panes `pane-N` and reuses the lowest free number, so an id can
-    // outlive the pane it named. The thread half is what refuses it.
-    const recycled = layout([{ paneId: "pane-2", threadId: null, isFocused: true }]);
-    expect(resolveBoardNativePane(recycled, OWNED)).toBeNull();
-  });
-
-  it("lapses when the same thread sits in a different pane", () => {
-    // The operator opened that thread from bb's own sidebar: their pane is
-    // theirs, even when it shows the thread the board put in its own.
-    const theirPane = layout([
-      { paneId: "pane-1", threadId: null, isFocused: false },
-      { paneId: "pane-4", threadId: "thr_a", isFocused: true },
+  it("does not care where the pane sits in the layout", () => {
+    // A dragged pane keeps its id, and position is not ownership.
+    const dragged = layout([
+      { paneId: "pane-2", threadId: "thr_b", isFocused: false },
+      { paneId: "pane-1", threadId: null, isFocused: true },
     ]);
-    expect(resolveBoardNativePane(theirPane, OWNED)).toBeNull();
+    expect(resolveBoardNativePane(dragged, OWNED)?.paneId).toBe("pane-2");
   });
 
   it("has nothing to say without a split or without a record", () => {
