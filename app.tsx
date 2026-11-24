@@ -3377,8 +3377,15 @@ function BoardPage({ subPath }: { subPath: string }) {
           return;
         }
         // A second request for the same thread while the ask is in flight:
-        // one dance, one ask. The host's answer will settle the first one.
-        if (onePaneDance.pending()?.threadId === threadId) {
+        // one dance, one ask. The host's answer will settle the first one. An
+        // ask armed by another branch (a fresh pane, a replacement) is
+        // replaced instead: this click's window has no layout, so its own
+        // answer is the one that has to be repaired.
+        const inFlightAsk = onePaneDance.pending();
+        if (
+          inFlightAsk?.threadId === threadId &&
+          (inFlightAsk.repair ?? "in-board-pane") === "in-board-pane"
+        ) {
           trace("one-pane: the ask is already in flight");
           return;
         }
@@ -3444,6 +3451,18 @@ function BoardPage({ subPath }: { subPath: string }) {
         // clicked thread that is NOT one of these, and never one that is.
         const priorPaneIds = layout.panes.map((pane) => pane.paneId);
         trace("fresh pane: asking the opener beside the board", { priorPaneIds });
+        // The same split ask as the one-pane branch, made from a window with a
+        // layout, so the host is even less likely to navigate. Armed anyway:
+        // the host's opener can answer by replacing the whole page (its own
+        // compact predicate, a layout it cannot place into), and that answer
+        // destroys this panel before the fresh-pane settlement can run. The
+        // guard's restore is the only continuation left (the operator's
+        // 2026-11-24 report, "just navs whole page").
+        onePaneDance.begin({
+          threadId,
+          subPath: paneSubPathFor(threadId),
+          repair: "restore-only",
+        });
         freshPaneAsk.begin({ threadId, priorPaneIds });
         actions.open(threadId, { split: true });
         return;
@@ -3468,6 +3487,21 @@ function BoardPage({ subPath }: { subPath: string }) {
         paneId: owned.paneId,
         from: owned.threadId,
         shownThreadId: owned.shownThreadId,
+      });
+      // The replacement's ask, armed with the guard for the same reason as the
+      // fresh pane's: this click asks the host twice (focus the board's pane,
+      // then navigate into it), and both asks can be answered by a whole-page
+      // navigation. The component's own net below dies with the panel; the
+      // guard's restore does not, and it accepts a navigation to either thread
+      // this click asked for.
+      onePaneDance.begin({
+        threadId,
+        subPath: paneSubPathFor(threadId),
+        askedThreadIds:
+          owned.shownThreadId === null
+            ? [threadId]
+            : [threadId, owned.shownThreadId],
+        repair: "restore-only",
       });
       setBoardNativePane({ paneId: owned.paneId, threadId });
       nativeNavigationRef.current = null;

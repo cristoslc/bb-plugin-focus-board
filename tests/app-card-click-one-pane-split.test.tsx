@@ -26,7 +26,9 @@ import {
   fakeNativeOpens,
   fakePanelPushes,
   fakeSplitPanes,
+  holdFakeNativeOpens,
   registeredNavPanel,
+  releaseFakeNativeOpens,
   resetFakeNativeOpens,
   resetFakePanelPushes,
   seedFakeLinks,
@@ -37,6 +39,7 @@ import {
   setFakeSplitsOff,
 } from "./helpers/app-fake-sdk";
 import { resetHostCapabilitiesForTests } from "../lib/host-capabilities";
+import { onePaneDance } from "../lib/native-one-pane-dance";
 
 const HOUR = 3_600_000;
 
@@ -68,6 +71,8 @@ beforeEach(() => {
   setFakeRouteThread(null);
   setFakeSplitLayout(null);
   setFakeSplitsOff(false);
+  releaseFakeNativeOpens();
+  onePaneDance.cancel();
   // The installed host: a one-pane window carries a layout to split, so the
   // click asks. The host-version store is per module graph and settles once,
   // so every test here starts it fresh against the version it wants.
@@ -276,6 +281,53 @@ describe("a card click in a one-pane window", () => {
       { paneId: "pane-2", threadId: "thr_focus", isFocused: true },
     ]);
     expect(document.querySelector('aside[aria-label^="Thread:"]')).toBeNull();
+  });
+
+  // The operator's 2026-11-24 report: "split pane not working in web browser,
+  // but not falling back to in-pane panel either -- just navs whole page". The
+  // probe against the installed host (scripts/screenshot/probe-web-one-pane.mjs,
+  // evidence in docs/screenshots/probe-web-one-pane/) could not reproduce a
+  // whole-page answer at 1600, 1024 or 700 pixels, so this test drives the
+  // state the report names and the probe cannot reach: a host that answers a
+  // split ask from a window WITH a layout by replacing the whole page. The ask
+  // is the fresh-pane one (the board's recorded pane is gone), and the answer
+  // destroys the panel, so only the module-scope guard can put the board back.
+  it("brings the board back when a two-pane host answers by navigating the whole page", async () => {
+    act(() => {
+      setFakeSplitLayout([
+        { paneId: "pane-1", threadId: null, isFocused: true },
+        { paneId: "pane-2", threadId: "thr_older", isFocused: false },
+      ]);
+    });
+    // The host's placement is held back, so the test can model the answer it
+    // actually gave: no pane, the whole page replaced by the thread.
+    holdFakeNativeOpens();
+    mountBoard();
+    await waitForCards();
+
+    fireEvent.click(cardAnchor("thr_focus"));
+    await waitFor(() =>
+      expect(fakeNativeOpens()).toEqual([{ threadId: "thr_focus", split: true }]),
+    );
+    // The guard is armed for the ask, not only for the one-pane branch.
+    expect(onePaneDance.pending()?.threadId).toBe("thr_focus");
+
+    // The host's answer: the panel is destroyed and the route is the thread.
+    cleanup();
+    window.history.pushState({}, "", "/projects/proj_a/threads/thr_focus");
+    try {
+      await waitFor(
+        () =>
+          expect(fakePanelPushes().at(-1)).toMatchObject({
+            path: "board",
+            subPath: "t/thr_focus",
+          }),
+        { timeout: 3000 },
+      );
+    } finally {
+      window.history.pushState({}, "", "/");
+      releaseFakeNativeOpens();
+    }
   });
 
   it("keeps the ask when the host version cannot be read", async () => {

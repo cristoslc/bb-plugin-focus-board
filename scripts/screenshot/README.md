@@ -374,6 +374,18 @@ host app involved.
   card or sweep clicks. Evidence, the lane-by-lane table and the rule each
   empty slot follows: `docs/screenshots/probe-sweep-pills/`.
 
+- `probe-web-one-pane.mjs` — the operator's 2026-11-24 web-browser report
+  ("split pane not working in web browser … just navs whole page") driven in
+  Chrome against the INSTALLED host, one fresh profile per phase at 1600, 1024
+  and 700 pixels. Per phase it records the click's own `[focus-board:native-open]`
+  branch lines, the host's split-layout atom, the rendered pane containers, the
+  route, the board marker sampled at eight points, whether the boot marker
+  survived (a real document navigation would kill it), and frames at 300ms and
+  2s. It also resolves which frontend bundle hash the host served and whether
+  that bundle carries the split guard's `restore-only` token, so a before/after
+  pair proves which code ran. Evidence and the missing condition:
+  `docs/screenshots/probe-web-one-pane/`.
+
 - `probe-board-touch-scroll.mjs` — the touch-pan grid for issue #328 (the
   phone report: the columns drag around and the board never scrolls). At
   390×844 with `hasTouch` + `isMobile` it drives a real CDP touch pan in both
