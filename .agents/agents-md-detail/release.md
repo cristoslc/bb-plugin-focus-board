@@ -196,8 +196,9 @@ merging into `dev`, releasing, changelog writing, or tagging.
 ## 2b. Release-safety gate (required before tagging a nightly release)
 
 - `npm run release-safety` — it builds, runs every automated UAT suite in
-  `tests/manual` against the real app (reports land in `docs/uat/`), and
-  captures nineteen harness screenshots into `docs/release-safety/`: the
+  `tests/manual` against the real app (reports land in `docs/uat/`), runs the
+  live smoke against the installed host, and captures nineteen harness
+  screenshots into `docs/release-safety/`: the
   board and the open thread pane at desktop 1920×1080, narrow desktop
   1280×800, tablet 768×1024, and phone 390×844; the parent-lane board and
   the group/family view at desktop; the parent-lane board on phone; the
@@ -208,6 +209,27 @@ merging into `dev`, releasing, changelog writing, or tagging.
   What's-new modal, and the new-thread modal at desktop. Any failing UAT
   step stops the release: fix it in a normal landing, never by editing a
   suite green on release day.
+- The live smoke stage (`scripts/uat/live-smoke.mjs`, spawned in its release
+  mode with `--release`) is the one gate that leaves the tree: six checks
+  against the host serving focus-board, in a browser context of its own, of
+  the things the harness cannot see (the real thread page, the real opener,
+  route reconciliation across panes, a transformed ancestor). The six: a
+  card click on a one-pane window splits, a second click replaces, a click
+  after the pane was navigated away keeps the native surface, the in-panel
+  pane header matches bb's own row, `/` and the New Thread letter work with a
+  second pane open, and a thread page's Focus Board menu opens inside the
+  viewport. Its scope is the `[Unreleased]` group
+  (`scripts/uat/live-smoke-scope.ts`): it prints the decision and stands down
+  only when no bullet names the pane, the click path, a pane header, a thread
+  page, the Focus Board thread menu, or a keyboard shortcut. A host that is
+  not answering is a FAILED stage naming the URL, never a skip: start bb and
+  rerun, or stop and report the cut as unverified. Its report is
+  `docs/uat/live-smoke.md`, its frames are
+  `docs/screenshots/live-smoke/<run>/`, and it lists every thread it opened
+  with the read state it saw, because a live run marks threads read. Check 3
+  asserts one pane ruling on purpose (`NAVIGATED_PANE_RULING` in the
+  script): when the always-replace rule lands, the check goes red and the
+  constant is the one-line flip.
 - The screenshots get a judgement pass before tagging. A non-vision agent
   asks a vision-capable model per its vision-dispatch spoke
   (`llm -m synthetic/infinite:small:vision -f <prompt-file> -a <shots...>`,

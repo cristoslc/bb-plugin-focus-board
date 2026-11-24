@@ -35,6 +35,35 @@ Then capture each demo against the tag's own tree (the convention's budget and
 the recorder's commands are in that doc), so the gifs land where the manifest
 says. Capture before `run`, or between `publish` and `upload-demos`.
 
+## 1b. The gate chain, and the one gate that needs a host
+
+Run `npm test`, `npm run build`, and `npm run release-safety` before `run` and
+paste their exit codes. `release-safety` builds, runs every UAT suite, runs the
+live smoke, and captures the release screenshots, and it stops at the first
+failing stage.
+
+The live smoke is the one stage that needs something other than the tree: it
+drives the bb host that is serving focus-board, six checks in a browser context
+of its own (a card click on a one-pane window splits, a second click replaces,
+a click after the pane was navigated away keeps the native surface, the pane
+header matches bb's own row, slash and the New Thread letter work with a second
+pane open, and a thread page's Focus Board menu opens inside the viewport). It
+prints its scope first: it stands down only when no `[Unreleased]` bullet names
+the pane, the click path, a pane header, a thread page, the Focus Board thread
+menu, or a keyboard shortcut. Its report is `docs/uat/live-smoke.md` and its
+frames are `docs/screenshots/live-smoke/<run>/`.
+
+- **Host not running** (`no answer from http://127.0.0.1:38886/...`): start bb
+  and rerun the stage. That is a red gate, not a skip. If this machine cannot
+  serve a host for the cut at all, stop and report the cut as unverified
+  instead of shipping past it: the gate exists because the pane defects it
+  catches are invisible to the harness.
+- **A check red**: keep `docs/uat/live-smoke.md` and the frames, and fix the
+  cause in a normal landing. Never edit a check to pass on release day.
+- **Scope says SKIP**: the gate did not run, and the printed decision names
+  every `[Unreleased]` bullet it read. If a bullet in that list touches the
+  pane, the keyword list in `scripts/uat/live-smoke-scope.ts` is the bug.
+
 ## 2. Then the driver
 
 ```sh
