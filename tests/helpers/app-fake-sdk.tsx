@@ -983,17 +983,23 @@ const fakeSdk = {
     return () => rpcSubscribers.delete(args.callback);
   },
   threads: {
-    list: async (args?: { archived?: boolean }) =>
-      args?.archived === true
-        ? store.threads
-            .filter((thread) => thread.isArchived)
-            .map((thread) => ({
-              id: thread.id,
-              title: thread.displayTitle,
-              titleFallback: null,
-              href: null,
-            }))
-        : [],
+    // Paged like the host (issue #504): the app's archived lookup asks for
+    // 500 rows at a time and stops on a short page, so `limit`/`offset` have
+    // to mean something here or the fake would answer the same rows forever.
+    list: async (args?: { archived?: boolean; limit?: number; offset?: number }) => {
+      if (args?.archived !== true) return [];
+      const offset = args.offset ?? 0;
+      const limit = args.limit ?? 200;
+      return store.threads
+        .filter((thread) => thread.isArchived)
+        .slice(offset, offset + limit)
+        .map((thread) => ({
+          id: thread.id,
+          title: thread.displayTitle,
+          titleFallback: null,
+          href: null,
+        }));
+    },
     get: async ({ threadId }: { threadId: string }) => {
       const found = store.threads.find((thread) => thread.id === threadId);
       return found === undefined

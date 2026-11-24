@@ -63,6 +63,7 @@ import {
   type SnoozeRecord,
 } from "./lib/snooze";
 import { reparentRefusal } from "./lib/reparent";
+import { readAllPages } from "./lib/host-paging";
 import {
   GROUP_METADATA_KEY,
   GROUPS_KV_KEY,
@@ -1291,6 +1292,27 @@ export default async function plugin(bb: BbPluginApi) {
   }
 
   /**
+   * Every live thread, read paged (lib/host-paging, issue #504). bb caps a
+   * `threads.list` that names no limit at 200 rows, and this board holds
+   * more than that, so a one-shot read silently lost every row past the cap.
+   */
+  function listLiveThreads() {
+    return readAllPages("threads", (page) => bb.sdk.threads.list(page));
+  }
+
+  /**
+   * Every archived thread, paged the same way. The archive list is the one
+   * the old `limit: 200` call truncated hardest: archived members are the
+   * rows that fall past the cap first, and a group whose members all fall
+   * past it is pruned out of the registry.
+   */
+  function listArchivedThreads() {
+    return readAllPages("threads", (page) =>
+      bb.sdk.threads.list({ ...page, archived: true }),
+    );
+  }
+
+  /**
    * groupId → assigned-thread count across LIVE and ARCHIVED rows: an
    * archived member still carries its assignment metadata, so it still
    * keeps the group's record alive (the group must reappear with the
@@ -1299,8 +1321,8 @@ export default async function plugin(bb: BbPluginApi) {
    */
   async function countAllGroupMembers(): Promise<Map<string, number>> {
     const [live, archived] = await Promise.all([
-      bb.sdk.threads.list({}),
-      bb.sdk.threads.list({ archived: true, limit: 200 }),
+      listLiveThreads(),
+      listArchivedThreads(),
     ]);
     const counts = new Map<string, number>();
     for (const row of [...live, ...archived]) {
@@ -1516,8 +1538,8 @@ export default async function plugin(bb: BbPluginApi) {
       const store = await readGroupsStore();
       if (store[groupId] === undefined) throw unknownGroupError(groupId);
       const [liveRows, archivedRows] = await Promise.all([
-        bb.sdk.threads.list({}),
-        bb.sdk.threads.list({ archived: true, limit: 200 }),
+        listLiveThreads(),
+        listArchivedThreads(),
       ]);
       const cleared: string[] = [];
       for (const row of [...liveRows, ...archivedRows]) {
@@ -2024,7 +2046,7 @@ export default async function plugin(bb: BbPluginApi) {
    * behind it.
    */
   async function armAllSnoozes(): Promise<void> {
-    const rows = await bb.sdk.threads.list({});
+    const rows = await listLiveThreads();
     for (const row of rows) {
       try {
         const record = await readSnoozeRecord(row.id);
@@ -2584,7 +2606,7 @@ export default async function plugin(bb: BbPluginApi) {
       // runs first for the same reason done_list runs it: a legacy KV row must
       // be consumed before any read builds the done projection.
       await importLegacyDone();
-      const rows = await bb.sdk.threads.list({});
+      const rows = await listLiveThreads();
       const pending = new Map<string, Promise<Record<string, JsonValue>>>();
       const readOnce: NamespaceRead = (threadId) => {
         const hit = pending.get(threadId);
@@ -2605,7 +2627,7 @@ export default async function plugin(bb: BbPluginApi) {
     },
     done_list: async () => {
       await importLegacyDone();
-      return donePayload(await bb.sdk.threads.list({}), readNamespace);
+      return donePayload(await listLiveThreads(), readNamespace);
     },
     done_set: async ({ threadId, done }) => {
       // Consume any legacy KV state before the first metadata write, or a
@@ -2618,7 +2640,7 @@ export default async function plugin(bb: BbPluginApi) {
     link_list: async () => {
       // The live list only, like pin_parks_list: a link on an archived
       // thread has no chip to drive (the card is not on the board).
-      return listLinksFor(await bb.sdk.threads.list({}), readNamespace);
+      return listLinksFor(await listLiveThreads(), readNamespace);
     },
     link_set: async ({ threadId, repo, number, kind, url, label, source }) => {
       const now = new Date();
@@ -2663,7 +2685,7 @@ export default async function plugin(bb: BbPluginApi) {
       // The live list only: a park on an archived thread has no consumer —
       // un-archiving returns the thread through done state, not a pin — and
       // the SDK scan the done CLI lacks is not needed here.
-      return listParksFor(await bb.sdk.threads.list({}), readNamespace);
+      return listParksFor(await listLiveThreads(), readNamespace);
     },
     pin_park_set: async ({ threadId, parked }) => {
       await writePinPark(threadId, parked);
@@ -2675,7 +2697,7 @@ export default async function plugin(bb: BbPluginApi) {
       // record stays dormant in metadata and re-arms if the thread returns
       // still errored; the client's stale sweep drops it after any turn
       // that leaves the error status, so a later error is never masked.
-      return listAcksFor(await bb.sdk.threads.list({}), readNamespace);
+      return listAcksFor(await listLiveThreads(), readNamespace);
     },
     error_ack_set: async ({ threadId, acked }) => {
       await writeErrorAck(threadId, acked);
@@ -2686,7 +2708,7 @@ export default async function plugin(bb: BbPluginApi) {
       // The live list only, like pin_parks_list: a snooze record on an
       // archived thread has no board consumer (snoozed cards never leave
       // their column), and the wake scan below reads the same list.
-      return listSnoozesFor(await bb.sdk.threads.list({}), readNamespace);
+      return listSnoozesFor(await listLiveThreads(), readNamespace);
     },
     snooze_set: async ({ threadId, wakeAt }) => {
       const wakeMs = Date.parse(wakeAt);
@@ -2984,10 +3006,10 @@ export default async function plugin(bb: BbPluginApi) {
     thread_reparent: async ({ threadId, parentThreadId }) => {
       // Validate against fresh rows, not the board's map — a family some
       // other surface moved between the dragover and the drop must not get
-      // a second write on top. (list({}) returns live rows; an archived id
-      // reads as a missing one, which refuses too.)
-      const rows = await bb.sdk.threads.list({});
-      // list({}) returns live rows; archivedAt is the row's archive stamp.
+      // a second write on top. (the live read returns live rows; an archived
+      // id reads as a missing one, which refuses too.)
+      const rows = await listLiveThreads();
+      // The live read returns live rows; archivedAt is the row's archive stamp.
       const live = rows.map((row) => ({
         id: row.id,
         parentThreadId: row.parentThreadId,
@@ -3047,7 +3069,7 @@ export default async function plugin(bb: BbPluginApi) {
     groups_list: async () => {
       // Live rows only, like the other list scans: an archived member has
       // no card to box, and unarchive brings the assignment back with it.
-      return listGroupsFor(await bb.sdk.threads.list({}), readNamespace);
+      return listGroupsFor(await listLiveThreads(), readNamespace);
     },
     group_create: async ({ name }) => {
       const { id, record } = await createGroupNamed(name);
@@ -3136,8 +3158,8 @@ export default async function plugin(bb: BbPluginApi) {
     liveIds: Set<string>;
   }> {
     const [live, archivedRows] = await Promise.all([
-      bb.sdk.threads.list({}),
-      bb.sdk.threads.list({ archived: true, limit: 200 }),
+      listLiveThreads(),
+      listArchivedThreads(),
     ]);
     const byId = new Map<string, ThreadRow>();
     for (const thread of [...live, ...archivedRows]) byId.set(thread.id, thread);
@@ -3967,7 +3989,7 @@ export default async function plugin(bb: BbPluginApi) {
       json: { type: "boolean", description: "Emit machine-readable JSON" },
     },
     async run(input) {
-      const rows = await bb.sdk.threads.list({});
+      const rows = await listLiveThreads();
       const records: Array<{
         id: string;
         title: string | null;
