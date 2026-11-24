@@ -15,13 +15,17 @@ export const settledSoFar = (destination: SweepDestination): string =>
  * view's column headers and the Parent view's row rail — so the affordance,
  * its states, and its wording cannot drift apart between the two boards.
  *
- * Always present on a sweepable lane or row: sweep mode is enterable on
- * demand, even when nothing is past the threshold yet. With no pre-selection
- * the button is icon-only; armed, it confirms whatever the operator's live
- * selection holds, and an empty selection cannot confirm. The broom is the
- * pill's only glyph and the word "Sweep" appears nowhere: the word repeated
- * on every column header read as noise, and the broom plus the count (plus
- * the destination, armed) carries the meaning at a glance.
+ * A sweepable lane or row carries the pill only while it has something to
+ * propose: an armed sweep, a running one, or at least one eligible thread.
+ * The manual arms (Pinned, Unread, the fresher idle buckets) therefore rest
+ * bare until the operator arms them from the lane menu's "Sweep this lane…",
+ * and a preselecting arm such as Done rests bare while its eligible set is
+ * empty (ruling dl-20261105T165850-324f). With no pre-selection the button is
+ * icon-only; armed, it confirms whatever the operator's live selection holds,
+ * and an empty selection cannot confirm. The broom is the pill's only glyph
+ * and the word "Sweep" appears nowhere: the word repeated on every column
+ * header read as noise, and the broom plus the count (plus the destination,
+ * armed) carries the meaning at a glance.
  */
 export function SweepButton({
   eligibleCount,

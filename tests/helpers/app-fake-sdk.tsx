@@ -601,6 +601,25 @@ let fakeGroups: Record<string, { name: string; createdAt: string }> = {};
 let fakeGroupMemberships: Record<string, string> = {};
 let fakeGroupSeq = 0;
 
+// The Done index the plugin server holds, seeded per test: the done ids plus
+// their records (`doneAt`, optional `keep`). It is what the board's
+// DoneAgeSource reads, so a suite that needs the Done arm to propose
+// something seeds a stamp past `sweepConfig.doneArchiveMs` here rather than
+// fabricating eligibility at the Board's props (which would skip the app's
+// own sweep law). Empty by default: a done-less board is every other suite's
+// starting state.
+let fakeDoneIds: string[] = [];
+let fakeDoneRecords: Record<string, { doneAt: string; keep?: boolean }> = {};
+
+/** Seed the fake Done index (fresh per test; pass nothing to clear). */
+export function seedFakeDone(
+  doneIds: readonly string[] = [],
+  records: Record<string, { doneAt: string; keep?: boolean }> = {},
+): void {
+  fakeDoneIds = [...doneIds];
+  fakeDoneRecords = structuredClone(records);
+}
+
 // The linked-issue records the plugin server (server.ts link_*) holds, seeded
 // per test: thread id → the array shape parseLinkedIssues validates. Tests
 // seed GitHub-shaped entries (repo + issue + kind + href + createdAt +
@@ -689,7 +708,7 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
       // handlers answer with, so a suite that seeds links/groups sees them
       // through the mount exactly as it does through a signal refetch.
       return {
-        done: { doneIds: [], records: {} },
+        done: { doneIds: [...fakeDoneIds], records: structuredClone(fakeDoneRecords) },
         parks: { parks: {} },
         links: { links: structuredClone(fakeLinks) },
         acks: { ackIds: [], records: {} },
@@ -700,7 +719,7 @@ const rpcCall = async (method: string, args?: unknown): Promise<unknown> => {
         },
       };
     case "done_list":
-      return { doneIds: [], records: {} };
+      return { doneIds: [...fakeDoneIds], records: structuredClone(fakeDoneRecords) };
     case "pin_parks_list":
       return { parks: {} };
     case "sweep_config_get":
