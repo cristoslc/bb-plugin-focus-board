@@ -83,6 +83,7 @@ Run these in your checkout and paste any failure into the pull request instead o
 | `npm run build` | When the change affects the shipped bundle |
 | `npm run gates` | When the change touches network calls, storage, or anything security-adjacent |
 | `npm run uat` | When the change alters board interaction. Needs `npm run build` first and a system Chrome (`CHROME_PATH` if it is not in the default place). Run one suite with `npm run uat -- tests/manual/uat-rank.yaml` |
+| `npm run live-smoke` | When the change touches the card click path, the thread pane, its header, or the two board shortcuts. It drives the INSTALLED bb host, not the build: start bb (`BB_APP` if it is not `http://127.0.0.1:38886/plugins/focus-board/board`) and keep the plugin loaded. Two or three minutes, a report in `docs/uat/live-smoke.md` |
 
 ## Changelog
 

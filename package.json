@@ -11,6 +11,8 @@
     "preuat": "node scripts/check-node-modules.mjs",
     "uat": "node scripts/uat/run.mjs",
     "release-shots": "node scripts/uat/release-shots.mjs",
+    "prelive-smoke": "node scripts/check-node-modules.mjs",
+    "live-smoke": "node scripts/uat/live-smoke.mjs",
     "release-safety": "node scripts/release-safety.mjs",
     "perf:load": "node scripts/perf/load-bench.mjs",
     "perf:sweep": "node scripts/perf/sweep-latency.mjs",

@@ -70,11 +70,12 @@ describe("runReleaseSafety", () => {
     expect(code).toBe(1);
   });
 
-  it("exposes the four documented stages in order", () => {
+  it("exposes the five documented stages in order", () => {
     expect(RELEASE_SAFETY_STAGES.map((stage: { name: string }) => stage.name)).toEqual([
       "check-node-modules",
       "build",
       "uat",
+      "live-smoke",
       "release-shots",
     ]);
   });

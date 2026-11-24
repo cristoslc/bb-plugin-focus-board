@@ -1,8 +1,16 @@
 /**
- * The release-safety gate runner: the four stages of `npm run
- * release-safety` — the node_modules guard, the build, the UAT sweep, and the
+ * The release-safety gate runner: the stages of `npm run release-safety` —
+ * the node_modules guard, the build, the UAT sweep, the live smoke, and the
  * release screenshots — with the release notification contract wired in
  * (`.agents/agents-md-detail/release.md` section 2b).
+ *
+ * The live smoke drives the INSTALLED host in a browser context of its own
+ * (scripts/uat/live-smoke.mjs), and `--release` is its release mode: it prints
+ * the scope decision over the `[Unreleased]` group and stands down only when
+ * no bullet touches the pane or the click path
+ * (scripts/uat/live-smoke-scope.ts). In scope with no host answering, it exits
+ * non-zero and names the URL: a red gate stops the release, never a green run
+ * that proved nothing.
  *
  * The runner exists so a failure names its gate. The old package.json chain
  * (`a && b && c && d`) exits with the first failing stage's code but leaves no
@@ -25,6 +33,7 @@ export const RELEASE_SAFETY_STAGES = [
   { name: "check-node-modules", command: process.execPath, args: ["scripts/check-node-modules.mjs"] },
   { name: "build", command: NPM, args: ["run", "build"] },
   { name: "uat", command: NPM, args: ["run", "uat"] },
+  { name: "live-smoke", command: process.execPath, args: ["scripts/uat/live-smoke.mjs", "--release"] },
   { name: "release-shots", command: NPM, args: ["run", "release-shots"] },
 ];
 
