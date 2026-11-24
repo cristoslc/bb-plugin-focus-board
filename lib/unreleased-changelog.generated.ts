@@ -6,6 +6,11 @@ export const UNRELEASED_ITEMS: readonly { text: string; children: string[]; grou
     "group": "The board"
   },
   {
+    "text": "**Marking a thread done from the thread pane's header closes that pane.** Done puts the card at the top of the Done lane, so the close leaves you looking at the thread you just finished. Mark Not Done stays put, and a failed write leaves the pane alone.",
+    "children": [],
+    "group": "bb's thread pages"
+  },
+  {
     "text": "**A card click that bb answers by navigating the whole page still lands on the board.** The click's split ask now keeps its repair armed wherever it asks, so the board comes back with the thread in its own pane instead of vanishing. A host that answers late, after the board's own pane already opened, is caught too.",
     "children": [],
     "group": "bb's thread pages"

@@ -30,10 +30,14 @@ vi.mock("@get-bb/plugin-sdk/app", async () => await import("./helpers/app-fake-s
 
 import "../app";
 import {
+  fakePanelPushes,
   fakeRpcCalls,
+  fakeThreadNavigations,
   fireRealtime,
   registeredThreadHeaderAction,
+  resetFakePanelPushes,
   resetFakeRpcCalls,
+  resetFakeThreadNavigations,
   seedFakeThreadMetadata,
   seedFakeThreads,
 } from "./helpers/app-fake-sdk";
@@ -45,6 +49,8 @@ afterEach(() => {
   hostHeader?.remove();
   hostHeader = null;
   resetFakeRpcCalls();
+  resetFakeThreadNavigations();
+  resetFakePanelPushes();
 });
 
 beforeEach(() => {
@@ -222,6 +228,27 @@ describe("the control on a native thread page", () => {
       const call = fakeRpcCalls().find((entry) => entry.method === "done_set");
       expect(call).toMatchObject({ args: { threadId: "thr_x", done: true } });
     });
+  });
+
+  // bb's own thread page has no close lever a plugin may reach: the SDK's
+  // `experimental_useSidebarThreadActions` offers open/openNewThread/setPinned/
+  // setRead/rename/archive/requestDelete, `threads.paneAction` accepts only
+  // spotlight/maximize/restore/toggle, and `useSidebarSplitLayout()` is a read.
+  // `pane.close` exists as a host keybinding name and nothing more. So the
+  // pane's new close-after-Mark-Done stops at the board's own pane, and this
+  // surface keeps writing the mark and nothing else. Pinned so a future host
+  // lever arrives as a deliberate addition rather than a stray side effect.
+  it("closes nothing on bb's own thread page: the mark is the whole gesture", async () => {
+    mountControl();
+    await openPopover();
+    fireEvent.click(doneRow());
+    await waitFor(() => {
+      expect(fakeRpcCalls().some((entry) => entry.method === "done_set")).toBe(true);
+    });
+    // No route change, no panel push, no host pane call: nothing in the plugin
+    // moved the operator off the page they were reading.
+    expect(fakeThreadNavigations()).toEqual([]);
+    expect(fakePanelPushes()).toEqual([]);
   });
 
   it("draws the done state as the menu row's check, not on the trigger", async () => {

@@ -25,11 +25,26 @@
 // scripts/screenshot/probe-pane-header-parity.mjs's evidence.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createElement, type ReactNode } from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ThreadPane } from "../components/thread-pane";
 import { CompactViewportOverrideProvider } from "../components/ui/hooks/use-compact-viewport";
 
 const noop = () => {};
+
+/** A `done_set` write the test settles by hand, so "in flight" is observable. */
+function deferred(): {
+  promise: Promise<void>;
+  resolve: () => void;
+  reject: (error: Error) => void;
+} {
+  let resolve: () => void = () => {};
+  let reject: (error: Error) => void = () => {};
+  const promise = new Promise<void>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
 
 vi.mock("@get-bb/plugin-sdk/app", () => ({
   ThreadChat: (): ReactNode => null,
@@ -71,13 +86,15 @@ function renderPane({
   done = false,
   snoozeWakeAt = null,
   onToggleDone = noop,
+  onClose = noop,
   onOpenSnoozePicker,
   onNewChildThread,
 }: {
   compact?: boolean;
   done?: boolean;
   snoozeWakeAt?: number | null;
-  onToggleDone?: (done: boolean) => void;
+  onToggleDone?: (done: boolean) => Promise<void> | void;
+  onClose?: () => void;
   onOpenSnoozePicker?: () => void;
   onNewChildThread?: () => void;
 } = {}) {
@@ -101,7 +118,7 @@ function renderPane({
         onToggleUnread: noop,
         onRename: async () => {},
         onMaximize: noop,
-        onClose: noop,
+        onClose,
         escStopsRunningThread: false,
         snoozeWakeAt,
         onOpenSnoozePicker,
@@ -294,5 +311,85 @@ describe("the pane header's Focus Board control at compact width", () => {
     expect(menuLabels(menu)).toEqual(["Mark Done", "Snooze…", "New child thread…"]);
     fireEvent.click(screen.getByRole("menuitemradio", { name: "Mark Done" }));
     expect(onToggleDone).toHaveBeenCalledWith(true);
+  });
+});
+
+// The operator's ask of 2026-11-24: marking a thread done from the pane header
+// also closes the pane. Marking done moves the card to the top of the Done
+// lane, so the close lands on the board with the card they just acted on in
+// plain sight; the close is the point of the gesture, not a side effect.
+//
+// The rules the pane half has to keep. The gate itself lives in the shared
+// control (tests/focus-board-thread-menu.test.tsx pins it there); these repeat
+// them at the pane's own wiring, which is what the operator actually touches:
+// - the close waits for the `done_set` write to land, so a rejected write
+//   leaves the pane exactly where it was;
+// - Mark Not Done never closes: it is the undo, and closing would hide the
+//   thread the operator just put back;
+// - the phone sheet closes through the same `onClose` its back button runs.
+describe("the pane closes after Mark Done", () => {
+  it.each([false, true])(
+    "waits for the write, then closes the pane (compact: %s)",
+    async (compact) => {
+      const write = deferred();
+      const onClose = vi.fn();
+      const onToggleDone = vi.fn(() => write.promise);
+      renderPane({ compact, onToggleDone, onClose });
+
+      openBoardMenu();
+      fireEvent.click(screen.getByRole("menuitemradio", { name: "Mark Done" }));
+      expect(onToggleDone).toHaveBeenCalledWith(true);
+      // In flight: the pane stays until the mark has actually landed.
+      expect(onClose).not.toHaveBeenCalled();
+
+      write.resolve();
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+    },
+  );
+
+  it("leaves the pane open on Mark Not Done", async () => {
+    const onClose = vi.fn();
+    const onToggleDone = vi.fn(async () => {});
+    renderPane({ done: true, onToggleDone, onClose });
+
+    openBoardMenu();
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Mark Not Done" }));
+    expect(onToggleDone).toHaveBeenCalledWith(false);
+    // The write settles, and the pane still holds the thread it un-did.
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "Focus Board thread menu" })).toBeNull();
+    });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("leaves the pane open when the done write rejects", async () => {
+    const onClose = vi.fn();
+    const onToggleDone = vi.fn(async () => {
+      throw new Error("done_set failed");
+    });
+    renderPane({ onToggleDone, onClose });
+
+    openBoardMenu();
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Mark Done" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "Focus Board thread menu" })).toBeNull();
+    });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("closes nothing for the rows that are not the done row", async () => {
+    const onClose = vi.fn();
+    renderPane({ onClose, onOpenSnoozePicker: noop, onNewChildThread: noop });
+
+    openBoardMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Snooze…" }));
+    openBoardMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: "New child thread…" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "Focus Board thread menu" })).toBeNull();
+    });
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

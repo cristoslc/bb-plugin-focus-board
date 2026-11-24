@@ -13,6 +13,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **The Idle · Earlier lane offers its sweep again.** It proposes the threads past the idle threshold, with the count on its pill, where it used to offer nothing at all. The two fresher idle buckets stay manual.
 
+#### bb's thread pages
+
+- **Marking a thread done from the thread pane's header closes that pane.** Done puts the card at the top of the Done lane, so the close leaves you looking at the thread you just finished. Mark Not Done stays put, and a failed write leaves the pane alone.
+
 ### Fixed
 
 #### bb's thread pages

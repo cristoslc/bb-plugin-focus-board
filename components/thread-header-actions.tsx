@@ -127,15 +127,29 @@ export function FocusBoardThreadHeaderAction({
 
   // Done: the pane header's own semantics — optimistic flip, the same
   // `done_set` RPC, and any done toggle lifts a snooze first (the pane's
-  // "a state change lifts any snooze first" rule).
-  const toggleDone = useCallback(() => {
-    const done = !state.done;
-    setState((current) => ({ ...current, done, snoozeWakeAt: null }));
-    if (state.snoozeWakeAt !== null) {
-      rpc.call("snooze_clear", { threadId }).catch(() => refresh());
-    }
-    rpc.call("done_set", { threadId, done }).catch(() => refresh());
-  }, [state.done, state.snoozeWakeAt, threadId, rpc, refresh]);
+  // "a state change lifts any snooze first" rule). The shared control hands
+  // the target state over rather than a bare toggle, so the two headers
+  // cannot disagree about which way a click goes.
+  //
+  // Nothing continues here, and that is deliberate: this surface is bb's own
+  // thread page, and the plugin SDK offers no close for a host pane. Store
+  // reads (`useSidebarSplitLayout`), the sidebar actions (open, pin, read,
+  // rename, archive, requestDelete) and `threads.paneAction`
+  // (spotlight/maximize/restore/toggle) are the whole reachable surface, and
+  // `pane.close` exists only as a host keybinding name. So a Mark Done on
+  // bb's own page writes the mark and leaves the page where it is, and the
+  // close-after-done half ships on the board's own pane alone until the host
+  // exposes a close (or an open with a close-on-done option).
+  const toggleDone = useCallback(
+    (done: boolean) => {
+      setState((current) => ({ ...current, done, snoozeWakeAt: null }));
+      if (state.snoozeWakeAt !== null) {
+        rpc.call("snooze_clear", { threadId }).catch(() => refresh());
+      }
+      rpc.call("done_set", { threadId, done }).catch(() => refresh());
+    },
+    [state.snoozeWakeAt, threadId, rpc, refresh],
+  );
 
   // Snooze: the SnoozeDialog both set and edit run through (fresh: confirm
   // stamps a new wake; edit: confirm re-stamps, remove clears).
