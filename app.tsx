@@ -15,6 +15,7 @@ import {
 import type { PluginSidebarThread } from "@get-bb/plugin-sdk/app";
 import { findTicketRefs, forgejoItemBase, resolveRepoSlug } from "./lib/tickets";
 import { MOUNT_SETTLE_CEILING_MS, scheduleIdleCallback } from "./lib/idle-callback";
+import { readAllPages } from "./lib/host-paging";
 import {
   applyBoardScroll,
   hasRestoredPosition,
@@ -1065,8 +1066,9 @@ function BoardPage({ subPath }: { subPath: string }) {
   }, [sdk]);
   useEffect(() => {
     let cancelled = false;
-    sdk.threads
-      .list({ archived: true, limit: 200 })
+    // Paged (lib/host-paging, issue #504): the host caps an unbounded list at
+    // 200 rows, and the archived rows are exactly the ones that fall past it.
+    readAllPages("threads", (page) => sdk.threads.list({ ...page, archived: true }))
       .then(
         (result) => {
           if (!cancelled) {

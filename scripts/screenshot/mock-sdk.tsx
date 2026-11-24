@@ -1087,15 +1087,20 @@ const mockSdk = {
     // archived thread's pane resolvable; the rows carry the sidebar's
     // title/titleFallback/href shape. Everything else keeps the historic
     // empty list (the board reads the sidebar through the hooks above).
-    list: async (args?: { archived?: boolean }) =>
-      args?.archived === true
-        ? simArchived.map((thread) => ({
-            id: thread.id,
-            title: thread.displayTitle,
-            titleFallback: null,
-            href: null,
-          }))
-        : [],
+    // `limit`/`offset` are honoured exactly as bb's own page honours them
+    // (issue #504): the caller pages until a short page, so a mock that
+    // ignored the offset would loop or throw rather than serve a list.
+    list: async (args?: { archived?: boolean; limit?: number; offset?: number }) => {
+      if (args?.archived !== true) return [];
+      const offset = args.offset ?? 0;
+      const limit = args.limit ?? 200;
+      return simArchived.slice(offset, offset + limit).map((thread) => ({
+        id: thread.id,
+        title: thread.displayTitle,
+        titleFallback: null,
+        href: null,
+      }));
+    },
     // The pane resolves the thread's environment once (the inline-code
     // decoration gates on it); mirror the fixture's own environment id. The
     // display title rides along because the native-header control labels its
