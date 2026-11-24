@@ -1,0 +1,193 @@
+{
+  "app": "http://localhost:5199/",
+  "viewport": {
+    "width": 1800,
+    "height": 1200
+  },
+  "errors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "lanes": [
+    {
+      "id": "pinned",
+      "closing": false,
+      "label": "Pinned",
+      "count": "2",
+      "pill": null,
+      "cancel": false,
+      "cards": 2
+    },
+    {
+      "id": "attention",
+      "closing": false,
+      "label": "Needs you",
+      "count": "2",
+      "pill": null,
+      "cancel": false,
+      "cards": 2
+    },
+    {
+      "id": "unread",
+      "closing": false,
+      "label": "Unread",
+      "count": "3",
+      "pill": null,
+      "cancel": false,
+      "cards": 3
+    },
+    {
+      "id": "working",
+      "closing": false,
+      "label": "Working",
+      "count": "3",
+      "pill": null,
+      "cancel": false,
+      "cards": 8
+    },
+    {
+      "id": "idle-recent",
+      "closing": false,
+      "label": "Idle · Recent",
+      "count": "3",
+      "pill": null,
+      "cancel": false,
+      "cards": 3
+    },
+    {
+      "id": "idle-today",
+      "closing": false,
+      "label": "Idle · Today",
+      "count": "2",
+      "pill": null,
+      "cancel": false,
+      "cards": 2
+    },
+    {
+      "id": "idle-earlier",
+      "closing": false,
+      "label": "Idle · Earlier",
+      "count": "2",
+      "pill": null,
+      "cancel": false,
+      "cards": 2
+    },
+    {
+      "id": "idle-awhile",
+      "closing": false,
+      "label": "Idle · A while ago",
+      "count": "5",
+      "pill": {
+        "label": "Arm sweep for this column: 1 eligible threads",
+        "text": "1"
+      },
+      "cancel": false,
+      "cards": 14
+    },
+    {
+      "id": "done",
+      "closing": false,
+      "label": "Done",
+      "count": "3",
+      "pill": {
+        "label": "Arm sweep for this column: 2 eligible threads",
+        "text": "2"
+      },
+      "cancel": false,
+      "cards": 4
+    }
+  ],
+  "menus": [
+    {
+      "columnId": "pinned",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Sweep this lane…"
+      ]
+    },
+    {
+      "columnId": "attention",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first"
+      ]
+    },
+    {
+      "columnId": "unread",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Sweep this lane…"
+      ]
+    },
+    {
+      "columnId": "working",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Collapse all",
+        "Expand all",
+        "Hide idle children",
+        "Show idle children"
+      ]
+    },
+    {
+      "columnId": "idle-recent",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Sweep this lane…"
+      ]
+    },
+    {
+      "columnId": "idle-today",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Sweep this lane…"
+      ]
+    },
+    {
+      "columnId": "idle-earlier",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Sweep this lane…"
+      ]
+    },
+    {
+      "columnId": "idle-awhile",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Collapse all",
+        "Expand all",
+        "Hide idle children",
+        "Show idle children",
+        "Sweep this lane…"
+      ]
+    },
+    {
+      "columnId": "done",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Collapse all",
+        "Expand all",
+        "Hide idle children",
+        "Show idle children",
+        "Sweep this lane…"
+      ]
+    }
+  ],
+  "laneDirection": "vertical"
+}

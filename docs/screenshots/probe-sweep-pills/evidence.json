@@ -1,0 +1,144 @@
+{
+  "app": "http://127.0.0.1:38886/plugins/focus-board/board",
+  "viewport": {
+    "width": 1800,
+    "height": 1200
+  },
+  "errors": [],
+  "lanes": [
+    {
+      "id": "pinned",
+      "closing": false,
+      "label": "Pinned",
+      "count": "13",
+      "pill": null,
+      "cancel": false,
+      "cards": 13
+    },
+    {
+      "id": "unread",
+      "closing": false,
+      "label": "Unread",
+      "count": "15",
+      "pill": null,
+      "cancel": false,
+      "cards": 16
+    },
+    {
+      "id": "working",
+      "closing": false,
+      "label": "Working",
+      "count": "4",
+      "pill": null,
+      "cancel": false,
+      "cards": 4
+    },
+    {
+      "id": "idle-recent",
+      "closing": false,
+      "label": "Idle · Recent",
+      "count": "3",
+      "pill": null,
+      "cancel": false,
+      "cards": 3
+    },
+    {
+      "id": "idle-today",
+      "closing": false,
+      "label": "Idle · Today",
+      "count": "7",
+      "pill": null,
+      "cancel": false,
+      "cards": 8
+    },
+    {
+      "id": "idle-earlier",
+      "closing": false,
+      "label": "Idle · Earlier",
+      "count": "13",
+      "pill": null,
+      "cancel": false,
+      "cards": 17
+    }
+  ],
+  "menus": [
+    {
+      "columnId": "pinned",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Collapse all",
+        "Expand all",
+        "Hide idle children",
+        "Show idle children",
+        "Sweep this lane…"
+      ]
+    },
+    {
+      "columnId": "unread",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Collapse all",
+        "Expand all",
+        "Hide idle children",
+        "Show idle children",
+        "Sweep this lane…"
+      ]
+    },
+    {
+      "columnId": "working",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Collapse all",
+        "Expand all",
+        "Hide idle children",
+        "Show idle children"
+      ]
+    },
+    {
+      "columnId": "idle-recent",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Collapse all",
+        "Expand all",
+        "Hide idle children",
+        "Show idle children",
+        "Sweep this lane…"
+      ]
+    },
+    {
+      "columnId": "idle-today",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Collapse all",
+        "Expand all",
+        "Hide idle children",
+        "Show idle children",
+        "Sweep this lane…"
+      ]
+    },
+    {
+      "columnId": "idle-earlier",
+      "open": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Collapse all",
+        "Expand all",
+        "Hide idle children",
+        "Show idle children",
+        "Sweep this lane…"
+      ]
+    }
+  ],
+  "laneDirection": "vertical"
+}

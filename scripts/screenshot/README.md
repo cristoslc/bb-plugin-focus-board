@@ -364,6 +364,16 @@ host app involved.
   harness first (same as above); honors the same `CHROME_PATH`, `HARNESS_URL`,
   and `OUT_DIR` overrides.
 
+- `probe-sweep-pills.mjs` — which lane headers carry the sweep pill, and which
+  lanes offer the manual door instead. Reads every rendered lane's label, bare
+  count, card count, pill and its accessible label, then opens each lane's own
+  menu and records its entries. Reads the LIVE board by default, or the
+  harness when `BB_APP` names it, and waits for a settled card census before
+  reading, because the host's sidebar list streams in and a
+  first paint can hold a partial lane set. Read-only: own browser context, no
+  card or sweep clicks. Evidence, the lane-by-lane table and the rule each
+  empty slot follows: `docs/screenshots/probe-sweep-pills/`.
+
 - `probe-board-touch-scroll.mjs` — the touch-pan grid for issue #328 (the
   phone report: the columns drag around and the board never scrolls). At
   390×844 with `hasTouch` + `isMobile` it drives a real CDP touch pan in both
