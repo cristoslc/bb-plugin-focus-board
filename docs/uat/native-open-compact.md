@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-11-23T21:05:00.290Z by `npm run uat`._
+_Generated 2026-11-24T05:25:29.586Z by `npm run uat`._
 
 ## native-open-compact
 

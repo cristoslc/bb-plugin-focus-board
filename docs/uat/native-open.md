@@ -1,6 +1,6 @@
 # UAT report
 
-_Generated 2026-11-23T21:04:52.668Z by `npm run uat`._
+_Generated 2026-11-24T05:25:22.629Z by `npm run uat`._
 
 ## native-open
 
@@ -10,8 +10,9 @@ Source: `tests/manual/uat-native-open.yaml` · theme dark
 | --- | --- | --- |
 | A card click in a one-pane window opens the thread beside the board | pass | ✓ native open thr_uat_queue with split; ✓ native panes ["thr_uat_queue"]; ✓ native pane count 2; ✓ pane closed; ✓ card thr_review_pr in the columns board's view; ✓ active card is thr_uat_queue |
 | A second card click replaces the thread in the pane, still two panes | pass | ✓ native panes ["thr_rpc_auth"]; ✓ native pane count 2; ✓ pane closed; ✓ route stayed on a thread |
-| With its record stale, a card click opens a fresh native pane instead of the board's own | pass | ✓ native open thr_uat_queue with split; ✓ native panes ["thr_uat_queue","thr_review_pr"]; ✓ native pane count 3; ✓ pane closed |
-| The pane a stale-record click created is replaced by the next card click | pass | ✓ native panes ["thr_rpc_auth","thr_review_pr"]; ✓ native pane count 3; ✓ pane closed |
+| With the board's pane rethreaded by the operator, a card click replaces in that pane | pass | ✓ native open thr_review_pr with split; ✓ native panes ["thr_uat_queue"]; ✓ native pane count 2; ✓ pane closed; ✓ route stayed on a thread |
+| The pane the operator rethreaded is replaced again by the next card click | pass | ✓ native panes ["thr_rpc_auth"]; ✓ native pane count 2; ✓ pane closed |
+| With a page in the board's pane, a card click puts the thread in that same pane | pass | ✓ native panes ["thr_uat_queue"]; ✓ native pane count 2; ✓ pane closed; ✓ route stayed on a thread |
 | A card clicked from a scrolled board stays inside the board after the native pane opens | pass | ✓ native panes ["thr_icon_lazy"]; ✓ native pane count 2; ✓ card thr_icon_lazy in the columns board's view |
 | The same click with the board-panel answer keeps the card inside the narrowed board | pass | ✓ native panes []; ✓ native pane count 1; ✓ pane shows thr_icon_lazy; ✓ card thr_icon_lazy in the columns board's view |
 | With splits off the click still asks, then keeps the thread in the board's own pane | pass | ✓ native open thr_uat_queue with split; ✓ native panes []; ✓ native pane count 1; ✓ pane shows thr_uat_queue; ✓ url ends with /board/t/thr_uat_queue |
