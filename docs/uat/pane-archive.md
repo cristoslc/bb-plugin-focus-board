@@ -1,10 +1,10 @@
 # UAT report
 
-_Generated 2026-11-24T19:09:21.973Z by `npm run uat`._
+_Generated 2026-11-25T08:53:55.530Z by `npm run uat`._
 
 ## pane-archive
 
-Source: `tests/manual/uat-pane-archive.yaml` · theme dark
+Source: `/Users/cristos/Documents/code/bb-plugin-focus-board/tests/manual/uat-pane-archive.yaml` · theme dark
 
 | Step | Result | Detail |
 | --- | --- | --- |

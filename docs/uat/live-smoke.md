@@ -1,16 +1,16 @@
 # UAT report
 
-_Generated 2026-11-24T08:38:40.496Z by `npm run live-smoke`._
+_Generated 2026-11-25T08:54:12.876Z by `npm run live-smoke`._
 
 ## live-smoke
 
-Host: bb 0.50.1 · Focus Board 1.8.3-dev · `http://127.0.0.1:38886/plugins/focus-board/board`
-Frames: `docs/screenshots/live-smoke/20261124T083825`
+Host: bb 0.50.1 · Focus Board 1.8.4-dev · `http://127.0.0.1:38886/plugins/focus-board/board`
+Frames: `docs/screenshots/live-smoke/20261125T085355`
 
 | Step | Result | Detail |
 | --- | --- | --- |
 | Preflight: the installed host, its version, and a fresh browser context | pass | ✓ the host version is readable (bb --version); ✓ the Focus Board plugin is installed (bb plugin list); ✓ Chrome is where CHROME_PATH says; ✓ the host answers the board's route; ✓ the board mounts at that route; ✓ nothing is covering the board; ✓ the board lists at least three threads to click; ✓ three distinct threads are picked for the checks |
-| A one-pane card click splits | pass | ✓ the window starts as one pane; ✓ no in-panel thread pane is open; ✓ the click leaves two panes; ✓ the board is still mounted; ✓ the board kept its own pane; ✓ the clicked thread (thr_29gxjg77x4) is in the new pane; ✓ the host focused the new pane; ✓ the board's own in-panel pane stayed closed |
+| A one-pane card click splits | pass | ✓ the window starts as one pane; ✓ no in-panel thread pane is open; ✓ the click leaves two panes; ✓ the board is still mounted; ✓ the board kept its own pane; ✓ the clicked thread (thr_tf8zuywpur) is in the new pane; ✓ the host focused the new pane; ✓ the board's own in-panel pane stayed closed |
 | A second card click replaces the pane's thread | pass | ✓ the board recorded the pane it opened; ✓ no third pane appears; ✓ the board is still mounted; ✓ the clicked thread is in the pane the board opened; ✓ the pane the board opened is the one the host focused; ✓ the board's own in-panel pane stayed closed |
 | A card click after the pane was navigated away keeps the native surface (ruling: replace) | pass | ✓ a sidebar row exists to rethread the pane with; ✓ the pane the board opened holds host focus before the rethread; ✓ the sidebar row put that thread in the board's pane; ✓ the board's record still names the pane it opened (the stale shape); ✓ the click leaves the pane count flat; ✓ the clicked thread replaced the pane's thread in place; ✓ the board is still mounted; ✓ the board's own in-panel pane stayed closed |
 | The board's pane header matches the native row | pass | ✓ the board's own pane opened at its pane route; ✓ a native split pane is in the window to compare against; ✓ the board's pane header is a 48px row; ✓ the native row is the same 48px; ✓ the two rows are the same height; ✓ the board's pane header carries exactly one Focus Board control; ✓ the native header carries the same control; ✓ the control carries the Focus Board mark and a caret; ✓ the control is the native 28px ghost box; ✓ no checkbox took the control's place; ✓ the control sits where the native one sits: before the maximize control; ✓ the native header orders it the same way |
@@ -24,10 +24,10 @@ Frames: `docs/screenshots/live-smoke/20261124T083825`
   Nothing here read or wrote the operator's window, profile, or any plugin setting.
 - Opening a thread marks it read on the host, so the cards the run used are the first ones
   the host already marked read where it could. The read state it saw is below.
-- `opened thr_29gxjg77x4 in a native pane`: read at the run's start was read.
-- `replaced the pane's thread with thr_8nbzpbmm3c`: read at the run's start was read.
-- `rethreaded the board's pane to thr_bkg7afa7nv from bb's sidebar`: read at the run's start was read.
-- `opened thr_bcymmhtpms after the rethread`: read at the run's start was read.
+- `opened thr_tf8zuywpur in a native pane`: read at the run's start was read.
+- `replaced the pane's thread with thr_jtdjf8af9m`: read at the run's start was read.
+- `rethreaded the board's pane to thr_p7udn6q2mr from bb's sidebar`: read at the run's start was read.
+- `opened thr_bkg7afa7nv after the rethread`: read at the run's start was read.
 - No file, tag, branch, version, or plugin setting was written. The report and the frames are
   the run's only output.
 
