@@ -31,7 +31,10 @@ export const baseParams = "groupBy=status";
 const EARLIER_LANE = '[data-column-id="idle-earlier"]';
 const EARLIER_PILL = `${EARLIER_LANE} [data-sweep-button]`;
 const TODAY_PILL = '[data-column-id="idle-today"] [data-sweep-button]';
-const SWEPT_CARD = '[data-thread-card="thr_icon_lazy"]';
+// The sweep's wipe-out ghosts keep the departing card's identity alive in the
+// old lane for a moment (data-transport-ghost), so every post-sweep lookup
+// must exclude them and poll until the real card re-mounts in Done.
+const REAL_SWEPT_CARD = '[data-thread-card="thr_icon_lazy"]:not([data-transport-ghost])';
 const PANE = 'aside[aria-label^="Thread:"]';
 const DONE_LANE = '[data-column-id="done"]';
 
@@ -80,17 +83,24 @@ export const demos = [
       // The pill click arms the sweep: both past-threshold threads
       // preselect, the pill reads "2 → Done", the cards wear the selection.
       await clickScoped(g, EARLIER_PILL, "armed-2-to-done", { settle: 1.2 });
-      // The second click confirms: the run sweeps both cards to Done.
+      // The second click confirms: the run sweeps both cards to Done. The
+      // wipe-out ghosts keep the departing cards' identity alive in the old
+      // lane for a moment, so poll until the real (non-ghost) card is inside
+      // Done before shooting the destination.
       await clickScoped(g, EARLIER_PILL, "sweep-confirmed", { settle: 1.8 });
-      const landed = await g.page.evaluate(
-        ({ sel, lane }) => {
-          const card = document.querySelector(sel);
-          return card !== null && card.closest(`[data-column-id="${lane}"]`) !== null;
-        },
-        { sel: SWEPT_CARD, lane: "done" },
-      );
+      let landed = false;
+      for (let attempt = 0; attempt < 20 && !landed; attempt += 1) {
+        landed = await g.page.evaluate(
+          ({ sel, lane }) => {
+            const card = document.querySelector(sel);
+            return card !== null && card.closest(`[data-column-id="${lane}"]`) !== null;
+          },
+          { sel: REAL_SWEPT_CARD, lane: "done" },
+        );
+        if (!landed) await g.sleep(250);
+      }
       if (landed !== true) throw new Error("the swept card did not land in the Done lane");
-      await g.scrollInto(SWEPT_CARD, { hold: 0.6 });
+      await g.scrollInto(REAL_SWEPT_CARD, { hold: 0.6 });
       await g.shot("cards-land-in-done", { hold: 2.2 });
     },
   },
