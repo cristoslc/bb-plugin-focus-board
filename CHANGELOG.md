@@ -9,6 +9,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+### Fixed
+
+## [1.8.4] - 2026-11-25
+
+### Added
+
+### Changed
+
 #### The board
 
 - **The Idle · Earlier lane offers its sweep again.** It proposes the threads past the idle threshold, with the count on its pill, where it used to offer nothing at all. The two fresher idle buckets stay manual.
