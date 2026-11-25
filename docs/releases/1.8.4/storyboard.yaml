@@ -1,0 +1,24 @@
+version: 1.8.4
+# The 1.8.4 nightly storyboard (2026-11-25). Three bullets, judged against
+# docs/releases/demo-gif-convention.md. Two film on the base board with no
+# new fixture: the Earlier bucket's sweep proposal is the base fixture's own
+# idle lanes (two threads past the 2-day threshold, the fresher buckets
+# hours old), and the pane close rides the same /t/ staging v1.8.3's
+# pane-header-menu demo used. The third observes what bb's HOST answers,
+# which the harness cannot stage.
+demos:
+  - bullet: "**The Idle · Earlier lane offers its sweep again.**"
+    gif: docs/screenshots/release-demos/v1.8.4-idle-earlier-sweep.gif
+    caption: "The Idle · Earlier lane's pill proposes its two past-threshold threads with the count; one click arms the sweep with both selected, the second confirms, and the cards land in Done while Today and Recent stay manual."
+    steps:
+      - "release-demos/v1.8.4.mjs idle-earlier-sweep: the base board's idle lanes — Earlier holds thr_icon_lazy and thr_env_edge past the 2-day idle threshold, Today and Recent hold hours-old threads"
+      - "the lane's pill shows the count (2); the pill click arms with both preselected (2 → Done), the second click confirms, and the capture asserts the cards land in Done with the fresher buckets' pills still absent"
+  - bullet: "**Marking a thread done from the thread pane's header closes that pane.**"
+    gif: docs/screenshots/release-demos/v1.8.4-mark-done-closes-pane.gif
+    caption: "Mark Done from the pane header's Focus Board menu settles the write, the pane closes itself, and the board is left looking at the card at the top of the Done lane."
+    steps:
+      - "release-demos/v1.8.4.mjs mark-done-closes-pane: the board's own pane deep-linked open (the uat-pane suites' /t/ route, thr_review_pr)"
+      - "Mark Done from the menu's checked first row; the capture asserts the pane closed and the card sits first in the Done lane"
+skips:
+  - bullet: "**A card click that bb answers by navigating the whole page still lands on the board.**"
+    reason: "The fix lives in what bb's host answers: a split ask answered by navigating the whole page, and a late answer that arrives after the board's own pane opened. The harness's split stand-in renders placement only, with no host navigation or delayed reply to stage — the limit the 1.8.1–1.8.3 storyboards recorded; the uat-native-open suite asserts the settled rulings and the live smoke drives the real host's answer paths."
