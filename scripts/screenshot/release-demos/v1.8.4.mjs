@@ -37,6 +37,12 @@ const TODAY_PILL = '[data-column-id="idle-today"] [data-sweep-button]';
 const REAL_SWEPT_CARD = '[data-thread-card="thr_icon_lazy"]:not([data-transport-ghost])';
 const PANE = 'aside[aria-label^="Thread:"]';
 const DONE_LANE = '[data-column-id="done"]';
+// The card's move to Done leaves a wipe-out ghost (data-transport-ghost) in
+// the Unread lane for a moment; the raw id matches the ghost first, and the
+// ghost is already on camera, so a plain scrollInto would scroll nowhere and
+// leave the destination off screen. Every post-close lookup uses the real
+// (non-ghost) card.
+const REAL_FINISHED_CARD = '[data-thread-card="thr_review_pr"]:not([data-transport-ghost])';
 
 /**
  * Click a scoped control at its own coordinates: the pointer glides there so
@@ -137,7 +143,18 @@ export const demos = [
       if (first !== "thr_review_pr") {
         throw new Error(`expected thr_review_pr first in Done, found ${String(first)}`);
       }
-      await g.scrollInto('[data-thread-card="thr_review_pr"]', { hold: 0.6 });
+      // Let the pane-close relayout settle, then bring the finished card on
+      // camera — and assert it really is there, so the gif cannot end on the
+      // board's pre-close scroll position with the destination off screen.
+      await g.sleep(600);
+      await g.scrollInto(REAL_FINISHED_CARD, { hold: 0.8 });
+      const onCamera = await g.page.evaluate((sel) => {
+        const el = document.querySelector(sel);
+        if (!(el instanceof HTMLElement)) return false;
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.left >= 0 && r.right <= window.innerWidth;
+      }, REAL_FINISHED_CARD);
+      if (onCamera !== true) throw new Error("the finished card is not on camera after the close");
       await g.shot("pane-closed-card-in-done", { hold: 2.2 });
     },
   },
