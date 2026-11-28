@@ -227,6 +227,42 @@ export function computeParentLaneLayout(
   };
 }
 
+/**
+ * The cards of one status row that a board ACTUALLY renders, in board display
+ * order (lane order, then the lane's own row order inside each band).
+ *
+ * `laneRowThreads` (components/parent-lanes) answers what every lane of a row
+ * HOLDS, which is the eligibility law's input. This answers what the layout
+ * puts on screen, and it is the scope a sweep may act on: a context lane hides
+ * the tail of a band behind its "+N more" chip, and a card behind that chip has
+ * no card to highlight and no way to be deselected. Arming on the row's whole
+ * membership archived threads the operator could not inspect (measured on the
+ * installed board 2026-11-28: the Done rail proposed 215 while 177 cards
+ * rendered, leaving 38 unreachable). A chipped card therefore stays Done and
+ * unswept until a view renders it; the rail never counts it, and never quietly
+ * expands the chip to reach it.
+ *
+ * The locked lane never chips (its overflow grows the shared band instead), so
+ * its every card is rendered and included here. Empty and unknown rows return
+ * an empty list.
+ */
+export function renderedRowThreads(
+  lanes: readonly ParentLane[],
+  layout: ParentLaneLayout,
+  rowId: string,
+): PluginSidebarThread[] {
+  const rowIndex = lanes[0]?.rows.findIndex((row) => row.id === rowId) ?? -1;
+  if (rowIndex < 0) return [];
+  const out: PluginSidebarThread[] = [];
+  for (const laneLayout of layout.lanes) {
+    // Cells are pushed in the lane's own row order, so the filter preserves it.
+    for (const cell of laneLayout.cells) {
+      if (cell.row === rowIndex) out.push(cell.thread);
+    }
+  }
+  return out;
+}
+
 /** Content-space x of lane `index`'s left edge given final lane widths — the
  *  DOM renders every section's margin-left at RAIL_TO_LANE_GAP, so this
  *  matches the real layout. The flush target scroll is

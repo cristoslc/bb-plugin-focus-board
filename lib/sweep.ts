@@ -455,6 +455,26 @@ export interface SweepRunView {
   activeId: string | null;
 }
 
+/**
+ * The line a sweep posts when armed cards were left out because their cards
+ * are not rendered: a Parent lane's "+N more" chip, or a group box folded
+ * after the arm. The count is never folded into the swept figure, and the
+ * selection stays armed, so the operator is told what stayed behind and how
+ * to reach it.
+ */
+export function hiddenSweepNotice(
+  hiddenCount: number,
+  destination: SweepDestination,
+  sweptCount: number,
+): string {
+  const label = SWEEP_DESTINATION_LABELS[destination];
+  const singular = hiddenCount === 1;
+  const swept = sweptCount > 0 ? `Swept ${sweptCount} to ${label}. ` : "";
+  const what = `${hiddenCount} armed ${singular ? "thread is" : "threads are"} hidden by a "+N more" chip or a folded box`;
+  const stays = singular ? "so it stays armed" : "so they stay armed";
+  return `${swept}${what}, ${stays}.`;
+}
+
 /** A finished sweep's on-screen summary. */
 export interface SweepNotice {
   message: string;

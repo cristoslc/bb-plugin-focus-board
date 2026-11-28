@@ -32,7 +32,6 @@ import {
   type SweepRunView,
 } from "../lib/sweep";
 import {
-  laneRowThreads,
   sectionParentLanes,
   type ParentLane,
   type ParentLaneSection,
@@ -47,6 +46,7 @@ import {
   predictedStart,
   lockIndexFor,
   pinIsInstant,
+  renderedRowThreads,
   wallTrim,
 } from "./parent-lane-layout";
 import type { ParentLaneOrder } from "./preferences";
@@ -103,11 +103,14 @@ interface ParentLaneBoardProps {
    * pill rides each sweepable row's rail cell, arming pre-selects the
    * past-threshold cards (that row's own candidates), card clicks toggle
    * membership, and confirm applies the row's destination to the frozen
-   * selection. Eligibility is computed by the caller over this row's cards
-   * across every lane (`laneRowThreads`), through the same lib/sweep
-   * predicates the Focus view runs.
+   * selection. Eligibility is computed by the caller through the same
+   * lib/sweep predicates the Focus view runs, over the scope the board hands
+   * it: `renderedIds`, this row's cards that the layout actually renders
+   * (components/parent-lane-layout `renderedRowThreads`). A card behind a
+   * context lane's "+N more" chip is outside the scope, so the pill never
+   * counts it and the arm can never include it.
    */
-  sweepCandidatesFor?: (rowId: string) => readonly string[];
+  sweepCandidatesFor?: (rowId: string, renderedIds: readonly string[]) => readonly string[];
   armedSweep?: ArmedSweep | null;
   /** A confirmed sweep in progress; the active card carries the throbber. */
   sweepRun?: SweepRunView | null;
@@ -122,8 +125,11 @@ interface ParentLaneBoardProps {
   onSweepRangeSelect?: (threadIds: readonly string[]) => void;
   /** Threads that may never join a sweep (live-child parents). */
   sweepBlockedIds?: ReadonlySet<string>;
-  onSweepArm?: (rowId: string) => void;
-  onSweepConfirm?: (rowId: string) => void;
+  /** Arm the row over the same rendered scope the pill counted. */
+  onSweepArm?: (rowId: string, renderedIds: readonly string[]) => void;
+  /** Confirm the row's armed selection, narrowed to the cards the board
+   *  renders anywhere (a chipped or box-hidden card is never swept). */
+  onSweepConfirm?: (rowId: string, renderedIds: readonly string[]) => void;
   onSweepCancel?: () => void;
 }
 
@@ -819,16 +825,29 @@ function ParentLaneBoardBase({
   const rowIds = flat[0].lane.rows.map((row) => row.id);
   const rowLabels = flat[0].lane.rows.map((row) => row.label);
   const lockedLane = lockedIndex === null ? undefined : flat[lockedIndex].lane;
-  // Each row's cards in board display order (lane order, then the lane's own
-  // row order): the order a shift-click's range walks, and the order the
-  // caller's eligibility union was built in. A plain map, not a hook — it
-  // sits after the empty-board return.
+  // Each row's RENDERED cards in board display order (lane order, then the
+  // lane's own row order): the order a shift-click's range walks, and the
+  // scope the caller's eligibility law runs over. A card the layout chipped
+  // behind a context lane's "+N more" cell is not in this map: it has no card
+  // to highlight and no way to be deselected, so it can never join a sweep. A
+  // plain map, not a hook — it sits after the empty-board return.
   const rowDisplayOrder = new Map<string, string[]>();
   {
     const laneList = flat.map((entry) => entry.lane);
     for (const rowId of rowIds) {
-      rowDisplayOrder.set(rowId, laneRowThreads(laneList, rowId).map((t) => t.id));
+      rowDisplayOrder.set(
+        rowId,
+        renderedRowThreads(laneList, layout, rowId).map((t) => t.id),
+      );
     }
+  }
+  // Every card the board currently renders, any row: the scope a confirm
+  // narrows to. An armed card that moved to another row since the arm still
+  // has a card (the arm keeps sweeping it); a card a lane chipped away, or one
+  // a re-lock chipped since the arm, has none anywhere.
+  const boardVisibleIds: string[] = [];
+  for (const laneLayout of layout.lanes) {
+    for (const cell of laneLayout.cells) boardVisibleIds.push(cell.thread.id);
   }
   // Trailing spacer: enough room for a full viewport past the last lane so
   // it can reach the locked position. Constant per viewport — it never
@@ -875,7 +894,7 @@ function ParentLaneBoardBase({
     const eligible = isArmed
       ? (armedSweep?.threadIds ?? [])
       : sweepActive && kind !== null
-        ? (sweepCandidatesFor?.(rowId) ?? [])
+        ? (sweepCandidatesFor?.(rowId, rowDisplayOrder.get(rowId) ?? []) ?? [])
         : [];
     return {
       kind,
@@ -1019,8 +1038,8 @@ function ParentLaneBoardBase({
                       destination={sweepDestination(rowId) ?? "archive"}
                       scope="row"
                       truncates
-                      onArm={() => onSweepArm?.(rowId)}
-                      onConfirm={() => onSweepConfirm?.(rowId)}
+                      onArm={() => onSweepArm?.(rowId, rowDisplayOrder.get(rowId) ?? [])}
+                      onConfirm={() => onSweepConfirm?.(rowId, boardVisibleIds)}
                     />
                     {sweep.isArmed || sweep.runHere !== null ? (
                       <SweepCancelButton

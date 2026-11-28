@@ -335,7 +335,9 @@ describe("lane header: the sweep pill is eligibility plus count", () => {
     });
     fireEvent.click(laneMenuTrigger("unread"));
     fireEvent.click(screen.getByRole("menuitem", { name: "Sweep this lane…" }));
-    expect(onSweepArm).toHaveBeenCalledWith("unread");
+    // The manual door arms the lane's rendered scope, not a guess at its
+    // membership: both cards are on screen here.
+    expect(onSweepArm).toHaveBeenCalledWith("unread", ["thr_u1", "thr_u2"]);
   });
 
   it("a lane that cannot sweep offers no sweep entry", () => {

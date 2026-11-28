@@ -77,6 +77,7 @@ import {
   flattenRuns,
   inBoxMoveTarget,
   laneGroupBoxes,
+  renderedRunsThreads,
   runsFromColumns,
   unitMoveTarget,
   type ColumnRunInfo,
@@ -559,8 +560,13 @@ interface BoardProps {
    * and the armed lifecycle. Arming pre-selects the past-threshold
    * candidates; from there `armedSweep`'s list is LIVE — card clicks toggle
    * membership, and the list is what displays, gathers, and confirms.
+   *
+   * `renderedIds` is the scope the law runs over: the lane's cards the board
+   * actually renders, which excludes the members of a folded group box (no
+   * card to highlight or click away). A lane that hides nothing passes every
+   * thread it holds.
    */
-  sweepCandidatesFor?: (columnId: string) => readonly string[];
+  sweepCandidatesFor?: (columnId: string, renderedIds: readonly string[]) => readonly string[];
   armedSweep?: ArmedSweep | null;
   /**
    * A confirmed sweep in progress (null when idle). While it runs for a
@@ -621,9 +627,12 @@ interface BoardProps {
    * and clicking one refuses on screen.
    */
   sweepBlockedIds?: ReadonlySet<string>;
-  onSweepArm?: (columnId: string) => void;
+  /** Arm the column over the same rendered scope the pill counted. */
+  onSweepArm?: (columnId: string, renderedIds: readonly string[]) => void;
   onSweepDisarm?: () => void;
-  onSweepConfirm?: (columnId: string) => void;
+  /** Confirm the column's armed selection, narrowed to the cards the board
+   *  renders anywhere (a box-hidden card is never swept). */
+  onSweepConfirm?: (columnId: string, renderedIds: readonly string[]) => void;
   /**
    * The Appearance tab's card-transport choice: `teleport` (default) runs
    * the transporter dissolve, `none` relocates cards instantly (the planner
@@ -1769,6 +1778,43 @@ function BoardBase({
   // delete pattern, miniaturized).
   const [renamingBoxId, setRenamingBoxId] = useState<string | null>(null);
   const [labelDeleteArmed, setLabelDeleteArmed] = useState(false);
+  /**
+   * One box run's fold state, read by the render and by the sweep scope: the
+   * box renders as ONE normal-size card when the caller persisted a collapse
+   * for its group AND can expand it again (unwired boards never fold), and
+   * never while its label rename editor is open — the editor lives in the
+   * expanded box's label row, so the fold lifts while it is on.
+   */
+  const boxFolded = useCallback(
+    (groupId: string): boolean =>
+      onGroupCollapsedChange !== undefined &&
+      renamingBoxId !== groupId &&
+      (collapsedGroupIds?.has(groupId) ?? false),
+    [collapsedGroupIds, onGroupCollapsedChange, renamingBoxId],
+  );
+  /**
+   * Every thread that currently has a CARD on this board, any lane: the scope
+   * a confirm narrows to. A member of a folded group box is the one thread a
+   * lane holds without drawing a card for it, so it is the one exclusion. A
+   * card that moved to another lane since the arm is still rendered, and the
+   * arm-frozen race the batch suite pins still sweeps it.
+   */
+  const boardVisibleIds = useMemo(() => {
+    const foldedAway = new Set<string>();
+    for (const column of columns) {
+      for (const box of boxesForLane(column.id).values()) {
+        if (!boxFolded(box.groupId)) continue;
+        for (const member of box.members) foldedAway.add(member.id);
+      }
+    }
+    const ids: string[] = [];
+    for (const column of columns) {
+      for (const thread of column.threads) {
+        if (!foldedAway.has(thread.id)) ids.push(thread.id);
+      }
+    }
+    return ids;
+  }, [columns, boxesForLane, boxFolded]);
   // The group box's own right-click menu: where the pointer landed and
   // which box it names; the ungroup entry arms in place (the label
   // editor's two-click pattern, carried into the menu).
@@ -2689,14 +2735,6 @@ function BoardBase({
           // A run is bound to its column: only that column's button shows
           // progress, and only its cards can carry the throbber.
           const runHere = sweepRun !== null && sweepRun.columnId === column.id ? sweepRun : null;
-          // While armed, the LIVE selection drives count, gather, and
-          // highlight — card clicks toggle it via onSweepToggle. Before
-          // arming, the past-threshold set is what the button proposes.
-          const eligible = isArmed
-            ? (armedSweep?.threadIds ?? [])
-            : sweepActive && sweepKind !== null
-              ? (sweepCandidatesFor?.(column.id) ?? [])
-              : [];
           // Selection never reorders the column: highlighted cards stay
           // where they are and the operator scrolls to see the blast
           // radius. Reordering on every toggle made deselecting feel like
@@ -2714,6 +2752,24 @@ function BoardBase({
           // Boxes off (or the Parent view, which never boxes) → the runs are
           // all singles and the flatten is identity.
           const shownThreads = flattenRuns(columnRuns);
+          // The lane's sweep scope: the cards it RENDERS. A folded group box
+          // draws one group card in place of its members, and a member with no
+          // card has nothing to highlight or click away, so the pill counts
+          // and the arm freezes only what is on screen. Same rule as the
+          // Parent view's "+N more" chip (components/parent-lane-layout
+          // `renderedRowThreads`); a lane that hides nothing passes every
+          // thread it holds.
+          const renderedSweepIds = renderedRunsThreads(columnRuns, boxFolded).map(
+            (thread) => thread.id,
+          );
+          // While armed, the LIVE selection drives count, gather, and
+          // highlight — card clicks toggle it via onSweepToggle. Before
+          // arming, the past-threshold set is what the button proposes.
+          const eligible = isArmed
+            ? (armedSweep?.threadIds ?? [])
+            : sweepActive && sweepKind !== null
+              ? (sweepCandidatesFor?.(column.id, renderedSweepIds) ?? [])
+              : [];
           const armedSet = isArmed ? new Set(eligible) : null;
           // May this card join the armed selection? Blocked ids never join
           // in a removing arm, and a Done column's family projection card
@@ -3396,8 +3452,8 @@ function BoardBase({
                                 : { done: runHere.done, total: runHere.total }
                             }
                             destination={sweepDestination(column.id) ?? "archive"}
-                            onArm={() => onSweepArm?.(column.id)}
-                            onConfirm={() => onSweepConfirm?.(column.id)}
+                            onArm={() => onSweepArm?.(column.id, renderedSweepIds)}
+                            onConfirm={() => onSweepConfirm?.(column.id, boardVisibleIds)}
                           />
                         ) : null}
                         {isArmed || runHere !== null ? (
@@ -4409,18 +4465,6 @@ function BoardBase({
                     }
                   };
                   /**
-                   * One box run's fold state: the box renders as ONE
-                   * normal-size card when the caller persisted a collapse for
-                   * its group AND can expand it again (unwired boards never
-                   * fold), and never while its label rename editor is open —
-                   * the editor lives in the expanded box's label row, so the
-                   * fold lifts while it is on.
-                   */
-                  const boxCollapseFolds = (box: GroupBox): boolean =>
-                    onGroupCollapsedChange !== undefined &&
-                    renamingBoxId !== box.groupId &&
-                    (collapsedGroupIds?.has(box.groupId) ?? false);
-                  /**
                    * The folded box's chevron chip, beside the expanded box's
                    * label: present only when the caller persists collapse
                    * state, so an unwired board never offers the fold.
@@ -4865,7 +4909,7 @@ function BoardBase({
                     );
                   };
                   const renderRun = (runItem: GroupRunItem) => {
-                    if (runItem.kind === "box" && boxCollapseFolds(runItem.box)) {
+                    if (runItem.kind === "box" && boxFolded(runItem.box.groupId)) {
                       return renderCollapsedBoxRun(runItem.box);
                     }
                     return runItem.kind === "single" ? (
@@ -5362,6 +5406,18 @@ function BoardBase({
             const laneMenuOrdered = ranking && columnIsRanked(rankStore ?? {}, laneMenuRankKey);
             const laneMenuDirection = laneOrderDirections?.[laneMenuRankKey];
             const laneMenuSweepKind = sweepActive ? sweepColumnKind(laneMenu.columnId) : null;
+            // The lane menu's manual door arms the same rendered scope the
+            // pill counts: a folded group box's members have no card to
+            // click, so they never join a sweep armed from here.
+            const laneMenuRenderedIds =
+              laneMenuColumn === undefined
+                ? []
+                : renderedRunsThreads(
+                    runsFromColumns([laneMenuColumn], boxesForLane(laneMenu.columnId)).get(
+                      laneMenu.columnId,
+                    ) ?? [],
+                    boxFolded,
+                  ).map((thread) => thread.id);
             const laneMenuRunning =
               sweepRun !== null && sweepRun.columnId === laneMenu.columnId;
             const laneMenuArmed = armedColumnId === laneMenu.columnId;
@@ -5508,7 +5564,7 @@ function BoardBase({
                     dividerAbove={!laneMenuRemoveVisible && !laneFoldVisible}
                     onRun={() => {
                       closeLaneMenu();
-                      onSweepArm?.(laneMenu.columnId);
+                      onSweepArm?.(laneMenu.columnId, laneMenuRenderedIds);
                     }}
                   />
                 ) : null}

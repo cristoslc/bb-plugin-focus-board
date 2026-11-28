@@ -162,6 +162,7 @@ import {
   SWEEP_SETTLED_WORDS,
   armSweep,
   confirmSweep,
+  hiddenSweepNotice,
   runSweep,
   sweepArmPreselects,
   sweepCandidatesForDoneColumn,
@@ -2549,10 +2550,10 @@ function BoardPage({ subPath }: { subPath: string }) {
 
   // ONE eligibility law for every sweep surface: the Focus view calls this
   // with each column's own threads, the Parent view with a row's cards
-  // gathered across every lane (laneRowThreads). Same predicates, same
-  // config, same exclusions — so a thread sweepable in one view is
-  // sweepable in the other, and one excluded for a pinned/attention/live
-  // reason is excluded identically.
+  // gathered across every lane (laneRowThreads) and narrowed to the cards the
+  // layout renders. Same predicates, same config, same exclusions — so a
+  // thread sweepable in one view is sweepable in the other, and one excluded
+  // for a pinned/attention/live reason is excluded identically.
   const sweepCandidatesAmong = useCallback(
     (scopeId: string, threads: readonly PluginSidebarThread[]): readonly string[] => {
       const kind = sweepColumnKind(scopeId);
@@ -2598,23 +2599,36 @@ function BoardPage({ subPath }: { subPath: string }) {
     [doneIds, doneAgeSource, idleKept, liveChildParentIds, snoozedIds, sweepConfig, errorAckIds],
   );
 
+  // The Focus view's sweep, per COLUMN, over the cards the lane RENDERS
+  // (`renderedIds`, which the board hands in): a member hidden inside a
+  // folded group box has no card to highlight or click away, so it is outside
+  // the scope. A lane that hides nothing passes every thread it holds.
   const sweepCandidatesFor = useCallback(
-    (columnId: string): readonly string[] => {
+    (columnId: string, renderedIds: readonly string[]): readonly string[] => {
       const column = columns.find((candidate) => candidate.id === columnId);
       if (column === undefined) return [];
-      return sweepCandidatesAmong(columnId, column.threads);
+      const rendered = new Set(renderedIds);
+      return sweepCandidatesAmong(
+        columnId,
+        column.threads.filter((thread) => rendered.has(thread.id)),
+      );
     },
     [columns, sweepCandidatesAmong],
   );
 
-  // The Parent view's sweep, per ROW: the same law over the row's cards
-  // across every family lane. A row exists on every lane, so this is a
-  // union; a row that holds nothing sweepable still arms (manual sweep
+  // The Parent view's sweep, per ROW: the same law over the row's cards that
+  // the layout renders across every family lane (a card behind a lane's
+  // "+N more" chip is not among them). A row exists on every lane, so this is
+  // a union; a row that holds nothing sweepable still arms (manual sweep
   // mode), exactly as an empty Focus column does.
   const parentLaneSweepCandidatesFor = useCallback(
-    (rowId: string): readonly string[] => {
+    (rowId: string, renderedIds: readonly string[]): readonly string[] => {
       if (parentLanes === null) return [];
-      return sweepCandidatesAmong(rowId, laneRowThreads(parentLanes, rowId));
+      const rendered = new Set(renderedIds);
+      return sweepCandidatesAmong(
+        rowId,
+        laneRowThreads(parentLanes, rowId).filter((thread) => rendered.has(thread.id)),
+      );
     },
     [parentLanes, sweepCandidatesAmong],
   );
@@ -2632,26 +2646,26 @@ function BoardPage({ subPath }: { subPath: string }) {
   );
 
   const armSweepFor = useCallback(
-    (columnId: string) => {
+    (columnId: string, renderedIds: readonly string[]) => {
       // A running sweep owns the gesture: no re-arming mid-run. And a
       // non-sweepable column never arms — the pill is its only door, and
       // that pill exists only on sweepable lanes.
       if (sweepRun !== null) return;
       if (sweepColumnKind(columnId) === null) return;
-      setArmedSweep(armSweep(columnId, sweepCandidatesFor(columnId)));
+      setArmedSweep(armSweep(columnId, sweepCandidatesFor(columnId, renderedIds)));
     },
     [sweepCandidatesFor, sweepRun],
   );
 
-  // The Parent view's arm: the same gesture over a row's cards across every
-  // lane. The row id is the armed scope, so the Focus board's confirm,
-  // toggle, range, cancel, and undo paths serve this arm unchanged — one
-  // armed sweep, two boards that can show it.
+  // The Parent view's arm: the same gesture over the row's rendered cards
+  // across every lane. The row id is the armed scope, so the Focus board's
+  // confirm, toggle, range, cancel, and undo paths serve this arm unchanged —
+  // one armed sweep, two boards that can show it.
   const armParentLaneSweepFor = useCallback(
-    (rowId: string) => {
+    (rowId: string, renderedIds: readonly string[]) => {
       if (sweepRun !== null) return;
       if (sweepColumnKind(rowId) === null) return;
-      setArmedSweep(armSweep(rowId, parentLaneSweepCandidatesFor(rowId)));
+      setArmedSweep(armSweep(rowId, parentLaneSweepCandidatesFor(rowId, renderedIds)));
     },
     [parentLaneSweepCandidatesFor, sweepRun],
   );
@@ -3998,11 +4012,21 @@ function BoardPage({ subPath }: { subPath: string }) {
   // never run twice. Lives below exitPinnedLane/parkPin because the Pinned
   // arm exits through the lane exit (unpin, pin parked).
   const confirmSweepFor = useCallback(
-    (columnId: string) => {
+    (columnId: string, visibleIds: readonly string[]) => {
       const current = armedSweep;
       if (current === null || current.columnId !== columnId) return;
       if (sweepRun !== null) return; // one run at a time
-      const threadIds = confirmSweep(current, true);
+      const armedIds = confirmSweep(current, true);
+      // The arm freezes its list at arm time, but the layout can move under
+      // it: panning the Parent view re-locks a lane and re-cuts its chips, and
+      // folding a group box hides its members. `visibleIds` is every thread
+      // the board renders a card for right now, any lane — a card that moved
+      // to another lane since the arm is still there and still swept (the
+      // arm-frozen race), while one with no card on screen is not: it stays
+      // armed until a view shows it, and the notice says so.
+      const rendered = new Set(visibleIds);
+      const hiddenIds = armedIds.filter((threadId) => !rendered.has(threadId));
+      const threadIds = armedIds.filter((threadId) => rendered.has(threadId));
       // The sweep's runner moves (or removes) the confirmed cards: release
       // their pins so the gestures land; the attention rules resume for
       // what remains on the board.
@@ -4015,7 +4039,13 @@ function BoardPage({ subPath }: { subPath: string }) {
         return;
       }
       if (threadIds.length === 0) {
-        setArmedSweep(null);
+        if (hiddenIds.length === 0) {
+          setArmedSweep(null);
+          return;
+        }
+        // Every armed card is out of sight: nothing to confirm, and the
+        // selection stays armed for the view that shows it again.
+        setSweepNotice({ message: hiddenSweepNotice(hiddenIds.length, destination, 0) });
         return;
       }
       // The idle arm's exit is staged: mark Done (the same recipe as a drop
@@ -4099,11 +4129,13 @@ function BoardPage({ subPath }: { subPath: string }) {
         // failures) so it can be inspected, retried, or explicitly exited;
         // the pill flipping back to its count is the cancellation feedback.
         // Undo is OFFERED, never automatic: cancel means "stop", undo is a
-        // deliberate second click.
+        // deliberate second click. The hidden ids were never attempted, so
+        // they stay armed with the rest.
         const stayArmed = result.cancelled
-          ? [...failedIds, ...result.remaining]
-          : failedIds;
+          ? [...failedIds, ...result.remaining, ...hiddenIds]
+          : [...failedIds, ...hiddenIds];
         setArmedSweep(stayArmed.length > 0 ? { columnId, threadIds: stayArmed } : null);
+        const hiddenCopy = hiddenIds.length > 0 ? ` ${hiddenSweepNotice(hiddenIds.length, destination, 0)}` : "";
         if (result.cancelled) {
           if (result.swept.length === 0 && result.failures.length === 0) return;
           const failedCopy =
@@ -4113,12 +4145,19 @@ function BoardPage({ subPath }: { subPath: string }) {
                   .join(", ")}.`
               : "";
           setSweepNotice({
-            message: `Sweep stopped. ${result.swept.length} ${settledWord}, ${result.remaining.length} not attempted.${failedCopy}`,
+            message: `Sweep stopped. ${result.swept.length} ${settledWord}, ${result.remaining.length} not attempted.${failedCopy}${hiddenCopy}`,
             undo: { ids: result.swept, destination },
           });
           return;
         }
-        if (result.failures.length === 0) return;
+        if (result.failures.length === 0) {
+          if (hiddenIds.length > 0) {
+            setSweepNotice({
+              message: hiddenSweepNotice(hiddenIds.length, destination, result.swept.length),
+            });
+          }
+          return;
+        }
         // Fail loud: the failed candidates stay armed (highlight) for a
         // one-click retry, and a banner says what happened.
         const failedTitles = result.failures.map((failure) => {
@@ -4127,7 +4166,7 @@ function BoardPage({ subPath }: { subPath: string }) {
         });
         const attempted = threadIds.length - result.remaining.length;
         setSweepNotice({
-          message: `Sweep ${settledWord} ${attempted - result.failures.length} of ${threadIds.length}; ${result.failures.length} failed: ${failedTitles.join(", ")}. The failed cards stay highlighted. Click the broom to retry.`,
+          message: `Sweep ${settledWord} ${attempted - result.failures.length} of ${threadIds.length}; ${result.failures.length} failed: ${failedTitles.join(", ")}. The failed cards stay highlighted. Click the broom to retry.${hiddenCopy}`,
         });
       });
     },
