@@ -11,6 +11,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+## [1.8.5] - 2026-11-28
+
+### Added
+
+### Changed
+
+### Fixed
+
 #### The board
 
 - **A sweep on the Parent view's Done row no longer archives cards hidden behind "+N more".** The pill counts, and the arm holds, only the cards the row actually renders, so nothing leaves the board without a card you could see and click away. A folded group box on the Focus view's lanes follows the same rule.
