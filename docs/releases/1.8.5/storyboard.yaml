@@ -1,0 +1,10 @@
+version: 1.8.5
+demos:
+  - bullet: "**A sweep on the Parent view's Done row no longer archives cards hidden behind \"+N more\".**"
+    gif: docs/screenshots/release-demos/v1.8.5-done-row-rendered-sweep.gif
+    caption: "The Done row's sweep counts the four rendered cards, and the chip's four stay Done."
+    steps:
+      - "?demo=1&donemore=1&groupBy=parent stages the fixture family: its Done row renders four cards and chips four"
+      - "arm the Done row's sweep in the rail: the pill reads 5, the highlight lands on the rendered four, the chip's tail stays out"
+      - "confirm: the rendered five archive; the chip's four stay Done and render in their place, and the pill counts them"
+skips: []

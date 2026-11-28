@@ -57,6 +57,10 @@ export const SIM_DONE_IDS: readonly string[] = [
   "thr_ov_done_license",
   "thr_ov_done_stale",
   "thr_ov_release_c_done",
+  // The done-more fixture's children (SIM_DONE_MORE_THREADS, `?donemore=1`
+  // only): eight Done siblings past the sweep threshold, so their family's
+  // context lane chips the row's tail.
+  ...Array.from({ length: 8 }, (_, index) => `thr_donemore_c${index}`),
 ];
 
 /**
@@ -77,6 +81,18 @@ export const SIM_DONE_RECORDS: Record<string, { doneAt: string }> = {
   thr_ov_done_license: { doneAt: new Date(SIM_NOW - 10 * DAY).toISOString() },
   thr_ov_done_stale: { doneAt: new Date(SIM_NOW - 13 * DAY).toISOString() },
   thr_ov_release_c_done: { doneAt: new Date(SIM_NOW - 8 * DAY).toISOString() },
+  // The done-more fixture's children: all Done past the 2-day sweep
+  // threshold, so the row's sweep arm proposes every card the lane renders.
+  // The stamps sit just past it (2.5–2.9 days) so the family's recency —
+  // lanes order by the family's newest touch (components/parent-lanes
+  // laneRecency) — keeps the lane on-screen at the capture viewport instead
+  // of parked at the board's far right among the ancient families.
+  ...Object.fromEntries(
+    Array.from({ length: 8 }, (_, index) => [
+      `thr_donemore_c${index}`,
+      { doneAt: new Date(SIM_NOW - (2.5 + index * 0.05) * DAY).toISOString() },
+    ]),
+  ),
 };
 
 /**
@@ -1318,6 +1334,35 @@ export const SIM_ZOOM_FAMILY_THREADS: readonly SimThread[] = [
       updatedAt: SIM_NOW - (index + 3) * MINUTE,
       lastReadAt: SIM_NOW - (index + 3) * MINUTE,
       environment: boardEnv("feat/fractional-ranks"),
+    }),
+  ),
+];
+
+/**
+ * The Done-row rendered-sweep fixture (`?donemore=1` on top of `?demo=1`):
+ * a family whose eight children are all Done past the sweep threshold, so
+ * the Parent view's Done row holds more cards than a context lane renders —
+ * the tail hides behind the lane's "+N more" chip. The row's sweep pill must
+ * count (and hold) only the rendered cards, which is the story the
+ * release gif films; the base demo board's Done row holds one card and can
+ * never chip. Gated behind its own flag so neither the UAT fixtures nor the
+ * standard demo shots ever see it.
+ */
+export const SIM_DONE_MORE_PARENT_ID = "thr_donemore";
+export const SIM_DONE_MORE_THREADS: readonly SimThread[] = [
+  thread({
+    id: SIM_DONE_MORE_PARENT_ID,
+    displayTitle: "Retire the legacy export queue",
+    updatedAt: SIM_NOW - 60 * MINUTE,
+    lastReadAt: SIM_NOW - 30 * HOUR,
+  }),
+  ...Array.from({ length: 8 }, (_, index) =>
+    thread({
+      id: `thr_donemore_c${index}`,
+      displayTitle: `Export worker ${index}: drain the batch queue`,
+      parentThreadId: SIM_DONE_MORE_PARENT_ID,
+      updatedAt: SIM_NOW - (2.5 + index * 0.05) * DAY,
+      lastReadAt: SIM_NOW - (2.5 + index * 0.05) * DAY,
     }),
   ),
 ];
