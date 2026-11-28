@@ -11,6 +11,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+#### The board's lanes
+
+- **An armed Done sweep paints only the cards it will archive, and each Done card names how long it has been Done.** The age chip read last activity, so a card Done two days ago but written to that morning showed "33m ago" while it sat in the archive selection. Cards that can merely be clicked into the sweep now reveal their amber on hover.
+
 ## [1.8.5] - 2026-11-28
 
 ### Added

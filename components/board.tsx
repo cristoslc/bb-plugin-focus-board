@@ -289,6 +289,13 @@ interface BoardProps {
   /** The active grouping — a column's rank key is namespaced by it. */
   groupBy: GroupBy;
   activeThreadId: string | null;  doneIds: ReadonlySet<string>;
+  /**
+   * Thread id → when it was marked Done (epoch ms), when known. The Done
+   * sweep filters on that stamp, so a Done card labels itself with it; the
+   * grid and both boards hand it down, and a card whose stamp is unknown
+   * keeps painting last activity.
+   */
+  doneMarkedAtFor?: (threadId: string) => number | undefined;
   /** Clear-error acknowledgment ids (issue #157): acked error dots sit quiet. */
   errorAckIds?: ReadonlySet<string>;
   /** Parent id → children that render as nested rows under the parent card. */
@@ -692,6 +699,7 @@ function BoardBase({
   groupBy,
   activeThreadId,
   doneIds,
+  doneMarkedAtFor,
   errorAckIds,
   nestedChildrenByParent,
   childCountByParent,
@@ -2647,6 +2655,7 @@ function BoardBase({
           gridSort={gridSort}
           activeThreadId={activeThreadId}
           doneIds={doneIds}
+          doneMarkedAtFor={doneMarkedAtFor}
           errorAckIds={errorAckIds}
           nestedChildrenByParent={nestedChildrenByParent}
           childCountByParent={childCountByParent}
@@ -4130,6 +4139,7 @@ function BoardBase({
                           onAttentionEnter={onAttentionEnter}
                           onAttentionLeave={onAttentionLeave}
                           isSweepHighlighted={armedSet?.has(thread.id) ?? false}
+                          doneMarkedAtFor={doneMarkedAtFor}
                           isSweeping={runHere !== null && runHere.activeId === thread.id}
                           isSweepSelecting={isArmed}
                           isSweepSelectable={

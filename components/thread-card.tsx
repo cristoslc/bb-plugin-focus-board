@@ -117,10 +117,22 @@ export interface ThreadCardProps {
    */
   isSweepSelecting?: boolean;
   /**
-   * In sweep mode but not selected: a quieter ring marks the card as
-   * toggleable, distinct from the selected highlight.
+   * In sweep mode but not selected: the card can be clicked into the
+   * selection. The affordance reveals on hover/focus and never paints amber
+   * at rest — at rest amber belongs to the armed set alone, or a lane full
+   * of joinable cards reads as a lane full of selected ones (the operator's
+   * 2026-11-28 report: "the Done sweep selects cards younger than the sweep
+   * age"; the young Done cards were merely joinable).
    */
   isSweepSelectable?: boolean;
+  /**
+   * How long a thread has been Done, epoch ms. The Done sweep filters on this
+   * clock (`sweepCandidatesForDoneColumn`), so a Done card labels itself with
+   * it instead of last activity; two clocks on one card made a correctly
+   * armed card read as younger than the sweep age. A nested Done child row
+   * reads the same clock.
+   */
+  doneMarkedAtFor?: (threadId: string) => number | undefined;
   /**
    * A sweep-mode card click, with the modifiers users select with: Shift
    * extends the selection from the anchor through this card, cmd/ctrl (and
@@ -852,6 +864,7 @@ function ChildRow({
   onOpenThread,
   menuActions,
   snoozeFor,
+  doneMarkedAt,
   rankKey,
   onRankDragStart,
   dragEnabled = true,
@@ -875,6 +888,9 @@ function ChildRow({
   menuActions?: readonly CardMenuAction[];
   /** Snooze wake lookup, for the row's little clock marker. */
   snoozeFor?: (threadId: string) => number | null;
+  /** How long the child has been Done (epoch ms), when it is Done: the row
+   *  labels itself with the Done sweep's clock, as the card does. */
+  doneMarkedAt?: number;
   /** The parent slot's lane rides along so dropping the child on any lane's
    * floor (its own via the same type, another via the lane mismatch) can
    * read the gesture. */
@@ -1024,8 +1040,19 @@ function ChildRow({
             snoozed
           </span>
         ) : null}
-        <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground/60">
-          {relativeTime(child.updatedAt, now)}
+        <span
+          data-age=""
+          data-age-source={doneMarkedAt === undefined ? "activity" : "done"}
+          title={
+            doneMarkedAt === undefined
+              ? `Last active ${relativeTime(child.updatedAt, now)}`
+              : `Marked Done ${relativeTime(doneMarkedAt, now)} · last active ${relativeTime(child.updatedAt, now)}`
+          }
+          className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground/60"
+        >
+          {doneMarkedAt === undefined
+            ? relativeTime(child.updatedAt, now)
+            : `Done ${relativeTime(doneMarkedAt, now)}`}
         </span>
       </div>
       <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug">{child.displayTitle}</p>
@@ -1089,6 +1116,7 @@ export function ThreadCardImpl({
   isSweeping = false,
   isSweepSelecting = false,
   isSweepSelectable = false,
+  doneMarkedAtFor,
   onSweepToggle,
   onMarkDone,
   projectName,
@@ -1127,6 +1155,11 @@ export function ThreadCardImpl({
   onAttentionLeave,
 }: ThreadCardProps) {
   const now = Date.now();
+  // The Done stamp is the clock the Done sweep filters on, so a Done card
+  // labels itself with it instead of last activity (see doneMarkedAtFor's
+  // prop note). A family's Done projection is a live parent: no stamp.
+  const doneMarkedAt =
+    doneIds?.has(thread.id) === true ? (doneMarkedAtFor?.(thread.id) ?? null) : null;
   // A touch surface owns the pan, not a drag (issue #328). Every drag source
   // this card renders — the card's anchor, a nested child row, a dot in the
   // collapsed strip — is `draggable` on a fine pointer only: the platform's
@@ -1609,6 +1642,7 @@ export function ThreadCardImpl({
     <div
       data-thread-card={thread.id}
       data-sweep-highlighted={isSweepHighlighted ? "" : undefined}
+      data-sweep-selectable={isSweepSelectable ? "" : undefined}
       data-sweep-active={isSweeping ? "" : undefined}
       data-snoozed={snoozed ? "" : undefined}
       // The dot-drag morph's in-place marker (issue #249, goal 5): while a
@@ -1695,7 +1729,13 @@ export function ThreadCardImpl({
         // note below forbids). The wash lives on the [data-sweep-tint]
         // overlay further down; the card keeps its own opaque surface.
         isSweepHighlighted && "ring-2 ring-amber-500 saturate-100 opacity-100",
-        isSweepSelectable && "ring-1 ring-amber-500/40",
+        // The join affordance, revealed: a card that MAY join the armed
+        // sweep says so on hover/focus, never at rest. At rest the amber
+        // belongs to the armed set alone, so "what will confirm archive" and
+        // "what merely could be clicked in" cannot be mistaken for each
+        // other (the operator's 2026-11-28 report).
+        isSweepSelectable &&
+          "hover:ring-1 hover:ring-amber-500/40 focus-visible:ring-1 focus-visible:ring-amber-500/40",
         // The morph ring + dim ride LAST: the escaped drag's tail is a card
         // drag, and this card is its landing-light while the ghost follows
         // the pointer. Appended last so tailwind-merge lets it win any ring
@@ -1849,8 +1889,19 @@ export function ThreadCardImpl({
                   {compact ? "" : `Snoozed · wakes ${describeWakeAt(snoozeWakeAt, now)}`}
                 </span>
               ) : null}
-              <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground/60">
-                {relativeTime(thread.updatedAt, now)}
+              <span
+                data-age=""
+                data-age-source={doneMarkedAt === null ? "activity" : "done"}
+                title={
+                  doneMarkedAt === null
+                    ? `Last active ${relativeTime(thread.updatedAt, now)}`
+                    : `Marked Done ${relativeTime(doneMarkedAt, now)} · last active ${relativeTime(thread.updatedAt, now)}`
+                }
+                className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground/60"
+              >
+                {doneMarkedAt === null
+                  ? relativeTime(thread.updatedAt, now)
+                  : `Done ${relativeTime(doneMarkedAt, now)}`}
               </span>
             </div>
             <p data-title="" className={cn("mt-0.5 line-clamp-2 pl-1.5 leading-snug", compact ? "text-[11px]" : "text-[13px]")}>{thread.displayTitle}</p>
@@ -2144,6 +2195,7 @@ export function ThreadCardImpl({
                     onOpenThread={onOpenThread}
                     menuActions={childMenuActions?.(activeCollapsedChild)}
                     snoozeFor={snoozeFor}
+                    doneMarkedAt={doneMarkedAtFor?.(activeCollapsedChild.id)}
                     dragEnabled={dragEnabled}
                     onAttentionEnter={onAttentionEnter}
                     onAttentionLeave={onAttentionLeave}
@@ -2182,6 +2234,7 @@ export function ThreadCardImpl({
                         onOpenThread={onOpenThread}
                         menuActions={childMenuActions?.(child)}
                         snoozeFor={snoozeFor}
+                        doneMarkedAt={doneMarkedAtFor?.(child.id)}
                         rankKey={rankKey}
                         onRankDragStart={onRankDragStart}
                         dragEnabled={dragEnabled}
@@ -2209,6 +2262,7 @@ export function ThreadCardImpl({
                                 onOpenThread={onOpenThread}
                                 menuActions={childMenuActions?.(sub)}
                                 snoozeFor={snoozeFor}
+                                doneMarkedAt={doneMarkedAtFor?.(sub.id)}
                                 rankKey={subRankKey}
                                 onRankDragStart={onRankDragStart}
                                 dragEnabled={dragEnabled}
@@ -2573,6 +2627,18 @@ export function sameCardProps(prev: ThreadCardProps, next: ThreadCardProps): boo
     if (prev.snoozeFor === undefined || next.snoozeFor === undefined) return false;
     for (const id of ids) {
       if (prev.snoozeFor(id) !== next.snoozeFor(id)) return false;
+    }
+  }
+  // The Done age is the same kind of per-id lookup, and it repaints the age
+  // label on the card and on any nested Done row: compare results, so a
+  // refetch that moves one thread's stamp repaints only the cards that paint
+  // that thread.
+  if (prev.doneMarkedAtFor !== next.doneMarkedAtFor) {
+    if (prev.doneMarkedAtFor === undefined || next.doneMarkedAtFor === undefined) {
+      return false;
+    }
+    for (const id of ids) {
+      if (prev.doneMarkedAtFor(id) !== next.doneMarkedAtFor(id)) return false;
     }
   }
   // The rate lookup (issue #279) is the same kind of per-id prop as the snooze

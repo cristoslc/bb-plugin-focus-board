@@ -138,6 +138,35 @@ describe("cancelling a sweep", () => {
   });
 });
 
+describe("an armed lane paints only its armed cards as selected", () => {
+  it("keeps the amber selection look off a card the arm left out", () => {
+    // The operator's report (2026-11-28): the Done sweep selects cards
+    // younger than the age gate. The armed list was right; the PAINT was
+    // not. Every non-armed card in an armed lane wore `ring-1
+    // ring-amber-500/40`, so a Done card marked minutes ago looked picked
+    // for the archive sweep even though no age-gated arm would include it.
+    // The join affordance now reveals on hover/focus only; amber at rest
+    // belongs to the armed set alone.
+    renderBoard(["thr_aged", "thr_fresh"].map(doneThread), {
+      armedSweep: armSweep("done", ["thr_aged"]),
+    });
+    const fresh = document.querySelector<HTMLElement>('[data-thread-card="thr_fresh"]');
+    expect(fresh).not.toBeNull();
+    // Still joinable by a click, and still says so.
+    expect(fresh?.hasAttribute("data-sweep-selectable")).toBe(true);
+    // But it wears no amber at rest: the resting ring stays transparent, and
+    // the amber affordance is the hover one.
+    const restTokens = (fresh?.className ?? "").split(/\s+/).filter((token) => !token.includes(":"));
+    expect(restTokens).not.toContain("ring-amber-500/40");
+    expect(fresh?.className ?? "").toContain("hover:ring-amber-500/40");
+    // The armed card is the one painted selected.
+    const aged = document.querySelector<HTMLElement>('[data-thread-card="thr_aged"]');
+    expect(aged?.hasAttribute("data-sweep-highlighted")).toBe(true);
+    const armedRest = (aged?.className ?? "").split(/\s+/).filter((token) => !token.includes(":"));
+    expect(armedRest).toContain("ring-amber-500");
+  });
+});
+
 describe("selection never reorders the column", () => {
   it("selected cards highlight in place; the list keeps its order", () => {
     // Deliberately NOT the gather order: thr_d3 selected first, and the
