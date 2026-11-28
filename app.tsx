@@ -791,6 +791,14 @@ function BoardPage({ subPath }: { subPath: string }) {
     }
     return times;
   }, [doneExtras]);
+  // The Done age on the card face: the same clock the Done sweep filters on,
+  // handed to both boards and the grid as one per-id lookup (lib/sweep's
+  // DoneAgeSource reads the same map). A Done card labelling last activity
+  // made correctly armed cards read as younger than the sweep age.
+  const doneMarkedAtFor = useCallback(
+    (threadId: string) => doneTimes.get(threadId),
+    [doneTimes],
+  );
 
   // Snoozed threads: per-thread plugin metadata ({ wakeAt, setAt }) surfaced
   // through the snooze RPCs. The board only mirrors the records — dimming,
@@ -4973,6 +4981,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             lanes={parentLanes ?? []}
             activeThreadId={paneCoversBoard ? null : boardActiveThreadId}
             doneIds={doneIds}
+            doneMarkedAtFor={doneMarkedAtFor}
             errorAckIds={errorAckIds}
             dimmedIds={dimmedIds}
             childrenByParent={parentLaneChildrenByParent}
@@ -5032,6 +5041,7 @@ function BoardPage({ subPath }: { subPath: string }) {
             laneDirection={laneDirection}
             gridSort={gridSort}
             doneIds={doneIds}
+            doneMarkedAtFor={doneMarkedAtFor}
             errorAckIds={errorAckIds}
             nestedChildrenByParent={nestedChildrenByParent}
             childCountByParent={assembly?.childCountByParent ?? EMPTY_CHILD_COUNTS}

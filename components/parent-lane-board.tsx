@@ -55,6 +55,8 @@ interface ParentLaneBoardProps {
   lanes: readonly ParentLane[];
   activeThreadId: string | null;
   doneIds: ReadonlySet<string>;
+  /** Thread id → when it was marked Done (epoch ms): the Done age label. */
+  doneMarkedAtFor?: (threadId: string) => number | undefined;
   /** Clear-error acknowledgment ids (issue #157): acked error dots sit quiet. */
   errorAckIds?: ReadonlySet<string>;
   /** Members of kept families that did not match the filters/search. */
@@ -325,6 +327,7 @@ function ParentLaneBoardBase({
   lanes,
   activeThreadId,
   doneIds,
+  doneMarkedAtFor,
   errorAckIds,
   dimmedIds,
   childrenByParent,
@@ -1163,6 +1166,7 @@ function ParentLaneBoardBase({
                           stateDot={<LaneStateDot thread={cell.thread} errorAcks={errorAckIds} />}
                           isActive={cell.thread.id === activeThreadId}
                           isDone={doneIds.has(cell.thread.id)}
+                          doneMarkedAtFor={doneMarkedAtFor}
                           isSweepHighlighted={sweep.armedSet?.has(cell.thread.id) ?? false}
                           isSweeping={sweep.runHere !== null && sweep.runHere.activeId === cell.thread.id}
                           isSweepSelecting={sweep.isArmed}

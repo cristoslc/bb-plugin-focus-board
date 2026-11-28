@@ -182,6 +182,46 @@ describe("the Done lane's age gate holds on the live-shaped lane", () => {
   });
 });
 
+describe("the armed Done lane names the age it filtered on", () => {
+  it("labels a Done card with its Done age, not its last activity", async () => {
+    // The operator's report (2026-11-28) read off the cards: an armed Done
+    // card showing "23m ago" is younger than the 2-day sweep age. The age
+    // gate filters on the Done stamp, but the card painted the thread's last
+    // activity, so a correctly armed card claimed to be young. The two live
+    // examples (thr_by4i6v9n6b, thr_e8rfjse49w) were Done 60h and 95h ago
+    // while their activity was 23 and 25 minutes old.
+    const now = Date.now();
+    seedFakeThreads([
+      sidebarThread({ id: "thr_long_done", updatedAt: now - 23 * 60_000 }),
+      sidebarThread({ id: "thr_fresh_done", updatedAt: now - 20 * 60_000 }),
+    ]);
+    seedFakeDone(["thr_long_done", "thr_fresh_done"], {
+      thr_long_done: doneAgo(2.5 * DAY),
+      thr_fresh_done: doneAgo(20 * 60_000),
+    });
+    mount();
+
+    await waitFor(() => expect(lanePill("done")?.textContent).toBe("1"));
+    fireEvent.click(lanePill("done") as HTMLElement);
+    await waitFor(() => expect(lanePill("done")?.textContent).toBe("1 → Archive"));
+
+    const armedAge = document.querySelector<HTMLElement>(
+      '[data-thread-card="thr_long_done"] [data-age]',
+    );
+    expect(armedAge?.getAttribute("data-age-source")).toBe("done");
+    expect(armedAge?.textContent).toBe("Done 2d ago");
+    // The activity clock stays one hover away, so the label never loses it.
+    expect(armedAge?.getAttribute("title")).toContain("last active 23m ago");
+
+    // The card the arm left out says how young it is on the same clock.
+    const freshAge = document.querySelector<HTMLElement>(
+      '[data-thread-card="thr_fresh_done"] [data-age]',
+    );
+    expect(freshAge?.textContent).toBe("Done 20m ago");
+    expect(isHighlighted("thr_fresh_done")).toBe(false);
+  });
+});
+
 describe("the Parent view's Done row sweeps only the cards it renders", () => {
   it("keeps the cards behind a lane's +N chip out of the arm", async () => {
     const now = Date.now();

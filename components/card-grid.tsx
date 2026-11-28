@@ -43,6 +43,8 @@ export interface CardGridProps {
   /** The thread open in the pane; its card wears the focus marker. */
   activeThreadId: string | null;
   doneIds: ReadonlySet<string>;
+  /** Thread id → when it was marked Done (epoch ms): the label's clock. */
+  doneMarkedAtFor?: (threadId: string) => number | undefined;
   /** Clear-error acknowledgment ids (issue #157): acked error dots sit quiet. */
   errorAckIds?: ReadonlySet<string>;
   /** Parent id → children that render as nested rows under the parent card. */
@@ -166,6 +168,7 @@ export function CardGrid({
   gridSort,
   activeThreadId,
   doneIds,
+  doneMarkedAtFor,
   errorAckIds,
   nestedChildrenByParent,
   childCountByParent,
@@ -290,6 +293,7 @@ function GridCard({
   const {
     activeThreadId,
     doneIds,
+    doneMarkedAtFor,
     errorAckIds,
     nestedChildrenByParent,
     childCountByParent,
@@ -326,6 +330,7 @@ function GridCard({
       isDone={doneIds.has(thread.id)}
       onAttentionEnter={onAttentionEnter}
       onAttentionLeave={onAttentionLeave}
+      doneMarkedAtFor={doneMarkedAtFor}
       projectName={projectNameFor(thread.projectId)}
       repoHrefBase={repoBaseFor(thread.projectId) ?? undefined}
       statusFor={statusFor}
