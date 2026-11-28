@@ -10,7 +10,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { ComponentType, ReactNode } from "react";
-import { SIM_ATTENTION_THREADS, SIM_BULK_DONE_IDS, SIM_BULK_DONE_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DESC_GROUP, SIM_DESC_GROUP_THREADS, SIM_DONE_IDS, SIM_DONE_RECORDS, SIM_DUAL_GROUPS, SIM_DUAL_GROUP_THREADS, SIM_GROUP_FAMILY_GROUPS, SIM_GROUP_FAMILY_THREADS, SIM_IDLE_BUSY_THREADS, SIM_ORCH_FAMILY_THREADS, SIM_OVERVIEW_GROUPS, SIM_OVERVIEW_LINKS, SIM_OVERVIEW_THREADS, SIM_PINNED_GROUP, SIM_PINNED_GROUP_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimProject, type SimThread } from "./data";
+import { SIM_ATTENTION_THREADS, SIM_BULK_DONE_IDS, SIM_BULK_DONE_THREADS, SIM_BULK_THREADS, SIM_DEMO_THREADS, SIM_DESC_GROUP, SIM_DESC_GROUP_THREADS, SIM_DONE_IDS, SIM_DONE_MORE_THREADS, SIM_DONE_RECORDS, SIM_DUAL_GROUPS, SIM_DUAL_GROUP_THREADS, SIM_GROUP_FAMILY_GROUPS, SIM_GROUP_FAMILY_THREADS, SIM_IDLE_BUSY_THREADS, SIM_ORCH_FAMILY_THREADS, SIM_OVERVIEW_GROUPS, SIM_OVERVIEW_LINKS, SIM_OVERVIEW_THREADS, SIM_PINNED_GROUP, SIM_PINNED_GROUP_THREADS, SIM_PROJECTS, SIM_PROVIDERS, SIM_SECTIONS, SIM_THREADS, SIM_WORKSPACE_FILES, SIM_WORK_PULSE_GROUPS, SIM_ZOOM_FAMILY_THREADS, type SimProject, type SimThread } from "./data";
 import {
   type FractionColumn,
   mintLegacyColumn,
@@ -825,6 +825,12 @@ const PINNED_GROUP_MODE = new URLSearchParams(window.location.search).get("pinne
 // parent in one group with a child in another (the operator's 2026-11-11
 // ruling), plus a member of the other group so its lane has a reason to stand.
 const GROUP_FAMILY_MODE = new URLSearchParams(window.location.search).get("groupfamily") === "1";
+// `?donemore=1` (the Done-row rendered-sweep GIF capture only): append the
+// done-more fixture (data.ts SIM_DONE_MORE_THREADS) — a family whose eight
+// Done children overflow a context lane's Done row, so the row's tail hides
+// behind the lane's "+N more" chip and the sweep pill's rendered-only count
+// is the story.
+const DONE_MORE_MODE = new URLSearchParams(window.location.search).get("donemore") === "1";
 // `?failautotitle=` (comma list): autotitle call kinds that fail ONCE, then
 // succeed — the UAT suite walks a failure into the fallback modal and out
 // through an alternative. Kinds: "plain" (the bare ✨ call), "threadmodel"
@@ -855,6 +861,7 @@ let simThreads: readonly SimThread[] = EMPTY_MODE
       ...(DUAL_GROUPS_MODE ? SIM_DUAL_GROUP_THREADS : []),
       ...(PINNED_GROUP_MODE ? SIM_PINNED_GROUP_THREADS : []),
       ...(GROUP_FAMILY_MODE ? SIM_GROUP_FAMILY_THREADS : []),
+      ...(DONE_MORE_MODE ? SIM_DONE_MORE_THREADS : []),
     ];
 
 /**
