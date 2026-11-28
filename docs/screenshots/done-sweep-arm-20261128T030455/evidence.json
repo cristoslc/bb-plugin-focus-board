@@ -1,0 +1,860 @@
+{
+  "app": "http://127.0.0.1:38886/plugins/focus-board/board",
+  "viewport": {
+    "width": 1800,
+    "height": 1100
+  },
+  "capturedAt": "2026-11-28T03:05:17.660Z",
+  "declaredSettings": "bb plugin config focus-board (doneArchiveValue 2, doneArchiveUnit days)",
+  "focus": {
+    "lanes": [
+      {
+        "id": "pinned",
+        "headerText": "Pinned 13",
+        "cards": 16,
+        "pill": null
+      },
+      {
+        "id": "unread",
+        "headerText": "Unread 22",
+        "cards": 23,
+        "pill": null
+      },
+      {
+        "id": "working",
+        "headerText": "Working 1",
+        "cards": 1,
+        "pill": null
+      },
+      {
+        "id": "idle-today",
+        "headerText": "Idle · Today 6",
+        "cards": 6,
+        "pill": null
+      },
+      {
+        "id": "idle-earlier",
+        "headerText": "Idle · Earlier 6",
+        "cards": 6,
+        "pill": null
+      },
+      {
+        "id": "done",
+        "headerText": "Done 49 15",
+        "cards": 114,
+        "pill": "15"
+      }
+    ],
+    "thresholdDays": 2,
+    "lane": {
+      "label": "Done",
+      "laneCountHeader": 49,
+      "renderedCards": 114,
+      "pill": {
+        "text": "15",
+        "label": "Arm sweep for this column: 15 eligible threads"
+      },
+      "ages": {
+        "count": 114,
+        "withStamp": 87,
+        "withoutStamp": 27,
+        "kept": 0,
+        "pastThreshold": 38,
+        "underThreshold": 49,
+        "minAgeDays": 0.01,
+        "maxAgeDays": 7.32,
+        "underThresholdIds": [
+          {
+            "id": "thr_bacrmsajeh",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_ds2tjzs6g6",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_rgtvecjygt",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_rw578xyqnh",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_b4b3aeuven",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_qvc7uf9h38",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_faryj53kss",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_zbwwrmtrna",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_jeprhv2z98",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_4xp62fcsex",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_h92qxjpcaa",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_mbn7xdch8i",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_wc5i4pd2b7",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_873fsrxkii",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_7v76xqjuvj",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_jrftx7ij7p",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_vkp4znnrp3",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_4auusypfey",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_k2n9dstugr",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_2cpmh5cx2b",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_kadv4iumq4",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_nycqm2r5an",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_cxsqcyfb42",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_d3x4ahva6n",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_zq8fj8bnu8",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_pp3ux3vwqs",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_j4gvjnjgat",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_4cfw6dum3w",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_r2xq5s995t",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_ncret95ydv",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_ezkyi6uewd",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_qxauapm28d",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_8a3rjhfqdh",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_3xfmuyx6xj",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_g2fz6uac7b",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_58zzdygu3m",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_526dfsi3pi",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_frqiwknvxt",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_2p3ig7dkkn",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_r39yhvsqii",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_ar5u7ssxsc",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_dz8fr7vb5m",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_2wdxs2tzq3",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_r8zvh6283a",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_kb9yz7bv7z",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_kpmn6rbtua",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_37k6j6cccg",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_sjqe8fcg43",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_6zhgkgjaww",
+            "ageDays": 0.01
+          }
+        ]
+      }
+    },
+    "arm": {
+      "clicked": true,
+      "pill": {
+        "text": "15 → Archive",
+        "label": "Confirm sweep of 15 threads from this column to Archive; click away to disarm"
+      },
+      "highlighted": 15,
+      "ages": {
+        "count": 15,
+        "withStamp": 15,
+        "withoutStamp": 0,
+        "kept": 0,
+        "pastThreshold": 15,
+        "underThreshold": 0,
+        "minAgeDays": 2.07,
+        "maxAgeDays": 4.24,
+        "underThresholdIds": []
+      },
+      "oldButNotArmed": [
+        {
+          "id": "thr_9b9raw8tkb",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_dpg6sbsht4",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_rsmf9vukiy",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_6yqnhfqhmm",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_dryygaxv5k",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_kbsjn37hah",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_t6uy5w4dmf",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_nqgw3xzdng",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_q9ymwyy4mg",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_94zbrz89gf",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_tf76yxa6b3",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_spfe8gpdiw",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_79edbxkh69",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_qy4z52xp9r",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_5xyyeedjbq",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_wuk6jxk7n5",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_69iir9mjqy",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_5btbwni865",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_r5esdamhpz",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_zjvb8krhxi",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_9sqvq4yvtj",
+          "ageDays": 2.53
+        },
+        {
+          "id": "thr_uyu3s59q3b",
+          "ageDays": 7.32
+        },
+        {
+          "id": "thr_n35z5g42jh",
+          "ageDays": 2.53
+        }
+      ],
+      "underThresholdArmed": []
+    },
+    "disarm": {
+      "clicked": true,
+      "highlightedAfter": 0,
+      "pill": "15"
+    },
+    "laneMenu": {
+      "opened": true,
+      "entries": [
+        "Newest first",
+        "Oldest first",
+        "Collapse all",
+        "Expand all",
+        "Hide idle children",
+        "Show idle children",
+        "Sweep this lane…"
+      ],
+      "carriesSweep": true
+    },
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  "parent": {
+    "thresholdDays": 2,
+    "rail": {
+      "railText": "Done 35 215",
+      "lanes": 23,
+      "doneBands": 23,
+      "chippedCards": 38,
+      "chipCounts": [
+        15,
+        23
+      ],
+      "renderedCards": 278,
+      "pill": {
+        "text": "215",
+        "label": "Arm sweep for this row: 215 eligible threads"
+      },
+      "ages": {
+        "count": 278,
+        "withStamp": 278,
+        "withoutStamp": 0,
+        "kept": 0,
+        "pastThreshold": 177,
+        "underThreshold": 101,
+        "minAgeDays": 0.01,
+        "maxAgeDays": 3.46,
+        "underThresholdIds": [
+          {
+            "id": "thr_qvc7uf9h38",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_faryj53kss",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_zbwwrmtrna",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_jeprhv2z98",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_4xp62fcsex",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_44qw5f8yr9",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_v46pccyq4j",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_4b7pt78u52",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_wchc5u25iz",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_spjia3rs2t",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_9gyu8i8x9g",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_rgcwh5sppy",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_mpi7g4cwsf",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_rvvkhxkde3",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_s4ihd9735k",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_92cezpiyy4",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_f9a3p5dmyy",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_8sb72wdkxv",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_s6m42rzppi",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_y7jmtzmt2c",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_2keg3mbdbj",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_rcjewq4fmi",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_ek55rgznha",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_h6j8vexzm5",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_cip6wf9r3h",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_pemragsvwf",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_p257b4jc9k",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_6qdz472i6v",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_47rk956up2",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_a2rnqnzfnz",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_h92qxjpcaa",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_mbn7xdch8i",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_wc5i4pd2b7",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_873fsrxkii",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_ucyukpxd7i",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_nycqm2r5an",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_cxsqcyfb42",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_wrkyksjfct",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_jjgvmixiv7",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_9ewqat9c92",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_d3x4ahva6n",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_zq8fj8bnu8",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_9ia77npmjk",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_pp3ux3vwqs",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_ni9nuffsvh",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_drbb2643cg",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_txuqwcrhq3",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_wb9stz46v3",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_2gc9gx3qrh",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_22fedqf9pn",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_xs7s6fciti",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_ij57efdddx",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_89tjcw439h",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_geb6a3fs3j",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_xqvsx6eafc",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_7v76xqjuvj",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_jrftx7ij7p",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_vkp4znnrp3",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_4auusypfey",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_k2n9dstugr",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_2cpmh5cx2b",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_kadv4iumq4",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_c237ym9f3j",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_ryuzvx29xg",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_zdkchmhd5c",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_phita66iha",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_nk2wtfa8e2",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_9j5w7jc7fv",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_zmg9t72men",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_9meavetzef",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_n2jy2aa2bf",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_9sbryirhn5",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_qenr7jnr99",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_md57hrhwwy",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_hmm8kmn7ak",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_bacrmsajeh",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_ds2tjzs6g6",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_rgtvecjygt",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_rw578xyqnh",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_b4b3aeuven",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_jf6pbh9kub",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_42eezh4htw",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_j4gvjnjgat",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_4cfw6dum3w",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_r2xq5s995t",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_ncret95ydv",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_ezkyi6uewd",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_5ebm66kj3s",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_qxauapm28d",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_8a3rjhfqdh",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_3xfmuyx6xj",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_g2fz6uac7b",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_58zzdygu3m",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_bckw87sx5i",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_526dfsi3pi",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_frqiwknvxt",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_2p3ig7dkkn",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_r39yhvsqii",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_kb9yz7bv7z",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_kpmn6rbtua",
+            "ageDays": 0.01
+          },
+          {
+            "id": "thr_6zhgkgjaww",
+            "ageDays": 0.01
+          }
+        ]
+      }
+    },
+    "arm": {
+      "clicked": true,
+      "pill": {
+        "text": "215 → Archive",
+        "label": "Confirm sweep of 215 threads from this row to Archive; click away to disarm"
+      },
+      "highlighted": 177,
+      "ages": {
+        "count": 177,
+        "withStamp": 177,
+        "withoutStamp": 0,
+        "kept": 0,
+        "pastThreshold": 177,
+        "underThreshold": 0,
+        "minAgeDays": 2.53,
+        "maxAgeDays": 3.46,
+        "underThresholdIds": []
+      },
+      "candidatesWithoutRenderedCard": 38
+    },
+    "errors": [
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+    ]
+  },
+  "failure": null
+}
