@@ -62,13 +62,17 @@ function isLive(thread: PluginSidebarThread, doneIds: ReadonlySet<string>): bool
  * Every card of one row across every lane, in board display order (lane
  * order, then the row's own order inside each lane).
  *
- * This is what a row sweep acts on. The sweep's eligibility law is the same
+ * This is one input to a row sweep: the sweep's eligibility law runs the same
  * predicates the Focus view's columns run (lib/sweep's candidate functions
- * take this list instead of a column's threads), so a thread sweepable in
- * one view is sweepable in the other, and one excluded for a reason
- * (pinned, attention, working, live children) is excluded identically. Lanes
- * whose row is empty contribute nothing, so the union covers exactly the
- * cards the operator can see and click in that row.
+ * take this list instead of a column's threads), so a thread sweepable in one
+ * view is sweepable in the other, and one excluded for a reason (pinned,
+ * attention, working, live children) is excluded identically.
+ *
+ * It is the row's MEMBERSHIP, not what the operator can inspect: a context
+ * lane hides the tail of a band behind its "+N more" chip, so the cards here
+ * can outnumber the cards on screen. A sweep's scope is the rendered subset
+ * (`renderedRowThreads` in components/parent-lane-layout); this list is
+ * filtered through it before any pill counts or any arm freezes.
  */
 export function laneRowThreads(
   lanes: readonly ParentLane[],

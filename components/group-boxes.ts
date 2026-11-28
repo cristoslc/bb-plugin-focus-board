@@ -515,4 +515,27 @@ export function flattenRuns(
   return items.flatMap((item) => (item.kind === "box" ? item.box.members : [item.thread]));
 }
 
+/**
+ * The threads one lane actually renders, in display order: standalone cards
+ * plus the members of every box run that is NOT folded. A folded box renders
+ * ONE group card in place of its members, so those members have no card to
+ * click — and a sweep may only act on cards the operator can highlight and
+ * deselect, so the lane hands this list to its sweep as the scope. Together
+ * with the parent board's `renderedRowThreads` (the "+N more" chip), this is
+ * the same rule on both boards: the pill counts what is on screen, and an arm
+ * never reaches further.
+ */
+export function renderedRunsThreads(
+  items: readonly GroupRunItem[],
+  isFolded: (groupId: string) => boolean,
+): PluginSidebarThread[] {
+  return items.flatMap((item) =>
+    item.kind === "single"
+      ? [item.thread]
+      : isFolded(item.box.groupId)
+        ? []
+        : item.box.members,
+  );
+}
+
 export { stateIndexOf };

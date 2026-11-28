@@ -12,6 +12,7 @@ import {
   lockIndexFor,
   pinIsInstant,
   predictedStart,
+  renderedRowThreads,
   viewportContextCols,
   viewportLockedCols,
   laneOverflowsViewport,
@@ -226,6 +227,44 @@ describe("computeParentLaneLayout", () => {
     const lanes = familyLanes([7, 1, 1, 0]);
     const layout = computeParentLaneLayout(lanes, 0, VIEWPORT, RAIL_W);
     expect(layout.laneWidths[0]).toBe(4 * RULER.w + 3 * GAP + CELL_PAD * 2);
+  });
+});
+
+// The sweep scope rule: a row sweep acts on the cards the layout renders,
+// never on the ones a context lane chipped behind "+N more". `laneRowThreads`
+// answers what a lane HOLDS; this answers what the operator can highlight and
+// click away, and the arm runs on the second answer.
+describe("renderedRowThreads", () => {
+  it("returns exactly the rendered cells, in board display order", () => {
+    // 30 working children in lane 0, a context lane while lane 1 is locked:
+    // the row overflows lane 0's band and the tail renders as a chip.
+    const lanes = familyLanes([30, 1, 0, 0]);
+    const layout = computeParentLaneLayout(lanes, 1, VIEWPORT, RAIL_W);
+    const w = workingIndex(lanes);
+    const rendered = renderedRowThreads(lanes, layout, "working");
+    const fromCells = layout.lanes.flatMap((laneLayout) =>
+      laneLayout.cells.filter((cell) => cell.row === w).map((cell) => cell.thread.id),
+    );
+    expect(rendered.map((t) => t.id)).toEqual(fromCells);
+    // Both lanes contribute: the locked lane's card plus lane 0's visible ones.
+    expect(rendered.map((t) => t.id)).toContain("c1_0");
+    expect(layout.lanes[0].chipFor[w]).toBeGreaterThan(0);
+    expect(rendered).toHaveLength(30 - (layout.lanes[0].chipFor[w] ?? 0) + 1);
+    // The chipped tail has no card at all.
+    expect(rendered.map((t) => t.id)).not.toContain("c0_29");
+  });
+
+  it("returns every card of a row that fits, and nothing for an empty or unknown row", () => {
+    const lanes = familyLanes([2, 1]);
+    const layout = computeParentLaneLayout(lanes, 1, VIEWPORT, RAIL_W);
+    // Lane order, then the lane's own row order: lane 0's pair, lane 1's one.
+    expect(renderedRowThreads(lanes, layout, "working").map((t) => t.id)).toEqual([
+      "c0_0",
+      "c0_1",
+      "c1_0",
+    ]);
+    expect(renderedRowThreads(lanes, layout, "needs-you")).toEqual([]);
+    expect(renderedRowThreads(lanes, layout, "not-a-row")).toEqual([]);
   });
 });
 

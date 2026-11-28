@@ -178,7 +178,8 @@ describe("the sweep pill is eligibility plus count", () => {
     fireEvent.click(
       screen.getByRole("menuitem", { name: "Sweep this lane…" }) as HTMLElement,
     );
-    expect(onSweepArm).toHaveBeenCalledWith("done");
+    // The manual door arms the lane's rendered scope: the card on screen.
+    expect(onSweepArm).toHaveBeenCalledWith("done", ["thr_d1"]);
   });
 
   it("still shows the past-threshold count when there is one", () => {
@@ -386,6 +387,77 @@ describe("cmd/ctrl-click toggles a single card", () => {
     fireEvent.click(cardAnchor("thr_d2"), { ctrlKey: true });
     expect(onSweepToggle).toHaveBeenCalledWith("thr_d2");
     expect(onSweepRangeSelect).not.toHaveBeenCalled();
+  });
+});
+
+describe("a folded group box keeps its hidden members out of the sweep", () => {
+  // A folded box renders ONE normal-size group card in place of its members,
+  // so those members have nothing to highlight or click away. The lane's pill
+  // and its arm therefore run over the cards the lane RENDERS: the board
+  // hands the caller its visible ids, exactly as the Parent view's row does.
+  const members = ["thr_g1", "thr_g2", "thr_g3"].map(doneThread);
+  // The box map is keyed by MEMBER id (the shape `planGroupBoxes` emits).
+  const box = { groupId: "grp_1", name: "Group 1", members };
+  const groupBoxOf = new Map(members.map((member) => [member.id, box]));
+
+  it("proposes and arms only what the lane renders", () => {
+    const onSweepArm = vi.fn();
+    renderBoard(members, {
+      groupBoxOf,
+      collapsedGroupIds: new Set(["grp_1"]),
+      onGroupCollapsedChange: vi.fn(),
+      sweepCandidatesFor: (_columnId, renderedIds) => renderedIds,
+      onSweepArm,
+    });
+    // The fold hides every member card.
+    for (const member of members) {
+      expect(document.querySelector(`[data-thread-card="${member.id}"]`)).toBeNull();
+    }
+    // With nothing rendered there is nothing to propose, so no pill waits.
+    expect(document.querySelector("[data-sweep-button]")).toBeNull();
+    // The lane menu's manual door arms the same empty scope.
+    const section = document.querySelector('section[data-column-id="done"]');
+    const trigger = section?.querySelector("header button[data-lane-menu-trigger]");
+    if (!(trigger instanceof HTMLElement)) throw new Error("missing lane menu trigger");
+    fireEvent.click(trigger);
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Sweep this lane…" }) as HTMLElement,
+    );
+    expect(onSweepArm).toHaveBeenCalledWith("done", []);
+  });
+
+  it("confirm reports only the members still on screen", () => {
+    // The arm was frozen while the box was open; it folded afterwards. The
+    // armed count stays the operator's own set, but confirm narrows to the
+    // cards that still have one — a hidden member can neither be highlighted
+    // nor clicked away.
+    const solo = doneThread("thr_solo");
+    const onSweepConfirm = vi.fn();
+    renderBoard([...members, solo], {
+      groupBoxOf,
+      collapsedGroupIds: new Set(["grp_1"]),
+      onGroupCollapsedChange: vi.fn(),
+      armedSweep: armSweep("done", ["thr_g1", "thr_g2", "thr_solo"]),
+      onSweepConfirm,
+    });
+    expect(sweepButton().textContent).toBe("3 → Archive");
+    fireEvent.click(sweepButton());
+    expect(onSweepConfirm).toHaveBeenCalledWith("done", ["thr_solo"]);
+  });
+
+  it("an expanded box passes every member card to the scope", () => {
+    const onSweepArm = vi.fn();
+    renderBoard(members, {
+      groupBoxOf,
+      sweepCandidatesFor: (_columnId, renderedIds) => renderedIds,
+      onSweepArm,
+    });
+    for (const member of members) {
+      expect(document.querySelector(`[data-thread-card="${member.id}"]`)).not.toBeNull();
+    }
+    expect(sweepButton().textContent).toBe("3");
+    fireEvent.click(sweepButton());
+    expect(onSweepArm).toHaveBeenCalledWith("done", ["thr_g1", "thr_g2", "thr_g3"]);
   });
 });
 

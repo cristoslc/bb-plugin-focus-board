@@ -182,6 +182,65 @@ describe("the Done lane's age gate holds on the live-shaped lane", () => {
   });
 });
 
+describe("the Parent view's Done row sweeps only the cards it renders", () => {
+  it("keeps the cards behind a lane's +N chip out of the arm", async () => {
+    const now = Date.now();
+    // Family A locks first (its parent was touched most recently) and holds
+    // two aged Done children, all rendered: a ruler lane never chips. Family B
+    // is a context lane whose twelve aged Done children overflow its band, so
+    // the tail renders as a "+3 more" cell with no card to click.
+    const threads = [
+      sidebarThread({ id: "thr_family_a", updatedAt: now - HOUR }),
+      sidebarThread({ id: "thr_a_0", parentThreadId: "thr_family_a" }),
+      sidebarThread({ id: "thr_a_1", parentThreadId: "thr_family_a" }),
+      sidebarThread({ id: "thr_family_b", updatedAt: now - 5 * DAY }),
+    ];
+    const records: Record<string, { doneAt: string; keep?: boolean }> = {
+      thr_a_0: doneAgo(2.5 * DAY),
+      thr_a_1: doneAgo(2.6 * DAY),
+    };
+    for (let i = 0; i < 12; i += 1) {
+      const id = `thr_b_${i}`;
+      threads.push(sidebarThread({ id, parentThreadId: "thr_family_b" }));
+      records[id] = doneAgo((2.5 + i * 0.1) * DAY);
+    }
+    seedFakeThreads(threads);
+    seedFakeDone(Object.keys(records), records);
+    window.localStorage.setItem("focus-board:groupBy", "parent");
+    mount();
+
+    await waitFor(() => expect(document.querySelector("[data-parent-board]")).not.toBeNull());
+    const railRow = document.querySelector<HTMLElement>('[data-rail-row="done"]');
+    const pill = railRow?.querySelector<HTMLButtonElement>("[data-sweep-button]") ?? null;
+    expect(pill).not.toBeNull();
+    // The chip is the proof that some cards sit outside the operator's reach.
+    const chip = await waitFor(() => {
+      const node = [...document.querySelectorAll("[data-parent-board] [data-cell]")].find(
+        (cell) => /^\+\d+ more$/.test(cell.firstElementChild?.textContent ?? "") ||
+          /^\+\d+ more$/.test(cell.textContent?.trim() ?? ""),
+      );
+      if (node === undefined) throw new Error("no +N more chip on the Done row");
+      return node;
+    });
+    const chipCount = Number((chip.textContent ?? "").match(/\d+/)?.[0] ?? "0");
+    expect(chipCount).toBeGreaterThan(0);
+    const renderedIds = [
+      ...document.querySelectorAll('[data-band="done"] [data-thread-card]'),
+    ]
+      .map((card) => card.getAttribute("data-thread-card"))
+      .filter((id): id is string => id !== null);
+    // Fourteen aged Done cards exist; the chip hides part of the row.
+    expect(renderedIds.length + chipCount).toBe(14);
+    expect(renderedIds).toHaveLength(14 - chipCount);
+    // The pill proposes exactly the cards the row renders.
+    await waitFor(() => expect(pill?.textContent).toBe(String(renderedIds.length)));
+
+    fireEvent.click(pill as HTMLElement);
+    await waitFor(() => expect(pill?.textContent).toBe(`${renderedIds.length} → Archive`));
+    expect(highlightedIds()).toEqual([...renderedIds].sort());
+  });
+});
+
 describe("the Parent view's Done row runs the same age gate", () => {
   it("counts and lights only the past-threshold cards across family lanes", async () => {
     // Two families, each with an aged-out Done child and one marked Done an

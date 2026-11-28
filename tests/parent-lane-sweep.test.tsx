@@ -117,7 +117,9 @@ describe("the row rail carries a sweep per sweepable row", () => {
     const pill = sweepButtonForRow("Idle · A while ago");
     expect(pill.textContent).toBe("");
     fireEvent.click(pill);
-    expect(onSweepArm).toHaveBeenCalledWith("idle-awhile");
+    // The arm carries the row's rendered scope: both lanes' cards are on
+    // screen in this fixture.
+    expect(onSweepArm).toHaveBeenCalledWith("idle-awhile", ["a0", "b0"]);
   });
 
   it("shows the row's candidate count, and the destination word armed", () => {

@@ -6,6 +6,7 @@ import {
   DEFAULT_IDLE_ARCHIVE_MS,
   armSweep,
   confirmSweep,
+  hiddenSweepNotice,
   sweepArmPreselects,
   sweepCandidatesForDoneColumn,
   sweepCandidatesForIdleColumn,
@@ -513,5 +514,18 @@ describe("addSweepSelection", () => {
     const armed = armSweep("done", ["a"]);
     expect(addSweepSelection(armed, ["a"])).toBe(armed);
     expect(addSweepSelection(armed, [])).toBe(armed);
+  });
+});
+describe("hiddenSweepNotice", () => {
+  it("names the hidden count and the destination a swept batch reached", () => {
+    expect(hiddenSweepNotice(3, "done", 2)).toBe(
+      'Swept 2 to Done. 3 armed threads are hidden by a "+N more" chip or a folded box, so they stay armed.',
+    );
+  });
+
+  it("reads a single hidden thread in the singular, with nothing swept", () => {
+    expect(hiddenSweepNotice(1, "archive", 0)).toBe(
+      '1 armed thread is hidden by a "+N more" chip or a folded box, so it stays armed.',
+    );
   });
 });
