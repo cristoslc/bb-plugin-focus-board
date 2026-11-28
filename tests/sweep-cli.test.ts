@@ -32,11 +32,20 @@ describe("bb focus-board sweep", () => {
   let metadata: Map<string, Record<string, unknown>>;
   let listedThreads: ReturnType<typeof makeThreadResponse>[];
   let archived: string[];
+  // How many per-thread namespace reads the sweep holds in flight at once.
+  // The live bridge answers a bounded burst and starts refusing somewhere
+  // past ~4,600 concurrent reads ("fetch failed"), which is what broke
+  // `bb focus-board sweep` on a 2,291-row board: every candidate's Done and
+  // snooze records were read in ONE unbounded Promise.all.
+  let readsInFlight = 0;
+  let maxReadsInFlight = 0;
 
   beforeEach(() => {
     metadata = new Map();
     listedThreads = [];
     archived = [];
+    readsInFlight = 0;
+    maxReadsInFlight = 0;
   });
 
   async function load(): Promise<void> {
@@ -45,8 +54,18 @@ describe("bb focus-board sweep", () => {
       sdk: {
         threads: {
           list: async () => listedThreads,
-          getPluginMetadata: async ({ threadId }: { threadId: string }) =>
-            metadata.get(threadId) ?? {},
+          getPluginMetadata: async ({ threadId }: { threadId: string }) => {
+            readsInFlight += 1;
+            maxReadsInFlight = Math.max(maxReadsInFlight, readsInFlight);
+            try {
+              // Await a tick so a fan-out actually overlaps: a resolved
+              // promise would let the counter miss the burst.
+              await new Promise((resolve) => setTimeout(resolve, 1));
+              return metadata.get(threadId) ?? {};
+            } finally {
+              readsInFlight -= 1;
+            }
+          },
           updatePluginMetadata: async ({
             threadId,
             set,
@@ -90,6 +109,24 @@ describe("bb focus-board sweep", () => {
   }
 
   describe("dry-run (no --confirm)", () => {
+    it("reads every thread's records in bounded batches, never one fan-out", async () => {
+      // The live board is 2,291 candidate rows; the sweep reads a Done record
+      // and a snooze record for each. Unbounded, that is 4,582 concurrent
+      // bridge reads, and the host starts refusing them: `bb focus-board
+      // sweep` died with `bb focus-board failed: fetch failed` on every run
+      // while `bb focus-board done list` (a serial walk) succeeded in the
+      // same second. The board's list walks already cap at
+      // LIST_READ_CONCURRENCY (16) through readBounded; the sweep must too.
+      await load();
+      listedThreads = Array.from({ length: 96 }, (_unused, index) =>
+        idleThread(`thr_idle_${index}`, 40),
+      );
+      const result = await harness.behavior.runCli(["sweep", "--json"]);
+      expect(result.exitCode).toBe(1);
+      expect(JSON.parse(result.stdout).count).toBe(96);
+      expect(maxReadsInFlight).toBeLessThanOrEqual(16);
+    });
+
     it("prints the eligible set with reasons and exits 1", async () => {
       await load();
       listedThreads = [

@@ -3852,8 +3852,15 @@ export default async function plugin(bb: BbPluginApi) {
         }
       }
 
-      const facts: SweepFact[] = await Promise.all(
-        candidates.map(async (thread) => {
+      // Bounded, never one fan-out: each thread needs a Done read and a snooze
+      // read, and this workspace holds 2,291 candidate rows (live + archived).
+      // Unbounded that is 4,582 reads in flight at once, which the bridge
+      // refuses ("fetch failed") — every `bb focus-board sweep` run on this
+      // install died there while the serial `done list` succeeded beside it.
+      // readBounded is the same 16-at-a-time law every list walk uses.
+      const facts: SweepFact[] = await readBounded(
+        candidates,
+        async (thread) => {
           const record = await readDoneRecord(thread.id);
           const snoozeRecord = await readSnoozeRecord(thread.id);
           return {
@@ -3878,7 +3885,7 @@ export default async function plugin(bb: BbPluginApi) {
               (thread.activity?.activeBackgroundCommandCount ?? 0) > 0 ||
               (thread.activity?.activeWorkflowCount ?? 0) > 0,
           };
-        }),
+        },
       );
       let eligible = sweepCliEligible(facts, thresholds, Date.now());
       if (ids.length > 0) {
